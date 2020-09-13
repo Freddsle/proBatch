@@ -2,40 +2,11 @@
 % Please edit documentation in R/proteome_wide_diagnostics.R
 \name{plot_PVCA.df}
 \alias{plot_PVCA.df}
-\alias{plot_PVCA.df.default}
-\alias{plot_PVCA.df.ProBatchFeatures}
 \title{plot PVCA, when the analysis is completed}
 \usage{
-\method{plot_PVCA}{df.default}(
-  pvca_res,
-  colors_for_bars = NULL,
-  filename = NULL,
-  width = NA,
-  height = NA,
-  units = c("cm", "in", "mm"),
-  plot_title = NULL,
-  theme = "classic",
-  base_size = 15
-)
-
-\method{plot_PVCA.df}{ProBatchFeatures}(
-  x,
-  pbf_name = NULL,
-  sample_annotation = NULL,
-  feature_id_col = "peptide_group_label",
-  sample_id_col = "FullRunName",
-  colors_for_bars = NULL,
-  filename = NULL,
-  width = NA,
-  height = NA,
-  units = c("cm", "in", "mm"),
-  plot_title = NULL,
-  theme = "classic",
-  base_size = 20,
-  return_gridExtra = FALSE,
-  plot_ncol = NULL,
-  ...
-)
+plot_PVCA.df(pvca_res, colors_for_bars = NULL, filename = NULL,
+  width = NA, height = NA, units = c("cm", "in", "mm"),
+  plot_title = NULL, theme = "classic", base_size = 20)
 }
 \arguments{
 \item{pvca_res}{data frame of weights of Principal Variance Components, result
@@ -45,14 +16,14 @@ of \code{calculate_PVCA}}
 following categories: c('residual', 'biological', 'biol:techn',
 'technical')}
 
-\item{filename}{path where the results are saved.
+\item{filename}{path where the results are saved. 
 If null the object is returned to the active window;
-otherwise, the object is save into the file. Currently only
+otherwise, the object is save into the file. Currently only 
 pdf and png format is supported}
 
 \item{width}{option  determining the output image width}
 
-\item{height}{option  determining the output image height}
+\item{height}{option  determining the output image width}
 
 \item{units}{units: 'cm', 'in' or 'mm'}
 
@@ -60,22 +31,6 @@ pdf and png format is supported}
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
-
-\item{base_size}{base size of the text in the plot}
-
-\item{sample_annotation}{data frame with:
-\enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
-  \item biological covariates
-  \item technical covariates (batches etc) }.
-  See \code{help("example_sample_annotation")}}
-
-\item{feature_id_col}{name of the column with feature/gene/peptide/protein
-ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
-
-\item{sample_id_col}{name of the column in \code{sample_annotation} table,
-where the filenames (colnames of the \code{data_matrix} are found).}
 }
 \value{
 \code{ggplot} object with bars as weights, colored by bio/tech factors
@@ -84,15 +39,13 @@ where the filenames (colnames of the \code{data_matrix} are found).}
 plot PVCA, when the analysis is completed
 }
 \examples{
-data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
 matrix_test <- example_proteome_matrix[1:150, ]
-pvca_df_res <- prepare_PVCA_df(matrix_test, example_sample_annotation,
-    technical_factors = c("MS_batch", "digestion_batch"),
-    biological_factors = c("Diet", "Sex", "Strain"),
-    pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1
-)
-colors_for_bars <- c("grey", "green", "blue", "red")
-names(colors_for_bars) <- c("residual", "biological", "biol:techn", "technical")
+pvca_df_res <- prepare_PVCA_df(matrix_test, example_sample_annotation, 
+technical_factors = c('MS_batch', 'digestion_batch'),
+biological_factors = c("Diet", "Sex", "Strain"), 
+pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1)
+colors_for_bars = c('grey', 'green','blue','red')
+names(colors_for_bars) = c('residual', 'biological','biol:techn','technical')
 
 pvca_plot <- plot_PVCA.df(pvca_df_res, colors_for_bars)
 }

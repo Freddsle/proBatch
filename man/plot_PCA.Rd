@@ -2,52 +2,26 @@
 % Please edit documentation in R/proteome_wide_diagnostics.R
 \name{plot_PCA}
 \alias{plot_PCA}
-\alias{plot_PCA.default}
-\alias{plot_PCA.ProBatchFeatures}
 \title{plot PCA plot}
 \usage{
-\method{plot_PCA}{default}(
-  data_matrix,
-  sample_annotation,
+plot_PCA(data_matrix, sample_annotation,
   feature_id_col = "peptide_group_label",
-  sample_id_col = "FullRunName",
-  color_by = "MS_batch",
-  shape_by = NULL,
-  PC_to_plot = c(1, 2),
-  fill_the_missing = -1,
-  color_scheme = "brewer",
-  filename = NULL,
-  width = NA,
-  height = NA,
-  units = c("cm", "in", "mm"),
-  plot_title = NULL,
-  theme_name = "classic",
-  base_size = 10,
-  point_size = 3,
-  point_alpha = 0.8
-)
-
-\method{plot_PCA}{ProBatchFeatures}(
-  x,
-  pbf_name = NULL,
-  sample_annotation = NULL,
-  sample_id_col = "FullRunName",
-  plot_title = NULL,
-  return_gridExtra = FALSE,
-  plot_ncol = NULL,
-  ...
-)
+  sample_id_col = "FullRunName", color_by = "MS_batch",
+  PC_to_plot = c(1, 2), fill_the_missing = -1,
+  color_scheme = "brewer", filename = NULL, width = NA,
+  height = NA, units = c("cm", "in", "mm"), plot_title = NULL,
+  theme = "classic", base_size = 20)
 }
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
+feature IDs in rownames and file/sample names as colnames. 
+See "example_proteome_matrix" for more details (to call the description, 
 use \code{help("example_proteome_matrix")})}
 
-\item{sample_annotation}{data frame with:
-\enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
-  \item biological covariates
-  \item technical covariates (batches etc) }.
+\item{sample_annotation}{data frame with: 
+\enumerate{ \item \code{sample_id_col} (this can be repeated as row names) 
+  \item biological covariates 
+  \item technical covariates (batches etc) }. 
   See \code{help("example_sample_annotation")}}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
@@ -55,37 +29,37 @@ ID used in the long format representation \code{df_long}. In the wide
 formatted representation \code{data_matrix} this corresponds to the row
 names.}
 
-\item{sample_id_col}{name of the column in \code{sample_annotation} table,
+\item{sample_id_col}{name of the column in \code{sample_annotation} table, 
 where the filenames (colnames of the \code{data_matrix} are found).}
 
 \item{color_by}{column name (as in \code{sample_annotation}) to color by}
 
 \item{PC_to_plot}{principal component numbers for x and y axis}
 
-\item{fill_the_missing}{numeric value determining how  missing values
-should be substituted. If \code{NULL}, features with missing values are
+\item{fill_the_missing}{numeric value determining how  missing values 
+should be substituted. If \code{NULL}, features with missing values are 
 excluded.
 If \code{NULL}, features with missing values are excluded.}
 
-\item{color_scheme}{a named vector of colors to map to \code{batch_col},
-names corresponding to the levels of the factor. For continuous variables,
+\item{color_scheme}{a named vector of colors to map to \code{batch_col}, 
+names corresponding to the levels of the factor. For continuous variables, 
 vector doesn't need to be named.}
 
-\item{filename}{path where the results are saved.
+\item{filename}{path where the results are saved. 
 If null the object is returned to the active window;
-otherwise, the object is save into the file. Currently only
+otherwise, the object is save into the file. Currently only 
 pdf and png format is supported}
 
 \item{width}{option  determining the output image width}
 
-\item{height}{option  determining the output image height}
+\item{height}{option  determining the output image width}
 
 \item{units}{units: 'cm', 'in' or 'mm'}
 
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
-\item{base_size}{base size of the text in the plot}
+\item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
 }
 \value{
 ggplot scatterplot colored by factor levels of column specified in
@@ -95,31 +69,25 @@ ggplot scatterplot colored by factor levels of column specified in
 plot PCA plot
 }
 \examples{
-data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
-pca_plot <- plot_PCA(example_proteome_matrix, example_sample_annotation,
-    color_by = "MS_batch", plot_title = "PCA colored by MS batch"
-)
-pca_plot <- plot_PCA(example_proteome_matrix, example_sample_annotation,
-    color_by = "DateTime", plot_title = "PCA colored by DateTime"
-)
+pca_plot <- plot_PCA(example_proteome_matrix, example_sample_annotation, 
+color_by = 'MS_batch', plot_title = "PCA colored by MS batch")
+pca_plot <- plot_PCA(example_proteome_matrix, example_sample_annotation, 
+color_by = 'DateTime', plot_title = "PCA colored by DateTime")
 
-color_list <- sample_annotation_to_colors(example_sample_annotation,
-    factor_columns = c("MS_batch", "digestion_batch"),
-    numeric_columns = c("DateTime", "order")
-)
-pca_plot <- plot_PCA(example_proteome_matrix, example_sample_annotation,
-    color_by = "DateTime", color_scheme = color_list[["DateTime"]]
-)
+color_list <- sample_annotation_to_colors (example_sample_annotation, 
+factor_columns = c('MS_batch', 'digestion_batch'),
+numeric_columns = c('DateTime','order'))
+pca_plot <- plot_PCA(example_proteome_matrix, example_sample_annotation, 
+color_by = 'DateTime', color_scheme = color_list[['DateTime']])
 
-pca_file <- tempfile("pca_plot", fileext = ".png")
-pca_plot <- plot_PCA(example_proteome_matrix, example_sample_annotation,
-    color_by = "DateTime", plot_title = "PCA colored by DateTime",
-    filename = pca_file, width = 14, height = 9, units = "cm"
-)
-unlink(pca_file)
+\dontrun{
+pca_plot <- plot_PCA(example_proteome_matrix, example_sample_annotation, 
+color_by = 'DateTime', plot_title = "PCA colored by DateTime",
+filename = 'test_PCA.png', width = 14, height = 9, units = 'cm')
+}
 
 }
 \seealso{
-\code{\link[ggfortify]{autoplot.pca_common}},
+\code{\link[ggfortify]{autoplot.pca_common}}, 
 \code{\link[ggplot2]{ggplot}}
 }
