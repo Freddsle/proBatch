@@ -1,7 +1,7 @@
 Package: proBatch
 Type: Package
 Title: Tools for Diagnostics and Corrections of Batch Effects in Proteomics 
-Version: 1.15.0
+Version: 1.15.1
 Author: Jelena Cuklina <chuklina.jelena@gmail.com>, Chloe H. Lee <chloe.h.lee94@gmail.com>, Patrick Pedrioli <pedrioli@gmail.com>
 Maintainer: Chloe H. Lee <chloe.h.lee94@gmail.com>
 Description: These tools facilitate batch effects analysis and correction in 
@@ -58,3 +58,4 @@ Suggests:
 VignetteBuilder: knitr
 RoxygenNote: 7.1.0
 Language: en-US
+PackageStatus: Deprecated
