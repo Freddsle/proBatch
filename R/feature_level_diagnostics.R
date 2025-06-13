@@ -566,8 +566,7 @@ plot_with_fitting_curve <- function(feature_name,
                                     filename = NULL, width = NA, height = NA,
                                     units = c("cm", "in", "mm"),
                                     plot_title = sprintf(
-                                      "Fitting curve of %s
-                                                         peptide",
+                                      "Fitting curve of %s peptide",
                                       paste(feature_name,
                                         collapse = " "
                                       )
