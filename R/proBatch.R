@@ -90,7 +90,7 @@
 #' otherwise, the object is save into the file. Currently only
 #' pdf and png format is supported
 #' @param width option  determining the output image width
-#' @param height option  determining the output image width
+#' @param height option  determining the output image height
 #' @param units units: 'cm', 'in' or 'mm'
 #' @param base_size base font size
 #'
