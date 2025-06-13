@@ -138,9 +138,8 @@ plot_with_fitting_curve(
   width = NA,
   height = NA,
   units = c("cm", "in", "mm"),
-  plot_title =
-    sprintf("Fitting curve of \%s\\n                                                         peptide",
-    paste(feature_name, collapse = " ")),
+  plot_title = sprintf("Fitting curve of \%s peptide", paste(feature_name, collapse =
+    " ")),
   theme = "classic",
   base_size = 20
 )
@@ -222,7 +221,7 @@ pdf and png format is supported}
 
 \item{width}{option  determining the output image width}
 
-\item{height}{option  determining the output image width}
+\item{height}{option  determining the output image height}
 
 \item{units}{units: 'cm', 'in' or 'mm'}
 

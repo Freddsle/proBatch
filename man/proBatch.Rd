@@ -102,7 +102,7 @@ pdf and png format is supported}
 
 \item{width}{option  determining the output image width}
 
-\item{height}{option  determining the output image width}
+\item{height}{option  determining the output image height}
 
 \item{units}{units: 'cm', 'in' or 'mm'}
 
@@ -138,7 +138,7 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: 
+\strong{Maintainer}: Yuliya Burankova \email{yuliya.burankova@uni-hamburg.de}
 
 Authors:
 \itemize{

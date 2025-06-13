@@ -66,7 +66,7 @@ pdf and png format is supported}
 
 \item{width}{option  determining the output image width}
 
-\item{height}{option  determining the output image width}
+\item{height}{option  determining the output image height}
 
 \item{units}{units: 'cm', 'in' or 'mm'}
 

@@ -97,7 +97,7 @@ pdf and png format is supported}
 
 \item{width}{option  determining the output image width}
 
-\item{height}{option  determining the output image width}
+\item{height}{option  determining the output image height}
 
 \item{units}{units: 'cm', 'in' or 'mm'}
 
@@ -133,7 +133,10 @@ functions for quick visual assessment of trends associated, overall
   or specific covariate-associated (see \code{batch_col} and \code{facet_col})
 }
 \examples{
-data(list = c("example_proteome", "example_sample_annotation", "example_proteome_matrix"), package = "proBatch")
+data(list = c(
+  "example_proteome", "example_sample_annotation",
+  "example_proteome_matrix"
+), package = "proBatch")
 mean_plot <- plot_sample_mean(example_proteome_matrix, example_sample_annotation,
   order_col = "order", batch_col = "MS_batch"
 )
