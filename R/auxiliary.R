@@ -131,7 +131,7 @@ create_peptide_annotation <- function(df_long,
     )
   }
   peptide_annotation <- df_long %>%
-    select(one_of(c(feature_id_col, protein_col))) %>%
+    select(all_of(c(feature_id_col, protein_col))) %>%
     distinct()
   return(peptide_annotation)
 }
