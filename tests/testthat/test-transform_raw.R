@@ -1,5 +1,3 @@
-context("transform_raw")
-
 test_that("log_transformed_matrix", {
   data(example_proteome_matrix, package = "proBatch")
 

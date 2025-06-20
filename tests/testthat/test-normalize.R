@@ -1,5 +1,3 @@
-context("normalize")
-
 test_that("quantile_normalize", {
   data(example_proteome_matrix, package = "proBatch")
 

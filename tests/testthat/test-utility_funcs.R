@@ -1,5 +1,3 @@
-context("utility_funcs")
-
 test_that("check_sample_consistency", {
   # TODO: check if the warnings are raised expect_warning
 

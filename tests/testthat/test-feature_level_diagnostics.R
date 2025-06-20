@@ -1,6 +1,3 @@
-context("feature-level diagnostics")
-
-
 test_that("single_feature_plot", {
   data(example_proteome, package = "proBatch")
   data(example_sample_annotation, package = "proBatch")

@@ -1,6 +1,3 @@
-context("date_conversion")
-
-
 test_that("dates_to_posix", {
   data(example_sample_annotation, package = "proBatch")
 

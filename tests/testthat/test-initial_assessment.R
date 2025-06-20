@@ -1,6 +1,3 @@
-context("initial_assessment")
-
-
 test_that("sample_mean_plots", {
   data(example_proteome_matrix, package = "proBatch")
   data(example_sample_annotation, package = "proBatch")

@@ -1,6 +1,3 @@
-context("auxiliary")
-
-
 test_that("long_conversion_to_matrix", {
   data(example_proteome, package = "proBatch")
 
