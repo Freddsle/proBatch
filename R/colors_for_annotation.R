@@ -17,12 +17,15 @@ map_factors_to_colors <- function(annotation_df_factors) {
 
   nlev_covariate <- mapply(nlevels, annotation_df_factors)
 
-  if (any(nlev_covariate > 20)) {
-    warning("Some colors will be hard to distinguish\n")
-  }
+  # if (any(nlev_covariate > 20)) {
+  #   warning("Some colors will be hard to distinguish\n")
+  # }
   if (any(nlev_covariate > 50)) {
-    warning("Too many colors, consider merging some covariate
-                values for better visualisation\n")
+    warning(
+      "Too many colors, consider merging some covariate values for better visualisation\n"
+    )
+  } else if (any(nlev_covariate > 20)) {
+    warning("Some colors will be hard to distinguish\n")
   }
 
   number_colors_for_factors <- sum(nlev_covariate)
@@ -123,11 +126,11 @@ map_numbers_to_colors <- function(annotation_df_numbers,
                                   palette_type = "brewer") {
   n_colors_to_create <- ncol(annotation_df_numbers)
   if ((n_colors_to_create > 4 && palette_type == "viridis")) {
-    warning("Too many colors for viridis palette,
-            switching to Brewer palettes")
+    warning("Too many colors for viridis palette, switching to Brewer palettes")
+    palette_type <- "brewer"
   }
   if ((n_colors_to_create > 18)) {
-    stop("Not enough color paletters to visualize the annotation")
+    stop("Not enough color palettes to visualize the annotation")
   }
 
   color_list <- lapply(
