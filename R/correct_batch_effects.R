@@ -169,33 +169,19 @@ however,
     rename(!!(sym(old_measure_col)) := !!(sym(measure_col))) %>%
     mutate(!!(sym(measure_col)) := !!(sym(old_measure_col)) + diff_medians)
 
+  default_cols <- c(original_cols, old_measure_col)
+  minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
+  
   if (!is.null(qual_col) && qual_col %in% names(corrected_df)) {
-    corrected_df <- switch(keep_all,
-      all = corrected_df,
-      default = corrected_df %>%
-        dplyr::select(all_of(c(
-          original_cols, old_measure_col,
-          qual_col, qual_value
-        ))),
-      minimal = corrected_df %>%
-        dplyr::select(all_of(c(
-          sample_id_col, feature_id_col, measure_col,
-          old_measure_col, qual_col, qual_value
-        )))
-    )
-  } else {
-    corrected_df <- switch(keep_all,
-      all = corrected_df,
-      default = corrected_df %>%
-        dplyr::select(all_of(c(original_cols, old_measure_col))),
-      minimal = corrected_df %>%
-        dplyr::select(all_of(c(
-          sample_id_col, feature_id_col, measure_col,
-          old_measure_col
-        )))
-    )
+    default_cols <- c(default_cols, qual_col, qual_value)
+    minimal_cols <- c(minimal_cols, qual_col, qual_value)
   }
-
+  corrected_df <- subset_keep_cols(
+    corrected_df,
+    keep_all,
+    default_cols = default_cols,
+    minimal_cols = minimal_cols
+  )
 
   return(corrected_df)
 }
@@ -298,33 +284,19 @@ center_feature_batch_means_df <- function(df_long, sample_annotation = NULL,
     rename(!!(sym(old_measure_col)) := !!(sym(measure_col))) %>%
     mutate(!!(sym(measure_col)) := !!(sym(old_measure_col)) + diff_means)
 
-  if (!is.null(qual_col) && qual_col %in% names(corrected_df)) {
-    corrected_df <- switch(keep_all,
-      all = corrected_df,
-      default = corrected_df %>%
-        dplyr::select(all_of(c(
-          original_cols, old_measure_col,
-          qual_col, qual_value
-        ))),
-      minimal = corrected_df %>%
-        dplyr::select(all_of(c(
-          sample_id_col, feature_id_col, measure_col,
-          old_measure_col, qual_col, qual_value
-        )))
-    )
-  } else {
-    corrected_df <- switch(keep_all,
-      all = corrected_df,
-      default = corrected_df %>%
-        dplyr::select(all_of(c(original_cols, old_measure_col))),
-      minimal = corrected_df %>%
-        dplyr::select(all_of(c(
-          sample_id_col, feature_id_col, measure_col,
-          old_measure_col
-        )))
-    )
-  }
+  default_cols <- c(original_cols, old_measure_col)
+  minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
 
+  if (!is.null(qual_col) && qual_col %in% names(corrected_df)) {
+    default_cols <- c(default_cols, qual_col, qual_value)
+    minimal_cols <- c(minimal_cols, qual_col, qual_value)
+  }
+  corrected_df <- subset_keep_cols(
+    corrected_df,
+    keep_all,
+    default_cols = default_cols,
+    minimal_cols = minimal_cols
+  )
 
   return(corrected_df)
 }
@@ -451,32 +423,21 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
     # then we can fit the curve without, but shift them nevertheless
     mutate(!!(sym(measure_col)) := !!sym("diff.na") + !!sym(old_measure_col))
 
+  default_cols <- c(original_cols, old_measure_col, "fit", batch_col)
+  minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col, "fit")
+
   if (!is.null(qual_col) && qual_col %in% names(corrected_df)) {
-    corrected_df <- switch(keep_all,
-      all = corrected_df,
-      default = corrected_df %>%
-        dplyr::select(all_of(c(
-          original_cols, old_measure_col,
-          "fit", batch_col, qual_col, qual_value
-        ))),
-      minimal = corrected_df %>%
-        dplyr::select(all_of(c(
-          sample_id_col, feature_id_col, measure_col,
-          old_measure_col, "fit", batch_col, qual_col, qual_value
-        )))
-    )
+    default_cols <- c(default_cols, qual_col, qual_value)
+    minimal_cols <- c(minimal_cols, batch_col, qual_col, qual_value)
   } else {
-    corrected_df <- switch(keep_all,
-      all = corrected_df,
-      default = corrected_df %>%
-        dplyr::select(all_of(c(original_cols, old_measure_col, "fit"))),
-      minimal = corrected_df %>%
-        dplyr::select(all_of(c(
-          sample_id_col, feature_id_col, measure_col,
-          old_measure_col, "fit"
-        )))
-    )
+    minimal_cols <- c(minimal_cols)
   }
+  corrected_df <- subset_keep_cols(
+    corrected_df,
+    keep_all,
+    default_cols = default_cols,
+    minimal_cols = minimal_cols
+  )
 
   return(corrected_df)
 }
@@ -600,15 +561,14 @@ correct_with_ComBat_df <- function(df_long, sample_annotation = NULL,
   corrected_df <- corrected_df %>%
     merge(df_long, by = c(feature_id_col, sample_id_col))
 
-  corrected_df <- switch(keep_all,
-    all = corrected_df,
-    default = corrected_df %>%
-      dplyr::select(all_of(c(original_cols, old_measure_col))),
-    minimal = corrected_df %>%
-      dplyr::select(all_of(c(
-        sample_id_col, feature_id_col, measure_col,
-        old_measure_col
-      )))
+  default_cols <- c(original_cols, old_measure_col)
+  minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
+  
+  corrected_df <- subset_keep_cols(
+    corrected_df,
+    keep_all,
+    default_cols = default_cols,
+    minimal_cols = minimal_cols
   )
 
   return(corrected_df)
@@ -753,28 +713,18 @@ correct_batch_effects_df <- function(df_long, sample_annotation,
   old_measure_col <- paste("preBatchCorr", measure_col, sep = "_")
   if (!is.null(continuous_func)) {
     preFit_measure_col <- paste("preTrendFit", measure_col, sep = "_")
-    corrected_df <- switch(keep_all,
-      all = corrected_df,
-      default = corrected_df %>%
-        dplyr::select(all_of(c(original_cols, old_measure_col, preFit_measure_col, "fit"))),
-      minimal = corrected_df %>%
-        dplyr::select(all_of(c(
-          sample_id_col, feature_id_col, measure_col,
-          old_measure_col
-        )))
-    )
+    default_cols <- c(original_cols, old_measure_col, preFit_measure_col, "fit")
   } else {
-    corrected_df <- switch(keep_all,
-      all = corrected_df,
-      default = corrected_df %>%
-        dplyr::select(all_of(c(original_cols, old_measure_col))),
-      minimal = corrected_df %>%
-        dplyr::select(all_of(c(
-          sample_id_col, feature_id_col, measure_col,
-          old_measure_col
-        )))
-    )
+    default_cols <- c(original_cols, old_measure_col)
   }
+  
+  minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
+  corrected_df <- subset_keep_cols(
+    corrected_df,
+    keep_all,
+    default_cols = default_cols,
+    minimal_cols = minimal_cols
+  )
 
   return(corrected_df)
 }
