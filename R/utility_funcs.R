@@ -180,28 +180,29 @@ define_sample_order <- function(order_col, sample_annotation, facet_col,
                 sample order in annotation")
         df_long <- df_long %>%
           arrange(!!sym(c(batch_col))) %>%
-          mutate(!!(sym(order_col)) := factor(!!(sym(sample_id_col)),
-            levels = unique(!!(sym(sample_id_col)))
+          mutate(!!(sym(order_col)) := factor(
+            as.character(!!sym(sample_id_col)),
+            levels = unique(as.character(!!sym(sample_id_col)))
           ))
         # df_long[[order_col]] = reorder(as.character(df_long[[sample_id_col]]), df_long[[batch_col]])
       } else {
         warning("order column is identical to sample ID column,
                 assuming order of samples in the annnotation corresponds to the
                 sample running order")
-        df_long[[order_col]] <- match(
+        df_long[[order_col]] <- as.integer(match(
           df_long[[sample_id_col]],
           sample_annotation[[sample_id_col]]
-        )
+        ))
       }
     } else {
       warning("order column is identical to sample ID column, and sample
                annotation is not defined, assuming order of samples in the
               intensity table corresponds to the sample running order")
       order_col <- "sample_order"
-      df_long[[order_col]] <- match(
+      df_long[[order_col]] <- as.integer(match(
         df_long[[sample_id_col]],
         unique(df_long[[sample_id_col]])
-      )
+      ))
     }
   }
 
@@ -212,14 +213,16 @@ define_sample_order <- function(order_col, sample_annotation, facet_col,
       warning("order column is not defined and coloring by batch is required,
                 ordering the samples by batch")
       df_long <- df_long %>%
-        arrange(!!sym(c(batch_col))) %>%
-        mutate(!!(sym(order_col)) := factor(!!(sym(order_col)),
-          levels = unique(!!(sym(order_col)))
+        arrange(!!sym(batch_col)) %>%
+        mutate(!!sym(order_col) := factor(
+          as.character(!!sym(order_col)),
+          levels = unique(as.character(!!sym(order_col)))
         ))
       # df_long[[order_col]] = reorder(as.character(df_long[[order_col]]), df_long[[batch_col]])
     } else {
-      df_long[[order_col]] <- factor(df_long[[order_col]],
-        levels = unique(df_long[[order_col]])
+      df_long[[order_col]] <- factor(
+        as.character(df_long[[order_col]]),
+        levels = unique(as.character(df_long[[order_col]]))
       )
     }
   }

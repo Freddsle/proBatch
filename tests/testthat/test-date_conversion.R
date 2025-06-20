@@ -16,7 +16,7 @@ test_that("dates_to_posix", {
   expect_equal(format(new_annotation$DateTime[1], "%d"), "05")
   expect_equal(format(new_annotation$DateTime[1], "%H"), "18")
 
-  expect_is(new_annotation$DateTime, "POSIXct")
+  expect_s3_class(new_annotation$DateTime, "POSIXct")
 })
 
 
@@ -38,7 +38,7 @@ test_that("date_to_sample_order", {
   expect_equal(new_annotation_worder$RunDate[1], "Oct_05")
   expect_equal(new_annotation_worder$RunTime[1], "18:35:00")
 
-  expect_is(new_annotation_worder$new_DateTime, "POSIXct")
+  expect_s3_class(new_annotation_worder$new_DateTime, "POSIXct")
   expect_length(new_annotation_worder$new_order, nrow(sample_annotation_test))
 
   expect_equal(new_annotation_worder$new_order[1], 1)
