@@ -12,7 +12,6 @@ test_that("map_factors_to_colors", {
 })
 
 
-
 test_that("map_numbers_to_colors", {
   data(example_sample_annotation, package = "proBatch")
 
@@ -24,8 +23,6 @@ test_that("map_numbers_to_colors", {
   expect_equal(sample_color_annt$DateTime[[1]], "#A6611A")
   expect_equal(sample_color_annt$order[[1]], "#D01C8B")
 })
-
-
 
 
 test_that("sample_annotation_to_colors", {
