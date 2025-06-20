@@ -129,8 +129,8 @@ loess_regression_opt <- function(x_to_fit, y, x_all, y_all,
     {
       bw <- optimise_bw(x_to_fit, y, ...)
       degr_freedom <- optimise_df(x_to_fit, bw)
-      fit <- loess(y ~ x_all, enp.target = degr_freedom, surface = "direct", ...)
-      pred <- predict(fit, newdata = x_to_fit)
+      fit <- loess(y ~ x_to_fit, enp.target = degr_freedom, surface = "direct", ...)
+      pred <- predict(fit, newdata = x_all)
       return(pred)
     },
     warning = function(cond) {
