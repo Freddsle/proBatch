@@ -276,7 +276,7 @@ get_sample_corr_df <- function(cor_proteome, sample_annotation,
     value.name = "correlation"
   ) %>%
     merge(comb_to_keep) %>%
-    merge(sample_annotation %>% select(one_of(c(sample_id_col, spec_cols))),
+    merge(sample_annotation %>% select(all_of(c(sample_id_col, spec_cols))),
       by.x = paste(sample_id_col, "1", sep = "_"),
       by.y = sample_id_col, all.x = TRUE
     ) %>%
@@ -284,7 +284,7 @@ get_sample_corr_df <- function(cor_proteome, sample_annotation,
       old = spec_cols,
       new = paste(spec_cols, 1, sep = "")
     ) %>%
-    merge(sample_annotation %>% select(one_of(c(sample_id_col, spec_cols))),
+    merge(sample_annotation %>% select(all_of(c(sample_id_col, spec_cols))),
       by.x = paste(sample_id_col, "2", sep = "_"),
       by.y = sample_id_col, all.x = TRUE
     ) %>%
@@ -563,7 +563,7 @@ get_peptide_corr_df <- function(peptide_cor, peptide_annotation,
     merge(comb_to_keep) %>%
     merge(
       peptide_annotation %>%
-        select(one_of(c(feature_id_col, protein_col))),
+        select(all_of(c(feature_id_col, protein_col))),
       by.x = paste(feature_id_col, "1", sep = "_"),
       by.y = feature_id_col, all.x = TRUE
     ) %>%
@@ -573,7 +573,7 @@ get_peptide_corr_df <- function(peptide_cor, peptide_annotation,
     ) %>%
     merge(
       peptide_annotation %>%
-        select(one_of(c(feature_id_col, protein_col))),
+        select(all_of(c(feature_id_col, protein_col))),
       by.x = paste(feature_id_col, "2", sep = "_"),
       by.y = feature_id_col, all.x = TRUE
     ) %>%

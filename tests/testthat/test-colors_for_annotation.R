@@ -4,7 +4,8 @@ test_that("map_factors_to_colors", {
   factor_columns <- c("MS_batch", "Strain")
   sample_annt <- example_sample_annotation[, factor_columns]
 
-  expect_warning(sample_color_annt <- map_factors_to_colors(sample_annt))
+  expect_warning(sample_color_annt <- map_factors_to_colors(sample_annt),
+    "Too many colors, consider merging some covariate values for better visualisation")
 
   expect_equal(names(sample_color_annt$MS_batch[1]), "Batch_1")
   expect_equal(sample_color_annt$MS_batch[[1]], "#7FC97F")
@@ -36,7 +37,8 @@ test_that("sample_annotation_to_colors", {
   expect_warning(color_scheme <- sample_annotation_to_colors(example_sample_annotation,
     factor_columns = factor_columns,
     numeric_columns = numeric_columns
-  ))
+  ),
+  "Too many colors, consider merging some covariate values for better visualisation")
 
   expect_equal(names(color_scheme), c(factor_columns, numeric_columns))
 

@@ -13,7 +13,7 @@ merge_df_with_annotation <- function(df_long, sample_annotation, sample_id_col,
                     remove these columns from df_long and
                     repeat the function execution.", common_col_string))
     df_long <- df_long %>%
-      select(-one_of(common_cols))
+      select(-all_of(common_cols))
   }
 
   message("Merging data matrix and sample annotation")
@@ -230,7 +230,7 @@ define_sample_order <- function(order_col, sample_annotation, facet_col,
   # infer the order within facets
   if (!is.null(facet_col) && is.numeric(df_long[[order_col]])) {
     df_long <- df_long %>%
-      group_by_at(vars(one_of(facet_col))) %>%
+      group_by_at(vars(all_of(facet_col))) %>%
       mutate(order_per_instrument = dense_rank(!!(sym(order_col))))
     order_col <- "order_per_instrument"
   }
@@ -254,7 +254,7 @@ add_vertical_batch_borders <- function(order_col, sample_id_col, batch_col,
             NULL")
     if (!is.null(facet_col)) {
       sample_annotation <- sample_annotation %>%
-        select(one_of(c(order_col, sample_id_col, batch_col, facet_col))) %>%
+        select(all_of(c(order_col, sample_id_col, batch_col, facet_col))) %>%
         distinct()
       order_vars <- c(facet_col, order_col)
       batch_vars <- c(facet_col, batch_col)
@@ -272,7 +272,7 @@ add_vertical_batch_borders <- function(order_col, sample_id_col, batch_col,
         mutate(tipping.points = tipping.points + .5 + min_order_value)
     } else {
       sample_annotation <- sample_annotation %>%
-        select(one_of(c(order_col, sample_id_col, batch_col))) %>%
+        select(all_of(c(order_col, sample_id_col, batch_col))) %>%
         distinct()
       min_order_val <- min(sample_annotation[[order_col]]) - 1
       batch.tipping.points <- sample_annotation %>%

@@ -395,7 +395,7 @@ plot_heatmap_generic <- function(data_matrix,
   if (!is.null(column_annotation_df)) {
     if (!is.null(columns_for_cols)) {
       annotation_col <- column_annotation_df %>%
-        select(one_of(col_ann_id_col, columns_for_cols))
+        select(all_of(c(col_ann_id_col, columns_for_cols)))
     } else {
       annotation_col <- column_annotation_df
     }
@@ -408,7 +408,7 @@ plot_heatmap_generic <- function(data_matrix,
   if (!is.null(row_annotation_df)) {
     if (!is.null(columns_for_rows)) {
       annotation_row <- row_annotation_df %>%
-        select(one_of(row_ann_id_col, columns_for_rows))
+        select(all_of(c(row_ann_id_col, columns_for_rows)))
     } else {
       annotation_row <- row_annotation_df
     }
@@ -505,7 +505,7 @@ calculate_PVCA <- function(data_matrix, sample_annotation,
   data_matrix <- long_to_matrix(df_long, sample_id_col = sample_id_col)
 
   sample_annotation <- sample_annotation %>%
-    select(one_of(c(sample_id_col, factors_for_PVCA))) %>%
+    select(all_of (c(sample_id_col, factors_for_PVCA))) %>%
     mutate_if(is.POSIXct, as.numeric) %>%
     as.data.frame() %>%
     column_to_rownames(var = sample_id_col)
