@@ -1,6 +1,3 @@
-context("proteome_wide_diagnostics")
-
-
 test_that("hierarchical_clustering", {
   data(example_proteome_matrix, package = "proBatch")
 

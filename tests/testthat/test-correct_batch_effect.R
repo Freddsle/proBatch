@@ -1,6 +1,3 @@
-context("correct_batch_effects")
-
-
 test_that("center_feature_batch_medians", {
   data(example_proteome, package = "proBatch")
   data(example_sample_annotation, package = "proBatch")

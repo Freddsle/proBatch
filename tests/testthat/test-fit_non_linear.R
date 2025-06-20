@@ -1,5 +1,3 @@
-context("fit_non_linear")
-
 test_that("fit works", {
   test_annotation <- example_sample_annotation[example_sample_annotation$MS_batch == "Batch_1", ]
   selected_files <- test_annotation$FullRunName

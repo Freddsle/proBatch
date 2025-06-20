@@ -1,6 +1,3 @@
-context("colors_for_annotation")
-
-
 test_that("map_factors_to_colors", {
   data(example_sample_annotation, package = "proBatch")
 

@@ -1,6 +1,3 @@
-context("correlation-based_diagnostics")
-
-
 test_that("corr_matrix_plots", {
   data(example_proteome_matrix, package = "proBatch")
   peptides <- c("10231_QDVDVWLWQQEGSSK_2", "10768_RLESELDGLR_2")
