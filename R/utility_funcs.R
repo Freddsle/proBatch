@@ -352,3 +352,26 @@ is_batch_factor <- function(batch_vector, color_scheme) {
   }
   return(is_factor)
 }
+
+#' Subset columns according to `keep_all` argument
+#'
+#' Helper for data transformation functions to consistently keep a
+#' predefined set of columns.
+#'
+#' @param df data frame to subset
+#' @param keep_all one of `"all"`, `"default"` or `"minimal"`
+#' @param default_cols columns to keep when `keep_all = "default"`
+#' @param minimal_cols columns to keep when `keep_all = "minimal"`
+#'
+#' @return data frame with selected columns
+#' @keywords internal
+#'
+subset_keep_cols <- function(df, keep_all = "default",
+                             default_cols = names(df),
+                             minimal_cols = default_cols) {
+  switch(keep_all,
+    all = df,
+    default = dplyr::select(df, dplyr::all_of(default_cols)),
+    minimal = dplyr::select(df, dplyr::all_of(minimal_cols))
+  )
+}
