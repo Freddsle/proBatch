@@ -57,8 +57,9 @@ Suggests:
     gtable,
     gridExtra,
     roxygen2,
-    testthat (>= 2.1.0),
+    testthat (>= 3.0.0),
     spelling
 VignetteBuilder: knitr
 RoxygenNote: 7.3.2
 Language: en-US
+Config/testthat/edition: 3
