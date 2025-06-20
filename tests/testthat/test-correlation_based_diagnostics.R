@@ -6,8 +6,8 @@ test_that("corr_matrix_plots", {
   corr_matrix <- cor(t(matrix_test), use = "complete.obs")
   corr_matrix_pheatmap <- plot_corr_matrix(corr_matrix)
 
-  expect_is(corr_matrix_pheatmap, "pheatmap")
-  expect_equivalent(corr_matrix_pheatmap$gtable$layout$name[4], "legend")
+  expect_s3_class(corr_matrix_pheatmap, "pheatmap")
+  expect_equal(corr_matrix_pheatmap$gtable$layout$name[4], "legend", ignore_attr = TRUE)
 })
 
 
@@ -22,12 +22,12 @@ test_that("protein_corrplot_plots", {
     cluster_rows = TRUE, cluster_cols = TRUE
   )
 
-  expect_equivalent(corrplot$tree_row$method, "complete")
-  expect_equivalent(corrplot$tree_row$dist.method, "euclidean")
+  expect_equal(corrplot$tree_row$method, "complete", ignore_attr = TRUE)
+  expect_equal(corrplot$tree_row$dist.method, "euclidean", ignore_attr = TRUE)
 
-  expect_equivalent(corrplot$tree_row$labels[1], "10231_QDVDVWLWQQEGSSK_2")
-  expect_equivalent(corrplot$tree_row$labels[2], "10768_RLESELDGLR_2")
-  expect_equivalent(corrplot$tree_row$labels[3], "1131_AQGSVALSVTQDPAR_2")
+  expect_equal(corrplot$tree_row$labels[1], "10231_QDVDVWLWQQEGSSK_2", ignore_attr = TRUE)
+  expect_equal(corrplot$tree_row$labels[2], "10768_RLESELDGLR_2", ignore_attr = TRUE)
+  expect_equal(corrplot$tree_row$labels[3], "1131_AQGSVALSVTQDPAR_2", ignore_attr = TRUE)
 })
 
 
@@ -46,18 +46,18 @@ test_that("sample_corr_heatmap", {
     show_colnames = FALSE
   ))
 
-  expect_equivalent(sample_heatmap$tree_row$method, "complete")
-  expect_equivalent(sample_heatmap$tree_row$dist.method, "euclidean")
+  expect_equal(sample_heatmap$tree_row$method, "complete", ignore_attr = TRUE)
+  expect_equal(sample_heatmap$tree_row$dist.method, "euclidean", ignore_attr = TRUE)
 
-  expect_equivalent(sample_heatmap$tree_col$method, "complete")
-  expect_equivalent(sample_heatmap$tree_col$dist.method, "euclidean")
+  expect_equal(sample_heatmap$tree_col$method, "complete", ignore_attr = TRUE)
+  expect_equal(sample_heatmap$tree_col$dist.method, "euclidean", ignore_attr = TRUE)
 
-  expect_equivalent(sample_heatmap$tree_row$labels[1], "I171013_BXD61_CD_ET2145_Run113")
-  expect_equivalent(sample_heatmap$tree_row$labels[2], "I171013_BXD70_HF_ET1728_Run114")
-  expect_equivalent(sample_heatmap$tree_row$labels[3], "I171016_BXD89_CD_ET2078_Run115")
+  expect_equal(sample_heatmap$tree_row$labels[1], "I171013_BXD61_CD_ET2145_Run113", ignore_attr = TRUE)
+  expect_equal(sample_heatmap$tree_row$labels[2], "I171013_BXD70_HF_ET1728_Run114", ignore_attr = TRUE)
+  expect_equal(sample_heatmap$tree_row$labels[3], "I171016_BXD89_CD_ET2078_Run115", ignore_attr = TRUE)
 
-  expect_equivalent(sample_heatmap$gtable$layout[[1]], c(1, 2, 4, 4, 4, 3))
-  expect_equivalent(sample_heatmap$gtable$layout$name[[4]], "matrix")
+  expect_equal(sample_heatmap$gtable$layout[[1]], c(1, 2, 4, 4, 4, 3), ignore_attr = TRUE)
+  expect_equal(sample_heatmap$gtable$layout$name[[4]], "matrix", ignore_attr = TRUE)
 })
 
 
@@ -73,12 +73,12 @@ test_that("sample_distribution_plot", {
     plot_param = "batch_replicate"
   )
 
-  expect_equivalent(sample_dist$labels$x, "batch_replicate")
-  expect_equivalent(sample_dist$labels$y, "correlation")
+  expect_equal(sample_dist$labels$x, "batch_replicate", ignore_attr = TRUE)
+  expect_equal(sample_dist$labels$y, "correlation", ignore_attr = TRUE)
 
-  expect_is(sample_dist$plot_env$corr_distribution, "data.frame")
-  expect_equivalent(sample_dist$plot_env$plot_param, "batch_replicate")
-  expect_is(sample_dist$plot_env$gg, "ggplot")
+  expect_s3_class(sample_dist$plot_env$corr_distribution, "data.frame")
+  expect_equal(sample_dist$plot_env$plot_param, "batch_replicate", ignore_attr = TRUE)
+  expect_s3_class(sample_dist$plot_env$gg, "ggplot")
 })
 
 test_that("calculate_sample_corr_distribution", {
@@ -95,14 +95,14 @@ test_that("calculate_sample_corr_distribution", {
     batch_col = "MS_batch"
   )
 
-  expect_is(corr_distribution, "data.frame")
+  expect_s3_class(corr_distribution, "data.frame")
 
   sample_cols <- paste("FullRunName", seq_len(2), sep = "_")
 
-  expect_equivalent("batch_replicate" %in% names(corr_distribution), TRUE)
-  expect_equivalent("correlation" %in% names(corr_distribution), TRUE)
-  expect_equivalent("replicate" %in% names(corr_distribution), TRUE)
-  expect_equivalent(all(sample_cols %in% names(corr_distribution)), TRUE)
+  expect_equal("batch_replicate" %in% names(corr_distribution), TRUE, ignore_attr = TRUE)
+  expect_equal("correlation" %in% names(corr_distribution), TRUE, ignore_attr = TRUE)
+  expect_equal("replicate" %in% names(corr_distribution), TRUE, ignore_attr = TRUE)
+  expect_equal(all(sample_cols %in% names(corr_distribution)), TRUE, ignore_attr = TRUE)
 })
 
 
@@ -117,9 +117,9 @@ test_that("peptide_distribution_plots", {
     protein_col = "Gene"
   )
 
-  expect_equivalent(peptide_dist$labels$x, NULL)
-  expect_equivalent(peptide_dist$labels$y, "correlation")
+  expect_equal(peptide_dist$labels$x, NULL, ignore_attr = TRUE)
+  expect_equal(peptide_dist$labels$y, "correlation", ignore_attr = TRUE)
 
-  expect_is(peptide_dist$plot_env$corr_distribution, "data.frame")
+  expect_s3_class(peptide_dist$plot_env$corr_distribution, "data.frame")
   expect_equal(peptide_dist$plot_env$median_same_prot, 0.7337642, tolerance = 1e-6)
 })

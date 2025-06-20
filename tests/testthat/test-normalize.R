@@ -6,7 +6,7 @@ test_that("quantile_normalize", {
 
   quant_matrix <- preprocessCore::normalize.quantiles(matrix_test)
 
-  expect_equivalent(quant_matrix[1:10], quant_normalized_matrix[1:10])
+  expect_equal(quant_matrix[1:10], quant_normalized_matrix[1:10], ignore_attr = TRUE)
 })
 
 
@@ -26,10 +26,10 @@ test_that("normalize_sample_medians", {
     keep_all = "all"
   )
 
-  expect_equivalent(median_centered_data$median_global[1], 30277.6, tolerance = 1e-2)
-  expect_equivalent(median_centered_data$median_run[2], 29252.14, tolerance = 1e-2)
+  expect_equal(median_centered_data$median_global[1], 30277.6, tolerance = 1e-2, ignore_attr = TRUE)
+  expect_equal(median_centered_data$median_run[2], 29252.14, tolerance = 1e-2, ignore_attr = TRUE)
 
-  expect_equivalent(median_centered_data$Intensity[1], 2728887.42, tolerance = 1e-2)
-  expect_equivalent(median_centered_data$Intensity[549], 35191.95, tolerance = 1e-2)
-  expect_equivalent(median_centered_data$preNorm_Intensity[549], 25479.8)
+  expect_equal(median_centered_data$Intensity[1], 2728887.42, tolerance = 1e-2, ignore_attr = TRUE)
+  expect_equal(median_centered_data$Intensity[549], 35191.95, tolerance = 1e-2, ignore_attr = TRUE)
+  expect_equal(median_centered_data$preNorm_Intensity[549], 25479.8, ignore_attr = TRUE)
 })

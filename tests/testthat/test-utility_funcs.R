@@ -29,8 +29,7 @@ test_that("check_sample_consistency", {
 })
 
 test_that("define_sample_order", {
-  # TODO: check if the returned class is integer expect_is
-
+  # TODO: check if the returned class is integer expected_type
   order_col <- "order"
   sample_order <- define_sample_order(
     order_col = order_col,
@@ -43,10 +42,9 @@ test_that("define_sample_order", {
   new_order_col <- sample_order$order_col
   df_long <- sample_order$df_long
 
-  expect_is(sample_order, "list")
+  expect_type(sample_order, "list")
   expect_equal(df_long$order_col, example_sample_annotation$order_col)
-
-  expect_is(df_long[[new_order_col]], "numeric")
+  expect_type(df_long[[new_order_col]], "double")
 
   order_col <- NULL
   sample_order <- define_sample_order(
@@ -60,8 +58,7 @@ test_that("define_sample_order", {
   new_order_col <- sample_order$order_col
   df_long <- sample_order$df_long
 
-  expect_is(sample_order, "list")
+  expect_type(sample_order, "list")
   expect_equal(df_long$order_col, example_sample_annotation$order_col)
-
-  expect_is(df_long[[new_order_col]], "factor")
+  expect_s3_class(df_long[[new_order_col]], "factor")
 })
