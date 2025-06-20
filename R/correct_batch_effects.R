@@ -165,17 +165,21 @@ however,
   }
   corrected_df <- corrected_df %>%
     ungroup() %>%
-    mutate(diff_medians = median_global - median_batch) %>%
+    mutate(diff = median_global - median_batch) %>%    # rename here from diff_medians to diff
     rename(!!(sym(old_measure_col)) := !!(sym(measure_col))) %>%
-    mutate(!!(sym(measure_col)) := !!(sym(old_measure_col)) + diff_medians)
+    mutate(!!(sym(measure_col)) := !!(sym(old_measure_col)) + diff)
 
-  default_cols <- c(original_cols, old_measure_col)
-  minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
-  
+  # Ensure batch_col is present in default_cols/minimal_cols
+  default_cols <- c(original_cols, batch_col, old_measure_col, "median_batch", "median_global", "diff")
+  minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col,
+                    batch_col, "median_batch", "diff")
+
   if (!is.null(qual_col) && qual_col %in% names(corrected_df)) {
-    default_cols <- c(default_cols, qual_col, qual_value)
-    minimal_cols <- c(minimal_cols, qual_col, qual_value)
+    default_cols <- c(default_cols, qual_col)
+    minimal_cols <- c(minimal_cols, qual_col)
+    # qual_value is not a column name; do not include it here.
   }
+
   corrected_df <- subset_keep_cols(
     corrected_df,
     keep_all,
