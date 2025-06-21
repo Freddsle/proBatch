@@ -127,7 +127,7 @@ quantile_normalize_df <- function(df_long,
     minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
 
     if (!is.null(qual_col) && qual_col %in% names(normalized_df)) {
-        minimal_cols <- c(minimal_cols, qual_col, qual_value)
+        minimal_cols <- c(minimal_cols, qual_col)
     }
     normalized_df <- subset_keep_cols(
         normalized_df,
@@ -206,7 +206,7 @@ normalize_sample_medians_df <- function(df_long,
     minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
 
     if (!is.null(qual_col) && (qual_col %in% names(normalized_df))) {
-        minimal_cols <- c(minimal_cols, qual_col, qual_value)
+        minimal_cols <- c(minimal_cols, qual_col)
     }
     normalized_df <- subset_keep_cols(
         normalized_df,
