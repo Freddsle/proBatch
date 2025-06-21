@@ -390,7 +390,7 @@ plot_heatmap_generic <- function(data_matrix,
         heatmap_color <- c(color_for_missing, heatmap_color)
     }
 
-    if (is.null(col_ann_id_col)){
+    if (is.null(col_ann_id_col)) {
         col_ann_id_col <- "FullRunName"
         message(sprintf("Column %s is not in the data, using default", col_ann_id_col))
     }
@@ -399,7 +399,7 @@ plot_heatmap_generic <- function(data_matrix,
         message(sprintf("Column %s is not in the data, using default", row_ann_id_col))
     }
 
-    # if columns_for_cols is NULL, add default columns 
+    # if columns_for_cols is NULL, add default columns
     if (is.null(columns_for_cols)) {
         columns_for_cols <- intersect(
             c("MS_batch", "Diet", "DateTime", "order"),
@@ -528,7 +528,7 @@ calculate_PVCA <- function(data_matrix, sample_annotation,
     )
     data_matrix <- long_to_matrix(df_long, sample_id_col = sample_id_col)
 
-    # if factors_for_PVCA is NULL, add default columns 
+    # if factors_for_PVCA is NULL, add default columns
     if (is.null(factors_for_PVCA)) {
         factors_for_PVCA <- intersect(
             c("MS_batch", "digestion_batch", "Diet", "Sex", "Strain"),
