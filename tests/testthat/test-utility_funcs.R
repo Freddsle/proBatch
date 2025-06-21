@@ -52,15 +52,18 @@ test_that("define_sample_order", {
 
     order_col <- NULL
     expect_warning(
-        sample_order <- define_sample_order(
-            order_col = order_col,
-            sample_annotation = example_sample_annotation,
-            facet_col = NULL, batch_col = "MS_batch",
-            df_long = example_proteome,
-            sample_id_col = "FullRunName",
-            color_by_batch = TRUE
+        expect_warning(
+            sample_order <- define_sample_order(
+                order_col = order_col,
+                sample_annotation = example_sample_annotation,
+                facet_col = NULL, batch_col = "MS_batch",
+                df_long = example_proteome,
+                sample_id_col = "FullRunName",
+                color_by_batch = TRUE
+            ),
+            "Order column is NULL"
         ),
-        "batch",
+        "ordering the samples by batch"
     )
     new_order_col <- sample_order$order_col
     df_long <- sample_order$df_long
