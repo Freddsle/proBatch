@@ -63,9 +63,9 @@ Check if sample annotation is consistent with data matrix and join the two
 data(list = c("example_proteome", "example_sample_annotation"), package = "proBatch")
 
 df_test <- check_sample_consistency(
-  sample_annotation = example_sample_annotation,
-  df_long = example_proteome, sample_id_col = "FullRunName",
-  batch_col = NULL, order_col = NULL, facet_col = NULL
+    sample_annotation = example_sample_annotation,
+    df_long = example_proteome, sample_id_col = "FullRunName",
+    batch_col = NULL, order_col = NULL, facet_col = NULL
 )
 
 }

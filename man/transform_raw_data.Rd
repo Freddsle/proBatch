@@ -55,6 +55,6 @@ data(list = c("example_proteome", "example_proteome_matrix"), package = "proBatc
 log_transformed_df <- log_transform_df(example_proteome)
 
 log_transformed_matrix <- log_transform_dm(example_proteome_matrix,
-  log_base = 10, offset = 1
+    log_base = 10, offset = 1
 )
 }

@@ -55,11 +55,11 @@ the list is named as columns included to use in plotting functions
 \examples{
 data("example_sample_annotation", package = "proBatch")
 color_scheme <- sample_annotation_to_colors(
-  example_sample_annotation,
-  factor_columns = c(
-    "MS_batch", "EarTag", "Strain",
-    "Diet", "digestion_batch", "Sex"
-  ),
-  numeric_columns = c("DateTime", "order")
+    example_sample_annotation,
+    factor_columns = c(
+        "MS_batch", "EarTag", "Strain",
+        "Diet", "digestion_batch", "Sex"
+    ),
+    numeric_columns = c("DateTime", "order")
 )
 }

@@ -93,15 +93,15 @@ Plot variance distribution by variable
 data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
 matrix_test <- example_proteome_matrix[1:150, ]
 pvca_plot <- plot_PVCA(matrix_test, example_sample_annotation,
-  technical_factors = c("MS_batch", "digestion_batch"),
-  biological_factors = c("Diet", "Sex", "Strain")
+    technical_factors = c("MS_batch", "digestion_batch"),
+    biological_factors = c("Diet", "Sex", "Strain")
 )
 
 \donttest{
 pvca_plot <- plot_PVCA(matrix_test, example_sample_annotation,
-  technical_factors = c("MS_batch", "digestion_batch"),
-  biological_factors = c("Diet", "Sex", "Strain"),
-  filename = "test_PVCA.png", width = 28, height = 22, units = "cm"
+    technical_factors = c("MS_batch", "digestion_batch"),
+    biological_factors = c("Diet", "Sex", "Strain"),
+    filename = "test_PVCA.png", width = 28, height = 22, units = "cm"
 )
 }
 

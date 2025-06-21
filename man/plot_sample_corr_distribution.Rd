@@ -99,28 +99,28 @@ vs non-related sample correlation
 \examples{
 data(list = c("example_sample_annotation", "example_proteome_matrix"), package = "proBatch")
 sample_corr_distribution_plot <- plot_sample_corr_distribution(
-  example_proteome_matrix,
-  example_sample_annotation,
-  batch_col = "MS_batch",
-  biospecimen_id_col = "EarTag",
-  plot_param = "batch_replicate"
+    example_proteome_matrix,
+    example_sample_annotation,
+    batch_col = "MS_batch",
+    biospecimen_id_col = "EarTag",
+    plot_param = "batch_replicate"
 )
 
 data(list = c("example_sample_annotation", "example_proteome_matrix"), package = "proBatch")
 corr_distribution <- calculate_sample_corr_distr(
-  data_matrix = example_proteome_matrix,
-  sample_annotation = example_sample_annotation,
-  batch_col = "MS_batch", biospecimen_id_col = "EarTag"
+    data_matrix = example_proteome_matrix,
+    sample_annotation = example_sample_annotation,
+    batch_col = "MS_batch", biospecimen_id_col = "EarTag"
 )
 sample_corr_distribution_plot <- plot_sample_corr_distribution.corrDF(corr_distribution,
-  plot_param = "batch_replicate"
+    plot_param = "batch_replicate"
 )
 
 \donttest{
 sample_corr_distribution_plot <- plot_sample_corr_distribution.corrDF(corr_distribution,
-  plot_param = "batch_replicate",
-  filename = "test_sampleCorr.png",
-  width = 28, height = 28, units = "cm"
+    plot_param = "batch_replicate",
+    filename = "test_sampleCorr.png",
+    width = 28, height = 28, units = "cm"
 )
 }
 

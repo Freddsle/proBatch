@@ -44,9 +44,9 @@ keep number-like behavior
 \examples{
 data("example_sample_annotation", package = "proBatch")
 date_to_posix <- dates_to_posix(example_sample_annotation,
-  time_column = c("RunDate", "RunTime"),
-  new_time_column = "DateTime_new",
-  dateTimeFormat = c("\%b_\%d", "\%H:\%M:\%S")
+    time_column = c("RunDate", "RunTime"),
+    new_time_column = "DateTime_new",
+    dateTimeFormat = c("\%b_\%d", "\%H:\%M:\%S")
 )
 
 }

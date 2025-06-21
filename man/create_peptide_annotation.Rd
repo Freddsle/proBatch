@@ -33,9 +33,9 @@ for selection of illustrative proteins
 \examples{
 data("example_proteome", package = "proBatch")
 generated_peptide_annotation <- create_peptide_annotation(
-  example_proteome,
-  feature_id_col = "peptide_group_label",
-  protein_col = c("Protein")
+    example_proteome,
+    feature_id_col = "peptide_group_label",
+    protein_col = c("Protein")
 )
 
 }

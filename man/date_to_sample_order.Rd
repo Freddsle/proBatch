@@ -48,12 +48,12 @@ calculates sample run rank in order column
 \examples{
 data("example_sample_annotation", package = "proBatch")
 sample_annotation_wOrder <- date_to_sample_order(
-  example_sample_annotation,
-  time_column = c("RunDate", "RunTime"),
-  new_time_column = "new_DateTime",
-  dateTimeFormat = c("\%b_\%d", "\%H:\%M:\%S"),
-  new_order_col = "new_order",
-  instrument_col = NULL
+    example_sample_annotation,
+    time_column = c("RunDate", "RunTime"),
+    new_time_column = "new_DateTime",
+    dateTimeFormat = c("\%b_\%d", "\%H:\%M:\%S"),
+    new_order_col = "new_order",
+    instrument_col = NULL
 )
 
 }

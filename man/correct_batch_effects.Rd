@@ -267,19 +267,19 @@ discrete difference across batches.
 \examples{
 # Load necessary datasets
 data(
-  list = c("example_sample_annotation", "example_proteome"),
-  package = "proBatch"
+    list = c("example_sample_annotation", "example_proteome"),
+    package = "proBatch"
 )
 
 # Median centering per feature per batch:
 median_centered_df <- center_feature_batch_medians_df(
-  example_proteome, example_sample_annotation
+    example_proteome, example_sample_annotation
 )
 
 # Correct with ComBat:
 combat_corrected_df <- correct_with_ComBat_df(
-  example_proteome,
-  example_sample_annotation
+    example_proteome,
+    example_sample_annotation
 )
 
 # Adjust the MS signal drift:
@@ -287,22 +287,22 @@ test_peptides <- unique(example_proteome$peptide_group_label)[1:3]
 test_peptide_filter <- example_proteome$peptide_group_label \%in\% test_peptides
 test_proteome <- example_proteome[test_peptide_filter, ]
 adjusted_df <- adjust_batch_trend_df(test_proteome,
-  example_sample_annotation,
-  span = 0.7,
-  min_measurements = 8
+    example_sample_annotation,
+    span = 0.7,
+    min_measurements = 8
 )
 plot_fit <- plot_with_fitting_curve(unique(adjusted_df$peptide_group_label),
-  df_long = adjusted_df, measure_col = "preTrendFit_Intensity",
-  fit_df = adjusted_df, sample_annotation = example_sample_annotation
+    df_long = adjusted_df, measure_col = "preTrendFit_Intensity",
+    fit_df = adjusted_df, sample_annotation = example_sample_annotation
 )
 
 # Correct the data in one go:
 batch_corrected_matrix <- correct_batch_effects_df(example_proteome,
-  example_sample_annotation,
-  continuous_func = "loess_regression",
-  discrete_func = "MedianCentering",
-  batch_col = "MS_batch",
-  span = 0.7, min_measurements = 8
+    example_sample_annotation,
+    continuous_func = "loess_regression",
+    discrete_func = "MedianCentering",
+    batch_col = "MS_batch",
+    span = 0.7, min_measurements = 8
 )
 
 }

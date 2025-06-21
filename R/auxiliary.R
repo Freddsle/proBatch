@@ -20,25 +20,25 @@ long_to_matrix <- function(df_long,
                            sample_id_col = "FullRunName",
                            qual_col = NULL,
                            qual_value = 2) {
-  casting_formula <- as.formula(paste(
-    feature_id_col, sample_id_col,
-    sep = " ~ "
-  ))
-  if (!is.null(qual_col)) {
-    message("removing imputed values (requants)")
-    df_long <- df_long %>%
-      mutate(!!sym(measure_col) := ifelse(
-        !!sym(qual_col) == qual_value, NA, !!sym(measure_col)
-      ))
-  }
-  proteome_wide <- dcast(
-    df_long,
-    formula = casting_formula,
-    value.var = measure_col
-  ) %>%
-    column_to_rownames(feature_id_col) %>%
-    as.matrix()
-  return(proteome_wide)
+    casting_formula <- as.formula(paste(
+        feature_id_col, sample_id_col,
+        sep = " ~ "
+    ))
+    if (!is.null(qual_col)) {
+        message("removing imputed values (requants)")
+        df_long <- df_long %>%
+            mutate(!!sym(measure_col) := ifelse(
+                !!sym(qual_col) == qual_value, NA, !!sym(measure_col)
+            ))
+    }
+    proteome_wide <- dcast(
+        df_long,
+        formula = casting_formula,
+        value.var = measure_col
+    ) %>%
+        column_to_rownames(feature_id_col) %>%
+        as.matrix()
+    return(proteome_wide)
 }
 
 
@@ -59,13 +59,13 @@ long_to_matrix <- function(df_long,
 #' @examples
 #' # Load necessary datasets
 #' data(
-#'   list = c("example_sample_annotation", "example_proteome_matrix"),
-#'   package = "proBatch"
+#'     list = c("example_sample_annotation", "example_proteome_matrix"),
+#'     package = "proBatch"
 #' )
 #' # Convert matrix to long format
 #' proteome_long <- matrix_to_long(
-#'   example_proteome_matrix,
-#'   example_sample_annotation
+#'     example_proteome_matrix,
+#'     example_sample_annotation
 #' )
 #'
 #' @export
@@ -75,29 +75,29 @@ matrix_to_long <- function(data_matrix, sample_annotation = NULL,
                            measure_col = "Intensity",
                            sample_id_col = "FullRunName",
                            step = NULL) {
-  df_long <- data_matrix %>%
-    as.data.frame() %>%
-    rownames_to_column(var = feature_id_col) %>%
-    melt(
-      id.var = feature_id_col, value.name = measure_col,
-      variable.name = sample_id_col, factorsAsStrings = FALSE
-    )
-  if (!is.null(step)) {
-    df_long <- df_long %>%
-      mutate(Step = step)
-  }
+    df_long <- data_matrix %>%
+        as.data.frame() %>%
+        rownames_to_column(var = feature_id_col) %>%
+        melt(
+            id.var = feature_id_col, value.name = measure_col,
+            variable.name = sample_id_col, factorsAsStrings = FALSE
+        )
+    if (!is.null(step)) {
+        df_long <- df_long %>%
+            mutate(Step = step)
+    }
 
-  if (!is.null(sample_annotation)) {
-    df_long <- check_sample_consistency(
-      sample_annotation = sample_annotation,
-      sample_id_col = sample_id_col,
-      df_long = df_long,
-      batch_col = NULL, order_col = NULL,
-      facet_col = NULL, merge = FALSE
-    )
-  }
+    if (!is.null(sample_annotation)) {
+        df_long <- check_sample_consistency(
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
+            df_long = df_long,
+            batch_col = NULL, order_col = NULL,
+            facet_col = NULL, merge = FALSE
+        )
+    }
 
-  return(df_long)
+    return(df_long)
 }
 
 
@@ -114,9 +114,9 @@ matrix_to_long <- function(data_matrix, sample_annotation = NULL,
 #' @examples
 #' data("example_proteome", package = "proBatch")
 #' generated_peptide_annotation <- create_peptide_annotation(
-#'   example_proteome,
-#'   feature_id_col = "peptide_group_label",
-#'   protein_col = c("Protein")
+#'     example_proteome,
+#'     feature_id_col = "peptide_group_label",
+#'     protein_col = c("Protein")
 #' )
 #'
 #' @seealso \code{\link{plot_peptides_of_one_protein}},
@@ -124,14 +124,14 @@ matrix_to_long <- function(data_matrix, sample_annotation = NULL,
 create_peptide_annotation <- function(df_long,
                                       feature_id_col = "peptide_group_label",
                                       protein_col = c("ProteinName", "Gene")) {
-  if (!all(protein_col %in% names(df_long))) {
-    stop(
-      sprintf("Column %s is not in the data"),
-      setdiff(names(df_long), protein_col)
-    )
-  }
-  peptide_annotation <- df_long %>%
-    select(all_of(c(feature_id_col, protein_col))) %>%
-    distinct()
-  return(peptide_annotation)
+    if (!all(protein_col %in% names(df_long))) {
+        stop(
+            sprintf("Column %s is not in the data"),
+            setdiff(names(df_long), protein_col)
+        )
+    }
+    peptide_annotation <- df_long %>%
+        select(all_of(c(feature_id_col, protein_col))) %>%
+        distinct()
+    return(peptide_annotation)
 }
