@@ -415,7 +415,6 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
                 min_measurements = min_measurements, ...
             ))
     }
-
     old_measure_col <- paste("preTrendFit", measure_col, sep = "_")
 
     corrected_df <- corrected_df %>%
@@ -445,7 +444,6 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
         default_cols = default_cols,
         minimal_cols = minimal_cols
     )
-
     return(corrected_df)
 }
 
@@ -760,6 +758,7 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
         measure_col = measure_col,
         sample_id_col = sample_id_col
     )
+
     corrected_df <- correct_batch_effects_df(
         df_long,
         sample_annotation,
@@ -774,7 +773,7 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
         no_fit_imputed = no_fit_imputed,
         qual_col = NULL,
         qual_value = NULL,
-        keep_all = FALSE, ...
+        keep_all = "default", ...
     )
     # Convert the corrected data frame back to matrix format
     corrected_matrix <- long_to_matrix(
