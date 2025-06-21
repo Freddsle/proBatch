@@ -379,7 +379,7 @@ plot_peptides_of_one_protein <- function(protein_name,
     } else {
         peptides <- df_long %>%
             filter((!!sym(protein_col)) == protein_name) %>%
-            pull(feature_id_col) %>%
+            pull(!!sym(feature_id_col)) %>%
             unique()
     }
     gg <- plot_single_feature(
@@ -434,7 +434,7 @@ plot_spike_in <- function(spike_ins = "BOVIN", peptide_annotation = NULL,
         if (protein_col %in% names(df_long)) {
             spike_in_peptides <- df_long %>%
                 filter(grepl(spike_ins, !!sym(protein_col))) %>%
-                pull(feature_id_col) %>%
+                pull(!!sym(feature_id_col)) %>%
                 as.character() %>%
                 unique()
         } else {
@@ -442,7 +442,7 @@ plot_spike_in <- function(spike_ins = "BOVIN", peptide_annotation = NULL,
                 if (protein_col %in% names(peptide_annotation)) {
                     spike_in_peptides <- peptide_annotation %>%
                         filter(grepl(spike_ins, !!sym(protein_col))) %>%
-                        pull(feature_id_col) %>%
+                        pull(!!sym(feature_id_col)) %>%
                         as.character() %>%
                         unique()
                     df_long <- df_long %>%
@@ -518,7 +518,7 @@ plot_iRT <- function(irt_pattern = "iRT",
     }
     iRT_peptides <- df_long %>%
         filter(grepl(irt_pattern, !!sym(protein_col))) %>%
-        pull(feature_id_col) %>%
+        pull(!!sym(feature_id_col)) %>%
         unique()
     gg <- plot_single_feature(
         feature_name = iRT_peptides,

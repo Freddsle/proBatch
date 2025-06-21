@@ -61,30 +61,40 @@ check_sample_consistency <- function(sample_annotation, sample_id_col, df_long,
         return(df_long)
     }
 
+    # Required column exists?
     if (!(sample_id_col %in% names(sample_annotation))) {
         stop(sprintf(
             "Sample ID column %s is not defined in sample annotation,
-                sample annotation cannot be used for correction/plotting",
+                sample annotation cannot be used for correction/plotting; cannot proceed.",
             sample_id_col
         ))
     }
-    if (!setequal(
-        unique(sample_annotation[[sample_id_col]]),
-        unique(df_long[[sample_id_col]])
-    )) {
-        warning("Sample IDs in sample annotation not consistent with samples in input data,
-            will merge, using intersecting Sample IDs only")
-        # TODO: expand the warnings for more specific cases: 1) sample annotation
-        # has samples not represented in data matrix; 2) dm has samples not in
-        # annotation;
-        # TODO: Break the merge if 1) sample annotation has duplicated samples;
-        # 2) dm has duplicated samples
+
+    # Check for duplicated IDs
+    dup_ann <- duplicated(sample_annotation[[sample_id_col]])
+    dup_df  <- duplicated(df_long[[sample_id_col]])
+    if (any(dup_ann)) {
+        warning("Duplicated sample IDs in sample_annotation.")
     }
+    if (any(dup_df)) {
+        message("Duplicated sample IDs in df_long.")
+    }
+
+    # Consistency check
+    ids_ann <- unique(sample_annotation[[sample_id_col]])
+    ids_df  <- unique(df_long[[sample_id_col]])
+    if (!setequal(ids_ann, ids_df)) {
+        warning(
+        "Mismatch between sample_annotation and df_long samples: ",
+        "will merge on intersecting IDs only."
+        )
+    }
+
+    # Merge if requested
     if (merge) {
         df_long <- merge_df_with_annotation(
             df_long, sample_annotation,
-            sample_id_col, batch_col, order_col,
-            facet_col
+            sample_id_col, batch_col, order_col, facet_col
         )
     }
     return(df_long)
@@ -286,8 +296,7 @@ add_vertical_batch_borders <- function(order_col, sample_id_col, batch_col,
                 group_by(!!sym(batch_col)) %>%
                 summarise(batch_size = n()) %>%
                 ungroup() %>%
-                mutate() %>% # enables adequate plotting for batches, where order doesn't
-                # start from one
+                # ensures adequate plotting for batches where order doesn't start from one
                 mutate(tipping.points = cumsum(batch_size)) %>%
                 mutate(tipping.points = tipping.points + .5 + min_order_val)
         }
