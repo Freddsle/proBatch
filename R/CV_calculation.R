@@ -29,8 +29,8 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
 
     if (is.null(biospecimen_id_col)) {
         warning("considering all samples as replicates!")
-        df_long$biospecimen_id_col <- "replication"
-        biospecimen_id_col <- "biospecimen_id_col"
+        biospecimen_id_col <- "biospecimen_id"
+        df_long[[biospecimen_id_col]] <- "replication"
     } else {
         if (!(biospecimen_id_col %in% names(df_long))) {
             stop("biospecimen ID, indicating replicates, is not in the data (df_long or sample_annotation)")
@@ -44,17 +44,20 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
 
     if (!is.null(batch_col)) {
         df_long <- df_long %>%
-            group_by(!!!syms(c(feature_id_col, batch_col, biospecimen_id_col))) %>%
-            mutate(n = sum(!is.na(!!sym(measure_col))))
+            group_by(!!sym(feature_id_col), !!sym(batch_col), !!sym(biospecimen_id_col)) %>%
+            mutate(n = sum(!is.na(!!sym(measure_col)))) %>%
+            ungroup()
     } else {
         df_long <- df_long %>%
-            group_by(!!!syms(c(feature_id_col, biospecimen_id_col))) %>%
-            mutate(n = sum(!is.na(!!sym(measure_col))))
+            group_by(!!sym(feature_id_col), !!sym(biospecimen_id_col)) %>%
+            mutate(n = sum(!is.na(!!sym(measure_col)))) %>%
+            ungroup()
     }
+
     if (any(df_long$n <= 2)) {
         # how many features have 2 or less measurements?
         n_peptides <- sum(df_long$n <= 2)
-        warning(paste0("Cannot calculate CV for ", n_peptides, " peptides with 2 or less measurements, removing those peptides"))
+        warning(paste0("Cannot calculate CV for ", nrow(n_peptides), " peptides with 2 or less measurements, removing those peptides"))
         df_long <- df_long %>%
             filter(n > 2)
     }
@@ -72,7 +75,8 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
         CV_df <- df_long %>%
             group_by(!!!syms(c(feature_id_col, "Step"))) %>%
             mutate(CV_total = 100 * sd(!!sym(measure_col), na.rm = TRUE) /
-                mean(!!sym(measure_col), na.rm = TRUE))
+                mean(!!sym(measure_col), na.rm = TRUE)) %>%
+            ungroup()
         if (!is.null(batch_col)) {
             CV_df <- CV_df %>%
                 select(c(!!sym(feature_id_col), CV_total, CV_perBatch)) %>%
@@ -86,7 +90,7 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
         if (!is.null(batch_col)) {
             df_long <- df_long %>%
                 group_by(!!!syms(c(feature_id_col, batch_col))) %>%
-                mutate(CV_perBatch = sd(!!sym(measure_col), na.rm = TRUE) /
+                mutate(CV_perBatch = 100 * sd(!!sym(measure_col), na.rm = TRUE) /
                     mean(!!sym(measure_col), na.rm = TRUE)) %>%
                 ungroup()
         } else {
@@ -95,7 +99,8 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
         CV_df <- df_long %>%
             group_by(!!sym(feature_id_col)) %>%
             mutate(CV_total = sd(!!sym(measure_col), na.rm = TRUE) /
-                mean(!!sym(measure_col), na.rm = TRUE))
+                mean(!!sym(measure_col), na.rm = TRUE)) %>%
+            ungroup()
         if (!is.null(batch_col)) {
             CV_df <- CV_df %>%
                 select(c(!!sym(feature_id_col), CV_total, CV_perBatch)) %>%
