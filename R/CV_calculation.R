@@ -194,16 +194,16 @@ plot_CV_distr <- function(df_long, sample_annotation = NULL,
         log_base = log_base,
         offset = offset
     )
-
+    # keep only finite CV values - check, message, and filter
+    if (any(!is.finite(CV_df$CV_total))) {
+        message("Some CV values are not finite, filtering them out - number of such features: ",
+                sum(!is.finite(CV_df$CV_total)))
+        CV_df <- CV_df %>%
+            filter(is.finite(CV_total))
+    }
     # Check if CV_df is empty
     if (nrow(CV_df) == 0) {
         stop("No features with sufficient measurements to calculate CV.")
-    }
-    # keep only finite CV values - check, message, and filter
-    if (any(!is.finite(CV_df$CV_total))) {
-        message("Some CV values are not finite, filtering them out.")
-        CV_df <- CV_df %>%
-            filter(is.finite(CV_total))
     }
 
     gg <- plot_CV_distr.df(

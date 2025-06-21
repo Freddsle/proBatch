@@ -254,15 +254,17 @@ test_that("filename argument saves a file", {
     # filter to keep only finite values or value equal to 0
     dplyr::filter(is.finite(Intensity) | Intensity == 0)
   tmpfile <- tempfile(fileext = ".png")
-  ggs <- plot_CV_distr.df(
-    CV_df     = calculate_feature_CV(
-      df_long            = df,
-      sample_annotation  = example_sample_annotation,
-      batch_col          = "MS_batch",
-      biospecimen_id_col = "EarTag"
-    ),
-    filename  = tmpfile,
-    log_y_scale = FALSE
+  cv_df <- calculate_feature_CV(
+    df_long            = df,
+    sample_annotation  = example_sample_annotation,
+    batch_col          = "MS_batch",
+    biospecimen_id_col = "EarTag"
+  ) %>%
+    dplyr::filter(is.finite(CV_total))
+    ggs <- plot_CV_distr.df(
+        CV_df     = cv_df,,
+        filename  = tmpfile,
+        log_y_scale = FALSE
   )
   expect_true(file.exists(tmpfile))
   unlink(tmpfile)
