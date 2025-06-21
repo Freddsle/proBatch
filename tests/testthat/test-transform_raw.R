@@ -84,7 +84,11 @@ test_that("log_transform_dm and unlog_dm: warning when log_base is NULL", {
 
 test_that("log_transform_df: data frame long format transforms correctly", {
     # Create a simple tibble with an "Intensity" column
+<<<<<<< HEAD
     df_long <- tibble(
+=======
+    df_long <- tibble::tibble(
+>>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
         Sample = rep(c("A", "B"), each = 3),
         Intensity = c(0, 1, 4, 0.2, 2.5, 10)
     )
@@ -114,7 +118,11 @@ test_that("log_transform_df: data frame long format transforms correctly", {
 test_that("unlog_df: handles negative or zero after unlog (informative check)", {
     # Construct a logged value that yields small or negative on unlog
     # For example, if logged is very negative: base^(-10) - offset → nearly zero minus offset → negative
+<<<<<<< HEAD
     df_long <- tibble(
+=======
+    df_long <- tibble::tibble(
+>>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
         Sample = "X",
         Intensity = -10 # logged value
     )
@@ -126,6 +134,7 @@ test_that("unlog_df: handles negative or zero after unlog (informative check)", 
     expect_equal(df_unlogged$Intensity, expected_val)
     # This may be negative; test that function does not error
     expect_true(is.numeric(df_unlogged$Intensity))
+<<<<<<< HEAD
 })
 
 test_that("log_transform_df produces expected values", {
@@ -162,4 +171,6 @@ test_that("unlog functions invert log transformations", {
 
     expect_warning(unlog_df(log_df, log_base = NULL))
     expect_warning(unlog_dm(log_mat, log_base = NULL))
+=======
+>>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
 })

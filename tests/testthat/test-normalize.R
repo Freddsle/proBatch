@@ -4,7 +4,11 @@ test_that("quantile_normalize", {
     matrix_test <- example_proteome_matrix[1:10, ]
     quant_normalized_matrix <- quantile_normalize_dm(matrix_test)
 
+<<<<<<< HEAD
     quant_matrix <- normalize.quantiles(matrix_test)
+=======
+    quant_matrix <- preprocessCore::normalize.quantiles(matrix_test)
+>>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
 
     expect_equal(quant_matrix[1:10], quant_normalized_matrix[1:10], ignore_attr = TRUE)
 })
@@ -30,6 +34,7 @@ test_that("normalize_sample_medians", {
     expect_equal(median_centered_data$Intensity[1], 2728887.42, tolerance = 1e-2, ignore_attr = TRUE)
     expect_equal(median_centered_data$Intensity[549], 35191.95, tolerance = 1e-2, ignore_attr = TRUE)
     expect_equal(median_centered_data$preNorm_Intensity[549], 25479.8, ignore_attr = TRUE)
+<<<<<<< HEAD
 })
 
 test_that("normalize_data_dm forwards offset to log transform", {
@@ -42,4 +47,6 @@ test_that("normalize_data_dm forwards offset to log transform", {
     res_median <- normalize_data_dm(mat, normalize_func = "medianCentering", log_base = 2, offset = 0.5)
     expected_median <- normalize_sample_medians_dm(log_transform_dm(mat, log_base = 2, offset = 0.5))
     expect_equal(res_median, expected_median, ignore_attr = TRUE)
+=======
+>>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
 })

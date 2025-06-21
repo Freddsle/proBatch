@@ -131,20 +131,20 @@
 #' @aliases proBatch-package
 "_PACKAGE"
 if (getRversion() >= "2.15.1") {
-  utils::globalVariables(c(
-    "batch_size",
-    "tipping.points",
-    "min_order_value",
-    "data", "batch_total", "fit", "mean_fit",
-    "CV_total", "CV_perBatch", "diff_fit", "diff_medians", "sd",
-    "median_global", "median_batch", "diff_norm",
-    "mean_global", "mean_batch", "diff_means",
-    "dateTime",
-    "same_protein", "batch_the_same",
-    "median_run",
-    "Var1", "Var2", "label", "weights", "category",
-    "Step", "correlation",
-    "."
-  ))
+    utils::globalVariables(c(
+        "batch_size",
+        "tipping.points",
+        "min_order_value",
+        "data", "batch_total", "fit", "mean_fit",
+        "CV_total", "CV_perBatch", "diff_fit", "diff_medians", "sd",
+        "median_global", "median_batch", "diff_norm",
+        "mean_global", "mean_batch", "diff_means",
+        "dateTime",
+        "same_protein", "batch_the_same",
+        "median_run",
+        "Var1", "Var2", "label", "weights", "category",
+        "Step", "correlation",
+        "."
+    ))
 }
 NULL

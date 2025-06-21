@@ -43,6 +43,7 @@ test_that("date_to_sample_order", {
 
     expect_equal(new_annotation_worder$new_order[1], 1)
     expect_equal(new_annotation_worder$new_order[2], 2)
+<<<<<<< HEAD
 })
 
 
@@ -108,4 +109,6 @@ test_that("date_to_sample_order: grouping by instrument resets ranks", {
     ord_by_inst <- split(out$ord, out$instrument)
     expect_equal(ord_by_inst$A, 1:3)
     expect_equal(ord_by_inst$B, 1:3)
+=======
+>>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
 })

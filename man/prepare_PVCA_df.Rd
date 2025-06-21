@@ -63,8 +63,8 @@ prepare the weights of Principal Variance Components
 data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
 matrix_test <- example_proteome_matrix[1:150, ]
 pvca_df_res <- prepare_PVCA_df(matrix_test, example_sample_annotation,
-  technical_factors = c("MS_batch", "digestion_batch"),
-  biological_factors = c("Diet", "Sex", "Strain"),
-  pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1
+    technical_factors = c("MS_batch", "digestion_batch"),
+    biological_factors = c("Diet", "Sex", "Strain"),
+    pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1
 )
 }

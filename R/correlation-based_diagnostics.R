@@ -38,50 +38,50 @@ plot_corr_matrix <- function(corr_matrix,
                              factors_to_plot = NULL,
                              cluster_rows = FALSE, cluster_cols = FALSE,
                              heatmap_color = colorRampPalette(
-                               rev(brewer.pal(n = 7, name = "RdYlBu"))
+                                 rev(brewer.pal(n = 7, name = "RdYlBu"))
                              )(100),
                              color_list = NULL,
                              filename = NULL, width = 7, height = 7,
                              units = c("cm", "in", "mm"),
                              plot_title = NULL, ...) {
-  # infer the color scheme for annotation (cols & rows)
-  if (is.null(color_list) && !is.null(annotation)) {
-    warning("color_list for annotation (cols & rows) not defined, inferring automatically.
+    # infer the color scheme for annotation (cols & rows)
+    if (is.null(color_list) && !is.null(annotation)) {
+        warning("color_list for annotation (cols & rows) not defined, inferring automatically.
             Numeric/factor columns are guessed, for more controlled color mapping use
             sample_annotation_to_colors()")
-    color_list <- sample_annotation_to_colors(
-      sample_annotation = annotation,
-      sample_id_col = annotation_id_col,
-      factor_columns = factors_to_plot,
-      numeric_columns = NULL,
-      guess_factors = TRUE
-    )
-  }
+        color_list <- sample_annotation_to_colors(
+            sample_annotation = annotation,
+            sample_id_col = annotation_id_col,
+            factor_columns = factors_to_plot,
+            numeric_columns = NULL,
+            guess_factors = TRUE
+        )
+    }
 
-  if (cluster_rows != cluster_cols) {
-    warning("different arguments for clustering of rows and columns, this will make
+    if (cluster_rows != cluster_cols) {
+        warning("different arguments for clustering of rows and columns, this will make
             correlation matrix heatmap assimmetrical!")
-  }
-  p <- plot_heatmap_generic(
-    corr_matrix,
-    column_annotation_df = annotation,
-    row_annotation_df = annotation,
-    fill_the_missing = NULL,
-    col_ann_id_col = annotation_id_col,
-    row_ann_id_col = annotation_id_col,
-    columns_for_cols = factors_to_plot,
-    columns_for_rows = factors_to_plot,
-    cluster_rows = cluster_rows, cluster_cols = cluster_cols,
-    annotation_color_cols = color_list,
-    annotation_color_rows = color_list,
-    heatmap_color = heatmap_color,
-    filename = filename,
-    width = width, height = height,
-    units = units,
-    plot_title = plot_title,
-    ...
-  )
-  return(p)
+    }
+    p <- plot_heatmap_generic(
+        corr_matrix,
+        column_annotation_df = annotation,
+        row_annotation_df = annotation,
+        fill_the_missing = NULL,
+        col_ann_id_col = annotation_id_col,
+        row_ann_id_col = annotation_id_col,
+        columns_for_cols = factors_to_plot,
+        columns_for_rows = factors_to_plot,
+        cluster_rows = cluster_rows, cluster_cols = cluster_cols,
+        annotation_color_cols = color_list,
+        annotation_color_rows = color_list,
+        heatmap_color = heatmap_color,
+        filename = filename,
+        width = width, height = height,
+        units = units,
+        plot_title = plot_title,
+        ...
+    )
+    return(p)
 }
 
 #' Peptide correlation matrix (heatmap)
@@ -101,14 +101,14 @@ plot_corr_matrix <- function(corr_matrix,
 #' @examples
 #' data(list = c("example_peptide_annotation", "example_proteome_matrix"), package = "proBatch")
 #' protein_corrplot_plot <- plot_protein_corrplot(example_proteome_matrix,
-#'   protein_name = "Haao", peptide_annotation = example_peptide_annotation,
-#'   protein_col = "Gene"
+#'     protein_name = "Haao", peptide_annotation = example_peptide_annotation,
+#'     protein_col = "Gene"
 #' )
 #'
 #' protein_corrplot_plot <- plot_protein_corrplot(example_proteome_matrix,
-#'   protein_name = c("Haao", "Dhtkd1"),
-#'   peptide_annotation = example_peptide_annotation,
-#'   protein_col = "Gene", factors_to_plot = "Gene"
+#'     protein_name = c("Haao", "Dhtkd1"),
+#'     peptide_annotation = example_peptide_annotation,
+#'     protein_col = "Gene", factors_to_plot = "Gene"
 #' )
 #'
 plot_protein_corrplot <- function(data_matrix,
@@ -119,48 +119,48 @@ plot_protein_corrplot <- function(data_matrix,
                                   factors_to_plot = c("ProteinName"),
                                   cluster_rows = FALSE, cluster_cols = FALSE,
                                   heatmap_color = colorRampPalette(
-                                    rev(brewer.pal(n = 7, name = "RdYlBu"))
+                                      rev(brewer.pal(n = 7, name = "RdYlBu"))
                                   )(100),
                                   color_list = NULL,
                                   filename = NULL,
                                   width = NA, height = NA,
                                   units = c("cm", "in", "mm"),
                                   plot_title = NULL, ...) {
-  peptides <- peptide_annotation %>%
-    filter(!!(sym(feature_id_col)) %in% rownames(data_matrix)) %>%
-    filter(!!(sym(protein_col)) %in% protein_name) %>%
-    pull(feature_id_col) %>%
-    as.character()
+    peptides <- peptide_annotation %>%
+        filter(!!(sym(feature_id_col)) %in% rownames(data_matrix)) %>%
+        filter(!!(sym(protein_col)) %in% protein_name) %>%
+        pull(feature_id_col) %>%
+        as.character()
 
-  data_matrix_sub <- data_matrix[peptides, ]
-  corr_matrix <- cor(t(data_matrix_sub), use = "pairwise.complete.obs")
+    data_matrix_sub <- data_matrix[peptides, ]
+    corr_matrix <- cor(t(data_matrix_sub), use = "pairwise.complete.obs")
 
-  peptide_annotation <- peptide_annotation %>%
-    filter(!!(sym(protein_col)) %in% protein_name) %>%
-    arrange(!!sym(protein_col))
+    peptide_annotation <- peptide_annotation %>%
+        filter(!!(sym(protein_col)) %in% protein_name) %>%
+        arrange(!!sym(protein_col))
 
-  corr_matrix <- corr_matrix[
-    peptide_annotation[[feature_id_col]],
-    peptide_annotation[[feature_id_col]]
-  ]
+    corr_matrix <- corr_matrix[
+        peptide_annotation[[feature_id_col]],
+        peptide_annotation[[feature_id_col]]
+    ]
 
-  if (is.null(plot_title) && length(protein_name) == 1) {
-    plot_title <- sprintf("Correlation matrix of peptides from %s", protein_name)
-  } else if (is.null(plot_title) && length(protein_name) > 1) {
-    plot_title <- sprintf("Peptide correlation matrix of %s proteins", paste(protein_name, collapse = ", "))
-  }
+    if (is.null(plot_title) && length(protein_name) == 1) {
+        plot_title <- sprintf("Correlation matrix of peptides from %s", protein_name)
+    } else if (is.null(plot_title) && length(protein_name) > 1) {
+        plot_title <- sprintf("Peptide correlation matrix of %s proteins", paste(protein_name, collapse = ", "))
+    }
 
-  plot_corr_matrix(corr_matrix,
-    annotation = peptide_annotation,
-    annotation_id_col = feature_id_col,
-    factors_to_plot = factors_to_plot,
-    cluster_rows = cluster_rows, cluster_cols = cluster_cols,
-    heatmap_color = heatmap_color,
-    color_list = color_list,
-    plot_title = plot_title,
-    filename = filename, width = width,
-    height = height, units = units, ...
-  )
+    plot_corr_matrix(corr_matrix,
+        annotation = peptide_annotation,
+        annotation_id_col = feature_id_col,
+        factors_to_plot = factors_to_plot,
+        cluster_rows = cluster_rows, cluster_cols = cluster_cols,
+        heatmap_color = heatmap_color,
+        color_list = color_list,
+        plot_title = plot_title,
+        filename = filename, width = width,
+        height = height, units = units, ...
+    )
 }
 
 #' Sample correlation matrix (heatmap)
@@ -183,30 +183,30 @@ plot_protein_corrplot <- function(data_matrix,
 #' @examples
 #' data(list = c("example_sample_annotation", "example_proteome_matrix"), package = "proBatch")
 #' specified_samples <- example_sample_annotation$FullRunName[
-#'   which(example_sample_annotation$order %in% 110:115)
+#'     which(example_sample_annotation$order %in% 110:115)
 #' ]
 #'
 #' sample_corr_heatmap <- plot_sample_corr_heatmap(example_proteome_matrix,
-#'   samples_to_plot = specified_samples,
-#'   factors_to_plot = c("MS_batch", "Diet", "DateTime", "digestion_batch"),
-#'   cluster_rows = FALSE, cluster_cols = FALSE,
-#'   annotation_names_col = TRUE, annotation_legend = FALSE,
-#'   show_colnames = FALSE
+#'     samples_to_plot = specified_samples,
+#'     factors_to_plot = c("MS_batch", "Diet", "DateTime", "digestion_batch"),
+#'     cluster_rows = FALSE, cluster_cols = FALSE,
+#'     annotation_names_col = TRUE, annotation_legend = FALSE,
+#'     show_colnames = FALSE
 #' )
 #'
 #' color_list <- sample_annotation_to_colors(example_sample_annotation,
-#'   factor_columns = c(
-#'     "MS_batch", "EarTag", "Strain",
-#'     "Diet", "digestion_batch", "Sex"
-#'   ),
-#'   numeric_columns = c("DateTime", "order")
+#'     factor_columns = c(
+#'         "MS_batch", "EarTag", "Strain",
+#'         "Diet", "digestion_batch", "Sex"
+#'     ),
+#'     numeric_columns = c("DateTime", "order")
 #' )
 #' sample_corr_heatmap_annotated <- plot_sample_corr_heatmap(log_transform_dm(example_proteome_matrix),
-#'   sample_annotation = example_sample_annotation,
-#'   factors_to_plot = c("MS_batch", "Diet", "DateTime", "digestion_batch"),
-#'   cluster_rows = FALSE, cluster_cols = FALSE,
-#'   annotation_names_col = TRUE,
-#'   show_colnames = FALSE, color_list = color_list
+#'     sample_annotation = example_sample_annotation,
+#'     factors_to_plot = c("MS_batch", "Diet", "DateTime", "digestion_batch"),
+#'     cluster_rows = FALSE, cluster_cols = FALSE,
+#'     annotation_names_col = TRUE,
+#'     show_colnames = FALSE, color_list = color_list
 #' )
 #'
 #' @seealso \code{\link[pheatmap]{pheatmap}}
@@ -217,102 +217,102 @@ plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
                                      factors_to_plot = NULL,
                                      cluster_rows = FALSE, cluster_cols = FALSE,
                                      heatmap_color = colorRampPalette(
-                                       rev(brewer.pal(n = 7, name = "RdYlBu"))
+                                         rev(brewer.pal(n = 7, name = "RdYlBu"))
                                      )(100),
                                      color_list = NULL,
                                      filename = NULL,
                                      width = NA, height = NA,
                                      units = c("cm", "in", "mm"),
                                      plot_title = sprintf(
-                                       "Correlation matrix of%s samples",
-                                       ifelse(is.null(samples_to_plot), "", " selected")
+                                         "Correlation matrix of%s samples",
+                                         ifelse(is.null(samples_to_plot), "", " selected")
                                      ), ...) {
-  if (!is.null(samples_to_plot)) {
-    if (!all(samples_to_plot %in% colnames(data_matrix))) {
-      missing_samples <- setdiff(samples_to_plot, colnames(data_matrix))
-      stop(sprintf(
-        "The following samples are not in data matrix and can not
+    if (!is.null(samples_to_plot)) {
+        if (!all(samples_to_plot %in% colnames(data_matrix))) {
+            missing_samples <- setdiff(samples_to_plot, colnames(data_matrix))
+            stop(sprintf(
+                "The following samples are not in data matrix and can not
                     be used in sample correlation plotting %s",
-        paste(missing_samples, collapse = ";\n")
-      ))
+                paste(missing_samples, collapse = ";\n")
+            ))
+        }
+        corr_matrix <- cor(data_matrix[, samples_to_plot], use = "complete.obs")
+    } else {
+        corr_matrix <- cor(data_matrix, use = "complete.obs")
     }
-    corr_matrix <- cor(data_matrix[, samples_to_plot], use = "complete.obs")
-  } else {
-    corr_matrix <- cor(data_matrix, use = "complete.obs")
-  }
 
-  if (!is.null(sample_annotation)) {
-    if (!all(samples_to_plot %in% sample_annotation[[sample_id_col]])) {
-      warning("some of the samples are not in annotation, this may lead to problems in color annotation")
+    if (!is.null(sample_annotation)) {
+        if (!all(samples_to_plot %in% sample_annotation[[sample_id_col]])) {
+            warning("some of the samples are not in annotation, this may lead to problems in color annotation")
+        }
     }
-  }
 
-  p <- plot_corr_matrix(
-    corr_matrix,
-    annotation = sample_annotation,
-    annotation_id_col = sample_id_col,
-    factors_to_plot = factors_to_plot,
-    cluster_rows = cluster_rows, cluster_cols = cluster_cols,
-    heatmap_color = heatmap_color,
-    color_list = color_list,
-    plot_title = plot_title,
-    filename = filename,
-    width = width, height = height, units = units, ...
-  )
-  return(p)
+    p <- plot_corr_matrix(
+        corr_matrix,
+        annotation = sample_annotation,
+        annotation_id_col = sample_id_col,
+        factors_to_plot = factors_to_plot,
+        cluster_rows = cluster_rows, cluster_cols = cluster_cols,
+        heatmap_color = heatmap_color,
+        color_list = color_list,
+        plot_title = plot_title,
+        filename = filename,
+        width = width, height = height, units = units, ...
+    )
+    return(p)
 }
 
 get_sample_corr_df <- function(cor_proteome, sample_annotation,
                                sample_id_col = "FullRunName",
                                biospecimen_id_col = "EarTag",
                                batch_col = "MS_batch") {
-  comb_to_keep <- data.frame(t(combn(colnames(cor_proteome), 2)))
-  names(comb_to_keep) <- paste(sample_id_col, seq_len(2), sep = "_")
+    comb_to_keep <- data.frame(t(combn(colnames(cor_proteome), 2)))
+    names(comb_to_keep) <- paste(sample_id_col, seq_len(2), sep = "_")
 
-  spec_cols <- c(biospecimen_id_col, batch_col)
+    spec_cols <- c(biospecimen_id_col, batch_col)
 
-  corr_distribution <- melt(cor_proteome,
-    varnames = paste(sample_id_col, seq_len(2), sep = "_"),
-    value.name = "correlation"
-  ) %>%
-    merge(comb_to_keep) %>%
-    merge(sample_annotation %>% select(all_of(c(sample_id_col, spec_cols))),
-      by.x = paste(sample_id_col, "1", sep = "_"),
-      by.y = sample_id_col, all.x = TRUE
+    corr_distribution <- melt(cor_proteome,
+        varnames = paste(sample_id_col, seq_len(2), sep = "_"),
+        value.name = "correlation"
     ) %>%
-    data.table::setnames(
-      old = spec_cols,
-      new = paste(spec_cols, 1, sep = "")
-    ) %>%
-    merge(sample_annotation %>% select(all_of(c(sample_id_col, spec_cols))),
-      by.x = paste(sample_id_col, "2", sep = "_"),
-      by.y = sample_id_col, all.x = TRUE
-    ) %>%
-    data.table::setnames(
-      old = spec_cols,
-      new = paste(spec_cols, 2, sep = "")
-    ) %>%
-    mutate(replicate = (!!sym(paste(biospecimen_id_col, "1", sep = "")) ==
-      !!sym(paste(biospecimen_id_col, "2", sep = "")))) %>%
-    mutate(
-      batch_the_same = (!!sym(paste(batch_col, "1", sep = "")) ==
-        !!sym(paste(batch_col, "2", sep = ""))),
-      batches = paste(!!sym(paste(batch_col, "1", sep = "")),
-        !!sym(paste(batch_col, "2", sep = "")),
-        sep = ":"
-      )
-    ) %>%
-    mutate(batch_replicate = ifelse(replicate,
-      ifelse(batch_the_same,
-        "same_batch\nsame_biospecimen",
-        "same_biospecimen\ndiff_batch"
-      ),
-      ifelse(batch_the_same,
-        "same_batch\ndiff_biospecimen",
-        "diff_batch\ndiff_biospecimen"
-      )
-    ))
-  return(corr_distribution)
+        merge(comb_to_keep) %>%
+        merge(sample_annotation %>% select(all_of(c(sample_id_col, spec_cols))),
+            by.x = paste(sample_id_col, "1", sep = "_"),
+            by.y = sample_id_col, all.x = TRUE
+        ) %>%
+        data.table::setnames(
+            old = spec_cols,
+            new = paste(spec_cols, 1, sep = "")
+        ) %>%
+        merge(sample_annotation %>% select(all_of(c(sample_id_col, spec_cols))),
+            by.x = paste(sample_id_col, "2", sep = "_"),
+            by.y = sample_id_col, all.x = TRUE
+        ) %>%
+        data.table::setnames(
+            old = spec_cols,
+            new = paste(spec_cols, 2, sep = "")
+        ) %>%
+        mutate(replicate = (!!sym(paste(biospecimen_id_col, "1", sep = "")) ==
+            !!sym(paste(biospecimen_id_col, "2", sep = "")))) %>%
+        mutate(
+            batch_the_same = (!!sym(paste(batch_col, "1", sep = "")) ==
+                !!sym(paste(batch_col, "2", sep = ""))),
+            batches = paste(!!sym(paste(batch_col, "1", sep = "")),
+                !!sym(paste(batch_col, "2", sep = "")),
+                sep = ":"
+            )
+        ) %>%
+        mutate(batch_replicate = ifelse(replicate,
+            ifelse(batch_the_same,
+                "same_batch\nsame_biospecimen",
+                "same_biospecimen\ndiff_batch"
+            ),
+            ifelse(batch_the_same,
+                "same_batch\ndiff_biospecimen",
+                "diff_batch\ndiff_biospecimen"
+            )
+        ))
+    return(corr_distribution)
 }
 
 
@@ -348,9 +348,9 @@ get_sample_corr_df <- function(cor_proteome, sample_annotation,
 #' @examples
 #' data(list = c("example_sample_annotation", "example_proteome_matrix"), package = "proBatch")
 #' corr_distribution <- calculate_sample_corr_distr(
-#'   data_matrix = example_proteome_matrix,
-#'   sample_annotation = example_sample_annotation,
-#'   batch_col = "MS_batch", biospecimen_id_col = "EarTag"
+#'     data_matrix = example_proteome_matrix,
+#'     sample_annotation = example_sample_annotation,
+#'     batch_col = "MS_batch", biospecimen_id_col = "EarTag"
 #' )
 #'
 #' @export
@@ -360,34 +360,34 @@ calculate_sample_corr_distr <- function(data_matrix, sample_annotation,
                                         biospecimen_id_col = "EarTag",
                                         sample_id_col = "FullRunName",
                                         batch_col = "MS_batch") {
-  df_long <- matrix_to_long(data_matrix, sample_id_col = sample_id_col)
-  df_long <- check_sample_consistency(
-    sample_annotation,
-    sample_id_col,
-    df_long,
-    batch_col,
-    order_col = NULL,
-    facet_col = NULL,
-    merge = FALSE
-  )
-  data_matrix <- long_to_matrix(df_long, sample_id_col = sample_id_col)
-
-  if (!is.null(repeated_samples)) {
-    message("calculating correlation of repeated samples only")
-    corr_matrix <- cor(data_matrix[, repeated_samples],
-      use = "pairwise.complete.obs"
+    df_long <- matrix_to_long(data_matrix, sample_id_col = sample_id_col)
+    df_long <- check_sample_consistency(
+        sample_annotation,
+        sample_id_col,
+        df_long,
+        batch_col,
+        order_col = NULL,
+        facet_col = NULL,
+        merge = FALSE
     )
-  } else {
-    corr_matrix <- cor(data_matrix, use = "pairwise.complete.obs")
-  }
-  corr_distribution <- get_sample_corr_df(
-    cor_proteome = corr_matrix,
-    sample_annotation = sample_annotation,
-    sample_id_col = sample_id_col,
-    biospecimen_id_col = biospecimen_id_col,
-    batch_col = batch_col
-  )
-  return(corr_distribution)
+    data_matrix <- long_to_matrix(df_long, sample_id_col = sample_id_col)
+
+    if (!is.null(repeated_samples)) {
+        message("calculating correlation of repeated samples only")
+        corr_matrix <- cor(data_matrix[, repeated_samples],
+            use = "pairwise.complete.obs"
+        )
+    } else {
+        corr_matrix <- cor(data_matrix, use = "pairwise.complete.obs")
+    }
+    corr_distribution <- get_sample_corr_df(
+        cor_proteome = corr_matrix,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        biospecimen_id_col = biospecimen_id_col,
+        batch_col = batch_col
+    )
+    return(corr_distribution)
 }
 
 #' @name plot_sample_corr_distribution
@@ -429,11 +429,11 @@ NULL
 #' @examples
 #' data(list = c("example_sample_annotation", "example_proteome_matrix"), package = "proBatch")
 #' sample_corr_distribution_plot <- plot_sample_corr_distribution(
-#'   example_proteome_matrix,
-#'   example_sample_annotation,
-#'   batch_col = "MS_batch",
-#'   biospecimen_id_col = "EarTag",
-#'   plot_param = "batch_replicate"
+#'     example_proteome_matrix,
+#'     example_sample_annotation,
+#'     batch_col = "MS_batch",
+#'     biospecimen_id_col = "EarTag",
+#'     plot_param = "batch_replicate"
 #' )
 #'
 #' @export
@@ -448,40 +448,40 @@ plot_sample_corr_distribution <- function(data_matrix, sample_annotation,
                                           plot_title = "Sample correlation distribution",
                                           plot_param = "batch_replicate",
                                           theme = "classic") {
-  if (!is.list(data_matrix)) {
-    corr_distribution <- calculate_sample_corr_distr(
-      data_matrix = data_matrix,
-      sample_annotation = sample_annotation,
-      sample_id_col = sample_id_col,
-      biospecimen_id_col = biospecimen_id_col,
-      batch_col = batch_col
+    if (!is.list(data_matrix)) {
+        corr_distribution <- calculate_sample_corr_distr(
+            data_matrix = data_matrix,
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
+            biospecimen_id_col = biospecimen_id_col,
+            batch_col = batch_col
+        )
+    } else {
+        corr_distribution <- lapply(seq_len(length(data_matrix)), function(i) {
+            dm <- data_matrix[[i]]
+            corr_distribution <- calculate_sample_corr_distr(
+                data_matrix = dm,
+                repeated_samples = repeated_samples,
+                sample_annotation = sample_annotation,
+                biospecimen_id_col = biospecimen_id_col,
+                sample_id_col = sample_id_col,
+                batch_col = batch_col
+            )
+            corr_distribution$Step <- names(data_matrix)[i]
+            return(corr_distribution)
+        })
+        corr_distribution <- do.call(rbind, corr_distribution)
+    }
+    gg <- plot_sample_corr_distribution.corrDF(
+        corr_distribution = corr_distribution,
+        filename = filename,
+        width = width, height = height,
+        units = units,
+        plot_title = plot_title,
+        plot_param = plot_param,
+        theme = theme
     )
-  } else {
-    corr_distribution <- lapply(seq_len(length(data_matrix)), function(i) {
-      dm <- data_matrix[[i]]
-      corr_distribution <- calculate_sample_corr_distr(
-        data_matrix = dm,
-        repeated_samples = repeated_samples,
-        sample_annotation = sample_annotation,
-        biospecimen_id_col = biospecimen_id_col,
-        sample_id_col = sample_id_col,
-        batch_col = batch_col
-      )
-      corr_distribution$Step <- names(data_matrix)[i]
-      return(corr_distribution)
-    })
-    corr_distribution <- do.call(rbind, corr_distribution)
-  }
-  gg <- plot_sample_corr_distribution.corrDF(
-    corr_distribution = corr_distribution,
-    filename = filename,
-    width = width, height = height,
-    units = units,
-    plot_title = plot_title,
-    plot_param = plot_param,
-    theme = theme
-  )
-  return(gg)
+    return(gg)
 }
 
 #' @rdname plot_sample_corr_distribution
@@ -489,19 +489,19 @@ plot_sample_corr_distribution <- function(data_matrix, sample_annotation,
 #' @examples
 #' data(list = c("example_sample_annotation", "example_proteome_matrix"), package = "proBatch")
 #' corr_distribution <- calculate_sample_corr_distr(
-#'   data_matrix = example_proteome_matrix,
-#'   sample_annotation = example_sample_annotation,
-#'   batch_col = "MS_batch", biospecimen_id_col = "EarTag"
+#'     data_matrix = example_proteome_matrix,
+#'     sample_annotation = example_sample_annotation,
+#'     batch_col = "MS_batch", biospecimen_id_col = "EarTag"
 #' )
 #' sample_corr_distribution_plot <- plot_sample_corr_distribution.corrDF(corr_distribution,
-#'   plot_param = "batch_replicate"
+#'     plot_param = "batch_replicate"
 #' )
 #'
 #' \donttest{
 #' sample_corr_distribution_plot <- plot_sample_corr_distribution.corrDF(corr_distribution,
-#'   plot_param = "batch_replicate",
-#'   filename = "test_sampleCorr.png",
-#'   width = 28, height = 28, units = "cm"
+#'     plot_param = "batch_replicate",
+#'     filename = "test_sampleCorr.png",
+#'     width = 28, height = 28, units = "cm"
 #' )
 #' }
 #'
@@ -513,81 +513,81 @@ plot_sample_corr_distribution.corrDF <- function(corr_distribution,
                                                  plot_title = "Sample correlation distribution",
                                                  plot_param = "batch_replicate",
                                                  theme = "classic", base_size = 20) {
-  gg <- ggplot(corr_distribution, aes(x = !!sym(plot_param), y = correlation)) +
-    geom_violin(scale = "width") +
-    geom_boxplot(width = .1) +
-    theme(axis.title.x = element_blank())
+    gg <- ggplot(corr_distribution, aes(x = !!sym(plot_param), y = correlation)) +
+        geom_violin(scale = "width") +
+        geom_boxplot(width = .1) +
+        theme(axis.title.x = element_blank())
 
-  if (!is.null(plot_title)) {
-    gg <- gg + ggtitle(plot_title)
-  }
-
-  if (("Step" %in% names(corr_distribution)) &
-    length(unique(corr_distribution$Step)) > 1) {
-    if (length(unique(corr_distribution$Step)) <= 4) {
-      gg <- gg + facet_grid(. ~ Step)
-    } else {
-      gg <- gg + facet_grid(Step ~ .)
+    if (!is.null(plot_title)) {
+        gg <- gg + ggtitle(plot_title)
     }
-  }
-  if (!is.null(theme) && theme == "classic") {
-    gg <- gg + theme_classic(base_size = base_size)
-  } else {
-    message("plotting with default ggplot theme, only theme = 'classic' implemented")
-  }
 
-  if (plot_param == "batches") {
-    gg <- gg + theme(axis.text.x = element_text(angle = 90))
-  }
-  if (plot_param == "batch_replicate") {
-    gg <- gg + theme(axis.text.x = element_text(angle = 45, hjust = 1))
-  }
+    if (("Step" %in% names(corr_distribution)) &
+        length(unique(corr_distribution$Step)) > 1) {
+        if (length(unique(corr_distribution$Step)) <= 4) {
+            gg <- gg + facet_grid(. ~ Step)
+        } else {
+            gg <- gg + facet_grid(Step ~ .)
+        }
+    }
+    if (!is.null(theme) && theme == "classic") {
+        gg <- gg + theme_classic(base_size = base_size)
+    } else {
+        message("plotting with default ggplot theme, only theme = 'classic' implemented")
+    }
 
-  gg <- gg + theme(plot.title = element_text(hjust = .5, face = "bold"))
+    if (plot_param == "batches") {
+        gg <- gg + theme(axis.text.x = element_text(angle = 90))
+    }
+    if (plot_param == "batch_replicate") {
+        gg <- gg + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
 
-  save_ggplot(filename, units, width, height, gg)
-  return(gg)
+    gg <- gg + theme(plot.title = element_text(hjust = .5, face = "bold"))
+
+    save_ggplot(filename, units, width, height, gg)
+    return(gg)
 }
 
 get_peptide_corr_df <- function(peptide_cor, peptide_annotation,
                                 protein_col = "ProteinName",
                                 feature_id_col = "peptide_group_label") {
-  comb_to_keep <- data.frame(t(combn(colnames(peptide_cor), 2)))
-  names(comb_to_keep) <- paste(feature_id_col, seq_len(2), sep = "_")
+    comb_to_keep <- data.frame(t(combn(colnames(peptide_cor), 2)))
+    names(comb_to_keep) <- paste(feature_id_col, seq_len(2), sep = "_")
 
-  corr_distribution <- melt(peptide_cor,
-    varnames = paste(feature_id_col, seq_len(2), sep = "_"),
-    value.name = "correlation"
-  ) %>%
-    filter(!is.na(correlation)) %>%
-    merge(comb_to_keep) %>%
-    merge(
-      peptide_annotation %>%
-        select(all_of(c(feature_id_col, protein_col))),
-      by.x = paste(feature_id_col, "1", sep = "_"),
-      by.y = feature_id_col, all.x = TRUE
+    corr_distribution <- melt(peptide_cor,
+        varnames = paste(feature_id_col, seq_len(2), sep = "_"),
+        value.name = "correlation"
     ) %>%
-    data.table::setnames(
-      old = protein_col,
-      new = paste(protein_col, 1, sep = "")
-    ) %>%
-    merge(
-      peptide_annotation %>%
-        select(all_of(c(feature_id_col, protein_col))),
-      by.x = paste(feature_id_col, "2", sep = "_"),
-      by.y = feature_id_col, all.x = TRUE
-    ) %>%
-    data.table::setnames(
-      old = protein_col,
-      new = paste(protein_col, 2, sep = "")
-    ) %>%
-    mutate(same_protein = (!!sym(paste(protein_col, "1", sep = "")) ==
-      !!sym(paste(protein_col, "2", sep = "")))) %>%
-    mutate(same_protein = ifelse(same_protein,
-      "same protein", "different proteins"
-    ))
+        filter(!is.na(correlation)) %>%
+        merge(comb_to_keep) %>%
+        merge(
+            peptide_annotation %>%
+                select(all_of(c(feature_id_col, protein_col))),
+            by.x = paste(feature_id_col, "1", sep = "_"),
+            by.y = feature_id_col, all.x = TRUE
+        ) %>%
+        data.table::setnames(
+            old = protein_col,
+            new = paste(protein_col, 1, sep = "")
+        ) %>%
+        merge(
+            peptide_annotation %>%
+                select(all_of(c(feature_id_col, protein_col))),
+            by.x = paste(feature_id_col, "2", sep = "_"),
+            by.y = feature_id_col, all.x = TRUE
+        ) %>%
+        data.table::setnames(
+            old = protein_col,
+            new = paste(protein_col, 2, sep = "")
+        ) %>%
+        mutate(same_protein = (!!sym(paste(protein_col, "1", sep = "")) ==
+            !!sym(paste(protein_col, "2", sep = "")))) %>%
+        mutate(same_protein = ifelse(same_protein,
+            "same protein", "different proteins"
+        ))
 
-  return(corr_distribution)
+    return(corr_distribution)
 }
 
 
@@ -608,8 +608,8 @@ get_peptide_corr_df <- function(peptide_cor, peptide_annotation,
 #' matrix_test <- example_proteome_matrix[selected_peptides, ]
 #' pep_annotation_sel <- example_peptide_annotation[gene_filter, ]
 #' corr_distribution <- calculate_peptide_corr_distr(matrix_test,
-#'   pep_annotation_sel,
-#'   protein_col = "Gene"
+#'     pep_annotation_sel,
+#'     protein_col = "Gene"
 #' )
 #'
 #' @export
@@ -617,14 +617,14 @@ get_peptide_corr_df <- function(peptide_cor, peptide_annotation,
 calculate_peptide_corr_distr <- function(data_matrix, peptide_annotation,
                                          protein_col = "ProteinName",
                                          feature_id_col = "peptide_group_label") {
-  corr_matrix <- cor(t(data_matrix), use = "pairwise.complete.obs")
-  corr_distribution <- get_peptide_corr_df(
-    peptide_cor = corr_matrix,
-    peptide_annotation = peptide_annotation,
-    protein_col = protein_col,
-    feature_id_col = feature_id_col
-  )
-  return(corr_distribution)
+    corr_matrix <- cor(t(data_matrix), use = "pairwise.complete.obs")
+    corr_distribution <- get_peptide_corr_df(
+        peptide_cor = corr_matrix,
+        peptide_annotation = peptide_annotation,
+        protein_col = protein_col,
+        feature_id_col = feature_id_col
+    )
+    return(corr_distribution)
 }
 
 #' @name plot_peptide_corr_distribution
@@ -647,9 +647,9 @@ NULL
 #' @examples
 #' data(list = c("example_peptide_annotation", "example_proteome_matrix"), package = "proBatch")
 #' peptide_corr_distribution <- plot_peptide_corr_distribution(
-#'   example_proteome_matrix,
-#'   example_peptide_annotation,
-#'   protein_col = "Gene"
+#'     example_proteome_matrix,
+#'     example_peptide_annotation,
+#'     protein_col = "Gene"
 #' )
 #'
 #' @export
@@ -661,35 +661,35 @@ plot_peptide_corr_distribution <- function(data_matrix, peptide_annotation,
                                            units = c("cm", "in", "mm"),
                                            plot_title = "Distribution of peptide correlation",
                                            theme = "classic") {
-  if (!is.list(data_matrix)) {
-    corr_distribution <- calculate_peptide_corr_distr(
-      data_matrix,
-      peptide_annotation,
-      protein_col,
-      feature_id_col
+    if (!is.list(data_matrix)) {
+        corr_distribution <- calculate_peptide_corr_distr(
+            data_matrix,
+            peptide_annotation,
+            protein_col,
+            feature_id_col
+        )
+    } else {
+        corr_distribution <- lapply(seq_len(length(data_matrix)), function(i) {
+            dm <- data_matrix[[i]]
+            corr_distribution <- calculate_peptide_corr_distr(
+                dm, peptide_annotation,
+                protein_col, feature_id_col
+            )
+            corr_distribution$Step <- names(data_matrix)[i]
+            return(corr_distribution)
+        })
+        corr_distribution <- do.call(rbind, corr_distribution) %>%
+            mutate(Step = factor(Step, levels = names(data_matrix)))
+    }
+    p <- plot_peptide_corr_distribution.corrDF(
+        corr_distribution = corr_distribution,
+        theme = theme,
+        filename = filename,
+        width = width, height = height,
+        units = units,
+        plot_title = plot_title
     )
-  } else {
-    corr_distribution <- lapply(seq_len(length(data_matrix)), function(i) {
-      dm <- data_matrix[[i]]
-      corr_distribution <- calculate_peptide_corr_distr(
-        dm, peptide_annotation,
-        protein_col, feature_id_col
-      )
-      corr_distribution$Step <- names(data_matrix)[i]
-      return(corr_distribution)
-    })
-    corr_distribution <- do.call(rbind, corr_distribution) %>%
-      mutate(Step = factor(Step, levels = names(data_matrix)))
-  }
-  p <- plot_peptide_corr_distribution.corrDF(
-    corr_distribution = corr_distribution,
-    theme = theme,
-    filename = filename,
-    width = width, height = height,
-    units = units,
-    plot_title = plot_title
-  )
-  return(p)
+    return(p)
 }
 
 
@@ -704,15 +704,15 @@ plot_peptide_corr_distribution <- function(data_matrix, peptide_annotation,
 #' matrix_test <- example_proteome_matrix[selected_peptides, ]
 #' pep_annotation_sel <- example_peptide_annotation[gene_filter, ]
 #' corr_distribution <- calculate_peptide_corr_distr(matrix_test,
-#'   pep_annotation_sel,
-#'   protein_col = "Gene"
+#'     pep_annotation_sel,
+#'     protein_col = "Gene"
 #' )
 #' peptide_corr_distribution <- plot_peptide_corr_distribution.corrDF(corr_distribution)
 #'
 #' \donttest{
 #' peptide_corr_distribution <- plot_peptide_corr_distribution.corrDF(corr_distribution,
-#'   filename = "test_peptide.png",
-#'   width = 28, height = 28, units = "cm"
+#'     filename = "test_peptide.png",
+#'     width = 28, height = 28, units = "cm"
 #' )
 #' }
 #'
@@ -724,44 +724,44 @@ plot_peptide_corr_distribution.corrDF <- function(corr_distribution,
                                                   plot_title = "Correlation of peptides",
                                                   theme = "classic",
                                                   base_size = 20) {
-  median_same_prot <- corr_distribution %>%
-    filter(same_protein == "same protein") %>%
-    summarize(median = median(correlation, na.rm = TRUE)) %>%
-    pull(median)
-  gg <- ggplot(corr_distribution, aes(
-    x = same_protein,
-    y = correlation
-  )) +
-    geom_violin(scale = "width") +
-    geom_hline(yintercept = 0, linetype = "dashed", color = "darkgrey") +
-    geom_hline(
-      yintercept = median_same_prot, linetype = "dotted",
-      color = "tomato1"
-    ) +
-    geom_boxplot(width = .1) +
-    xlab(NULL)
+    median_same_prot <- corr_distribution %>%
+        filter(same_protein == "same protein") %>%
+        summarize(median = median(correlation, na.rm = TRUE)) %>%
+        pull(median)
+    gg <- ggplot(corr_distribution, aes(
+        x = same_protein,
+        y = correlation
+    )) +
+        geom_violin(scale = "width") +
+        geom_hline(yintercept = 0, linetype = "dashed", color = "darkgrey") +
+        geom_hline(
+            yintercept = median_same_prot, linetype = "dotted",
+            color = "tomato1"
+        ) +
+        geom_boxplot(width = .1) +
+        xlab(NULL)
 
-  if (!is.null(plot_title)) {
-    gg <- gg +
-      ggtitle(plot_title)
-  }
-
-  if (("Step" %in% names(corr_distribution)) &
-    length(unique(corr_distribution$Step)) > 1) {
-    if (length(unique(corr_distribution$Step)) <= 4) {
-      gg <- gg + facet_grid(. ~ Step)
-    } else {
-      gg <- gg + facet_grid(Step ~ .)
+    if (!is.null(plot_title)) {
+        gg <- gg +
+            ggtitle(plot_title)
     }
-  }
 
-  if (!is.null(theme) && theme == "classic") {
-    gg <- gg + theme_classic(base_size = base_size)
-  } else {
-    message("plotting with default ggplot theme, only theme = 'classic' implemented")
-  }
-  gg <- gg + theme(plot.title = element_text(hjust = .5, face = "bold"))
+    if (("Step" %in% names(corr_distribution)) &
+        length(unique(corr_distribution$Step)) > 1) {
+        if (length(unique(corr_distribution$Step)) <= 4) {
+            gg <- gg + facet_grid(. ~ Step)
+        } else {
+            gg <- gg + facet_grid(Step ~ .)
+        }
+    }
 
-  save_ggplot(filename, units, width, height, gg)
-  return(gg)
+    if (!is.null(theme) && theme == "classic") {
+        gg <- gg + theme_classic(base_size = base_size)
+    } else {
+        message("plotting with default ggplot theme, only theme = 'classic' implemented")
+    }
+    gg <- gg + theme(plot.title = element_text(hjust = .5, face = "bold"))
+
+    save_ggplot(filename, units, width, height, gg)
+    return(gg)
 }

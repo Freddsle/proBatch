@@ -1,5 +1,6 @@
 test_that("hierarchical_clustering", {
     data(example_proteome_matrix, package = "proBatch")
+<<<<<<< HEAD
     data(example_sample_annotation, package = "proBatch")
 
     matrix_test <- example_proteome_matrix[1:10, ]
@@ -31,6 +32,18 @@ test_that("hierarchical_clustering", {
         "color list and sample annotation have different factors,"
     )
 
+=======
+
+    matrix_test <- example_proteome_matrix[1:10, ]
+
+    hiearchical <- plot_hierarchical_clustering(matrix_test,
+        sample_annotation = example_sample_annotation,
+        factors_to_plot = c("MS_batch", "Diet"),
+        distance = "euclidean", agglomeration = "complete",
+        label_samples = FALSE
+    )
+
+>>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
     expect_identical(hiearchical$mar[[1]], 1)
     expect_identical(hiearchical$mar[[2]], 5)
     expect_identical(hiearchical$mar[[3]], 0)
@@ -43,6 +56,7 @@ test_that("heatmap_plot", {
     data(example_sample_annotation, package = "proBatch")
 
     matrix_test <- example_proteome_matrix[1:20, ]
+<<<<<<< HEAD
     example_sample_annotation <- example_sample_annotation %>%
         select("FullRunName", "MS_batch", "Sex", "digestion_batch", "Diet")
 
@@ -75,6 +89,27 @@ test_that("heatmap_plot", {
     expect_equal(heatmap$gtable$layout$name[5], "col_annotation")
     expect_equal(heatmap$gtable$layout$name[8], "legend")
 
+=======
+
+    expect_warning(heatmap <- plot_heatmap_diagnostic(matrix_test,
+        sample_annotation = example_sample_annotation,
+        factors_to_plot = c("MS_batch", "digestion_batch", "Diet"),
+        cluster_cols = TRUE,
+        show_rownames = TRUE, show_colnames = FALSE
+    ))
+
+    expect_equal(heatmap$tree_row$method, "complete")
+    expect_equal(heatmap$tree_row$dist.method, "euclidean")
+
+    expect_equal(heatmap$tree_row$labels[1], "10062_NVGVSFYADKPEVTQEQK_3")
+    expect_equal(heatmap$tree_row$labels[2], "10063_NVGVSFYADKPEVTQEQKK_3")
+
+    expect_equal(heatmap$gtable$layout$name[1], "col_tree")
+    expect_equal(heatmap$gtable$layout$name[3], "matrix")
+    expect_equal(heatmap$gtable$layout$name[5], "col_annotation")
+    expect_equal(heatmap$gtable$layout$name[8], "legend")
+
+>>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
     expect_equal(heatmap$gtable$layout$t, c(2, 4, 4, 4, 3, 3, 3, 3))
 })
 
@@ -84,6 +119,7 @@ test_that("pvca_plot", {
     data(example_sample_annotation, package = "proBatch")
 
     matrix_test <- example_proteome_matrix[1:150, ]
+<<<<<<< HEAD
     expect_warning(
         expect_warning(
             pvca <- plot_PVCA(matrix_test, example_sample_annotation,
@@ -93,6 +129,11 @@ test_that("pvca_plot", {
             "PVCA cannot operate with missing values in the matrix"
         ),
         "filling missing values with -1"
+=======
+    pvca <- plot_PVCA(matrix_test, example_sample_annotation,
+        technical_factors = c("MS_batch", "digestion_batch"),
+        biological_factors = c("Diet", "Sex", "Strain")
+>>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
     )
 
     expect_equal(pvca$data$weights[1], 0.39166175, tolerance = 3e-2, ignore_attr = TRUE)
@@ -108,6 +149,7 @@ test_that("pca_plot", {
     data(example_proteome_matrix, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
 
+<<<<<<< HEAD
     expect_warning(
         expect_warning(
             expect_warning(
@@ -556,4 +598,12 @@ test_that("plot_heatmap_diagnostic ProBatchFeatures respects assay subset order"
     expect_type(res, "list")
     expect_equal(names(res$plots), subset_assays)
     expect_true(all(vapply(res$plots, function(x) inherits(x, "pheatmap"), logical(1))))
+=======
+    pca <- plot_PCA(example_proteome_matrix, example_sample_annotation,
+        color_by = "MS_batch", plot_title = "PCA colored by MS batch"
+    )
+    expect_equal(pca$labels$y, "PC2 (14.24%)")
+    expect_equal(pca$labels$x, "PC1 (69.5%)")
+    expect_equal(pca$labels$colour, "MS_batch")
+>>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
 })

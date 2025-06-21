@@ -3,6 +3,7 @@ test_that("sample_mean_plots", {
     data(example_sample_annotation, package = "proBatch")
 
     matrix <- example_proteome_matrix[1:20, ]
+<<<<<<< HEAD
     expect_warning(
         expect_warning(
             meanplot <- plot_sample_mean(matrix, example_sample_annotation,
@@ -11,6 +12,10 @@ test_that("sample_mean_plots", {
             "inferring order-related batch borders for a plot;"
         ),
         "color_scheme will be inferred automatically"
+=======
+    meanplot <- plot_sample_mean(matrix, example_sample_annotation,
+        order_col = "order", batch_col = "MS_batch", color_by_batch = TRUE
+>>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
     )
 
     expect_equal(meanplot$labels$colour, "MS_batch")
@@ -24,6 +29,7 @@ test_that("boxplot_plots", {
     data(example_sample_annotation, package = "proBatch")
 
     proteome <- example_proteome[1:20, ]
+<<<<<<< HEAD
     expect_warning(
         expect_warning(
             boxplot <- plot_boxplot(proteome, example_sample_annotation,
@@ -232,4 +238,17 @@ test_that("plot_boxplot ProBatchFeatures respects assay subset order", {
     expect_type(res, "list")
     expect_equal(names(res$plots), subset_assays)
     expect_true(all(vapply(res$plots, inherits, logical(1), "ggplot")))
+=======
+    expect_warning(boxplot <- plot_boxplot(proteome, example_sample_annotation,
+        batch_col = "MS_batch"
+    ))
+
+    expect_equal(boxplot$labels$fill, "MS_batch")
+    expect_equal(boxplot$label$group, "order")
+    expect_equal(boxplot$label$x, "order")
+    expect_equal(boxplot$label$y, "Intensity")
+
+    expect_equal(boxplot$plot_env$color_by_batch, TRUE)
+    expect_equal(boxplot$plot_env$facet_col, NULL)
+>>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
 })

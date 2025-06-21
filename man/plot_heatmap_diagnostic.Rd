@@ -110,27 +110,27 @@ data(list = c("example_proteome_matrix", "example_sample_annotation"), package =
 
 log_transformed_matrix <- log_transform_dm(example_proteome_matrix)
 heatmap_plot <- plot_heatmap_diagnostic(log_transformed_matrix,
-  example_sample_annotation,
-  factors_to_plot = c("MS_batch", "digestion_batch", "Diet", "DateTime"),
-  cluster_cols = TRUE, cluster_rows = FALSE,
-  show_rownames = FALSE, show_colnames = FALSE
+    example_sample_annotation,
+    factors_to_plot = c("MS_batch", "digestion_batch", "Diet", "DateTime"),
+    cluster_cols = TRUE, cluster_rows = FALSE,
+    show_rownames = FALSE, show_colnames = FALSE
 )
 
 color_list <- sample_annotation_to_colors(example_sample_annotation,
-  factor_columns = c(
-    "MS_batch", "EarTag", "Strain",
-    "Diet", "digestion_batch", "Sex"
-  ),
-  numeric_columns = c("DateTime", "order")
+    factor_columns = c(
+        "MS_batch", "EarTag", "Strain",
+        "Diet", "digestion_batch", "Sex"
+    ),
+    numeric_columns = c("DateTime", "order")
 )
 
 log_transformed_matrix <- log_transform_dm(example_proteome_matrix)
 heatmap_plot <- plot_heatmap_diagnostic(log_transformed_matrix,
-  example_sample_annotation,
-  factors_to_plot = c("MS_batch", "digestion_batch", "Diet", "DateTime"),
-  cluster_cols = TRUE, cluster_rows = FALSE,
-  color_list = color_list,
-  show_rownames = FALSE, show_colnames = FALSE
+    example_sample_annotation,
+    factors_to_plot = c("MS_batch", "digestion_batch", "Diet", "DateTime"),
+    cluster_cols = TRUE, cluster_rows = FALSE,
+    color_list = color_list,
+    show_rownames = FALSE, show_colnames = FALSE
 )
 
 }

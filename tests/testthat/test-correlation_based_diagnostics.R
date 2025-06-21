@@ -4,10 +4,15 @@ test_that("corr_matrix_plots", {
 
     matrix_test <- example_proteome_matrix[peptides, ]
     corr_matrix <- cor(t(matrix_test), use = "complete.obs")
+<<<<<<< HEAD
     expect_warning(
         corr_matrix_pheatmap <- plot_corr_matrix(corr_matrix),
         "annotation_row and / or annotation_col are not specified for heatmap"
     )
+=======
+    corr_matrix_pheatmap <- plot_corr_matrix(corr_matrix)
+
+>>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
     expect_s3_class(corr_matrix_pheatmap, "pheatmap")
     expect_equal(corr_matrix_pheatmap$gtable$layout$name[4], "legend", ignore_attr = TRUE)
 })
@@ -17,6 +22,7 @@ test_that("protein_corrplot_plots", {
     data(example_proteome_matrix, package = "proBatch")
     data(example_peptide_annotation, package = "proBatch")
 
+<<<<<<< HEAD
     expect_warning(
         color_list <- sample_annotation_to_colors(
             sample_annotation = example_peptide_annotation,
@@ -33,6 +39,13 @@ test_that("protein_corrplot_plots", {
             cluster_rows = TRUE, cluster_cols = TRUE,
             color_list = color_list
         )
+=======
+    corrplot <- plot_protein_corrplot(example_proteome_matrix,
+        protein_name = "Haao",
+        peptide_annotation = example_peptide_annotation,
+        protein_col = "Gene",
+        cluster_rows = TRUE, cluster_cols = TRUE
+>>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
     )
 
     expect_equal(corrplot$tree_row$method, "complete", ignore_attr = TRUE)
@@ -52,6 +65,7 @@ test_that("sample_corr_heatmap", {
         which(example_sample_annotation$order %in% 110:115)
     ]
 
+<<<<<<< HEAD
     expect_warning(
         sample_heatmap <- plot_sample_corr_heatmap(
             example_proteome_matrix,
@@ -62,6 +76,14 @@ test_that("sample_corr_heatmap", {
         ),
         "annotation_row and / or annotation_col are not specified for heatmap"
     )
+=======
+    expect_warning(sample_heatmap <- plot_sample_corr_heatmap(example_proteome_matrix,
+        samples_to_plot = specified_samples,
+        cluster_rows = TRUE, cluster_cols = TRUE,
+        annotation_names_col = TRUE, annotation_legend = FALSE,
+        show_colnames = FALSE
+    ))
+>>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
 
     expect_equal(sample_heatmap$tree_row$method, "complete", ignore_attr = TRUE)
     expect_equal(sample_heatmap$tree_row$dist.method, "euclidean", ignore_attr = TRUE)
@@ -90,8 +112,13 @@ test_that("sample_distribution_plot", {
         plot_param = "batch_replicate"
     )
 
+<<<<<<< HEAD
     expect_equal(as_label(sample_dist$mapping$x), "batch_replicate", ignore_attr = TRUE)
     expect_equal(as_label(sample_dist$mapping$y), "correlation", ignore_attr = TRUE)
+=======
+    expect_equal(sample_dist$labels$x, "batch_replicate", ignore_attr = TRUE)
+    expect_equal(sample_dist$labels$y, "correlation", ignore_attr = TRUE)
+>>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
 
     expect_s3_class(sample_dist$plot_env$corr_distribution, "data.frame")
     expect_equal(sample_dist$plot_env$plot_param, "batch_replicate", ignore_attr = TRUE)
@@ -134,8 +161,13 @@ test_that("peptide_distribution_plots", {
         protein_col = "Gene"
     )
 
+<<<<<<< HEAD
     expect_equal(as_label(peptide_dist$mapping$x), "same_protein", ignore_attr = TRUE)
     expect_equal(as_label(peptide_dist$mapping$y), "correlation", ignore_attr = TRUE)
+=======
+    expect_equal(peptide_dist$labels$x, NULL, ignore_attr = TRUE)
+    expect_equal(peptide_dist$labels$y, "correlation", ignore_attr = TRUE)
+>>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
 
     expect_s3_class(peptide_dist$plot_env$corr_distribution, "data.frame")
     expect_equal(peptide_dist$plot_env$median_same_prot, 0.7337642, tolerance = 1e-6)

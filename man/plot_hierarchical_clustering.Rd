@@ -88,29 +88,29 @@ cluster the data matrix to visually inspect which confounder dominates
 data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
 
 selected_batches <- example_sample_annotation$MS_batch \%in\%
-  c("Batch_1", "Batch_2")
+    c("Batch_1", "Batch_2")
 selected_samples <- example_sample_annotation$FullRunName[selected_batches]
 test_matrix <- example_proteome_matrix[, selected_samples]
 
 hierarchical_clustering_plot <- plot_hierarchical_clustering(
-  example_proteome_matrix, example_sample_annotation,
-  factors_to_plot = c("MS_batch", "Diet", "DateTime"),
-  color_list = NULL,
-  distance = "euclidean", agglomeration = "complete",
-  label_samples = FALSE
+    example_proteome_matrix, example_sample_annotation,
+    factors_to_plot = c("MS_batch", "Diet", "DateTime"),
+    color_list = NULL,
+    distance = "euclidean", agglomeration = "complete",
+    label_samples = FALSE
 )
 
 # with defined color scheme:
 color_list <- sample_annotation_to_colors(example_sample_annotation,
-  factor_columns = c("MS_batch", "Strain", "Diet", "digestion_batch"),
-  numeric_columns = c("DateTime", "order")
+    factor_columns = c("MS_batch", "Strain", "Diet", "digestion_batch"),
+    numeric_columns = c("DateTime", "order")
 )
 hierarchical_clustering_plot <- plot_hierarchical_clustering(
-  example_proteome_matrix, example_sample_annotation,
-  factors_to_plot = c("MS_batch", "Strain", "DateTime", "digestion_batch"),
-  color_list = color_list,
-  distance = "euclidean", agglomeration = "complete",
-  label_samples = FALSE
+    example_proteome_matrix, example_sample_annotation,
+    factors_to_plot = c("MS_batch", "Strain", "DateTime", "digestion_batch"),
+    color_list = color_list,
+    distance = "euclidean", agglomeration = "complete",
+    label_samples = FALSE
 )
 
 }
