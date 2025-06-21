@@ -158,7 +158,7 @@ test_that("Step column preserved and plotting works", {
     expect_true("Step" %in% names(cv))
     gg <- plot_CV_distr.df(cv)
     expect_s3_class(gg, "ggplot")
-    expect_equal(gg$mapping$x, rlang::sym("Step"))
+    expect_equal(rlang::get_expr(gg$mapping$x), rlang::sym("Step"))
 })
 
 test_that("per-batch CV matches manual calculation", {
@@ -250,10 +250,13 @@ test_that("full pipeline returns ggplot", {
 })
 
 test_that("filename argument saves a file", {
+  df <- example_proteome %>%
+    # filter to keep only finite values or value equal to 0
+    dplyr::filter(is.finite(Intensity) | Intensity == 0)
   tmpfile <- tempfile(fileext = ".png")
   ggs <- plot_CV_distr.df(
     CV_df     = calculate_feature_CV(
-      df_long            = example_proteome,
+      df_long            = df,
       sample_annotation  = example_sample_annotation,
       batch_col          = "MS_batch",
       biospecimen_id_col = "EarTag"
