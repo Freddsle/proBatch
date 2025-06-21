@@ -48,3 +48,18 @@ test_that("sample_annotation_to_colors", {
   expect_equal(color_scheme$DateTime[[1]], "#A6611A")
   expect_equal(color_scheme$order[[1]], "#D01C8B")
 })
+
+test_that("color_list_to_df handles empty intersection", {
+  data(example_sample_annotation, package = "proBatch")
+
+  color_list <- list(AnotherFactor = c("red", "blue"))
+  expect_warning(
+    color_df <- proBatch:::color_list_to_df(color_list, example_sample_annotation),
+    "color list and sample annotation have different factors,
+            using only intersection in color scheme!"
+  )
+
+  expect_equal(nrow(color_df), nrow(example_sample_annotation))
+  expect_equal(ncol(color_df), 0)
+  expect_equal(rownames(color_df), example_sample_annotation$FullRunName)
+})
