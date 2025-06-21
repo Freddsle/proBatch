@@ -42,7 +42,6 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
         df_long <- unlog_df(df_long, log_base = log_base, offset = offset, measure_col = measure_col)
     }
 
-
     if (!is.null(batch_col)) {
         df_long <- df_long %>%
             group_by(!!!syms(c(feature_id_col, batch_col, biospecimen_id_col))) %>%
@@ -52,8 +51,10 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
             group_by(!!!syms(c(feature_id_col, biospecimen_id_col))) %>%
             mutate(n = sum(!is.na(!!sym(measure_col))))
     }
-    if (any(df_long$n) > 2) {
-        warning("Cannot calculate CV for peptides with 2 or less measurements, removing those peptides")
+    if (any(df_long$n <= 2)) {
+        # how many features have 2 or less measurements?
+        n_peptides <- sum(df_long$n <= 2)
+        warning(paste0("Cannot calculate CV for ", n_peptides, " peptides with 2 or less measurements, removing those peptides"))
         df_long <- df_long %>%
             filter(n > 2)
     }
