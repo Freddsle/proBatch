@@ -204,7 +204,8 @@ warn_unmapped_columns <- function(sample_annotation,
         warning(paste(c(
             "The following columns will not be mapped to colors:",
             undefined_cols, "; if these have to be mapped, please assign
-                    them to factor, date or numeric"
+                    them to factor, date or numeric and add to
+                    factor_columns or numeric_columns parameters"
         ), collapse = " "))
     }
 }
@@ -355,7 +356,7 @@ sample_annotation_to_colors <- function(sample_annotation,
                                         numeric_palette_type = "brewer") {
     sample_annotation <- as.data.frame(sample_annotation)
 
-    # if factor_columns is NULL, add default columns 
+    # if factor_columns is NULL, add default columns
     if (is.null(factor_columns)) {
         factor_columns <- intersect(
             c("MS_batch", "EarTag", "digestion_batch", "Strain", "Diet"),
