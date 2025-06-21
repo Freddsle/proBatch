@@ -47,11 +47,15 @@ map_factors_to_colors <- function(annotation_df_factors) {
       value = TRUE, invert = TRUE
     )
 
-    old_seed <- .Random.seed
+    if (exists(".Random.seed", envir = globalenv(), inherits = FALSE)) {
+      old_seed <- get(".Random.seed", envir = globalenv())
+    } else {
+      old_seed <- NULL
+    }
     set.seed(1)
-    indices_random = sample(1:length(colors_to_sample))
-    if (exists("old_seed", inherits = FALSE)) {
-      .Random.seed <- old_seed
+    indices_random <- sample(seq_along(colors_to_sample))
+    if (!is.null(old_seed)) {
+      assign(".Random.seed", old_seed, envir = globalenv())
     }
     
     standard_colors_all <- colors_to_sample[indices_random]
