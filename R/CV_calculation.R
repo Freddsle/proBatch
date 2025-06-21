@@ -55,7 +55,7 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
 
     # Optional unlog
     if (unlog) {
-        warning("reversing log-transformation for CV calculation!")
+        message("reversing log-transformation for CV calculation!")
         df_long <- unlog_df(df_long, log_base = log_base, offset = offset, measure_col = measure_col)
     }
 
@@ -71,12 +71,15 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
             mutate(n_total = sum(!is.na(!!sym(measure_col)))) %>%
             ungroup()
     }
-    if (any(df_long$n <= 2)) {
-        # how many features have 2 or less measurements?
-        n_peptides <- sum(df_long$n_total <= 2)
-        warning(paste0("Cannot calculate CV for ", n_peptides, " peptides with 2 or less measurements, removing those peptides"))
+    if (any(df_long$n_total <= 2)) {
+        # how many features have 2 or less measurements? unique peptides
+        n_peptides <- df_long %>%
+            filter(n_total <= 2) %>%
+            distinct(!!sym(feature_id_col)) %>%
+            nrow() 
+        message(paste0("Cannot calculate CV for ", n_peptides, " peptides with 2 or less measurements, removing those peptides"))
         df_long <- df_long %>%
-            filter(n > 2)
+            filter(n_total > 2)
     }
     df_long$n_total <- NULL
 
@@ -99,7 +102,7 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
     df_long <- compute_cv(df_long, measure_col, total_groups, "CV_total")
 
     # Final select + distinct
-    select_cols <- c(feature_id_col, "CV_total", if (!is.null(batch_col)) "CV_perBatch")
+    select_cols <- c(feature_id_col, if (has_step) "Step", "CV_total", if (!is.null(batch_col)) "CV_perBatch")
     CV_df <- df_long %>%
         select(all_of(select_cols)) %>%
         distinct()
@@ -120,7 +123,7 @@ plot_CV_distr.df <- function(CV_df,
                              plot_title = NULL,
                              filename = NULL, theme = "classic", log_y_scale = TRUE) {
     if ("Step" %in% names(CV_df)) {
-        gg <- ggplot(CV_df, aes(x = Step, y = CV_total)) +
+        gg <- ggplot(CV_df, aes(x = !!sym("Step"), y = !!sym("CV_total"))) +
             geom_boxplot()
     } else {
         gg <- ggplot(CV_df, aes(y = CV_total)) +
