@@ -170,11 +170,11 @@ however,
         mutate(!!(sym(measure_col)) := !!(sym(old_measure_col)) + diff)
 
     # Ensure batch_col is present in default_cols/minimal_cols
-    default_cols <- c(original_cols, batch_col, old_measure_col, "median_batch", "median_global", "diff")
-    minimal_cols <- c(
+    default_cols <- unique(c(original_cols, batch_col, old_measure_col, "median_batch", "median_global", "diff"))
+    minimal_cols <- unique(c(
         sample_id_col, feature_id_col, measure_col, old_measure_col,
         batch_col, "median_batch", "diff"
-    )
+    ))
 
     if (!is.null(qual_col) && qual_col %in% names(corrected_df)) {
         default_cols <- c(default_cols, qual_col)

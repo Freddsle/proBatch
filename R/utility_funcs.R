@@ -49,37 +49,37 @@ merge_df_with_annotation <- function(df_long, sample_annotation, sample_id_col,
 check_sample_consistency <- function(sample_annotation, sample_id_col, df_long,
                                      batch_col = NULL, order_col = NULL,
                                      facet_col = NULL, merge = TRUE) {
-    if (!is.null(sample_annotation)) {
-        if (!(sample_id_col %in% names(sample_annotation))) {
-            stop(sprintf(
-                "Sample ID column %s is not defined in sample annotation,
-                    sample annotation cannot be used for correction/plotting",
-                sample_id_col
-            ))
-        }
-        if (!setequal(
-            unique(sample_annotation[[sample_id_col]]),
-            unique(df_long[[sample_id_col]])
-        )) {
-            warning("Sample IDs in sample annotation not consistent with samples in
-input data,
-              will merge, using intersecting Sample IDs only")
-            # TODO: expand the warnings for more specific cases: 1) sample annotation
-            # has samples not represented in data matrix; 2) dm has samples not in
-            # annotation;
-            # TODO: Break the merge if 1) sample annotation has duplicated samples;
-            # 2) dm has duplicated samples
-        }
-        if (merge) {
-            df_long <- merge_df_with_annotation(
-                df_long, sample_annotation,
-                sample_id_col, batch_col, order_col,
-                facet_col
-            )
-        }
-    } else {
+    if (is.null(sample_annotation)) {
         warning("Sample annotation is not provided, only the using df_long alone for
             correction/plotting")
+        return(df_long)
+    }
+
+    if (!(sample_id_col %in% names(sample_annotation))) {
+        stop(sprintf(
+            "Sample ID column %s is not defined in sample annotation,
+                sample annotation cannot be used for correction/plotting",
+            sample_id_col
+        ))
+    }
+    if (!setequal(
+        unique(sample_annotation[[sample_id_col]]),
+        unique(df_long[[sample_id_col]])
+    )) {
+        warning("Sample IDs in sample annotation not consistent with samples in input data,
+            will merge, using intersecting Sample IDs only")
+        # TODO: expand the warnings for more specific cases: 1) sample annotation
+        # has samples not represented in data matrix; 2) dm has samples not in
+        # annotation;
+        # TODO: Break the merge if 1) sample annotation has duplicated samples;
+        # 2) dm has duplicated samples
+    }
+    if (merge) {
+        df_long <- merge_df_with_annotation(
+            df_long, sample_annotation,
+            sample_id_col, batch_col, order_col,
+            facet_col
+        )
     }
     return(df_long)
 }
@@ -372,6 +372,9 @@ is_batch_factor <- function(batch_vector, color_scheme) {
 subset_keep_cols <- function(df, keep_all = "default",
                              default_cols = names(df),
                              minimal_cols = default_cols) {
+
+    default_cols <- intersect(default_cols, names(df))
+    minimal_cols <- intersect(minimal_cols, names(df))
     switch(keep_all,
         all = df,
         default = dplyr::select(df, dplyr::all_of(default_cols)),
