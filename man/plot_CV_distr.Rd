@@ -78,8 +78,8 @@ Plot CV distribution to compare various steps of the analysis
 \examples{
 data(list = c("example_sample_annotation", "example_proteome"), package = "proBatch")
 CV_plot <- plot_CV_distr(example_proteome,
-  sample_annotation = example_sample_annotation,
-  measure_col = "Intensity", batch_col = "MS_batch",
-  plot_title = NULL, filename = NULL, theme = "classic"
+    sample_annotation = example_sample_annotation,
+    measure_col = "Intensity", batch_col = "MS_batch",
+    plot_title = NULL, filename = NULL, theme = "classic"
 )
 }

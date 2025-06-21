@@ -134,44 +134,44 @@ functions for quick visual assessment of trends associated, overall
 }
 \examples{
 data(list = c(
-  "example_proteome", "example_sample_annotation",
-  "example_proteome_matrix"
+    "example_proteome", "example_sample_annotation",
+    "example_proteome_matrix"
 ), package = "proBatch")
 mean_plot <- plot_sample_mean(example_proteome_matrix, example_sample_annotation,
-  order_col = "order", batch_col = "MS_batch"
+    order_col = "order", batch_col = "MS_batch"
 )
 
 color_list <- sample_annotation_to_colors(example_sample_annotation,
-  factor_columns = c("MS_batch"),
-  numeric_columns = c("DateTime", "order")
+    factor_columns = c("MS_batch"),
+    numeric_columns = c("DateTime", "order")
 )
 plot_sample_mean(example_proteome_matrix, example_sample_annotation,
-  order_col = "order", batch_col = "MS_batch", color_by_batch = TRUE,
-  color_scheme = color_list[["MS_batch"]]
+    order_col = "order", batch_col = "MS_batch", color_by_batch = TRUE,
+    color_scheme = color_list[["MS_batch"]]
 )
 
 \donttest{
 mean_plot <- plot_sample_mean(example_proteome_matrix,
-  example_sample_annotation,
-  order_col = "order", batch_col = "MS_batch",
-  filename = "test_meanplot.png",
-  width = 28, height = 18, units = "cm"
+    example_sample_annotation,
+    order_col = "order", batch_col = "MS_batch",
+    filename = "test_meanplot.png",
+    width = 28, height = 18, units = "cm"
 )
 }
 
 data(list = c("example_proteome", "example_sample_annotation"), package = "proBatch")
 boxplot <- plot_boxplot(log_transform_df(example_proteome),
-  sample_annotation = example_sample_annotation,
-  batch_col = "MS_batch"
+    sample_annotation = example_sample_annotation,
+    batch_col = "MS_batch"
 )
 
 color_list <- sample_annotation_to_colors(example_sample_annotation,
-  factor_columns = c("MS_batch"),
-  numeric_columns = c("DateTime", "order")
+    factor_columns = c("MS_batch"),
+    numeric_columns = c("DateTime", "order")
 )
 plot_boxplot(log_transform_df(example_proteome),
-  sample_annotation = example_sample_annotation,
-  batch_col = "MS_batch", color_scheme = color_list[["MS_batch"]]
+    sample_annotation = example_sample_annotation,
+    batch_col = "MS_batch", color_scheme = color_list[["MS_batch"]]
 )
 
 \donttest{

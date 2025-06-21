@@ -51,13 +51,13 @@ Convert from wide matrix to a long data frame representation
 \examples{
 # Load necessary datasets
 data(
-  list = c("example_sample_annotation", "example_proteome_matrix"),
-  package = "proBatch"
+    list = c("example_sample_annotation", "example_proteome_matrix"),
+    package = "proBatch"
 )
 # Convert matrix to long format
 proteome_long <- matrix_to_long(
-  example_proteome_matrix,
-  example_sample_annotation
+    example_proteome_matrix,
+    example_sample_annotation
 )
 
 }

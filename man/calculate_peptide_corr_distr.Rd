@@ -45,8 +45,8 @@ selected_peptides <- peptides_ann[gene_filter]
 matrix_test <- example_proteome_matrix[selected_peptides, ]
 pep_annotation_sel <- example_peptide_annotation[gene_filter, ]
 corr_distribution <- calculate_peptide_corr_distr(matrix_test,
-  pep_annotation_sel,
-  protein_col = "Gene"
+    pep_annotation_sel,
+    protein_col = "Gene"
 )
 
 }

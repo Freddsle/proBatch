@@ -81,14 +81,14 @@ Plots correlation plot of peptides from a single protein
 \examples{
 data(list = c("example_peptide_annotation", "example_proteome_matrix"), package = "proBatch")
 protein_corrplot_plot <- plot_protein_corrplot(example_proteome_matrix,
-  protein_name = "Haao", peptide_annotation = example_peptide_annotation,
-  protein_col = "Gene"
+    protein_name = "Haao", peptide_annotation = example_peptide_annotation,
+    protein_col = "Gene"
 )
 
 protein_corrplot_plot <- plot_protein_corrplot(example_proteome_matrix,
-  protein_name = c("Haao", "Dhtkd1"),
-  peptide_annotation = example_peptide_annotation,
-  protein_col = "Gene", factors_to_plot = "Gene"
+    protein_name = c("Haao", "Dhtkd1"),
+    peptide_annotation = example_peptide_annotation,
+    protein_col = "Gene", factors_to_plot = "Gene"
 )
 
 }
