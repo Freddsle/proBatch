@@ -1,4 +1,6 @@
 test_that("check_sample_consistency", {
+    data(example_proteome, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
     # TODO: check if the warnings are raised expect_warning
 
     df_test <- check_sample_consistency(
@@ -29,6 +31,8 @@ test_that("check_sample_consistency", {
 })
 
 test_that("define_sample_order", {
+    data(example_proteome, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
     # TODO: check if the returned class is integer expected_type
     order_col <- "order"
     sample_order <- define_sample_order(
@@ -47,13 +51,16 @@ test_that("define_sample_order", {
     expect_type(df_long[[new_order_col]], "double")
 
     order_col <- NULL
-    sample_order <- define_sample_order(
-        order_col = order_col,
-        sample_annotation = example_sample_annotation,
-        facet_col = NULL, batch_col = "MS_batch",
-        df_long = example_proteome,
-        sample_id_col = "FullRunName",
-        color_by_batch = TRUE
+    expect_warning(
+        sample_order <- define_sample_order(
+            order_col = order_col,
+            sample_annotation = example_sample_annotation,
+            facet_col = NULL, batch_col = "MS_batch",
+            df_long = example_proteome,
+            sample_id_col = "FullRunName",
+            color_by_batch = TRUE
+        ),
+        "batch",
     )
     new_order_col <- sample_order$order_col
     df_long <- sample_order$df_long

@@ -136,36 +136,32 @@ define_sample_order <- function(order_col, sample_annotation, facet_col,
 
     # 2. Early return if order_col already present & distinct from sample_id
     # 2a. Annotation case
-    if (!is.null(order_col) &&
-        !is.null(sample_annotation) &&
+    has_ann_order <- !is.null(order_col) && !is.null(sample_annotation) &&
         order_col %in% names(sample_annotation) &&
-        order_col != sample_id_col) {
-        return(list(order_col = order_col, df_long = df_long))
-    }
+        order_col != sample_id_col
     # 2b. No‐annotation case
-    if (!is.null(order_col) &&
-        is.null(sample_annotation) &&
+    has_df_order <- !is.null(order_col) && is.null(sample_annotation) &&
         order_col %in% names(df_long) &&
-        order_col != sample_id_col) {
+        order_col != sample_id_col
+    if (has_ann_order || has_df_order) {
         return(list(order_col = order_col, df_long = df_long))
     }
 
-    # 3. Warn about missing or NULL order_col (fully detailed)
-    if (is.null(order_col) || !(order_col %in% names(df_long))) {
-        if (!is.null(order_col)) {
-            # where did we look?
+    # 3. Warn about missing or NULL order_col
+    missing_order <- is.null(order_col) || !(order_col %in% names(df_long))
+    if (missing_order) {
+        if (!is.null(order_col) && !(order_col %in% names(df_long))) {
             if (!is.null(sample_annotation)) {
                 if (!is.null(facet_col)) {
                     warning(sprintf(
                         "column %s is not found in sample annotation,
-                        assuming that order in sample annotation corresponds to sample running order,
-                        specific for each instrument",
+                assuming that order in sample annotation corresponds to sample running order, specific for each instrument",
                         order_col
                     ))
                 } else {
                     warning(sprintf(
                         "column %s is not defined in sample annotation,
-                        assuming the order of sample IDs corresponds to running order",
+                assuming the order of sample IDs corresponds to running order",
                         order_col
                     ))
                 }
@@ -173,52 +169,52 @@ define_sample_order <- function(order_col, sample_annotation, facet_col,
                 if (!is.null(facet_col)) {
                     warning(sprintf(
                         "column %s for order is not found in data frame,
-                        taking order of files in the data matrix instead, specific for each instrument",
+                taking order of files in the data matrix instead,specific for each instrument",
                         order_col
                     ))
                 } else {
                     warning(sprintf(
-                        "column %s is not defined in data frame, taking order of files in the data matrix instead",
+                        "column %s is not defined in data frame,
+                taking order of files in the data matrix instead",
                         order_col
                     ))
                 }
             }
         } else if (!is.null(batch_col) && batch_col %in% names(df_long)) {
             warning(
-                "Order column is NULL, assuming order is not introducing unwanted\n",
-                "association between the samples, plotting samples in order of batch factor"
+                "Order column is NULL,
+            assuming order is not introducing unwanted association between the samples,
+            plotting samples in order of batch factor"
             )
             df_long[[batch_col]] <- as.factor(df_long[[batch_col]])
         } else {
             warning(
-                "Order column is NULL, assuming order is not introducing unwanted\n",
-                "association between the samples"
+                "Order column is NULL,
+            assuming order is not introducing unwanted association between the samples"
             )
         }
     }
-
-    # 4. Handle case order_col == sample_id_col
     if (!is.null(order_col) && order_col == sample_id_col) {
         order_col <- "sample_order"
 
-        if (!is.null(sample_annotation)) {
-            if (color_by_batch && batch_col %in% names(sample_annotation)) {
-                warning("order column is identical to sample ID column and coloring by batch is required; ordering by batch")
-                df_long <- df_long %>%
-                    arrange(!!sym(batch_col)) %>%
-                    mutate(!!sym(order_col) := factor(
-                        as.character(!!sym(sample_id_col)),
-                        levels = unique(as.character(!!sym(sample_id_col)))
-                    ))
-            } else {
-                warning("order column is identical to sample ID column; using annotation order")
-                df_long[[order_col]] <- as.integer(match(
-                    df_long[[sample_id_col]],
-                    sample_annotation[[sample_id_col]]
+        if (!is.null(sample_annotation) &&
+            color_by_batch &&
+            batch_col %in% names(sample_annotation)) {
+            warning("Order column is identical to sample ID column and coloring by batch is required; ordering by batch")
+            df_long <- df_long %>%
+                arrange(!!sym(batch_col)) %>%
+                mutate(!!sym(order_col) := factor(
+                    as.character(!!sym(sample_id_col)),
+                    levels = unique(as.character(!!sym(sample_id_col)))
                 ))
-            }
+        } else if (!is.null(sample_annotation)) {
+            warning("Order column is identical to sample ID column; using annotation order")
+            df_long[[order_col]] <- as.integer(match(
+                df_long[[sample_id_col]],
+                sample_annotation[[sample_id_col]]
+            ))
         } else {
-            warning("order column is identical to sample ID column and sample annotation is not defined; using data-frame order")
+            warning("Order column is identical to sample ID column and sample annotation is not defined; using data-frame order")
             df_long[[order_col]] <- as.integer(match(
                 df_long[[sample_id_col]],
                 unique(df_long[[sample_id_col]])
@@ -226,14 +222,14 @@ define_sample_order <- function(order_col, sample_annotation, facet_col,
         }
     }
 
-    # 5. Final fallback: ensure order_col exists & factor, with color_by_batch
+    ## 5. Final fallback: ensure order_col exists and is a factor
     if (is.null(order_col) || !(order_col %in% names(df_long))) {
         order_col <- sample_id_col
 
         if (color_by_batch &&
             !is.null(batch_col) &&
             batch_col %in% names(df_long)) {
-            warning("order column is not defined and coloring by batch is required; ordering the samples by batch")
+            warning("Order column is not defined and coloring by batch is required; ordering the samples by batch")
             df_long <- df_long %>%
                 arrange(!!sym(batch_col)) %>%
                 mutate(!!sym(order_col) := factor(
@@ -253,7 +249,7 @@ define_sample_order <- function(order_col, sample_annotation, facet_col,
         )
     }
 
-    # 6. Infer per‐facet ordering if numeric
+    ## 6. Infer per-facet ordering if numeric
     if (!is.null(facet_col) && is.numeric(df_long[[order_col]])) {
         df_long <- df_long %>%
             group_by_at(vars(all_of(facet_col))) %>%
@@ -263,6 +259,7 @@ define_sample_order <- function(order_col, sample_annotation, facet_col,
 
     return(list(order_col = order_col, df_long = df_long))
 }
+
 
 add_vertical_batch_borders <- function(order_col, sample_id_col, batch_col,
                                        vline_color, facet_col,
