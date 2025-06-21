@@ -3,6 +3,7 @@ test_that("map_factors_to_colors", {
 
   factor_columns <- c("MS_batch", "Strain")
   sample_annt <- example_sample_annotation[, factor_columns]
+  sample_annt[factor_columns] <- lapply(sample_annt[factor_columns], factor)
 
   expect_warning(sample_color_annt <- map_factors_to_colors(sample_annt),
     "Too many colors, consider merging some covariate values for better visualisation")
@@ -34,7 +35,12 @@ test_that("sample_annotation_to_colors", {
     "Diet", "digestion_batch", "Sex"
   )
   numeric_columns <- c("DateTime", "order")
-  expect_warning(color_scheme <- sample_annotation_to_colors(example_sample_annotation,
+
+  sample_annotation <- example_sample_annotation[, c(factor_columns, numeric_columns)]
+  sample_annotation[factor_columns] <- lapply(sample_annotation[factor_columns], factor)
+
+  expect_warning(color_scheme <- sample_annotation_to_colors(
+    sample_annotation,
     factor_columns = factor_columns,
     numeric_columns = numeric_columns
   ),
