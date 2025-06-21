@@ -295,8 +295,8 @@ center_feature_batch_means_df <- function(df_long, sample_annotation = NULL,
     minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
 
     if (!is.null(qual_col) && qual_col %in% names(corrected_df)) {
-        default_cols <- c(default_cols, qual_col, qual_value)
-        minimal_cols <- c(minimal_cols, qual_col, qual_value)
+        default_cols <- c(default_cols, qual_col)
+        minimal_cols <- c(minimal_cols, qual_col)
     }
     corrected_df <- subset_keep_cols(
         corrected_df,
@@ -433,8 +433,8 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
     minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col, "fit")
 
     if (!is.null(qual_col) && qual_col %in% names(corrected_df)) {
-        default_cols <- c(default_cols, qual_col, qual_value)
-        minimal_cols <- c(minimal_cols, batch_col, qual_col, qual_value)
+        default_cols <- c(default_cols, qual_col)
+        minimal_cols <- c(minimal_cols, batch_col, qual_col)
     } else {
         minimal_cols <- c(minimal_cols)
     }
