@@ -15,12 +15,17 @@ default_args <- list(
 
 # Helper to call with overrides
 calc_cv <- function(...) {
-    args <- modifyList(default_args, list(...))
+    args <- default_args
+    over <- list(...)
+    for (nm in names(over)) args[[nm]] <- over[[nm]]
     do.call(calculate_feature_CV, args)
 }
 
 test_that("basic output structure without batch, default args", {
-    cv_df <- calc_cv()
+    expect_warning(
+        cv_df <- calc_cv(),
+        "only total CV will be calculated"
+    )
     expect_equal(names(cv_df), c("peptide_group_label", "CV_total"))
     expect_type(cv_df$CV_total, "double")
     expect_true(all(cv_df$CV_total >= 0))
@@ -35,15 +40,23 @@ test_that("error on missing biospecimen_id_col", {
 
 test_that("warning if no biospecimen_id_col provided", {
     expect_warning(
-        cv_df <- calc_cv(biospecimen_id_col = NULL),
-        "considering all samples as replicates!"
+        expect_warning(
+            cv_df <- calc_cv(biospecimen_id_col = NULL),
+            "considering all samples as replicates!"
+        ),
+        "only total CV will be calculated"
     )
     expect_true("CV_total" %in% names(cv_df))
 })
 
 test_that("filter out features with ≤2 measurements", {
-    df2 <- head(example_proteome, 100)
-    cv2 <- calc_cv(df_long = df2)
+    df2 <- head(example_proteome, 200)
+    annot2 <- example_sample_annotation %>%
+        dplyr::filter(FullRunName %in% df2$FullRunName)
+    expect_warning(
+        cv2 <- calc_cv(df_long = df2, sample_annotation = annot2),
+        "only total CV will be calculated"
+    )
     low_n <- df2 %>%
         dplyr::count(peptide_group_label) %>%
         dplyr::filter(n <= 2) %>%
@@ -57,8 +70,9 @@ test_that("per-batch CV appears when batch_col is supplied", {
 })
 
 test_that("unlog = FALSE keeps log-scale, no unlog warning", {
-    expect_silent(
-        cvn <- calc_cv(unlog = FALSE)
+    expect_warning(
+        cvn <- calc_cv(unlog = FALSE),
+        "only total CV will be calculated"
     )
 })
 
@@ -70,7 +84,7 @@ test_that("features with <=2 replicates are removed with warning", {
         MS_batch            = rep("A", 5),
         biospec             = rep("bio1", 5)
     )
-    expect_warning(
+    expect_message(
         res <- calculate_feature_CV(
             df_long            = df,
             sample_annotation  = NULL,
@@ -94,7 +108,7 @@ test_that("unlogging reproduces original CV", {
         biospec             = rep("bio", 3)
     )
     logged <- dplyr::mutate(df, Intensity = log2(Intensity))
-    expect_warning(
+    expect_warning(expect_message(
         cv_logged <- calculate_feature_CV(
             df_long            = logged,
             sample_annotation  = NULL,
@@ -104,16 +118,20 @@ test_that("unlogging reproduces original CV", {
             biospecimen_id_col = "biospec",
             unlog              = TRUE
         ),
-        "reversing log-transformation"
+        "reversing log-transformation"),
+        "only total CV will be calculated"
     )
-    cv_raw <- calculate_feature_CV(
-        df_long            = df,
-        sample_annotation  = NULL,
-        sample_id_col      = "FullRunName",
-        feature_id_col     = "peptide_group_label",
-        measure_col        = "Intensity",
-        biospecimen_id_col = "biospec",
-        unlog              = FALSE
+    expect_warning(
+        cv_raw <- calculate_feature_CV(
+            df_long            = df,
+            sample_annotation  = NULL,
+            sample_id_col      = "FullRunName",
+            feature_id_col     = "peptide_group_label",
+            measure_col        = "Intensity",
+            biospecimen_id_col = "biospec",
+            unlog              = FALSE
+        ),
+    "only total CV will be calculated"
     )
     expect_equal(cv_logged$CV_total, cv_raw$CV_total)
 })
@@ -145,11 +163,11 @@ test_that("Step column preserved and plotting works", {
 
 test_that("per-batch CV matches manual calculation", {
     df <- tibble::tibble(
-        peptide_group_label = rep("pep", 4),
-        Intensity           = c(1, 2, 5, 6),
-        FullRunName         = paste0("s", 1:4),
-        MS_batch            = rep(c("b1", "b2"), each = 2),
-        biospec             = rep(c("bio1", "bio2"), each = 2)
+        peptide_group_label = rep("pep", 6),
+        Intensity           = c(1, 2, 5, 6, 10, 12),
+        FullRunName         = paste0("s", 1:6),
+        MS_batch            = rep(c("b1", "b2"), each = 3),
+        biospec             = rep(c("bio1", "bio2"), each = 3)
     )
     cv <- calculate_feature_CV(
         df_long            = df,
@@ -163,13 +181,13 @@ test_that("per-batch CV matches manual calculation", {
     )
     manual <- df %>%
         dplyr::group_by(MS_batch) %>%
-        dplyr::summarise(cv = sd(Intensity) / mean(Intensity))
+        dplyr::summarise(cv = 100 * sd(Intensity) / mean(Intensity))
     expect_equal(cv$CV_perBatch[1], manual$cv[1])
     expect_equal(cv$CV_perBatch[2], manual$cv[2])
 })
 
 test_that("missing biospecimen column triggers warning", {
-    expect_warning(
+    expect_warning(expect_warning(
         res <- calculate_feature_CV(
             df_long = tibble::tibble(
                 peptide_group_label = rep("pep", 3),
@@ -185,72 +203,64 @@ test_that("missing biospecimen column triggers warning", {
             unlog = FALSE
         ),
         "considering all samples as replicates"
-    )
+    ), "only total CV will be calculated")
     expect_true(all(res$CV_total >= 0))
 })
 
+# Prepare minimal CV_df
+cv_df_min <- data.frame(
+  peptide_group_label = letters[1:10],
+  CV_total            = runif(10, 0.1, 0.5),
+  Step                = rep(c("raw","norm"), each = 5),
+  stringsAsFactors    = FALSE
+)
 
-# # Prepare minimal CV_df
-# cv_df_min <- data.frame(
-#   peptide_group_label = letters[1:10],
-#   CV_total            = runif(10, 0.1, 0.5),
-#   Step                = rep(c("raw","norm"), each = 5),
-#   stringsAsFactors    = FALSE
-# )
+test_that("returns a ggplot object", {
+  p <- plot_CV_distr.df(cv_df_min, plot_title = "Test", log_y_scale = FALSE)
+  expect_s3_class(p, "ggplot")
+})
 
-# test_that("returns a ggplot object", {
-#   p <- plot_CV_distr.df(cv_df_min, plot_title = "Test", log_y_scale = FALSE)
-#   expect_s3_class(p, "ggplot")
-# })
+test_that("boxplot maps Step → x when Step present", {
+  p <- plot_CV_distr.df(cv_df_min, log_y_scale = FALSE)
+  # check mapping
+  aes_map <- layer_data(p, 1)
+  expect_true("xmin" %in% names(aes_map))  # presence of x grouping
+})
 
-# test_that("boxplot maps Step → x when Step present", {
-#   p <- plot_CV_distr.df(cv_df_min, log_y_scale = FALSE)
-#   # check mapping
-#   aes_map <- layer_data(p, 1)
-#   expect_true("xmin" %in% names(aes_map))  # presence of x grouping
-# })
+test_that("applies log scale when requested", {
+  p_log <- plot_CV_distr.df(cv_df_min, log_y_scale = TRUE)
+  # scale_y_log10 layer must be present
+  scales <- sapply(p_log$scales$scales, class)
+  expect_true(any(grepl("ScaleContinuousPosition", scales)))
+})
 
-# test_that("applies log scale when requested", {
-#   p_log <- plot_CV_distr.df(cv_df_min, log_y_scale = TRUE)
-#   # scale_y_log10 layer must be present
-#   scales <- sapply(p_log$scales$scales, class)
-#   expect_true(any(grepl("ScaleContinuousPosition", scales)))
-# })
+test_that("full pipeline returns ggplot", {
+  ggp <- plot_CV_distr(
+    df_long           = example_proteome,
+    sample_annotation = example_sample_annotation,
+    measure_col       = "Intensity",
+    batch_col         = "MS_batch",
+    biospecimen_id_col= "EarTag",
+    unlog             = TRUE,
+    plot_title        = "Full CV Test"
+  )
+  expect_s3_class(ggp, "ggplot")
+  # title must match
+  expect_equal(ggp$labels$title, "Full CV Test")
+})
 
-# test_that("classic theme is applied when theme='classic'", {
-#   p_cl <- plot_CV_distr.df(cv_df_min, theme = "classic", log_y_scale = FALSE)
-#   # theme_classic adds a panel.background element of class element_blank
-#   expect_true(inherits(p_cl$theme$panel.background, "element_blank"))
-# })
-
-
-# test_that("full pipeline returns ggplot", {
-#   ggp <- plot_CV_distr(
-#     df_long           = example_proteome,
-#     sample_annotation = example_sample_annotation,
-#     measure_col       = "Intensity",
-#     batch_col         = "MS_batch",
-#     biospecimen_id_col= "EarTag",
-#     unlog             = TRUE,
-#     plot_title        = "Full CV Test"
-#   )
-#   expect_s3_class(ggp, "ggplot")
-#   # title must match
-#   expect_equal(ggp$labels$title, "Full CV Test")
-# })
-
-# test_that("filename argument saves a file", {
-#   tmpfile <- tempfile(fileext = ".png")
-#   ggs <- plot_CV_distr.df(
-#     CV_df     = calculate_feature_CV(
-#       df_long            = example_proteome,
-#       sample_annotation  = example_sample_annotation,
-#       batch_col          = "MS_batch",
-#       biospecimen_id_col = "EarTag"
-#     ),
-#     filename  = tmpfile,
-#     log_y_scale = FALSE
-#   )
-#   expect_true(file.exists(tmpfile))
-#   unlink(tmpfile)
-# })
+test_that("filename argument saves a file", {
+  tmpfile <- tempfile(fileext = ".png")
+  ggs <- plot_CV_distr.df(
+    CV_df     = calculate_feature_CV(
+      df_long            = example_proteome,
+      sample_annotation  = example_sample_annotation,
+      batch_col          = "MS_batch",
+      biospecimen_id_col = "EarTag"
+    ),
+    filename  = tmpfile,
+    log_y_scale = FALSE
+  )
+  expect_true(file.exists(tmpfile))
+  unlink(tmpfile)
+})
