@@ -129,7 +129,7 @@ plot_protein_corrplot <- function(data_matrix,
     peptides <- peptide_annotation %>%
         filter(!!(sym(feature_id_col)) %in% rownames(data_matrix)) %>%
         filter(!!(sym(protein_col)) %in% protein_name) %>%
-        pull(feature_id_col) %>%
+        pull(!!sym(feature_id_col)) %>%
         as.character()
 
     data_matrix_sub <- data_matrix[peptides, ]
