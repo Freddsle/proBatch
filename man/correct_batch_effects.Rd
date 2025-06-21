@@ -142,6 +142,7 @@ correct_batch_effects_dm(
   measure_col = "Intensity",
   order_col = "order",
   min_measurements = 8,
+  no_fit_imputed = TRUE,
   ...
 )
 }

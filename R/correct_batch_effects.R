@@ -153,9 +153,10 @@ center_feature_batch_medians_df <- function(df_long, sample_annotation = NULL,
             mutate(median_global = median(!!(sym(temp_measure_col)), na.rm = TRUE))
     } else {
         if (!is.null(qual_col)) {
-            warning("imputed values are specified not to be used for median inference,
-however,
-              no_fit_imputed is FALSE")
+            warning(
+                "imputed values are specified not to be used for median inference, however,
+              no_fit_imputed is FALSE"
+            )
         }
         corrected_df <- corrected_df %>%
             mutate(median_batch = median(!!(sym(measure_col)), na.rm = TRUE)) %>%
@@ -750,7 +751,9 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
                                      sample_id_col = "FullRunName",
                                      measure_col = "Intensity",
                                      order_col = "order",
-                                     min_measurements = 8, ...) {
+                                     min_measurements = 8,
+                                     no_fit_imputed = TRUE,
+                                     ...) {
     df_long <- matrix_to_long(
         data_matrix,
         feature_id_col = feature_id_col,
@@ -768,11 +771,12 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
         measure_col = measure_col,
         order_col = order_col,
         min_measurements = min_measurements,
-        no_fit_imputed = TRUE,
+        no_fit_imputed = no_fit_imputed,
         qual_col = NULL,
         qual_value = NULL,
         keep_all = FALSE, ...
     )
+    # Convert the corrected data frame back to matrix format
     corrected_matrix <- long_to_matrix(
         corrected_df,
         sample_id_col = sample_id_col,
