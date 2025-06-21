@@ -60,3 +60,50 @@ test_that("correct_with_ComBat_df", {
     expect_lt(t_test_matrix$p.value, 0.05)
     expect_gt(t_test_combat$p.value, 0.05)
 })
+
+# test_that("center_feature_batch_means_df", {
+#     data(example_proteome, package = "proBatch")
+#     data(example_sample_annotation, package = "proBatch")
+
+#     rows <- which(example_proteome$peptide_group_label == "10062_NVGVSFYADKPEVTQEQK_3")
+#     proteome <- example_proteome[rows, ]
+#     means_df <- center_feature_batch_means_df(proteome, example_sample_annotation, no_fit_imputed = FALSE)
+
+#     n_batch <- length(unique(means_df$MS_batch))
+#     expect_equal(length(unique(means_df$diff)), n_batch)
+#     expect_equal(length(unique(means_df$mean_batch)), n_batch)
+# })
+
+test_that("correct_batch_effects_df wrapper", {
+    data(example_proteome, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    short_df <- example_proteome[example_proteome[["peptide_group_label"]] %in%
+        c("10062_NVGVSFYADKPEVTQEQK_3", "101233_QGFNVVVESGAGEASK_2"), ]
+
+    expect_warning(
+        corrected <- correct_batch_effects_df(short_df, example_sample_annotation,
+            continuous_func = "loess_regression",
+            discrete_func = "MedianCentering",
+            span = 0.7,
+            min_measurements = 8,
+            no_fit_imputed = FALSE
+        ),
+        "The following columns are represented in both df_long"
+    )
+
+    expect_true("fit" %in% names(corrected))
+    expect_equal(nrow(corrected), nrow(short_df))
+})
+
+test_that("correct_batch_effects_dm returns matrix", {
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    corrected <- correct_batch_effects_dm(example_proteome_matrix, example_sample_annotation,
+        discrete_func = "MedianCentering", no_fit_imputed = FALSE
+    )
+
+    expect_true(is.matrix(corrected))
+    expect_equal(dim(corrected), dim(example_proteome_matrix))
+})

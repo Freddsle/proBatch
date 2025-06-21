@@ -1,10 +1,16 @@
 merge_df_with_annotation <- function(df_long, sample_annotation, sample_id_col,
                                      batch_col, order_col, facet_col) {
+    join_cols <- unique(c(sample_id_col, batch_col, order_col, facet_col))
+    join_cols <- join_cols[!is.null(join_cols)]
+    # keep only columns that are in both data frames
+    join_cols <- join_cols[join_cols %in% names(df_long) &
+        join_cols %in% names(sample_annotation)]
+
     common_cols <- setdiff(
         intersect(names(sample_annotation), names(df_long)),
-        sample_id_col
+        join_cols
     )
-    if (length(common_cols) > 1) {
+    if (length(common_cols) >= 1) {
         common_col_string <- paste(common_cols, collapse = " ")
         warning(sprintf("The following columns are represented in both df_long
                     and sample_annotation: %s, these columns in df_long
@@ -18,7 +24,7 @@ merge_df_with_annotation <- function(df_long, sample_annotation, sample_id_col,
 
     message("Merging data matrix and sample annotation")
     df_long <- df_long %>%
-        inner_join(sample_annotation, by = sample_id_col) %>%
+        inner_join(sample_annotation, by = join_cols) %>%
         as.data.frame()
 
     return(df_long)
@@ -372,7 +378,6 @@ is_batch_factor <- function(batch_vector, color_scheme) {
 subset_keep_cols <- function(df, keep_all = "default",
                              default_cols = names(df),
                              minimal_cols = default_cols) {
-
     default_cols <- intersect(default_cols, names(df))
     minimal_cols <- intersect(minimal_cols, names(df))
     switch(keep_all,
@@ -380,4 +385,5 @@ subset_keep_cols <- function(df, keep_all = "default",
         default = dplyr::select(df, dplyr::all_of(default_cols)),
         minimal = dplyr::select(df, dplyr::all_of(minimal_cols))
     )
+    return(df)
 }
