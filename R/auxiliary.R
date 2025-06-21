@@ -135,7 +135,7 @@ create_peptide_annotation <- function(df_long,
     if (!(feature_id_col %in% names(df_long))) {
         stop(sprintf("Column %s is not in the data", feature_id_col))
     }
-    
+
     peptide_annotation <- df_long %>%
         select(all_of(c(feature_id_col, protein_col))) %>%
         distinct()
