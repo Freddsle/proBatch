@@ -203,7 +203,7 @@ warn_unmapped_columns <- function(sample_annotation,
     if (length(undefined_cols) > 0) {
         warning(paste(c(
             "The following columns will not be mapped to colors:",
-            undefined_cols, "if these have to be mapped, please assign
+            undefined_cols, "; if these have to be mapped, please assign
                     them to factor, date or numeric"
         ), collapse = " "))
     }
@@ -348,18 +348,27 @@ convert_annotation_classes <- function(df, factor_columns, numeric_columns) {
 #' @name sample_annotation_to_colors
 sample_annotation_to_colors <- function(sample_annotation,
                                         sample_id_col = "FullRunName",
-                                        factor_columns = c(
-                                            "MS_batch", "EarTag",
-                                            "digestion_batch",
-                                            "Strain", "Diet"
-                                        ),
-                                        numeric_columns = c(
-                                            "DateTime", "order"
-                                        ),
+                                        factor_columns = NULL,
+                                        numeric_columns = NULL,
                                         rare_categories_to_other = TRUE,
                                         guess_factors = FALSE,
                                         numeric_palette_type = "brewer") {
     sample_annotation <- as.data.frame(sample_annotation)
+
+    # if factor_columns is NULL, add default columns 
+    if (is.null(factor_columns)) {
+        factor_columns <- intersect(
+            c("MS_batch", "EarTag", "digestion_batch", "Strain", "Diet"),
+            names(sample_annotation)
+        )
+    }
+    # if numeric_columns is NULL, add default columns
+    if (is.null(numeric_columns)) {
+        numeric_columns <- intersect(
+            c("DateTime", "order"),
+            names(sample_annotation)
+        )
+    }
 
     columns_for_color_mapping <- union(factor_columns, numeric_columns)
 

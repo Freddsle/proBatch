@@ -348,8 +348,8 @@ plot_heatmap_diagnostic <- function(data_matrix, sample_annotation = NULL,
 plot_heatmap_generic <- function(data_matrix,
                                  column_annotation_df = NULL,
                                  row_annotation_df = NULL,
-                                 col_ann_id_col = "FullRunName",
-                                 row_ann_id_col = "peptide_group_label",
+                                 col_ann_id_col = NULL,
+                                 row_ann_id_col = NULL,
                                  columns_for_cols = c(
                                      "MS_batch", "Diet",
                                      "DateTime", "order"
@@ -388,6 +388,30 @@ plot_heatmap_generic <- function(data_matrix,
 
     if (!is.null(fill_the_missing)) {
         heatmap_color <- c(color_for_missing, heatmap_color)
+    }
+
+    if (is.null(col_ann_id_col)){
+        col_ann_id_col <- "FullRunName"
+        message(sprintf("Column %s is not in the data, using default", col_ann_id_col))
+    }
+    if (is.null(row_ann_id_col)) {
+        row_ann_id_col <- "peptide_group_label"
+        message(sprintf("Column %s is not in the data, using default", row_ann_id_col))
+    }
+
+    # if columns_for_cols is NULL, add default columns 
+    if (is.null(columns_for_cols)) {
+        columns_for_cols <- intersect(
+            c("MS_batch", "Diet", "DateTime", "order"),
+            names(column_annotation_df)
+        )
+    }
+    # if columns_for_rows is NULL, add default columns
+    if (is.null(columns_for_rows)) {
+        columns_for_rows <- intersect(
+            c("DateTime", "order"),
+            names(row_annotation_df)
+        )
     }
 
     annotation_col <- NA
@@ -503,6 +527,14 @@ calculate_PVCA <- function(data_matrix, sample_annotation,
         facet_col = NULL, merge = FALSE
     )
     data_matrix <- long_to_matrix(df_long, sample_id_col = sample_id_col)
+
+    # if factors_for_PVCA is NULL, add default columns 
+    if (is.null(factors_for_PVCA)) {
+        factors_for_PVCA <- intersect(
+            c("MS_batch", "digestion_batch", "Diet", "Sex", "Strain"),
+            names(sample_annotation)
+        )
+    }
 
     sample_annotation <- sample_annotation %>%
         select(all_of(c(sample_id_col, factors_for_PVCA))) %>%
