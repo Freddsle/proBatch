@@ -391,6 +391,10 @@ is_batch_factor <- function(batch_vector, color_scheme) {
 subset_keep_cols <- function(df, keep_all = "default",
                              default_cols = names(df),
                              minimal_cols = default_cols) {
+    if (!keep_all %in% c("all", "default", "minimal")) {
+        stop(sprintf("Invalid value for keep_all: %s. Must be one of 'all', 'default', or 'minimal'.", keep_all))
+    }
+
     default_cols <- intersect(default_cols, names(df))
     minimal_cols <- intersect(minimal_cols, names(df))
     df <- switch(keep_all,

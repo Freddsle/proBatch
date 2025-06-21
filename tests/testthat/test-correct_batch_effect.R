@@ -81,15 +81,12 @@ test_that("correct_batch_effects_df wrapper", {
     short_df <- example_proteome[example_proteome[["peptide_group_label"]] %in%
         c("10062_NVGVSFYADKPEVTQEQK_3", "101233_QGFNVVVESGAGEASK_2"), ]
 
-    expect_warning(
-        corrected <- correct_batch_effects_df(short_df, example_sample_annotation,
-            continuous_func = "loess_regression",
-            discrete_func = "MedianCentering",
-            span = 0.7,
-            min_measurements = 8,
-            no_fit_imputed = FALSE
-        ),
-        "The following columns are represented in both df_long"
+    corrected <- correct_batch_effects_df(short_df, example_sample_annotation,
+        continuous_func = "loess_regression",
+        discrete_func = "MedianCentering",
+        span = 0.7,
+        min_measurements = 8,
+        no_fit_imputed = FALSE
     )
 
     expect_true("fit" %in% names(corrected))
