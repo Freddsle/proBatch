@@ -14,7 +14,7 @@ calculate_feature_CV(
   biospecimen_id_col = NULL,
   unlog = TRUE,
   log_base = 2,
-  offset = 1
+  offset = 0
 )
 }
 \arguments{
