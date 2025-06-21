@@ -127,3 +127,39 @@ test_that("unlog_df: handles negative or zero after unlog (informative check)", 
     # This may be negative; test that function does not error
     expect_true(is.numeric(df_unlogged$Intensity))
 })
+
+test_that("log_transform_df produces expected values", {
+    data(example_proteome, package = "proBatch")
+
+    df_test <- example_proteome[1:3, ]
+    log_df <- log_transform_df(df_test, log_base = 2, offset = 0.5)
+
+    expected <- log2(df_test$Intensity + 0.5)
+
+    expect_true("beforeLog_Intensity" %in% names(log_df))
+    expect_equal(log_df$Intensity, expected, ignore_attr = TRUE)
+    expect_equal(log_df$beforeLog_Intensity, df_test$Intensity, ignore_attr = TRUE)
+
+    expect_warning(log_transform_df(df_test, log_base = NULL))
+})
+
+test_that("unlog functions invert log transformations", {
+    data(example_proteome, package = "proBatch")
+    data(example_proteome_matrix, package = "proBatch")
+
+    df_test <- example_proteome[1:3, ]
+    log_df <- log_transform_df(df_test, log_base = 2, offset = 0)
+    unlog_df_res <- unlog_df(log_df, log_base = 2, offset = 0)
+
+    expect_true("beforeUnLog_Intensity" %in% names(unlog_df_res))
+    expect_equal(unlog_df_res$Intensity, df_test$Intensity, ignore_attr = TRUE)
+
+    mat_test <- example_proteome_matrix[1:5, 1:4]
+    log_mat <- log_transform_dm(mat_test, log_base = 2, offset = 0)
+    unlog_mat <- unlog_dm(log_mat, log_base = 2, offset = 0)
+
+    expect_equal(unlog_mat, mat_test, ignore_attr = TRUE)
+
+    expect_warning(unlog_df(log_df, log_base = NULL))
+    expect_warning(unlog_dm(log_mat, log_base = NULL))
+})

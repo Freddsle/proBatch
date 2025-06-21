@@ -271,6 +271,14 @@ get_sample_corr_df <- function(cor_proteome, sample_annotation,
 
     spec_cols <- c(biospecimen_id_col, batch_col)
 
+    if (!all(spec_cols %in% names(sample_annotation))) {
+        stop(sprintf(
+            "Columns %s are not in sample_annotation",
+            setdiff(spec_cols, names(sample_annotation)),
+            "Please provide valid biospecimen_id_col and batch_col"
+        ))
+    }
+
     corr_distribution <- melt(cor_proteome,
         varnames = paste(sample_id_col, seq_len(2), sep = "_"),
         value.name = "correlation"
