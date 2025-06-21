@@ -29,18 +29,18 @@ map_factors_to_colors <- function(annotation_df_factors) {
   standard_colors_base <- grep("(white|(gr(a|e)y))", standardColors(45),
     value = TRUE, invert = TRUE
   )
-
+  n_base <- length(standard_colors_base)
   qual_col_pals <- brewer.pal.info[brewer.pal.info$category == "qual", ]
   brewer_colors <- unlist(mapply(
     brewer.pal,
     qual_col_pals$maxcolors,
     rownames(qual_col_pals)
   ))
-  if (number_colors_for_factors <= 45) {
+  if (number_colors_for_factors <= n_base) {
     colors <- standard_colors_base
   } else if (number_colors_for_factors <= length(brewer_colors)) {
     colors <- brewer_colors
-  } else if (number_colors_for_factors <= sum(length(brewer_colors), 45)) {
+  } else if (number_colors_for_factors <= sum(length(brewer_colors), n_base)) {
     colors <- c(standard_colors_base, brewer_colors)
   } else {
     colors_to_sample <- grep("(white|(gr(a|e)y))", standardColors(),
@@ -124,9 +124,9 @@ map_numbers_to_colors <- function(annotation_df_numbers,
 #'
 generate_colors_for_numeric <- function(palette_type = "brewer",
                                         i = 1) {
+  palette_type <- match.arg(palette_type, c("brewer", "viridis"))
   if ((palette_type == "viridis") && (i > 4 || i < 1)) {
-    warning("When using viridis palette i
-                must be >= 1 and <= 4. Setting it to 1.")
+    warning("When using viridis palette i must be >= 1 and <= 4. Setting it to 1.")
     i <- 1
   }
 
@@ -442,6 +442,10 @@ color_list_to_df <- function(color_list, sample_annotation,
   if (!setequal(names(sample_annotation), names(color_list))) {
     warning("color list and sample annotation have different factors,
             using only intersection in color scheme!")
+  }
+  if (length(factors_to_map) == 0) {
+    color_df <- data.frame(row.names = sample_annotation[[sample_id_col]])
+    return(color_df)
   }
   list_df <- lapply(factors_to_map, function(col_name) {
     col_values <- sample_annotation[[col_name]]
