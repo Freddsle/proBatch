@@ -74,7 +74,7 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
     if (any(df_long$n <= 2)) {
         # how many features have 2 or less measurements?
         n_peptides <- sum(df_long$n_total <= 2)
-        warning(paste0("Cannot calculate CV for ", nrow(n_peptides), " peptides with 2 or less measurements, removing those peptides"))
+        warning(paste0("Cannot calculate CV for ", n_peptides, " peptides with 2 or less measurements, removing those peptides"))
         df_long <- df_long %>%
             filter(n > 2)
     }
