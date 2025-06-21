@@ -187,7 +187,7 @@ define_sample_order <- function(order_col, sample_annotation, facet_col,
         # df_long[[order_col]] = reorder(as.character(df_long[[sample_id_col]]), df_long[[batch_col]])
       } else {
         warning("order column is identical to sample ID column,
-                assuming order of samples in the annnotation corresponds to the
+                assuming order of samples in the annotation corresponds to the
                 sample running order")
         df_long[[order_col]] <- as.integer(match(
           df_long[[sample_id_col]],
