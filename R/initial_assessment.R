@@ -243,7 +243,7 @@ plot_sample_mean <- function(data_matrix, sample_annotation,
 #' width = 14, height = 9, units = 'in')
 #' }
 #'
-plot_boxplot <- function(df_long, sample_annotation = NULL,
+plot_boxplot <- function(df_long, sample_annotation,
                          sample_id_col = "FullRunName",
                          measure_col = "Intensity",
                          batch_col = "MS_batch",

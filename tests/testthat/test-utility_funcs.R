@@ -112,3 +112,24 @@ test_that("adjust_units leaves inch units unchanged", {
 =======
 >>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
 })
+
+test_that("adjust_units converts mm to inches", {
+    res <- adjust_units("mm", width = 25.4, height = 50.8)
+    expect_equal(res$unit, "in")
+    expect_equal(res$width, 1)
+    expect_equal(res$height, 2)
+})
+
+test_that("adjust_units converts cm to inches", {
+    res <- adjust_units("cm", width = 2.54, height = 5.08)
+    expect_equal(res$unit, "in")
+    expect_equal(res$width, 1)
+    expect_equal(res$height, 2)
+})
+
+test_that("adjust_units leaves inch units unchanged", {
+    res <- adjust_units("in", width = 1, height = 2)
+    expect_equal(res$unit, "in")
+    expect_equal(res$width, 1)
+    expect_equal(res$height, 2)
+})
