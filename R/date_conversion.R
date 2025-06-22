@@ -1,4 +1,4 @@
-#' Convert data/time to POSIXct
+#' Convert date/time to POSIXct
 #'
 #' convert date/time column of sample_annotation to POSIX format required to
 #' keep number-like behavior
@@ -35,11 +35,15 @@ dates_to_posix <- function(sample_annotation,
     old_locale <- Sys.getlocale("LC_TIME")
     Sys.setlocale("LC_TIME", locale)
 
+    if (length(time_column) > 1 && length(dateTimeFormat) != length(time_column)) {
+    stop("`dateTimeFormat` must match length of `time_column`")
+  }
+
     if (length(time_column) == 1) {
         if (is.null(new_time_column)) new_time_column <- time_column
         time_col <- as.character(sample_annotation[[time_column]])
         sample_annotation[[new_time_column]] <- as.POSIXct(time_col,
-            format = dateTimeFormat,
+            format = paste(dateTimeFormat, collapse = " "), ,
             tz = tz
         )
     } else {
@@ -62,7 +66,7 @@ dates_to_posix <- function(sample_annotation,
 
 #' Convert date/time to POSIXct and rank samples by it
 #'
-#' Converts date/time columns fo sample_annotation to POSIXct format and
+#' Converts date/time columns for sample_annotation to POSIXct format and
 #' calculates sample run rank in order column
 #'
 #' @inheritParams dates_to_posix

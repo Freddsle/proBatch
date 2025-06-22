@@ -109,7 +109,7 @@ matrix_to_long <- function(data_matrix, sample_annotation = NULL,
 #'
 #' @inheritParams proBatch
 #'
-#' @return data frame containing petpide annotations
+#' @return data frame containing peptide annotations
 #' @export
 #' @examples
 #' data("example_proteome", package = "proBatch")
