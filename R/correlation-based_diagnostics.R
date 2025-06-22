@@ -60,7 +60,7 @@ plot_corr_matrix <- function(corr_matrix,
 
     if (cluster_rows != cluster_cols) {
         warning("different arguments for clustering of rows and columns, this will make
-            correlation matrix heatmap assimmetrical!")
+            correlation matrix heatmap asymmetrical!")
     }
     p <- plot_heatmap_generic(
         corr_matrix,

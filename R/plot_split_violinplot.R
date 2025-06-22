@@ -110,7 +110,7 @@ plot_split_violin_with_boxplot <- function(
     }
 
     if (!is.null(hlineintercept)) {
-        p <- p + geom_hline(yintercept = 0, linetype = "dashed")
+        p <- p + geom_hline(yintercept = hlineintercept, linetype = "dashed")
     }
 
     if (theme == "classic") {
