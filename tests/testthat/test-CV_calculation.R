@@ -108,17 +108,19 @@ test_that("unlogging reproduces original CV", {
         biospec             = rep("bio", 3)
     )
     logged <- dplyr::mutate(df, Intensity = log2(Intensity))
-    expect_warning(expect_message(
-        cv_logged <- calculate_feature_CV(
-            df_long            = logged,
-            sample_annotation  = NULL,
-            sample_id_col      = "FullRunName",
-            feature_id_col     = "peptide_group_label",
-            measure_col        = "Intensity",
-            biospecimen_id_col = "biospec",
-            unlog              = TRUE
+    expect_warning(
+        expect_message(
+            cv_logged <- calculate_feature_CV(
+                df_long            = logged,
+                sample_annotation  = NULL,
+                sample_id_col      = "FullRunName",
+                feature_id_col     = "peptide_group_label",
+                measure_col        = "Intensity",
+                biospecimen_id_col = "biospec",
+                unlog              = TRUE
+            ),
+            "reversing log-transformation"
         ),
-        "reversing log-transformation"),
         "only total CV will be calculated"
     )
     expect_warning(
@@ -131,7 +133,7 @@ test_that("unlogging reproduces original CV", {
             biospecimen_id_col = "biospec",
             unlog              = FALSE
         ),
-    "only total CV will be calculated"
+        "only total CV will be calculated"
     )
     expect_equal(cv_logged$CV_total, cv_raw$CV_total)
 })
@@ -209,63 +211,63 @@ test_that("missing biospecimen column triggers warning", {
 
 # Prepare minimal CV_df
 cv_df_min <- data.frame(
-  peptide_group_label = letters[1:10],
-  CV_total            = runif(10, 0.1, 0.5),
-  Step                = rep(c("raw","norm"), each = 5),
-  stringsAsFactors    = FALSE
+    peptide_group_label = letters[1:10],
+    CV_total            = runif(10, 0.1, 0.5),
+    Step                = rep(c("raw", "norm"), each = 5),
+    stringsAsFactors    = FALSE
 )
 
 test_that("returns a ggplot object", {
-  p <- plot_CV_distr.df(cv_df_min, plot_title = "Test", log_y_scale = FALSE)
-  expect_s3_class(p, "ggplot")
+    p <- plot_CV_distr.df(cv_df_min, plot_title = "Test", log_y_scale = FALSE)
+    expect_s3_class(p, "ggplot")
 })
 
 test_that("boxplot maps Step → x when Step present", {
-  p <- plot_CV_distr.df(cv_df_min, log_y_scale = FALSE)
-  # check mapping
-  aes_map <- layer_data(p, 1)
-  expect_true("xmin" %in% names(aes_map))  # presence of x grouping
+    p <- plot_CV_distr.df(cv_df_min, log_y_scale = FALSE)
+    # check mapping
+    aes_map <- layer_data(p, 1)
+    expect_true("xmin" %in% names(aes_map)) # presence of x grouping
 })
 
 test_that("applies log scale when requested", {
-  p_log <- plot_CV_distr.df(cv_df_min, log_y_scale = TRUE)
-  # scale_y_log10 layer must be present
-  scales <- sapply(p_log$scales$scales, class)
-  expect_true(any(grepl("ScaleContinuousPosition", scales)))
+    p_log <- plot_CV_distr.df(cv_df_min, log_y_scale = TRUE)
+    # scale_y_log10 layer must be present
+    scales <- sapply(p_log$scales$scales, class)
+    expect_true(any(grepl("ScaleContinuousPosition", scales)))
 })
 
 test_that("full pipeline returns ggplot", {
-  ggp <- plot_CV_distr(
-    df_long           = example_proteome,
-    sample_annotation = example_sample_annotation,
-    measure_col       = "Intensity",
-    batch_col         = "MS_batch",
-    biospecimen_id_col= "EarTag",
-    unlog             = TRUE,
-    plot_title        = "Full CV Test"
-  )
-  expect_s3_class(ggp, "ggplot")
-  # title must match
-  expect_equal(ggp$labels$title, "Full CV Test")
+    ggp <- plot_CV_distr(
+        df_long = example_proteome,
+        sample_annotation = example_sample_annotation,
+        measure_col = "Intensity",
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag",
+        unlog = TRUE,
+        plot_title = "Full CV Test"
+    )
+    expect_s3_class(ggp, "ggplot")
+    # title must match
+    expect_equal(ggp$labels$title, "Full CV Test")
 })
 
 test_that("filename argument saves a file", {
-  df <- example_proteome %>%
-    # filter to keep only finite values or value equal to 0
-    dplyr::filter(is.finite(Intensity) | Intensity == 0)
-  tmpfile <- tempfile(fileext = ".png")
-  cv_df <- calculate_feature_CV(
-    df_long            = df,
-    sample_annotation  = example_sample_annotation,
-    batch_col          = "MS_batch",
-    biospecimen_id_col = "EarTag"
-  ) %>%
-    dplyr::filter(is.finite(CV_total))
+    df <- example_proteome %>%
+        # filter to keep only finite values or value equal to 0
+        dplyr::filter(is.finite(Intensity) | Intensity == 0)
+    tmpfile <- tempfile(fileext = ".png")
+    cv_df <- calculate_feature_CV(
+        df_long            = df,
+        sample_annotation  = example_sample_annotation,
+        batch_col          = "MS_batch",
+        biospecimen_id_col = "EarTag"
+    ) %>%
+        dplyr::filter(is.finite(CV_total))
     ggs <- plot_CV_distr.df(
-        CV_df     = cv_df,,
-        filename  = tmpfile,
+        CV_df = cv_df, ,
+        filename = tmpfile,
         log_y_scale = FALSE
-  )
-  expect_true(file.exists(tmpfile))
-  unlink(tmpfile)
+    )
+    expect_true(file.exists(tmpfile))
+    unlink(tmpfile)
 })
