@@ -228,7 +228,7 @@ normalize_data_dm <- function(data_matrix,
                               log_base = NULL, offset = 1) {
     normalize_func <- match.arg(normalize_func)
     if (!is.null(log_base)) {
-        data_matrix <- log_transform_dm(data_matrix, log_base = log_base)
+        data_matrix <- log_transform_dm(data_matrix, log_base = log_base, offset = offset)
     }
 
     if (normalize_func == "quantile") {

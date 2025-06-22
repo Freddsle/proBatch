@@ -28,7 +28,7 @@ plot_sample_mean(
 
 plot_boxplot(
   df_long,
-  sample_annotation = NULL,
+  sample_annotation,
   sample_id_col = "FullRunName",
   measure_col = "Intensity",
   batch_col = "MS_batch",
