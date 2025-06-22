@@ -458,8 +458,10 @@ plot_spike_in <- function(spike_ins = "BOVIN", peptide_annotation = NULL,
 
 
     if (!is.null(protein_col) && !(protein_col %in% names(df_long))) {
-        stop("Protein column %s is not found in the data. Check peptide annotation
-         or main data table", protein_col)
+        stop(sprintf(
+            "Protein column %s is not found in the data. Check peptide annotation or main data table",
+            protein_col
+        ))
     }
 
 

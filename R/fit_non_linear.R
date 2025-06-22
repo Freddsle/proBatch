@@ -47,43 +47,48 @@ fit_nonlinear <- function(df_feature_batch,
                           qual_value = 2,
                           min_measurements = 8, ...) {
     x_all <- df_feature_batch[[order_col]]
+
+    # Prepare response vector with NAs for missing
     y_all <- df_feature_batch[[measure_col]]
+    missing_vals <- is.na(y_all)
 
     if (no_fit_imputed) {
         if (!is.null(qual_col) && (qual_col %in% names(df_feature_batch))) {
-            warning("imputed value column is in the data, fitting curve only to
-              measured, non-imputed values")
+            warning("Imputed-value column present; fitting only to measured (non-imputed) values.")
             imputed_values <- df_feature_batch[[qual_col]] == qual_value
             df_feature_batch[[measure_col]][imputed_values] <- NA
             missing_values <- imputed_values
         } else {
-            stop("imputed values are specified not to be used for curve fitting,
-           however, no flag for imputed values is specified")
+            stop("Imputed values should not be used, but no flag column specified.")
         }
     } else {
         if (!is.null(qual_col) && (qual_col %in% names(df_feature_batch))) {
-            warning("imputed value (requant) column is in the data, are you sure you
-                want to fit non-linear curve to these values, too?")
+            warning("Imputed-value column present; fitting non-linear curve to imputed values as well. Are you sure?")
         }
         missing_values <- is.na(y_all)
     }
 
-    y <- y_all[!missing_values]
-    x_to_fit <- x_all[!missing_values]
+     # Filter for fitting
+    x_to_fit <- x_all[!missing_vals]
+    y_to_fit <- y_all[!missing_vals]
 
-    max_consec_meas <- rle_func(df_feature_batch)
+    max_consec_meas <- rle_func(
+        df_feature_batch,
+        measure_col = measure_col,
+        order_col = order_col
+    )
     if (max_consec_meas >= min_measurements) {
         # fitting the curve
         # TODO: re-write in the functional programming paradigm (e.g. arguments -
         #       function, x_all, y, x_to_fit)
         if (fit_func == "loess_regression") {
             if (!optimize_span) {
-                fit_res <- loess_regression(x_to_fit, y, x_all, y_all,
+                fit_res <- loess_regression(x_to_fit, y_to_fit, x_all, y_all,
                     feature_id = feature_id,
                     batch_id = batch_id, ...
                 )
             } else {
-                fit_res <- loess_regression_opt(x_to_fit, y, x_all, y_all,
+                fit_res <- loess_regression_opt(x_to_fit, y_to_fit, x_all, y_all,
                     feature_id = feature_id,
                     batch_id = batch_id, ...
                 )
@@ -93,22 +98,22 @@ fit_nonlinear <- function(df_feature_batch,
         }
     } else {
         warning(sprintf(
-            "Curve fitting didn't have enough points to fit for the
-                       feature %s in the batch %s, leaving the original value",
+            "Curve fitting didn't have enough points to fit for feature %s in batch %s; leaving original values.",
             feature_id, batch_id
         ))
-        fit_res <- rep(NA, length(y_all))
+        fit_res <- y_all
     }
 
     return(fit_res)
 }
 
+#' @importFrom stats predict loess
 loess_regression <- function(x_to_fit, y, x_all, y_all,
                              feature_id = NULL, batch_id = NULL, ...) {
     out <- tryCatch(
         {
             fit <- loess(y ~ x_to_fit, surface = "direct", ...)
-            pred <- predict(fit, newdata = x_all)
+            pred <- predict(fit, newdata = data.frame(x_to_fit = x_all))
             pred
         },
         warning = function(cond) {
@@ -117,20 +122,22 @@ loess_regression <- function(x_to_fit, y, x_all, y_all,
                 feature_id, batch_id
             ))
             message(cond)
-            rep(NA, length(y_all))
+            y_all
         }
     )
     return(out)
 }
 
 loess_regression_opt <- function(x_to_fit, y, x_all, y_all,
-                                 feature_id = NULL, batch_id = NULL, ...) {
+                                 feature_id = NULL, batch_id = NULL, 
+                                 kernel = "normal",
+                                 bws    = c(0.01, 0.5, 1, 1.5, 2, 5, 10)) {
     out <- tryCatch(
         {
-            bw <- optimise_bw(x_to_fit, y, ...)
+            bw <- optimise_bw(x_to_fit, y, kernel = kernel, bws = bws)
             degr_freedom <- optimise_df(x_to_fit, bw)
             fit <- loess(y ~ x_to_fit, enp.target = degr_freedom, surface = "direct", ...)
-            pred <- predict(fit, newdata = x_all)
+            pred <- predict(fit, newdata = data.frame(x_to_fit = x_all))
             return(pred)
         },
         warning = function(cond) {
@@ -145,6 +152,7 @@ loess_regression_opt <- function(x_to_fit, y, x_all, y_all,
     return(out)
 }
 
+# Leave-one-out MSE for Nadaraya-Watson
 loocv.nw <- function(x, y, bw = 1.5, kernel = "normal") {
     ## Help function to calculate leave-one-out regression values
     loo.reg.value.bw <- function(i, x, y, bw, kernel = kernel) {
@@ -153,10 +161,7 @@ loocv.nw <- function(x, y, bw = 1.5, kernel = "normal") {
             kernel = kernel, bandwidth = bw
         )$y)
     }
-
-
     ## Calculate LOO regression values using the help function above
-
     n <- max(length(x), length(y))
     loo.values.bw <- vapply(seq_len(n),
         FUN = loo.reg.value.bw,
@@ -183,7 +188,6 @@ reg.fcn.nw <- function(reg.x, reg.y, x, bw = 1.5) {
 
 optimise_df <- function(x, bw) {
     # find the best bandwidth
-
     n <- length(x)
     Id <- diag(n)
     S.nw <- matrix(0, n, n)
@@ -194,8 +198,10 @@ optimise_df <- function(x, bw) {
     return(df.nw)
 }
 
-rle_func <- function(df) {
-    rle_res <- rle(is.na(df$Intensity[order(df$order)]))
+rle_func <- function(df, measure_col = "Intensity", order_col = "order") {
+    ordered_measure <- df[[measure_col]][order(df[[order_col]])]
+    rle_res <- rle(is.na(ordered_measure))
     max_measured <- max(rle_res$lengths[!rle_res$values])
+    if (is.infinite(max_measured)) max_measured <- 0
     return(max_measured)
 }
