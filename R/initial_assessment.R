@@ -48,7 +48,8 @@
 plot_sample_mean <- function(data_matrix, sample_annotation = NULL,
                              sample_id_col = "FullRunName",
                              batch_col = "MS_batch",
-                             color_by_batch = FALSE, color_scheme = "brewer",
+                             color_by_batch = FALSE,
+                             color_scheme = c("brewer", "viridis", "wesanderson", "ggplot2"),
                              order_col = "order",
                              vline_color = "grey",
                              facet_col = NULL,
@@ -73,6 +74,14 @@ plot_sample_mean <- function(data_matrix, sample_annotation = NULL,
         sample_annotation, sample_id_col, df_ave,
         batch_col, order_col, facet_col
     )
+
+    # Merge in any annotation columns needed for borders/facets
+    if (!is.null(sample_annotation)) {
+        # which columns to add?
+        ann_cols <- union(sample_id_col, setdiff(names(sample_annotation), names(df_ave)))
+        ann_subset <- sample_annotation[, ann_cols, drop = FALSE]
+        df_ave <- merge(df_ave, ann_subset, by = sample_id_col, all.x = TRUE, sort = FALSE)
+    }
 
     # Ensure that batch-coloring-related arguments are defined properly
     if (!is.null(batch_col)) {
@@ -109,6 +118,13 @@ plot_sample_mean <- function(data_matrix, sample_annotation = NULL,
     order_col <- sample_order$order_col
     df_ave <- sample_order$df_long
 
+    # If the order column is not numeric, convert it to factor
+    if (!is.numeric(df_ave[[order_col]])) {
+        if (is.character(df_ave[[order_col]])) {
+            df_ave[[order_col]] <- factor(df_ave[[order_col]], levels = unique(df_ave[[order_col]]))
+        }
+    }
+
     # Main plotting of intensity means:
     gg <- ggplot(df_ave, aes(x = !!sym(order_col), y = .data$Mean_Intensity)) +
         geom_point()
@@ -124,24 +140,17 @@ plot_sample_mean <- function(data_matrix, sample_annotation = NULL,
 
     # add vertical lines, if required (for order-related effects)
     if (!is.null(batch_col)) {
-        batch_vector <- sample_annotation[[batch_col]]
+        # batch_vector <- sample_annotation[[batch_col]]
+        batch_vector <- df_ave[[batch_col]]
         is_factor <- is_batch_factor(batch_vector, color_scheme)
     }
 
-    if (!is.null(batch_col) && is_factor) {
-        if (!is.null(sample_annotation)) {
-            gg <- add_vertical_batch_borders(
-                order_col, sample_id_col, batch_col,
-                vline_color,
-                facet_col, sample_annotation, gg
-            )
-        } else {
-            gg <- add_vertical_batch_borders(
-                order_col, sample_id_col, batch_col,
-                vline_color,
-                facet_col, df_ave, gg
-            )
-        }
+    if (!is.null(batch_col) && is_factor && !is.null(vline_color)) {
+        gg <- add_vertical_batch_borders(
+            order_col, sample_id_col, batch_col,
+            vline_color,
+            facet_col, df_ave, gg
+        )
     }
 
     # Plot each "facet factor" in it's own subplot
@@ -173,11 +182,6 @@ plot_sample_mean <- function(data_matrix, sample_annotation = NULL,
 
     # Rotate x axis tick labels if the filenames, not numeric order, is displayed
     if (!is.numeric(df_ave[[order_col]])) {
-        if (is.character(df_ave[[order_col]])) {
-            df_ave[[order_col]] <- factor(df_ave[[order_col]],
-                levels = unique(df_ave[[order_col]])
-            )
-        }
         gg <- gg +
             theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5))
     }
@@ -189,6 +193,7 @@ plot_sample_mean <- function(data_matrix, sample_annotation = NULL,
     }
 
     # save the plot
+    units <- match.arg(units)
     save_ggplot(filename, units, width, height, gg)
 
     return(gg)
@@ -277,6 +282,12 @@ plot_boxplot <- function(df_long, sample_annotation = NULL,
     order_col <- sample_order$order_col
     df_long <- sample_order$df_long
 
+    if (!is.numeric(df_long[[order_col]])) {
+        if (is.character(df_long[[order_col]])) {
+            df_long[[order_col]] <- factor(df_long[[order_col]], levels = unique(df_long[[order_col]]))
+        }
+    }
+
     # Main plotting of intensity distribution boxplots
     gg <- ggplot(df_long, aes(
         x = !!sym(order_col), y = !!sym(measure_col),
@@ -287,7 +298,6 @@ plot_boxplot <- function(df_long, sample_annotation = NULL,
     } else {
         gg <- gg + geom_boxplot(outlier.shape = NA)
     }
-
 
     # Define the color scheme, add colors
     gg <- color_by_factor(
@@ -304,7 +314,6 @@ plot_boxplot <- function(df_long, sample_annotation = NULL,
             dir = "v", scales = "free_x"
         )
     }
-
 
     # Add the title
     if (!is.null(plot_title)) {
@@ -328,17 +337,13 @@ plot_boxplot <- function(df_long, sample_annotation = NULL,
 
     # Rotate x axis tick labels if the filenames, not numeric order, is displayed
     if (!is.numeric(df_long[[order_col]])) {
-        if (is.character(df_long[[order_col]])) {
-            df_long[[order_col]] <- factor(df_long[[order_col]],
-                levels = unique(df_long[[order_col]])
-            )
-        }
         gg <- gg +
             theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5))
     }
 
     if (!is.null(batch_col)) {
-        batch_vector <- sample_annotation[[batch_col]]
+        # batch_vector <- sample_annotation[[batch_col]]
+        batch_vector <- df_long[[batch_col]]
         is_factor <- is_batch_factor(batch_vector, color_scheme)
     }
 
@@ -349,6 +354,7 @@ plot_boxplot <- function(df_long, sample_annotation = NULL,
     }
 
     # save the plot
+    units <- match.arg(units)
     save_ggplot(filename, units, width, height, gg)
 
     return(gg)
