@@ -50,3 +50,15 @@ test_that("normalize_data_dm forwards offset to log transform", {
 =======
 >>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
 })
+
+test_that("normalize_data_dm forwards offset to log transform", {
+    data(example_proteome_matrix, package = "proBatch")
+    mat <- example_proteome_matrix[1:5, 1:4]
+    res_quant <- normalize_data_dm(mat, normalize_func = "quantile", log_base = 2, offset = 0.5)
+    expected_quant <- quantile_normalize_dm(log_transform_dm(mat, log_base = 2, offset = 0.5))
+    expect_equal(res_quant, expected_quant, ignore_attr = TRUE)
+
+    res_median <- normalize_data_dm(mat, normalize_func = "medianCentering", log_base = 2, offset = 0.5)
+    expected_median <- normalize_sample_medians_dm(log_transform_dm(mat, log_base = 2, offset = 0.5))
+    expect_equal(res_median, expected_median, ignore_attr = TRUE)
+})
