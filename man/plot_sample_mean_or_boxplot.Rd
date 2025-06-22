@@ -8,11 +8,11 @@
 \usage{
 plot_sample_mean(
   data_matrix,
-  sample_annotation = NULL,
+  sample_annotation,
   sample_id_col = "FullRunName",
   batch_col = "MS_batch",
   color_by_batch = FALSE,
-  color_scheme = "brewer",
+  color_scheme = c("brewer", "viridis", "wesanderson", "ggplot2"),
   order_col = "order",
   vline_color = "grey",
   facet_col = NULL,
@@ -21,7 +21,7 @@ plot_sample_mean(
   height = NA,
   units = c("cm", "in", "mm"),
   plot_title = NULL,
-  theme = "classic",
+  theme_name = c("classic", "minimal", "bw", "light", "dark"),
   base_size = 20,
   ylimits = NULL
 )
@@ -104,8 +104,6 @@ pdf and png format is supported}
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
-\item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
-
 \item{base_size}{base font size}
 
 \item{ylimits}{range of y-axis to compare two plots side by side, if required.}
@@ -118,6 +116,8 @@ output result file). See \code{help("example_proteome")} for more details.}
 \item{measure_col}{if \code{df_long} is among the parameters, it is the
 column with expression/abundance/intensity; otherwise, it is used
 internally for consistency.}
+
+\item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
 
 \item{outliers}{keep (default) or remove the boxplot outliers}
 }
