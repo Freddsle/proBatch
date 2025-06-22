@@ -363,7 +363,7 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
         sample_annotation,
         sample_id_col, df_long,
         batch_col,
-        order_col = NULL,
+        order_col = order_col,
         facet_col = NULL,
         merge = TRUE
     )
@@ -460,6 +460,9 @@ adjust_batch_trend_dm <- function(data_matrix, sample_annotation,
                                   order_col = "order",
                                   fit_func = "loess_regression",
                                   return_fit_df = TRUE,
+                                  no_fit_imputed = TRUE,
+                                  qual_col = NULL,
+                                  qual_value = NULL,
                                   min_measurements = 8, ...) {
     df_long <- matrix_to_long(
         data_matrix,
@@ -474,7 +477,13 @@ adjust_batch_trend_dm <- function(data_matrix, sample_annotation,
         sample_id_col = sample_id_col,
         batch_col = batch_col,
         feature_id_col = feature_id_col,
-        measure_col = measure_col
+        measure_col = measure_col,
+        order_col = order_col,
+        fit_func = fit_func,
+        no_fit_imputed = no_fit_imputed,
+        qual_col = qual_col,
+        qual_value = qual_value,
+        min_measurements = min_measurements
     )
 
     corrected_df <- corrected_data$corrected_df
@@ -485,7 +494,12 @@ adjust_batch_trend_dm <- function(data_matrix, sample_annotation,
         sample_id_col = sample_id_col
     )
     if (return_fit_df) {
-        fit_df <- corrected_data$fit_df
+        # extract only the columns relevant for inspecting the fit
+        fit_columns <- c(sample_id_col, feature_id_col, batch_col, order_col, "fit")
+        if (!"fit" %in% names(corrected_df)) {
+            stop("Internal error: no 'fit' column in corrected_df")
+        }
+        fit_df <- corrected_df[, fit_columns, drop = FALSE]
         return(list(
             corrected_dm = corrected_dm,
             fit_df = fit_df
