@@ -133,7 +133,7 @@ test_that("adjust_batch_trend_dm forwards arguments", {
 
     res <- adjust_batch_trend_dm(sub_matrix, example_sample_annotation,
         order_col = "order", fit_func = "loess_regression",
-        min_measurements = 8
+        min_measurements = 8, no_fit_imputed = FALSE
     )
 
     expect_true(is.list(res))

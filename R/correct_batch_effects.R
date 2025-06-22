@@ -486,7 +486,7 @@ adjust_batch_trend_dm <- function(data_matrix, sample_annotation,
         min_measurements = min_measurements
     )
 
-    corrected_df <- corrected_data$corrected_df
+    corrected_df <- corrected_data
     corrected_dm <- long_to_matrix(
         corrected_df,
         feature_id_col = feature_id_col,
@@ -494,10 +494,17 @@ adjust_batch_trend_dm <- function(data_matrix, sample_annotation,
         sample_id_col = sample_id_col
     )
     if (return_fit_df) {
-        # extract only the columns relevant for inspecting the fit
+        # extract only the columns relevant for inspecting the fit (only non-empty columns)
         fit_columns <- c(sample_id_col, feature_id_col, batch_col, order_col, "fit")
-        if (!"fit" %in% names(corrected_df)) {
-            stop("Internal error: no 'fit' column in corrected_df")
+        # if any of the fit columns are not present in the corrected_df, remove them and warn
+        if (any(!fit_columns %in% names(corrected_df))) {
+            missing_cols <- fit_columns[!fit_columns %in% names(corrected_df)]
+            message(paste(
+                "The following columns are not present in the corrected_df and
+                            will be removed from fit_df: ",
+                paste(missing_cols, collapse = ", ")
+            ))
+            fit_columns <- fit_columns[fit_columns %in% names(corrected_df)]
         }
         fit_df <- corrected_df[, fit_columns, drop = FALSE]
         return(list(
