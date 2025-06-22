@@ -4,10 +4,13 @@ test_that("sample_mean_plots", {
 
     matrix <- example_proteome_matrix[1:20, ]
     expect_warning(
-        meanplot <- plot_sample_mean(matrix, example_sample_annotation,
-            order_col = "order", batch_col = "MS_batch", color_by_batch = TRUE
+        expect_warning(
+            meanplot <- plot_sample_mean(matrix, example_sample_annotation,
+                order_col = "order", batch_col = "MS_batch", color_by_batch = TRUE
+            ),
+            "inferring order-related batch borders for a plot;"
         ),
-        "inferring order-related batch borders for a plot;"
+        "color_scheme will be inferred automatically"
     )
 
     expect_equal(meanplot$labels$colour, "MS_batch")
@@ -21,9 +24,15 @@ test_that("boxplot_plots", {
     data(example_sample_annotation, package = "proBatch")
 
     proteome <- example_proteome[1:20, ]
-    expect_warning(boxplot <- plot_boxplot(proteome, example_sample_annotation,
-        batch_col = "MS_batch"
-    ))
+    expect_warning(
+        expect_warning(
+            boxplot <- plot_boxplot(proteome, example_sample_annotation,
+                batch_col = "MS_batch"
+            ),
+            "color_scheme will be inferred automatically"
+        ),
+        "Mismatch between sample_annotation and df_long sample"
+    )
 
     expect_equal(boxplot$labels$fill, "MS_batch")
     expect_equal(boxplot$label$group, "order")
@@ -92,12 +101,18 @@ test_that("boxplot without outliers", {
     )
     df_long <- merge(df_long, sample_annotation, by = "FullRunName")
 
+    color_scheme <- sample_annotation_to_colors(
+        sample_annotation,
+        factor_columns = c("MS_batch"),
+        numeric_columns = c("order")
+    )
     expect_warning(boxplot <- plot_boxplot(
         df_long,
         sample_annotation,
         order_col = "order",
         batch_col = "MS_batch",
-        outliers = FALSE
+        outliers = FALSE,
+        color_scheme = color_scheme
     ), "outliers will be removed")
 
     expect_equal(boxplot$layers[[1]]$geom_params$outlier.shape, NA)
