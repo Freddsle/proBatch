@@ -1,5 +1,6 @@
 test_that("hierarchical_clustering", {
     data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
 
     matrix_test <- example_proteome_matrix[1:10, ]
 
