@@ -1,44 +1,62 @@
-handle_missing_values <- function(data_matrix, warning_message,
-                                  fill_the_missing = NULL) {
-    if (any(is.na(as.vector(data_matrix)))) {
+handle_missing_values <- function(data_matrix, warning_message, fill_the_missing = NULL) {
+    # 1. Validate input and coerce to matrix
+    if (!is.matrix(data_matrix)) {
+        warning("Coercing input to matrix")
+        data_matrix <- as.matrix(data_matrix)
+    }
+    orig <- data_matrix
+
+    # 2. Only proceed if there are any NAs
+    if (any(is.na(orig))) {
         warning(warning_message)
-        pre_corr_dim <- nrow(data_matrix)
+
+        # 2a. Fill-missing path
         if (!is.null(fill_the_missing)) {
             if (!is.numeric(fill_the_missing)) {
-                warning("filling value is not numeric, setting to 0")
+                warning("filling value is not numeric, coercing to 0")
                 fill_the_missing <- 0
-            } else {
-                warning(sprintf("filling missing value with %s", fill_the_missing))
-                data_matrix[is.na(data_matrix)] <- fill_the_missing
             }
+            warning(sprintf("filling missing values with %s", fill_the_missing))
+            data_matrix[is.na(data_matrix)] <- fill_the_missing
+
+            # 2b. Removal path
         } else {
-            complete_cases <- complete.cases(data_matrix)
-            if (ncol(data_matrix) == nrow(data_matrix)) {
-                pre_corr_dim <- nrow(data_matrix)
-                if (isSymmetric(data_matrix)) {
-                    message("removing rows and columns with missing values, as matrix is square")
-                    if (all(!complete_cases)) {
-                        warning("removing rows with all values missing")
-                        all_missing_rows <- apply(data_matrix, 2, function(x) all(is.na(x)))
-                        bad_rows <- names(all_missing_rows[all_missing_rows])
-                        good_rows <- setdiff(colnames(data_matrix), bad_rows)
-                        data_matrix <- (data_matrix[good_rows, good_rows])
-                    }
-                    data_matrix <- data_matrix[complete.cases(data_matrix), complete.cases(data_matrix)]
+            nr <- nrow(data_matrix)
+            nc <- ncol(data_matrix)
+
+            # 2b.i Square & symmetric (ignoring NAs)
+            if (nr == nc && isSymmetric(data_matrix, na.rm = TRUE)) {
+                message("removing rows and columns with missing values, as matrix is square")
+                keep <- complete.cases(data_matrix)
+                if (!any(keep)) {
+                    warning("removing rows with all values missing")
+                    data_matrix <- data_matrix[FALSE, FALSE]
                 } else {
-                    warning("matrix is square, but not symmetric, coincidence or error?")
-                    data_matrix <- data_matrix[complete.cases(data_matrix), ]
+                    data_matrix <- data_matrix[keep, keep, drop = FALSE]
                 }
+
+                # 2b.ii Square but not symmetric
+            } else if (nr == nc) {
+                warning("matrix is square, but not symmetric, coincidence or error?")
+                data_matrix <- data_matrix[complete.cases(data_matrix), , drop = FALSE]
+
+                # 2b.iii Non-square: remove rows with any NA
             } else {
-                warning("filling value is NULL, removing rows with missing values from data matrix")
-                data_matrix <- data_matrix[complete.cases(data_matrix), ]
+                data_matrix <- data_matrix[complete.cases(data_matrix), , drop = FALSE]
             }
         }
-        after_corr_dim <- nrow(data_matrix)
-        rem_rows <- pre_corr_dim - after_corr_dim
-        if (rem_rows > 0) {
-            warning(sprintf("removed %s rows of the matrix with missing values", rem_rows))
+
+        # 3. Report removals
+        post <- data_matrix
+        removed_rows <- nrow(orig) - nrow(post)
+        if (removed_rows > 0) {
+            warning(sprintf("removed %d rows", removed_rows))
+        }
+        removed_cols <- ncol(orig) - ncol(post)
+        if (removed_cols > 0) {
+            warning(sprintf("removed %d columns", removed_cols))
         }
     }
+
     return(data_matrix)
 }

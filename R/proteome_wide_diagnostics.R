@@ -284,13 +284,13 @@ plot_heatmap_diagnostic <- function(data_matrix, sample_annotation = NULL,
         row_ann_id_col = feature_id_col,
         columns_for_cols = factors_to_plot,
         columns_for_rows = factors_of_feature_ann,
-        cluster_rows = cluster_cols,
+        cluster_rows = cluster_rows,
         cluster_cols = cluster_cols,
         annotation_color_cols = color_list,
         annotation_color_rows = color_list_features,
         heatmap_color = heatmap_color,
         color_for_missing = color_for_missing,
-        filename = filename, width = width, height = width,
+        filename = filename, width = width, height = height,
         units = units,
         plot_title = plot_title,
         ...
@@ -348,8 +348,8 @@ plot_heatmap_diagnostic <- function(data_matrix, sample_annotation = NULL,
 plot_heatmap_generic <- function(data_matrix,
                                  column_annotation_df = NULL,
                                  row_annotation_df = NULL,
-                                 col_ann_id_col = "FullRunName",
-                                 row_ann_id_col = "peptide_group_label",
+                                 col_ann_id_col = NULL,
+                                 row_ann_id_col = NULL,
                                  columns_for_cols = c(
                                      "MS_batch", "Diet",
                                      "DateTime", "order"
@@ -388,6 +388,30 @@ plot_heatmap_generic <- function(data_matrix,
 
     if (!is.null(fill_the_missing)) {
         heatmap_color <- c(color_for_missing, heatmap_color)
+    }
+
+    if (is.null(col_ann_id_col)) {
+        col_ann_id_col <- "FullRunName"
+        message(sprintf("Column %s is not in the data, using default", col_ann_id_col))
+    }
+    if (is.null(row_ann_id_col)) {
+        row_ann_id_col <- "peptide_group_label"
+        message(sprintf("Column %s is not in the data, using default", row_ann_id_col))
+    }
+
+    # if columns_for_cols is NULL, add default columns
+    if (is.null(columns_for_cols)) {
+        columns_for_cols <- intersect(
+            c("MS_batch", "Diet", "DateTime", "order"),
+            names(column_annotation_df)
+        )
+    }
+    # if columns_for_rows is NULL, add default columns
+    if (is.null(columns_for_rows)) {
+        columns_for_rows <- intersect(
+            c("DateTime", "order"),
+            names(row_annotation_df)
+        )
     }
 
     annotation_col <- NA
@@ -503,6 +527,14 @@ calculate_PVCA <- function(data_matrix, sample_annotation,
         facet_col = NULL, merge = FALSE
     )
     data_matrix <- long_to_matrix(df_long, sample_id_col = sample_id_col)
+
+    # if factors_for_PVCA is NULL, add default columns
+    if (is.null(factors_for_PVCA)) {
+        factors_for_PVCA <- intersect(
+            c("MS_batch", "digestion_batch", "Diet", "Sex", "Strain"),
+            names(sample_annotation)
+        )
+    }
 
     sample_annotation <- sample_annotation %>%
         select(all_of(c(sample_id_col, factors_for_PVCA))) %>%
@@ -765,8 +797,6 @@ plot_PVCA.df <- function(pvca_res,
             implemented")
     }
 
-    save_ggplot(filename, units, width, height, gg)
-
     gg <- gg +
         theme(
             axis.title.x = NULL,
@@ -775,6 +805,8 @@ plot_PVCA.df <- function(pvca_res,
         xlab(NULL) +
         theme(text = element_text(size = 15)) +
         guides(fill = guide_legend(override.aes = list(color = NA), title = NULL))
+
+    save_ggplot(filename, units, width, height, gg)
 
     return(gg)
 }
@@ -840,11 +872,14 @@ plot_PCA <- function(data_matrix, sample_annotation,
 
     data_matrix <- check_feature_id_col_in_dm(feature_id_col, data_matrix)
 
-    warning_message <- "PCA cannot operate with missing values in the matrix"
-    data_matrix <- handle_missing_values(
-        data_matrix, warning_message,
-        fill_the_missing
-    )
+    # if any missing values, print a warning and handle them
+    if (any(is.na(data_matrix))) {
+        warning_message <- "PCA cannot operate with missing values in the matrix"
+        data_matrix <- handle_missing_values(
+            data_matrix, warning_message,
+            fill_the_missing
+        )
+    }
 
     pr_comp_res <- prcomp(t(data_matrix))
     gg <- autoplot(pr_comp_res,
@@ -852,9 +887,7 @@ plot_PCA <- function(data_matrix, sample_annotation,
         x = PC_to_plot[1], y = PC_to_plot[2]
     )
 
-
     # add colors
-
     if (length(color_by) > 1) {
         warning("Coloring by the first column specified")
         color_by <- color_by[1]

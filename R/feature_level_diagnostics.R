@@ -1,10 +1,10 @@
-#' @title Ploting peptide measurements
+#' @title Plotting peptide measurements
 #'
 #' @description Creates a peptide faceted ggplot2 plot of the value in
 #' \code{measure_col}
 #' vs \code{order_col} (if `NULL`, x-axis is simply a sample name order).
 #' Additionally, the resulting plot can also be colored either by batch factor,
-#' by quality factor (e.g. imputated/non-imputed) and, if needed, faceted by
+#' by quality factor (e.g. imputed/non-imputed) and, if needed, faceted by
 #' another batch factor, e.g. an instrument.
 #'  If the non-linear curve was fit, this can also be added to the plot, see
 #'  functions specific to each case below
@@ -250,8 +250,6 @@ plot_single_feature <- function(feature_name, df_long,
         )
     }
 
-
-
     # add colors
     gg <- color_by_factor(
         color_by_batch = color_by_batch,
@@ -379,7 +377,7 @@ plot_peptides_of_one_protein <- function(protein_name,
     } else {
         peptides <- df_long %>%
             filter((!!sym(protein_col)) == protein_name) %>%
-            pull(feature_id_col) %>%
+            pull(!!sym(feature_id_col)) %>%
             unique()
     }
     gg <- plot_single_feature(
@@ -434,7 +432,7 @@ plot_spike_in <- function(spike_ins = "BOVIN", peptide_annotation = NULL,
         if (protein_col %in% names(df_long)) {
             spike_in_peptides <- df_long %>%
                 filter(grepl(spike_ins, !!sym(protein_col))) %>%
-                pull(feature_id_col) %>%
+                pull(!!sym(feature_id_col)) %>%
                 as.character() %>%
                 unique()
         } else {
@@ -442,7 +440,7 @@ plot_spike_in <- function(spike_ins = "BOVIN", peptide_annotation = NULL,
                 if (protein_col %in% names(peptide_annotation)) {
                     spike_in_peptides <- peptide_annotation %>%
                         filter(grepl(spike_ins, !!sym(protein_col))) %>%
-                        pull(feature_id_col) %>%
+                        pull(!!sym(feature_id_col)) %>%
                         as.character() %>%
                         unique()
                     df_long <- df_long %>%
@@ -455,15 +453,12 @@ plot_spike_in <- function(spike_ins = "BOVIN", peptide_annotation = NULL,
         spike_in_peptides <- spike_ins
     }
 
-
-
     if (!is.null(protein_col) && !(protein_col %in% names(df_long))) {
-        stop("Protein column %s is not found in the data. Check peptide annotation
-         or main data table", protein_col)
+        stop(sprintf(
+            "Protein column %s is not found in the data. Check peptide annotation or main data table",
+            protein_col
+        ))
     }
-
-
-
 
     gg <- plot_single_feature(
         feature_name = spike_in_peptides,
@@ -480,6 +475,7 @@ plot_spike_in <- function(spike_ins = "BOVIN", peptide_annotation = NULL,
         order_col = order_col,
         facet_col = facet_col,
         plot_title = plot_title,
+        vline_color = vline_color,
         theme = theme,
         base_size = base_size
     )
@@ -518,7 +514,7 @@ plot_iRT <- function(irt_pattern = "iRT",
     }
     iRT_peptides <- df_long %>%
         filter(grepl(irt_pattern, !!sym(protein_col))) %>%
-        pull(feature_id_col) %>%
+        pull(!!sym(feature_id_col)) %>%
         unique()
     gg <- plot_single_feature(
         feature_name = iRT_peptides,

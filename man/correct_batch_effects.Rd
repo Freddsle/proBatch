@@ -85,6 +85,9 @@ adjust_batch_trend_dm(
   order_col = "order",
   fit_func = "loess_regression",
   return_fit_df = TRUE,
+  no_fit_imputed = TRUE,
+  qual_col = NULL,
+  qual_value = NULL,
   min_measurements = 8,
   ...
 )
@@ -142,6 +145,7 @@ correct_batch_effects_dm(
   measure_col = "Intensity",
   order_col = "order",
   min_measurements = 8,
+  no_fit_imputed = TRUE,
   ...
 )
 }

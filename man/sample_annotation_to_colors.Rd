@@ -7,8 +7,8 @@
 sample_annotation_to_colors(
   sample_annotation,
   sample_id_col = "FullRunName",
-  factor_columns = c("MS_batch", "EarTag", "digestion_batch", "Strain", "Diet"),
-  numeric_columns = c("DateTime", "order"),
+  factor_columns = NULL,
+  numeric_columns = NULL,
   rare_categories_to_other = TRUE,
   guess_factors = FALSE,
   numeric_palette_type = "brewer"
@@ -42,11 +42,9 @@ are actually numeric}
 numeric values coloring (can be \code{'brewer' and 'viridis'})}
 }
 \value{
-list of three items: \enumerate{
-  \item list of colors;
-  \item data frame of colors;
-  \item new sample annotation (e.g. rare factor levels merged into "other")
-  }
+list of colors for the selected annotation columns. Use
+\code{\link{color_list_to_df}} if a data frame representation is
+needed.
 }
 \description{
 Convert the sample annotation data frame to list of colors

@@ -153,9 +153,10 @@ center_feature_batch_medians_df <- function(df_long, sample_annotation = NULL,
             mutate(median_global = median(!!(sym(temp_measure_col)), na.rm = TRUE))
     } else {
         if (!is.null(qual_col)) {
-            warning("imputed values are specified not to be used for median inference,
-however,
-              no_fit_imputed is FALSE")
+            warning(
+                "imputed values are specified not to be used for median inference, however,
+              no_fit_imputed is FALSE"
+            )
         }
         corrected_df <- corrected_df %>%
             mutate(median_batch = median(!!(sym(measure_col)), na.rm = TRUE)) %>%
@@ -170,11 +171,11 @@ however,
         mutate(!!(sym(measure_col)) := !!(sym(old_measure_col)) + diff)
 
     # Ensure batch_col is present in default_cols/minimal_cols
-    default_cols <- c(original_cols, batch_col, old_measure_col, "median_batch", "median_global", "diff")
-    minimal_cols <- c(
+    default_cols <- unique(c(original_cols, batch_col, old_measure_col, "median_batch", "median_global", "diff"))
+    minimal_cols <- unique(c(
         sample_id_col, feature_id_col, measure_col, old_measure_col,
         batch_col, "median_batch", "diff"
-    )
+    ))
 
     if (!is.null(qual_col) && qual_col %in% names(corrected_df)) {
         default_cols <- c(default_cols, qual_col)
@@ -294,8 +295,8 @@ center_feature_batch_means_df <- function(df_long, sample_annotation = NULL,
     minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
 
     if (!is.null(qual_col) && qual_col %in% names(corrected_df)) {
-        default_cols <- c(default_cols, qual_col, qual_value)
-        minimal_cols <- c(minimal_cols, qual_col, qual_value)
+        default_cols <- c(default_cols, qual_col)
+        minimal_cols <- c(minimal_cols, qual_col)
     }
     corrected_df <- subset_keep_cols(
         corrected_df,
@@ -362,7 +363,7 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
         sample_annotation,
         sample_id_col, df_long,
         batch_col,
-        order_col = NULL,
+        order_col = order_col,
         facet_col = NULL,
         merge = TRUE
     )
@@ -414,7 +415,6 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
                 min_measurements = min_measurements, ...
             ))
     }
-
     old_measure_col <- paste("preTrendFit", measure_col, sep = "_")
 
     corrected_df <- corrected_df %>%
@@ -433,8 +433,8 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
     minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col, "fit")
 
     if (!is.null(qual_col) && qual_col %in% names(corrected_df)) {
-        default_cols <- c(default_cols, qual_col, qual_value)
-        minimal_cols <- c(minimal_cols, batch_col, qual_col, qual_value)
+        default_cols <- c(default_cols, qual_col)
+        minimal_cols <- c(minimal_cols, batch_col, qual_col)
     } else {
         minimal_cols <- c(minimal_cols)
     }
@@ -444,7 +444,6 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
         default_cols = default_cols,
         minimal_cols = minimal_cols
     )
-
     return(corrected_df)
 }
 
@@ -461,6 +460,9 @@ adjust_batch_trend_dm <- function(data_matrix, sample_annotation,
                                   order_col = "order",
                                   fit_func = "loess_regression",
                                   return_fit_df = TRUE,
+                                  no_fit_imputed = TRUE,
+                                  qual_col = NULL,
+                                  qual_value = NULL,
                                   min_measurements = 8, ...) {
     df_long <- matrix_to_long(
         data_matrix,
@@ -475,10 +477,16 @@ adjust_batch_trend_dm <- function(data_matrix, sample_annotation,
         sample_id_col = sample_id_col,
         batch_col = batch_col,
         feature_id_col = feature_id_col,
-        measure_col = measure_col
+        measure_col = measure_col,
+        order_col = order_col,
+        fit_func = fit_func,
+        no_fit_imputed = no_fit_imputed,
+        qual_col = qual_col,
+        qual_value = qual_value,
+        min_measurements = min_measurements
     )
 
-    corrected_df <- corrected_data$corrected_df
+    corrected_df <- corrected_data
     corrected_dm <- long_to_matrix(
         corrected_df,
         feature_id_col = feature_id_col,
@@ -486,7 +494,19 @@ adjust_batch_trend_dm <- function(data_matrix, sample_annotation,
         sample_id_col = sample_id_col
     )
     if (return_fit_df) {
-        fit_df <- corrected_data$fit_df
+        # extract only the columns relevant for inspecting the fit (only non-empty columns)
+        fit_columns <- c(sample_id_col, feature_id_col, batch_col, order_col, "fit")
+        # if any of the fit columns are not present in the corrected_df, remove them and warn
+        if (any(!fit_columns %in% names(corrected_df))) {
+            missing_cols <- fit_columns[!fit_columns %in% names(corrected_df)]
+            message(paste(
+                "The following columns are not present in the corrected_df and
+                            will be removed from fit_df: ",
+                paste(missing_cols, collapse = ", ")
+            ))
+            fit_columns <- fit_columns[fit_columns %in% names(corrected_df)]
+        }
+        fit_df <- corrected_df[, fit_columns, drop = FALSE]
         return(list(
             corrected_dm = corrected_dm,
             fit_df = fit_df
@@ -750,13 +770,16 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
                                      sample_id_col = "FullRunName",
                                      measure_col = "Intensity",
                                      order_col = "order",
-                                     min_measurements = 8, ...) {
+                                     min_measurements = 8,
+                                     no_fit_imputed = TRUE,
+                                     ...) {
     df_long <- matrix_to_long(
         data_matrix,
         feature_id_col = feature_id_col,
         measure_col = measure_col,
         sample_id_col = sample_id_col
     )
+
     corrected_df <- correct_batch_effects_df(
         df_long,
         sample_annotation,
@@ -768,11 +791,12 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
         measure_col = measure_col,
         order_col = order_col,
         min_measurements = min_measurements,
-        no_fit_imputed = TRUE,
+        no_fit_imputed = no_fit_imputed,
         qual_col = NULL,
         qual_value = NULL,
-        keep_all = FALSE, ...
+        keep_all = "default", ...
     )
+    # Convert the corrected data frame back to matrix format
     corrected_matrix <- long_to_matrix(
         corrected_df,
         sample_id_col = sample_id_col,

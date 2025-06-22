@@ -1,4 +1,4 @@
-#' Convert data/time to POSIXct
+#' Convert date/time to POSIXct
 #'
 #' convert date/time column of sample_annotation to POSIX format required to
 #' keep number-like behavior
@@ -6,8 +6,8 @@
 #' @inheritParams proBatch
 #' @param time_column name of the column(s) where run date & time are specified.
 #'   These will be used to determine the run order
-#' @param new_time_column name of the new column to which date&time will be
-#'   converted to
+#' @param new_time_column name of the new column that will contain the converted
+#'   date/time value
 #' @param dateTimeFormat POSIX format of the date and time.
 #'   See \code{\link{as.POSIXct}} from base R for details
 #' @param tz for time zone, 'GMT' by default
@@ -35,11 +35,15 @@ dates_to_posix <- function(sample_annotation,
     old_locale <- Sys.getlocale("LC_TIME")
     Sys.setlocale("LC_TIME", locale)
 
+    if (length(time_column) > 1 && length(dateTimeFormat) != length(time_column)) {
+        stop("`dateTimeFormat` must match length of `time_column`")
+    }
+
     if (length(time_column) == 1) {
         if (is.null(new_time_column)) new_time_column <- time_column
         time_col <- as.character(sample_annotation[[time_column]])
         sample_annotation[[new_time_column]] <- as.POSIXct(time_col,
-            format = dateTimeFormat,
+            format = paste(dateTimeFormat, collapse = " "), ,
             tz = tz
         )
     } else {
@@ -62,15 +66,15 @@ dates_to_posix <- function(sample_annotation,
 
 #' Convert date/time to POSIXct and rank samples by it
 #'
-#' Converts date/time columns fo sample_annotation to POSIXct format and
+#' Converts date/time columns for sample_annotation to POSIXct format and
 #' calculates sample run rank in order column
 #'
 #' @inheritParams dates_to_posix
 #'
-#' @param new_order_col name of column with generated the order of sample run
-#'  based on time columns
-#' @param instrument_col column, denoting different
-#' instrument used for measurements
+#' @param new_order_col name of the column containing the generated sample run
+#'  order based on time columns
+#' @param instrument_col name of the column denoting the instrument used for
+#'  measurements
 #' @return sample annotation file with a new column \code{new_time_column} with
 #'   POSIX-formatted date & \code{new_order_col} used
 #'   in some diagnostic plots (e.g.

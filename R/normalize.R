@@ -127,7 +127,7 @@ quantile_normalize_df <- function(df_long,
     minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
 
     if (!is.null(qual_col) && qual_col %in% names(normalized_df)) {
-        minimal_cols <- c(minimal_cols, qual_col, qual_value)
+        minimal_cols <- c(minimal_cols, qual_col)
     }
     normalized_df <- subset_keep_cols(
         normalized_df,
@@ -178,7 +178,7 @@ normalize_sample_medians_df <- function(df_long,
         message("removing imputed values (requants) from the matrix")
         df_long <- df_long %>%
             mutate(!!sym(measure_col) := ifelse(!!sym(qual_col) == qual_value,
-                NA, measure_col
+                NA, !!sym(measure_col)
             ))
     } else {
         if (!is.null(qual_col) && (qual_col %in% names(df_long))) {
@@ -206,7 +206,7 @@ normalize_sample_medians_df <- function(df_long,
     minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
 
     if (!is.null(qual_col) && (qual_col %in% names(normalized_df))) {
-        minimal_cols <- c(minimal_cols, qual_col, qual_value)
+        minimal_cols <- c(minimal_cols, qual_col)
     }
     normalized_df <- subset_keep_cols(
         normalized_df,
@@ -228,7 +228,7 @@ normalize_data_dm <- function(data_matrix,
                               log_base = NULL, offset = 1) {
     normalize_func <- match.arg(normalize_func)
     if (!is.null(log_base)) {
-        data_matrix <- log_transform_dm(data_matrix, log_base = log_base)
+        data_matrix <- log_transform_dm(data_matrix, log_base = log_base, offset = offset)
     }
 
     if (normalize_func == "quantile") {

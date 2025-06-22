@@ -8,7 +8,7 @@
 \usage{
 plot_sample_mean(
   data_matrix,
-  sample_annotation = NULL,
+  sample_annotation,
   sample_id_col = "FullRunName",
   batch_col = "MS_batch",
   color_by_batch = FALSE,
@@ -21,14 +21,14 @@ plot_sample_mean(
   height = NA,
   units = c("cm", "in", "mm"),
   plot_title = NULL,
-  theme = "classic",
+  theme_name = c("classic", "minimal", "bw", "light", "dark"),
   base_size = 20,
   ylimits = NULL
 )
 
 plot_boxplot(
   df_long,
-  sample_annotation = NULL,
+  sample_annotation,
   sample_id_col = "FullRunName",
   measure_col = "Intensity",
   batch_col = "MS_batch",
@@ -41,7 +41,7 @@ plot_boxplot(
   height = NA,
   units = c("cm", "in", "mm"),
   plot_title = NULL,
-  theme = "classic",
+  theme_name = c("classic", "minimal", "bw", "light", "dark"),
   base_size = 20,
   ylimits = NULL,
   outliers = TRUE
@@ -103,8 +103,6 @@ pdf and png format is supported}
 
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
-
-\item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
 
 \item{base_size}{base font size}
 

@@ -203,8 +203,9 @@ warn_unmapped_columns <- function(sample_annotation,
     if (length(undefined_cols) > 0) {
         warning(paste(c(
             "The following columns will not be mapped to colors:",
-            undefined_cols, "if these have to be mapped, please assign
-                    them to factor, date or numeric"
+            undefined_cols, "; if these have to be mapped, please assign
+                    them to factor, date or numeric and add to
+                    factor_columns or numeric_columns parameters"
         ), collapse = " "))
     }
 }
@@ -327,11 +328,9 @@ convert_annotation_classes <- function(df, factor_columns, numeric_columns) {
 #' @param numeric_palette_type palette to be used for
 #' numeric values coloring (can be \code{'brewer' and 'viridis'})
 #'
-#' @return list of three items: \enumerate{
-#'   \item list of colors;
-#'   \item data frame of colors;
-#'   \item new sample annotation (e.g. rare factor levels merged into "other")
-#'   }
+#' @return list of colors for the selected annotation columns. Use
+#' \code{\link{color_list_to_df}} if a data frame representation is
+#' needed.
 #'
 #' @examples
 #' data("example_sample_annotation", package = "proBatch")
@@ -348,18 +347,27 @@ convert_annotation_classes <- function(df, factor_columns, numeric_columns) {
 #' @name sample_annotation_to_colors
 sample_annotation_to_colors <- function(sample_annotation,
                                         sample_id_col = "FullRunName",
-                                        factor_columns = c(
-                                            "MS_batch", "EarTag",
-                                            "digestion_batch",
-                                            "Strain", "Diet"
-                                        ),
-                                        numeric_columns = c(
-                                            "DateTime", "order"
-                                        ),
+                                        factor_columns = NULL,
+                                        numeric_columns = NULL,
                                         rare_categories_to_other = TRUE,
                                         guess_factors = FALSE,
                                         numeric_palette_type = "brewer") {
     sample_annotation <- as.data.frame(sample_annotation)
+
+    # if factor_columns is NULL, add default columns
+    if (is.null(factor_columns)) {
+        factor_columns <- intersect(
+            c("MS_batch", "EarTag", "digestion_batch", "Strain", "Diet"),
+            names(sample_annotation)
+        )
+    }
+    # if numeric_columns is NULL, add default columns
+    if (is.null(numeric_columns)) {
+        numeric_columns <- intersect(
+            c("DateTime", "order"),
+            names(sample_annotation)
+        )
+    }
 
     columns_for_color_mapping <- union(factor_columns, numeric_columns)
 
@@ -398,6 +406,7 @@ sample_annotation_to_colors <- function(sample_annotation,
         if (rare_categories_to_other) {
             factor_df <- factor_df %>%
                 mutate(across(where(check_rare_levels), merge_rare_levels))
+            sample_annotation[factor_columns] <- factor_df
         }
         list_of_col_for_factors <- map_factors_to_colors(factor_df)
     } else {

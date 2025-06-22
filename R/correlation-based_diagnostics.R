@@ -60,7 +60,7 @@ plot_corr_matrix <- function(corr_matrix,
 
     if (cluster_rows != cluster_cols) {
         warning("different arguments for clustering of rows and columns, this will make
-            correlation matrix heatmap assimmetrical!")
+            correlation matrix heatmap asymmetrical!")
     }
     p <- plot_heatmap_generic(
         corr_matrix,
@@ -129,7 +129,7 @@ plot_protein_corrplot <- function(data_matrix,
     peptides <- peptide_annotation %>%
         filter(!!(sym(feature_id_col)) %in% rownames(data_matrix)) %>%
         filter(!!(sym(protein_col)) %in% protein_name) %>%
-        pull(feature_id_col) %>%
+        pull(!!sym(feature_id_col)) %>%
         as.character()
 
     data_matrix_sub <- data_matrix[peptides, ]
@@ -270,6 +270,14 @@ get_sample_corr_df <- function(cor_proteome, sample_annotation,
     names(comb_to_keep) <- paste(sample_id_col, seq_len(2), sep = "_")
 
     spec_cols <- c(biospecimen_id_col, batch_col)
+
+    if (!all(spec_cols %in% names(sample_annotation))) {
+        stop(sprintf(
+            "Columns %s are not in sample_annotation",
+            setdiff(spec_cols, names(sample_annotation)),
+            "Please provide valid biospecimen_id_col and batch_col"
+        ))
+    }
 
     corr_distribution <- melt(cor_proteome,
         varnames = paste(sample_id_col, seq_len(2), sep = "_"),
@@ -451,6 +459,7 @@ plot_sample_corr_distribution <- function(data_matrix, sample_annotation,
     if (!is.list(data_matrix)) {
         corr_distribution <- calculate_sample_corr_distr(
             data_matrix = data_matrix,
+            repeated_samples = repeated_samples,
             sample_annotation = sample_annotation,
             sample_id_col = sample_id_col,
             biospecimen_id_col = biospecimen_id_col,

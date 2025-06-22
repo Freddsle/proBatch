@@ -4,8 +4,10 @@ test_that("corr_matrix_plots", {
 
     matrix_test <- example_proteome_matrix[peptides, ]
     corr_matrix <- cor(t(matrix_test), use = "complete.obs")
-    corr_matrix_pheatmap <- plot_corr_matrix(corr_matrix)
-
+    expect_warning(
+        corr_matrix_pheatmap <- plot_corr_matrix(corr_matrix),
+        "annotation_row and annotation_col are not specified for heatmap"
+    )
     expect_s3_class(corr_matrix_pheatmap, "pheatmap")
     expect_equal(corr_matrix_pheatmap$gtable$layout$name[4], "legend", ignore_attr = TRUE)
 })
@@ -15,11 +17,21 @@ test_that("protein_corrplot_plots", {
     data(example_proteome_matrix, package = "proBatch")
     data(example_peptide_annotation, package = "proBatch")
 
-    corrplot <- plot_protein_corrplot(example_proteome_matrix,
+    expect_warning(
+        color_list <- sample_annotation_to_colors(
+            sample_annotation = example_peptide_annotation,
+            factor_columns = "Gene"
+        ),
+        "The following columns will not be mapped to colors: peptide_group_label ProteinName ;"
+    )
+
+    corrplot <- plot_protein_corrplot(
+        example_proteome_matrix,
         protein_name = "Haao",
         peptide_annotation = example_peptide_annotation,
         protein_col = "Gene",
-        cluster_rows = TRUE, cluster_cols = TRUE
+        cluster_rows = TRUE, cluster_cols = TRUE,
+        color_list = color_list
     )
 
     expect_equal(corrplot$tree_row$method, "complete", ignore_attr = TRUE)

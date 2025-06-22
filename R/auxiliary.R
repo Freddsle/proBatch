@@ -109,7 +109,7 @@ matrix_to_long <- function(data_matrix, sample_annotation = NULL,
 #'
 #' @inheritParams proBatch
 #'
-#' @return data frame containing petpide annotations
+#' @return data frame containing peptide annotations
 #' @export
 #' @examples
 #' data("example_proteome", package = "proBatch")
@@ -126,10 +126,16 @@ create_peptide_annotation <- function(df_long,
                                       protein_col = c("ProteinName", "Gene")) {
     if (!all(protein_col %in% names(df_long))) {
         stop(
-            sprintf("Column %s is not in the data"),
-            setdiff(names(df_long), protein_col)
+            sprintf(
+                "The following columns are missing from the data: %s",
+                paste(setdiff(protein_col, names(df_long)), collapse = ", ")
+            )
         )
     }
+    if (!(feature_id_col %in% names(df_long))) {
+        stop(sprintf("Column %s is not in the data", feature_id_col))
+    }
+
     peptide_annotation <- df_long %>%
         select(all_of(c(feature_id_col, protein_col))) %>%
         distinct()
