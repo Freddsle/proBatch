@@ -50,7 +50,7 @@ plot_sample_mean <- function(data_matrix, sample_annotation,
                              sample_id_col = "FullRunName",
                              batch_col = "MS_batch",
                              color_by_batch = FALSE,
-                             color_scheme = c("brewer", "viridis", "wesanderson", "ggplot2"),
+                             color_scheme = "brewer",
                              order_col = "order",
                              vline_color = "grey",
                              facet_col = NULL,
@@ -248,7 +248,7 @@ plot_boxplot <- function(df_long, sample_annotation = NULL,
                          measure_col = "Intensity",
                          batch_col = "MS_batch",
                          color_by_batch = TRUE,
-                         color_scheme = c("brewer", "viridis", "wesanderson", "ggplot2"),
+                         color_scheme = "brewer",
                          order_col = "order",
                          facet_col = NULL,
                          filename = NULL, width = NA, height = NA,
@@ -321,6 +321,7 @@ plot_boxplot <- function(df_long, sample_annotation = NULL,
     if (outliers) {
         gg <- gg + geom_boxplot(outlier.size = 0.15)
     } else {
+        warning("`outliers = FALSE`: outliers will be removed (outlier.shape = NA).")
         gg <- gg + geom_boxplot(outlier.shape = NA)
     }
 
