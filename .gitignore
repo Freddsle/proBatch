@@ -12,3 +12,8 @@ Meta
 /.Rd2pdf*
 #NAMESPACE
 doc
+.Rprofile
+tmp.R
+/doc/
+/Meta/
+
