@@ -872,11 +872,14 @@ plot_PCA <- function(data_matrix, sample_annotation,
 
     data_matrix <- check_feature_id_col_in_dm(feature_id_col, data_matrix)
 
-    warning_message <- "PCA cannot operate with missing values in the matrix"
-    data_matrix <- handle_missing_values(
-        data_matrix, warning_message,
-        fill_the_missing
-    )
+    # if any missing values, print a warning and handle them
+    if (any(is.na(data_matrix))) {
+        warning_message <- "PCA cannot operate with missing values in the matrix"
+        data_matrix <- handle_missing_values(
+            data_matrix, warning_message,
+            fill_the_missing
+        )
+    }
 
     pr_comp_res <- prcomp(t(data_matrix))
     gg <- autoplot(pr_comp_res,
@@ -884,9 +887,7 @@ plot_PCA <- function(data_matrix, sample_annotation,
         x = PC_to_plot[1], y = PC_to_plot[2]
     )
 
-
     # add colors
-
     if (length(color_by) > 1) {
         warning("Coloring by the first column specified")
         color_by <- color_by[1]
