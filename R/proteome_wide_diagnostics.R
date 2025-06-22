@@ -797,8 +797,6 @@ plot_PVCA.df <- function(pvca_res,
             implemented")
     }
 
-    save_ggplot(filename, units, width, height, gg)
-
     gg <- gg +
         theme(
             axis.title.x = NULL,
@@ -807,6 +805,8 @@ plot_PVCA.df <- function(pvca_res,
         xlab(NULL) +
         theme(text = element_text(size = 15)) +
         guides(fill = guide_legend(override.aes = list(color = NA), title = NULL))
+
+    save_ggplot(filename, units, width, height, gg)
 
     return(gg)
 }

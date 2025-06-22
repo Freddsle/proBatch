@@ -72,3 +72,24 @@ test_that("define_sample_order", {
     expect_equal(df_long$order_col, example_sample_annotation$order_col)
     expect_s3_class(df_long[[new_order_col]], "factor")
 })
+
+test_that("adjust_units converts mm to inches", {
+    res <- adjust_units("mm", width = 25.4, height = 50.8)
+    expect_equal(res$unit, "in")
+    expect_equal(res$width, 1)
+    expect_equal(res$height, 2)
+})
+
+test_that("adjust_units converts cm to inches", {
+    res <- adjust_units("cm", width = 2.54, height = 5.08)
+    expect_equal(res$unit, "in")
+    expect_equal(res$width, 1)
+    expect_equal(res$height, 2)
+})
+
+test_that("adjust_units leaves inch units unchanged", {
+    res <- adjust_units("in", width = 1, height = 2)
+    expect_equal(res$unit, "in")
+    expect_equal(res$width, 1)
+    expect_equal(res$height, 2)
+})
