@@ -126,12 +126,12 @@ create_peptide_annotation <- function(df_long,
                                       protein_col = c("ProteinName", "Gene")) {
     if (!all(protein_col %in% names(df_long))) {
         stop(
-            sprintf("Column %s is not in the data"),
-            setdiff(names(df_long), protein_col)
+            sprintf(
+                "The following columns are missing from the data: %s",
+                paste(setdiff(protein_col, names(df_long)), collapse = ", ")
+            )
         )
     }
-
-    # if feature_id_col is not in df_long, stop
     if (!(feature_id_col %in% names(df_long))) {
         stop(sprintf("Column %s is not in the data", feature_id_col))
     }
