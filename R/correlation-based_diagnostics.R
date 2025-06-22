@@ -459,6 +459,7 @@ plot_sample_corr_distribution <- function(data_matrix, sample_annotation,
     if (!is.list(data_matrix)) {
         corr_distribution <- calculate_sample_corr_distr(
             data_matrix = data_matrix,
+            repeated_samples = repeated_samples,
             sample_annotation = sample_annotation,
             sample_id_col = sample_id_col,
             biospecimen_id_col = biospecimen_id_col,

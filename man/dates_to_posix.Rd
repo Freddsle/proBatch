@@ -2,7 +2,7 @@
 % Please edit documentation in R/date_conversion.R
 \name{dates_to_posix}
 \alias{dates_to_posix}
-\title{Convert data/time to POSIXct}
+\title{Convert date/time to POSIXct}
 \usage{
 dates_to_posix(
   sample_annotation,
