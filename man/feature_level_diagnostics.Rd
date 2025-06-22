@@ -7,7 +7,7 @@
 \alias{plot_spike_in}
 \alias{plot_iRT}
 \alias{plot_with_fitting_curve}
-\title{Ploting peptide measurements}
+\title{Plotting peptide measurements}
 \usage{
 plot_single_feature(
   feature_name,
@@ -263,7 +263,7 @@ Creates a peptide faceted ggplot2 plot of the value in
 \code{measure_col}
 vs \code{order_col} (if `NULL`, x-axis is simply a sample name order).
 Additionally, the resulting plot can also be colored either by batch factor,
-by quality factor (e.g. imputated/non-imputed) and, if needed, faceted by
+by quality factor (e.g. imputed/non-imputed) and, if needed, faceted by
 another batch factor, e.g. an instrument.
  If the non-linear curve was fit, this can also be added to the plot, see
  functions specific to each case below
