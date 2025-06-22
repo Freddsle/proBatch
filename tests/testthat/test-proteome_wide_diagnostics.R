@@ -17,14 +17,14 @@ test_that("hierarchical_clustering", {
     expect_warning(
         expect_warning(
             expect_warning(
-            hiearchical <- plot_hierarchical_clustering(matrix_test,
-                sample_annotation = example_sample_annotation,
-                factors_to_plot = c("MS_batch", "Diet"),
-                distance = "euclidean", agglomeration = "complete",
-                color_list = color_list,
-                label_samples = FALSE
-            ),
-            "filling missing values with 0"
+                hiearchical <- plot_hierarchical_clustering(matrix_test,
+                    sample_annotation = example_sample_annotation,
+                    factors_to_plot = c("MS_batch", "Diet"),
+                    distance = "euclidean", agglomeration = "complete",
+                    color_list = color_list,
+                    label_samples = FALSE
+                ),
+                "filling missing values with 0"
             ),
             "Hierarchical clustering cannot operate with missing values"
         ),
@@ -90,11 +90,11 @@ test_that("pvca_plot", {
     matrix_test <- example_proteome_matrix[1:150, ]
     expect_warning(
         expect_warning(
-        pvca <- plot_PVCA(matrix_test, example_sample_annotation,
-            technical_factors = c("MS_batch", "digestion_batch"),
-            biological_factors = c("Diet", "Sex", "Strain")
-        ),
-        "PVCA cannot operate with missing values in the matrix"
+            pvca <- plot_PVCA(matrix_test, example_sample_annotation,
+                technical_factors = c("MS_batch", "digestion_batch"),
+                biological_factors = c("Diet", "Sex", "Strain")
+            ),
+            "PVCA cannot operate with missing values in the matrix"
         ),
         "filling missing values with -1"
     )
