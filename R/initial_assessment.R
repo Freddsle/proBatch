@@ -186,7 +186,8 @@ plot_sample_mean <- function(data_matrix, sample_annotation,
     # Axis limits and rotations
     if (!is.null(ylimits)) {
         gg <- gg +
-            ylim(ylimits)
+            # ylim(ylimits)
+            coord_cartesian(ylim = ylimits) # Use coord_cartesian to avoid removing data outside limits
     }
     # Rotate x axis tick labels if the filenames, not numeric order, is displayed
     if (!is.numeric(df_ave[[order_col]])) {
@@ -246,14 +247,24 @@ plot_boxplot <- function(df_long, sample_annotation = NULL,
                          sample_id_col = "FullRunName",
                          measure_col = "Intensity",
                          batch_col = "MS_batch",
-                         color_by_batch = TRUE, color_scheme = "brewer",
+                         color_by_batch = TRUE,
+                         color_scheme = c("brewer", "viridis", "wesanderson", "ggplot2"),
                          order_col = "order",
                          facet_col = NULL,
                          filename = NULL, width = NA, height = NA,
                          units = c("cm", "in", "mm"),
-                         plot_title = NULL, theme = "classic",
+                         plot_title = NULL,
+                         theme_name = c("classic", "minimal", "bw", "light", "dark"),
                          base_size = 20,
                          ylimits = NULL, outliers = TRUE) {
+    # Validate inputs
+    if (is.null(sample_annotation)) {
+        stop("`sample_annotation` must be provided.")
+    }
+    if (!(measure_col %in% names(df_long))) {
+        stop("`measure_col` '", measure_col, "' not found in data.")
+    }
+
     # Check the consistency of sample ann. sample IDs and measur. table sample IDs
     df_long <- check_sample_consistency(
         sample_annotation, sample_id_col, df_long,
@@ -261,29 +272,28 @@ plot_boxplot <- function(df_long, sample_annotation = NULL,
     )
 
     # Ensure that batch-coloring-related arguments are defined properly
+    is_factor <- FALSE
     if (!is.null(batch_col)) {
         if (!(batch_col %in% names(df_long))) {
-            stop("batches cannot be colored as the batch column or sample ID column
-             is not defined, check sample_annotation and data matrix")
+            message("batches cannot be colored as the batch column or sample ID column
+                    is not defined, check sample_annotation and data matrix")
+            stop("Batch column '", batch_col, "' not found in data.")
         }
-    } else {
-        if (color_by_batch) {
-            warning("batches cannot be colored as the batch column is defined as NULL,
-              continuing without colors")
-            color_by_batch <- FALSE
-        }
+    } else if (color_by_batch) {
+        message("batches cannot be colored as the batch column is defined as NULL,
+            continuing without colors")
+        warning("`batch_col` is NULL; disabling `color_by_batch`")
+        color_by_batch <- FALSE
     }
 
-    # For order definition and subsequent faceting, facet column has to be in the
-    # data frame
-    if (!is.null(facet_col)) {
-        if (!(facet_col %in% names(df_long))) {
-            stop(sprintf(
-                '"%s" is specified as column for faceting, but is not present
+    # For order definition and subsequent faceting, facet column has to be in the df
+    if (!is.null(facet_col) && !(facet_col %in% names(df_long))) {
+        message(sprintf(
+            '"%s" is specified as column for faceting, but is not present
                     in the data, check sample annotation data frame',
-                facet_col
-            ))
-        }
+            facet_col
+        ))
+        stop(sprintf("Faceting column '%s' not found in data.", facet_col))
     }
 
     # Defining sample order for plotting (even if order_col NULL,
@@ -296,10 +306,11 @@ plot_boxplot <- function(df_long, sample_annotation = NULL,
     order_col <- sample_order$order_col
     df_long <- sample_order$df_long
 
-    if (!is.numeric(df_long[[order_col]])) {
-        if (is.character(df_long[[order_col]])) {
-            df_long[[order_col]] <- factor(df_long[[order_col]], levels = unique(df_long[[order_col]]))
-        }
+    # Convert order to factor if appropriate
+    if (!is.numeric(df_long[[order_col]]) && is.character(df_long[[order_col]])) {
+        df_long[[order_col]] <- factor(df_long[[order_col]],
+            levels = unique(df_long[[order_col]])
+        )
     }
 
     # Main plotting of intensity distribution boxplots
@@ -308,15 +319,16 @@ plot_boxplot <- function(df_long, sample_annotation = NULL,
         group = !!sym(order_col)
     ))
     if (outliers) {
-        gg <- gg + geom_boxplot(outlier.size = .15)
+        gg <- gg + geom_boxplot(outlier.size = 0.15)
     } else {
         gg <- gg + geom_boxplot(outlier.shape = NA)
     }
 
-    # Define the color scheme, add colors
+    # Define the color scheme, Apply fill colors
     gg <- color_by_factor(
         color_by_batch = color_by_batch,
-        batch_col = batch_col, gg = gg,
+        batch_col = batch_col,
+        gg = gg,
         color_scheme = color_scheme,
         sample_annotation = df_long,
         fill_or_color = "fill"
@@ -332,44 +344,61 @@ plot_boxplot <- function(df_long, sample_annotation = NULL,
     # Add the title
     if (!is.null(plot_title)) {
         gg <- gg + ggtitle(plot_title) +
-            theme(plot.title = element_text(hjust = .5, face = "bold", size = 16))
+            theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 16))
     }
 
+    theme_name <- match.arg(theme_name)
     # Change the plot theme
-    if (!is.null(theme) && theme == "classic") {
+    if (is.null(theme_name) || theme_name == "classic") {
         gg <- gg + theme_classic(base_size = base_size)
+    } else if (theme_name == "minimal") {
+        gg <- gg + theme_minimal(base_size = base_size)
+    } else if (theme_name == "bw") {
+        gg <- gg + theme_bw(base_size = base_size)
+    } else if (theme_name == "light") {
+        gg <- gg + theme_light(base_size = base_size)
+    } else if (theme_name == "dark") {
+        gg <- gg + theme_dark(base_size = base_size)
     } else {
-        message("plotting with default ggplot theme, only theme = 'classic'
-            implemented")
+        message("Using default ggplot2 theme;
+                please specify a valid theme name: 'classic', 'minimal', 'bw', 'light', or 'dark'")
+        gg <- gg + theme_classic(base_size = base_size)
     }
 
     # Change the limits of vertical axes
     if (!is.null(ylimits)) {
         gg <- gg +
-            ylim(ylimits)
+            # ylim(ylimits)
+            coord_cartesian(ylim = ylimits) # Use coord_cartesian to avoid removing data outside limits
     }
 
     # Rotate x axis tick labels if the filenames, not numeric order, is displayed
     if (!is.numeric(df_long[[order_col]])) {
         gg <- gg +
-            theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5))
+            theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
     }
 
     if (!is.null(batch_col)) {
-        # batch_vector <- sample_annotation[[batch_col]]
         batch_vector <- df_long[[batch_col]]
         is_factor <- is_batch_factor(batch_vector, color_scheme)
     }
 
     # Move the legend to the upper part of the plot to save the horizontal space
-    if (length(unique(df_long[[order_col]])) > 30 &&
-        color_by_batch && is_factor) {
+    if (length(unique(df_long[[order_col]])) > 30 && color_by_batch && is_factor) {
         gg <- gg + theme(legend.position = "top")
     }
 
     # save the plot
     units <- match.arg(units)
-    save_ggplot(filename, units, width, height, gg)
+    if (!is.null(filename)) {
+        ggsave(
+            filename = filename,
+            plot = gg,
+            width = width,
+            height = height,
+            units = units
+        )
+    }
 
     return(gg)
 }
