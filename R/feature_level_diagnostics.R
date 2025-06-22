@@ -250,8 +250,6 @@ plot_single_feature <- function(feature_name, df_long,
         )
     }
 
-
-
     # add colors
     gg <- color_by_factor(
         color_by_batch = color_by_batch,
@@ -477,6 +475,7 @@ plot_spike_in <- function(spike_ins = "BOVIN", peptide_annotation = NULL,
         order_col = order_col,
         facet_col = facet_col,
         plot_title = plot_title,
+        vline_color = vline_color,
         theme = theme,
         base_size = base_size
     )

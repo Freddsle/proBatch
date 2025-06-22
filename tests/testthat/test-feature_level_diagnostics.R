@@ -2,10 +2,13 @@ test_that("single_feature_plot", {
     data(example_proteome, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
 
-    single_feature <- plot_single_feature(
-        feature_name = "46213_NVGVSFYADKPEVTQEQK_2",
-        df_long = example_proteome,
-        sample_annotation = example_sample_annotation
+    expect_warning(
+        single_feature <- plot_single_feature(
+            feature_name = "46213_NVGVSFYADKPEVTQEQK_2",
+            df_long = example_proteome,
+            sample_annotation = example_sample_annotation
+        ),
+        "inferring order-related batch borders for a plot;"
     )
 
     expect_equal(single_feature$plot_env$feature_name, "46213_NVGVSFYADKPEVTQEQK_2")
@@ -25,14 +28,27 @@ test_that("peptides_of_one_protein_plot", {
     data(example_sample_annotation, package = "proBatch")
     data(example_peptide_annotation, package = "proBatch")
 
-    peptides_plot <- plot_peptides_of_one_protein(
-        protein_name = "Haao",
-        peptide_annotation = example_peptide_annotation,
-        protein_col = "Gene", df_long = example_proteome,
-        sample_annotation = example_sample_annotation,
-        color_by_batch = TRUE,
-        order_col = "order", sample_id_col = "FullRunName",
-        batch_col = "MS_batch"
+    expect_warning(
+        color_scheme <- sample_annotation_to_colors(
+            example_sample_annotation,
+            sample_id_col = "FullRunName",
+            factor_columns = c("MS_batch", "Diet")
+        ),
+        "EarTag Strain Sex RunDate RunTime digestion_batch "
+    )
+
+    expect_warning(
+        peptides_plot <- plot_peptides_of_one_protein(
+            protein_name = "Haao",
+            peptide_annotation = example_peptide_annotation,
+            protein_col = "Gene", df_long = example_proteome,
+            sample_annotation = example_sample_annotation,
+            color_by_batch = TRUE,
+            order_col = "order", sample_id_col = "FullRunName",
+            batch_col = "MS_batch",
+            color_scheme = color_scheme
+        ),
+        "inferring order-related batch borders for a plot;"
     )
 
     expect_equal(peptides_plot$plot_env$feature_name[1], "10231_QDVDVWLWQQEGSSK_2")
@@ -58,7 +74,8 @@ test_that("spike_in_peptides_plot", {
         peptide_annotation = example_peptide_annotation,
         protein_col = "Gene", df_long = example_proteome,
         sample_annotation = example_sample_annotation,
-        plot_title = "Spike-in BOVINE protein peptides"
+        plot_title = "Spike-in BOVINE protein peptides",
+        vline_color = NULL
     )
 
     expect_equal(spike_in$plot_env$feature_name[1], "10062_NVGVSFYADKPEVTQEQK_3")
@@ -70,7 +87,7 @@ test_that("spike_in_peptides_plot", {
     expect_equal(spike_in$plot_env$batch_col, "MS_batch")
     expect_equal(spike_in$plot_env$color_by_batch, FALSE)
     expect_equal(spike_in$plot_env$order_col, "order")
-    expect_equal(spike_in$plot_env$vline_color, "red")
+    expect_equal(spike_in$plot_env$vline_color, NULL)
 })
 
 
@@ -79,12 +96,15 @@ test_that("iRT_peptides_plot", {
     data(example_sample_annotation, package = "proBatch")
     data(example_peptide_annotation, package = "proBatch")
 
-    iRT <- plot_iRT(
-        irt_pattern = "iRT",
-        peptide_annotation = example_peptide_annotation,
-        protein_col = "Gene",
-        df_long = example_proteome,
-        sample_annotation = example_sample_annotation
+    expect_warning(
+        iRT <- plot_iRT(
+            irt_pattern = "iRT",
+            peptide_annotation = example_peptide_annotation,
+            protein_col = "Gene",
+            df_long = example_proteome,
+            sample_annotation = example_sample_annotation
+        ),
+        "inferring order-related batch borders for a plot;"
     )
 
     expect_equal(iRT$plot_env$feature_name[1], "1146_ADVTPADFSEWSK_3")
@@ -107,13 +127,20 @@ test_that("fitting_trend_plots", {
 
     short_df <- example_proteome[example_proteome$peptide_group_label %in%
         unique(example_proteome$peptide_group_label)[1:3], ]
-    loess_fit <- adjust_batch_trend_df(short_df, example_sample_annotation, span = 0.7)
 
-    fit_plot <- plot_with_fitting_curve(
-        feature_name = "10062_NVGVSFYADKPEVTQEQK_3",
-        fit_df = loess_fit, fit_value_col = "fit",
-        df_long = example_proteome,
-        sample_annotation = example_sample_annotation
+    expect_warning(
+        loess_fit <- adjust_batch_trend_df(short_df, example_sample_annotation, span = 0.7),
+        "imputed value flag column is NULL, changing no_fit_imputed to FALSE"
+    )
+
+    expect_warning(
+        fit_plot <- plot_with_fitting_curve(
+            feature_name = "10062_NVGVSFYADKPEVTQEQK_3",
+            fit_df = loess_fit, fit_value_col = "fit",
+            df_long = example_proteome,
+            sample_annotation = example_sample_annotation
+        ),
+        "inferring order-related batch borders for a plot;"
     )
 
     expect_equal(fit_plot$plot_env$feature_name[1], "10062_NVGVSFYADKPEVTQEQK_3")
