@@ -6,8 +6,8 @@
 #' @inheritParams proBatch
 #' @param time_column name of the column(s) where run date & time are specified.
 #'   These will be used to determine the run order
-#' @param new_time_column name of the new column to which date&time will be
-#'   converted to
+#' @param new_time_column name of the new column that will contain the converted
+#'   date/time value
 #' @param dateTimeFormat POSIX format of the date and time.
 #'   See \code{\link{as.POSIXct}} from base R for details
 #' @param tz for time zone, 'GMT' by default
@@ -71,10 +71,10 @@ dates_to_posix <- function(sample_annotation,
 #'
 #' @inheritParams dates_to_posix
 #'
-#' @param new_order_col name of column with generated the order of sample run
-#'  based on time columns
-#' @param instrument_col column, denoting different
-#' instrument used for measurements
+#' @param new_order_col name of the column containing the generated sample run
+#'  order based on time columns
+#' @param instrument_col name of the column denoting the instrument used for
+#'  measurements
 #' @return sample annotation file with a new column \code{new_time_column} with
 #'   POSIX-formatted date & \code{new_order_col} used
 #'   in some diagnostic plots (e.g.

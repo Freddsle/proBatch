@@ -23,17 +23,17 @@ date_to_sample_order(
 \item{time_column}{name of the column(s) where run date & time are specified.
 These will be used to determine the run order}
 
-\item{new_time_column}{name of the new column to which date&time will be
-converted to}
+\item{new_time_column}{name of the new column that will contain the converted
+date/time value}
 
 \item{dateTimeFormat}{POSIX format of the date and time.
 See \code{\link{as.POSIXct}} from base R for details}
 
-\item{new_order_col}{name of column with generated the order of sample run
-based on time columns}
+\item{new_order_col}{name of the column containing the generated sample run
+order based on time columns}
 
-\item{instrument_col}{column, denoting different
-instrument used for measurements}
+\item{instrument_col}{name of the column denoting the instrument used for
+measurements}
 }
 \value{
 sample annotation file with a new column \code{new_time_column} with
