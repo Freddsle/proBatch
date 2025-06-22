@@ -135,14 +135,12 @@ plot_CV_distr.df <- function(CV_df,
     if (theme == "classic") {
         gg <- gg + theme_classic()
     }
-    if (!is.null(filename)) {
-        ggsave(gg, filename = filename)
-    }
-
     if (log_y_scale) {
         gg <- gg + scale_y_log10()
     }
-
+    if (!is.null(filename)) {
+        ggsave(filename = filename, plot = gg)
+    }
     return(gg)
 }
 

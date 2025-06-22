@@ -24,7 +24,7 @@ names.}
 \item{protein_col}{column where protein names are specified}
 }
 \value{
-data frame containing petpide annotations
+data frame containing peptide annotations
 }
 \description{
 Create light-weight peptide annotation data frame
