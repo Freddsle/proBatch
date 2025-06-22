@@ -33,7 +33,7 @@ plot_boxplot(
   measure_col = "Intensity",
   batch_col = "MS_batch",
   color_by_batch = TRUE,
-  color_scheme = "brewer",
+  color_scheme = c("brewer", "viridis", "wesanderson", "ggplot2"),
   order_col = "order",
   facet_col = NULL,
   filename = NULL,
@@ -41,7 +41,7 @@ plot_boxplot(
   height = NA,
   units = c("cm", "in", "mm"),
   plot_title = NULL,
-  theme = "classic",
+  theme_name = c("classic", "minimal", "bw", "light", "dark"),
   base_size = 20,
   ylimits = NULL,
   outliers = TRUE
@@ -116,8 +116,6 @@ output result file). See \code{help("example_proteome")} for more details.}
 \item{measure_col}{if \code{df_long} is among the parameters, it is the
 column with expression/abundance/intensity; otherwise, it is used
 internally for consistency.}
-
-\item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
 
 \item{outliers}{keep (default) or remove the boxplot outliers}
 }
