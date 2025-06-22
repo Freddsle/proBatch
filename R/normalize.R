@@ -178,7 +178,7 @@ normalize_sample_medians_df <- function(df_long,
         message("removing imputed values (requants) from the matrix")
         df_long <- df_long %>%
             mutate(!!sym(measure_col) := ifelse(!!sym(qual_col) == qual_value,
-                NA, measure_col
+                NA, !!sym(measure_col)
             ))
     } else {
         if (!is.null(qual_col) && (qual_col %in% names(df_long))) {
