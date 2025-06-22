@@ -1,6 +1,7 @@
 #' @title Plot per-sample mean or boxplots for initial assessment
 #' @description Plot per-sample mean or boxplots (showing median and quantiles). In ordered samples,
 #' e.g. consecutive MS runs, order-associated effects are visualised.
+#' @inheritParams proBatch
 #' @details functions for quick visual assessment of trends associated, overall
 #'   or specific covariate-associated (see \code{batch_col} and \code{facet_col})
 #' @inheritParams proBatch
@@ -45,7 +46,7 @@
 #' )
 #' }
 #'
-plot_sample_mean <- function(data_matrix, sample_annotation = NULL,
+plot_sample_mean <- function(data_matrix, sample_annotation,
                              sample_id_col = "FullRunName",
                              batch_col = "MS_batch",
                              color_by_batch = FALSE,
@@ -56,57 +57,60 @@ plot_sample_mean <- function(data_matrix, sample_annotation = NULL,
                              filename = NULL, width = NA, height = NA,
                              units = c("cm", "in", "mm"),
                              plot_title = NULL,
-                             theme = "classic",
+                             theme_name = c("classic", "minimal", "bw", "light", "dark"),
                              base_size = 20,
                              ylimits = NULL) {
+    # stop early if sample_annotation missing
+    if (is.null(sample_annotation)) {
+        stop("`sample_annotation` must be provided.")
+    }
+    # require data_matrix column names
+    if (is.null(colnames(data_matrix))) {
+        stop("`data_matrix` must have column names representing samples.")
+    }
+
     # Create a data frame with sample averages
     sample_average <- colMeans(data_matrix, na.rm = TRUE)
-    # names(sample_average) = colnames(data_matrix)
-
     df_ave <- data.frame(
         Mean_Intensity = sample_average,
-        sample_id_col = colnames(data_matrix)
+        temp_id = colnames(data_matrix),
+        stringsAsFactors = FALSE
     )
-    names(df_ave)[names(df_ave) == "sample_id_col"] <- sample_id_col
+    names(df_ave)[names(df_ave) == "temp_id"] <- sample_id_col
 
     # Check the consistency of sample ann. sample IDs and measur. table sample IDs
     df_ave <- check_sample_consistency(
         sample_annotation, sample_id_col, df_ave,
         batch_col, order_col, facet_col
     )
+    message("Sample ID is kept only if they have a match in annotation data frame,
+            otherwise the sample ID is removed from the plot")
 
-    # Merge in any annotation columns needed for borders/facets
-    if (!is.null(sample_annotation)) {
-        # which columns to add?
-        ann_cols <- union(sample_id_col, setdiff(names(sample_annotation), names(df_ave)))
-        ann_subset <- sample_annotation[, ann_cols, drop = FALSE]
-        df_ave <- merge(df_ave, ann_subset, by = sample_id_col, all.x = TRUE, sort = FALSE)
-    }
-
+    # initialize is_factor to avoid undefined variable
+    is_factor <- FALSE
     # Ensure that batch-coloring-related arguments are defined properly
+    # validate batch_col existence, disable coloring if NULL
     if (!is.null(batch_col)) {
         if (!(batch_col %in% names(df_ave))) {
-            stop("batches cannot be colored as the batch column or sample ID column
-             is not defined, check sample_annotation and data matrix")
+            message("batches cannot be colored as the batch column or sample ID column
+                    is not defined, check sample_annotation and data matrix")
+            stop("Batch column '", batch_col, "' not found in data.")
         }
-    } else {
-        if (color_by_batch) {
-            warning("batches cannot be colored as the batch column is defined as NULL,
-              continuing without colors")
-            color_by_batch <- FALSE
-        }
+    } else if (color_by_batch) {
+        message("batches cannot be colored as the batch column is defined as NULL,
+                continuing without colors")
+        warning("`batch_col` is NULL; disabling `color_by_batch`")
+        color_by_batch <- FALSE
     }
 
-    # For order definition and subsequent faceting, facet column has to be in the
-    # data frame
-    if (!is.null(facet_col)) {
-        if (!(facet_col %in% names(df_ave))) {
-            stop(sprintf(
-                '"%s" is specified as column for faceting, but is not present
+    # For order definition and subsequent faceting, facet column has to be in the df
+    if (!is.null(facet_col) && !(facet_col %in% names(df_ave))) {
+        message(sprintf(
+            '"%s" is specified as column for faceting, but is not present
                     in the data, check sample annotation data frame',
-                facet_col
-            ))
-        }
+            facet_col
+        ))
+        stop(sprintf("Faceting column '%s' not found in data.", facet_col))
     }
 
     # Defining sample order for plotting
@@ -118,13 +122,12 @@ plot_sample_mean <- function(data_matrix, sample_annotation = NULL,
     order_col <- sample_order$order_col
     df_ave <- sample_order$df_long
 
-    # If the order column is not numeric, convert it to factor
-    if (!is.numeric(df_ave[[order_col]])) {
-        if (is.character(df_ave[[order_col]])) {
-            df_ave[[order_col]] <- factor(df_ave[[order_col]], levels = unique(df_ave[[order_col]]))
-        }
+    # Convert order to factor if not numeric
+    if (!is.numeric(df_ave[[order_col]]) && is.character(df_ave[[order_col]])) {
+        df_ave[[order_col]] <- factor(df_ave[[order_col]], levels = unique(df_ave[[order_col]]))
     }
 
+    # Create plot
     # Main plotting of intensity means:
     gg <- ggplot(df_ave, aes(x = !!sym(order_col), y = .data$Mean_Intensity)) +
         geom_point()
@@ -140,11 +143,9 @@ plot_sample_mean <- function(data_matrix, sample_annotation = NULL,
 
     # add vertical lines, if required (for order-related effects)
     if (!is.null(batch_col)) {
-        # batch_vector <- sample_annotation[[batch_col]]
         batch_vector <- df_ave[[batch_col]]
         is_factor <- is_batch_factor(batch_vector, color_scheme)
     }
-
     if (!is.null(batch_col) && is_factor && !is.null(vline_color)) {
         gg <- add_vertical_batch_borders(
             order_col, sample_id_col, batch_col,
@@ -153,49 +154,62 @@ plot_sample_mean <- function(data_matrix, sample_annotation = NULL,
         )
     }
 
-    # Plot each "facet factor" in it's own subplot
+    # Faceting - plot each "facet factor" in it's own subplot
     if (!is.null(facet_col)) {
         gg <- gg + facet_wrap(as.formula(paste("~", facet_col)),
             dir = "v", scales = "free_x"
         )
     }
 
-    # Add the title
+    # Add the title and theme
     if (!is.null(plot_title)) {
         gg <- gg + ggtitle(plot_title) +
-            theme(plot.title = element_text(face = "bold", hjust = .5))
+            theme(plot.title = element_text(face = "bold", hjust = 0.5))
     }
-
-    # Change the theme
-    if (!is.null(theme) && theme == "classic") {
+    theme_name <- match.arg(theme_name)
+    if (identical(theme_name, "classic")) {
         gg <- gg + theme_classic(base_size = base_size)
+    } else if (identical(theme_name, "minimal")) {
+        gg <- gg + theme_minimal(base_size = base_size)
+    } else if (identical(theme_name, "bw")) {
+        gg <- gg + theme_bw(base_size = base_size)
+    } else if (identical(theme_name, "light")) {
+        gg <- gg + theme_light(base_size = base_size)
+    } else if (identical(theme_name, "dark")) {
+        gg <- gg + theme_dark(base_size = base_size)
     } else {
-        message("plotting with default ggplot theme, only theme = 'classic'
-            implemented")
+        message("Using default ggplot2 theme;
+                please specify a valid theme name: 'classic', 'minimal', 'bw', 'light', or 'dark'")
+        gg <- gg + theme_classic(base_size = base_size)
     }
 
-    # Change the limits of vertical axes
+    # Axis limits and rotations
     if (!is.null(ylimits)) {
         gg <- gg +
             ylim(ylimits)
     }
-
     # Rotate x axis tick labels if the filenames, not numeric order, is displayed
     if (!is.numeric(df_ave[[order_col]])) {
-        gg <- gg +
-            theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5))
+        gg <- gg + theme(axis.text.x = element_text(
+            angle = 90,
+            hjust = 1, vjust = 0.5
+        ))
     }
 
+    # Legend repositioning
     # Move the legend to the upper part of the plot to save the horizontal space
-
     if (length(unique(df_ave[[order_col]])) > 30 && color_by_batch && is_factor) {
         gg <- gg + theme(legend.position = "top")
     }
 
     # save the plot
     units <- match.arg(units)
-    save_ggplot(filename, units, width, height, gg)
-
+    if (!is.null(filename)) {
+        ggsave(
+            filename = filename, plot = gg,
+            width = width, height = height, units = units
+        )
+    }
     return(gg)
 }
 
