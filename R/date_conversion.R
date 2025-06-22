@@ -36,8 +36,8 @@ dates_to_posix <- function(sample_annotation,
     Sys.setlocale("LC_TIME", locale)
 
     if (length(time_column) > 1 && length(dateTimeFormat) != length(time_column)) {
-    stop("`dateTimeFormat` must match length of `time_column`")
-  }
+        stop("`dateTimeFormat` must match length of `time_column`")
+    }
 
     if (length(time_column) == 1) {
         if (is.null(new_time_column)) new_time_column <- time_column

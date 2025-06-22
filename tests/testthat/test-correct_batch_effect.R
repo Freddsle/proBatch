@@ -104,3 +104,39 @@ test_that("correct_batch_effects_dm returns matrix", {
     expect_true(is.matrix(corrected))
     expect_equal(dim(corrected), dim(example_proteome_matrix))
 })
+
+
+test_that("adjust_batch_trend_df keeps order column", {
+    data(example_proteome, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    short_df <- example_proteome[example_proteome[["peptide_group_label"]] %in%
+        c("10062_NVGVSFYADKPEVTQEQK_3", "101233_QGFNVVVESGAGEASK_2"), ]
+
+    adjusted <- adjust_batch_trend_df(short_df, example_sample_annotation,
+        order_col = "order", keep_all = "all", fit_func = "loess_regression",
+        min_measurements = 8, no_fit_imputed = FALSE
+    )
+
+    expect_true("order" %in% names(adjusted))
+    expect_true("fit" %in% names(adjusted))
+    expect_equal(nrow(adjusted), nrow(short_df))
+})
+
+test_that("adjust_batch_trend_dm forwards arguments", {
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    feature_subset <- rownames(example_proteome_matrix) %in%
+        c("10062_NVGVSFYADKPEVTQEQK_3", "101233_QGFNVVVESGAGEASK_2")
+    sub_matrix <- example_proteome_matrix[feature_subset, , drop = FALSE]
+
+    res <- adjust_batch_trend_dm(sub_matrix, example_sample_annotation,
+        order_col = "order", fit_func = "loess_regression",
+        min_measurements = 8
+    )
+
+    expect_true(is.list(res))
+    expect_true(is.matrix(res$corrected_dm))
+    expect_equal(nrow(res$corrected_dm), sum(feature_subset))
+})

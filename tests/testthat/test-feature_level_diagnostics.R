@@ -74,9 +74,6 @@ test_that("spike_in_peptides_plot", {
 })
 
 
-
-
-
 test_that("iRT_peptides_plot", {
     data(example_proteome, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
@@ -101,7 +98,6 @@ test_that("iRT_peptides_plot", {
     expect_equal(iRT$plot_env$order_col, "order")
     expect_equal(iRT$plot_env$vline_color, "red")
 })
-
 
 
 test_that("fitting_trend_plots", {

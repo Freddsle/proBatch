@@ -42,11 +42,9 @@ are actually numeric}
 numeric values coloring (can be \code{'brewer' and 'viridis'})}
 }
 \value{
-list of three items: \enumerate{
-  \item list of colors;
-  \item data frame of colors;
-  \item new sample annotation (e.g. rare factor levels merged into "other")
-  }
+list of colors for the selected annotation columns. Use
+\code{\link{color_list_to_df}} if a data frame representation is
+needed.
 }
 \description{
 Convert the sample annotation data frame to list of colors
