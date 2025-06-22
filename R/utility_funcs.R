@@ -314,16 +314,19 @@ add_vertical_batch_borders <- function(order_col, sample_id_col, batch_col,
 }
 
 adjust_units <- function(units, width, height) {
+    # always convert to inches which are used internally by ggsave
+
     if (length(units) > 1) units <- units[1]
     if (units == "mm") {
-        units <- "cm"
-        width <- width / 10
-        height <- height / 10
-    }
-    if (units == "cm") {
+        width <- width / 25.4
+        height <- height / 25.4
+        units <- "in"
+    } else if (units == "cm") {
         width <- width / 2.54
         height <- height / 2.54
+        units <- "in"
     }
+
     return(list(
         unit = units,
         width = width,

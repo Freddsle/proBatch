@@ -68,7 +68,7 @@ fit_nonlinear <- function(df_feature_batch,
         missing_values <- is.na(y_all)
     }
 
-     # Filter for fitting
+    # Filter for fitting
     x_to_fit <- x_all[!missing_vals]
     y_to_fit <- y_all[!missing_vals]
 
@@ -98,10 +98,10 @@ fit_nonlinear <- function(df_feature_batch,
         }
     } else {
         warning(sprintf(
-            "Curve fitting didn't have enough points to fit for feature %s in batch %s; leaving original values.",
+            "Curve fitting didn't have enough points to fit for feature %s in batch %s; returning NA values.",
             feature_id, batch_id
         ))
-        fit_res <- y_all
+        fit_res <- rep(NA, length(y_all))
     }
 
     return(fit_res)
@@ -129,9 +129,9 @@ loess_regression <- function(x_to_fit, y, x_all, y_all,
 }
 
 loess_regression_opt <- function(x_to_fit, y, x_all, y_all,
-                                 feature_id = NULL, batch_id = NULL, 
+                                 feature_id = NULL, batch_id = NULL,
                                  kernel = "normal",
-                                 bws    = c(0.01, 0.5, 1, 1.5, 2, 5, 10)) {
+                                 bws = c(0.01, 0.5, 1, 1.5, 2, 5, 10)) {
     out <- tryCatch(
         {
             bw <- optimise_bw(x_to_fit, y, kernel = kernel, bws = bws)
@@ -201,7 +201,11 @@ optimise_df <- function(x, bw) {
 rle_func <- function(df, measure_col = "Intensity", order_col = "order") {
     ordered_measure <- df[[measure_col]][order(df[[order_col]])]
     rle_res <- rle(is.na(ordered_measure))
-    max_measured <- max(rle_res$lengths[!rle_res$values])
-    if (is.infinite(max_measured)) max_measured <- 0
+    non_na_lengths <- rle_res$lengths[!rle_res$values]
+    if (length(non_na_lengths) == 0) {
+        max_measured <- 0
+    } else {
+        max_measured <- max(non_na_lengths)
+    }
     return(max_measured)
 }
