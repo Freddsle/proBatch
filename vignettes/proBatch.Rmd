@@ -1,11 +1,13 @@
 ---
-title: 'proBatch'
-author: | 
+title: "proBatch"
+author: |
   | Jelena Čuklina, Chloe H. Lee, Patrick Pedrioli and Ruedi Aebersold
   | Institute of Molecular Systems Biology, Department of Biology, ETH Zurich, Switzerland
-date: '`r Sys.Date()`'
+date: "`r Sys.Date()`"
 output: pdf_document
 #output: html_document
+bibliography: "references.bib"
+csl: "nature-no-superscript.csl"
 vignette: >
   %\VignetteIndexEntry{proBatch package overview}
   %\VignetteEncoding{UTF-8}
@@ -14,15 +16,14 @@ vignette: >
 abstract: |
   This vignette describes how to apply different functions from the `proBatch` package to diagnose and correct for batch effects. Most of the functions are applicable any 'omic' data, however, the package has a number of functions, designed specifically for mass spectrometry-based proteomics, and has been tested on SWATH data.
   
-  
   The `proBatch` package was programmed and intended for use by researchers without
   extensive programming skills, but with basic R knowledge. 
   The `proBatch` package provides a complete functionality for batch correction workflow: to prepare the data for analysis, diagnose and correct batch effects and finally, to evaluate the correction with quality control metrics. 
 toc: yes
 toc_depth: 2
 numbersections: true
-editor_options: 
-  markdown: 
+editor_options:
+  markdown:
     wrap: 72
 ---
 
@@ -54,7 +55,7 @@ systematic technical variations known as batch effects.
 
 Batch effects can alter or obscure the biological signal in the data [2,
 3]. Thus, the presence and severity of batch effects should be assessed,
-and, if necessary, corrected.
+and, if necessary, corrected .
 
 The fundamental objective of the batch effects adjustment procedure is
 to make all measurements of samples comparable for a meaningful
@@ -89,7 +90,7 @@ Before starting the description, we give a few hints about the steps
 preceding and following batch effects analysis and correction.
 
 -   It is assumed that the initial data processing is completed. In mass
-    spectrometry- based proteomics, this involves primarily
+    spectrometry-based proteomics, this involves primarily
     peptide-spectrum matching [4, 5] and FDR control [6].
 
 -   Data filtering is commonly the next step of data processing. In the
@@ -97,7 +98,7 @@ preceding and following batch effects analysis and correction.
     filtering need to be approached with caution. First of all, decoy
     measurements should be filtered out to ensure correct sample
     intensity distribution alignment. However, non-proteotypic peptides
-    should be retained. Filtering out low-quality samples,also
+    should be retained. Filtering out low-quality samples, also
     substantially alters normalization and batch effects correction. The
     'bad' samples, usually identified by the total intensity of
     identified peptides or correlation of samples, can be removed either
@@ -129,7 +130,9 @@ therefore it has numerous dependencies. If some of these dependencies
 are not installed, you will need to do that before running `proBatch`.
 
 ```{r dependencies, eval = FALSE}
+# Bioconductor packages
 bioc_deps <- c("GO.db", "impute", "preprocessCore", "pvca", "sva")
+# CRAN packages
 cran_deps <- c(
     "corrplot", "data.table", "ggplot2", "ggfortify", "lazyeval",
     "lubridate", "pheatmap", "reshape2", "readr", "rlang",
@@ -139,8 +142,21 @@ cran_deps <- c(
 if (!requireNamespace("BiocManager", quietly = TRUE)) {
     install.packages("BiocManager")
 }
-BiocManager::install(bioc_deps)
-install.packages(cran_deps)
+# Determine which bioc packages are not installed
+missing_bioc <- bioc_deps[!bioc_deps %in% rownames(installed.packages())]
+missing_cran <- cran_deps[!cran_deps %in% rownames(installed.packages())]
+
+# Install only the missing ones
+if (length(missing_bioc) > 0) {
+  BiocManager::install(missing_bioc, ask = FALSE, update = FALSE)
+} else {
+  message("All Bioconductor dependencies are already installed.")
+}
+if (length(missing_cran) > 0) {
+  install.packages(missing_cran, dependencies = TRUE)
+} else {
+  message("All CRAN dependencies are already installed.")
+}
 ```
 
 # Installation
@@ -149,8 +165,12 @@ To install the latest version of proBatch package, you need `devtools`:
 
 ```{r install_proBatch, fig.show='hold', eval = FALSE}
 # install the development version from GitHub:
-install.packages("devtools")
-devtools::install_github("symbioticMe/proBatch", build_vignettes = TRUE)
+if (!requireNamespace("devtools", quietly = TRUE)) {
+    install.packages("devtools")
+}
+if (!requireNamespace("proBatch", quietly = TRUE)) {
+    devtools::install_github("freddsle/proBatch", build_vignettes = TRUE)
+} else {message("proBatch is already installed.")}
 ```
 
 \pagebreak
@@ -173,8 +193,8 @@ require(ggplot2)
 To analyze an experiment for batch effects, three tables need to be
 loaded into environment:
 
-The package typically requires three datasets: 1) measurement (data
-matrix), 2) sample annotation, and 3) feature annotation (optional)
+The package typically requires three datasets: 1) measurement
+(datamatrix), 2) sample annotation, and 3) feature annotation (optional)
 tables. If you are familiar with the `Biobase` package, these correspond
 to 1) `assayData`, 2) joined `phenoData` and `protocolData`, and
 3)`featureData`.
