@@ -31,7 +31,8 @@
 #'   factor of manually annotated batches}
 #'   ...
 #' }
-"example_sample_annotation"
+#' @name example_sample_annotation
+NULL
 
 #' Example protein data in long format
 #'
@@ -59,7 +60,8 @@
 #' ...
 #' }
 #' @source PRIDE ID will be added upon the publication of the dataset
-"example_proteome"
+#' @name example_proteome
+NULL
 
 #' Example protein data in matrix
 #'
@@ -70,7 +72,8 @@
 #' @format A matrix with 535 rows and 233 columns:
 #'
 #' @source PRIDE ID will be added upon the publication of the dataset
-"example_proteome_matrix"
+#' @name example_proteome_matrix
+NULL
 
 #' Peptide annotation data
 #'
@@ -84,4 +87,54 @@
 #'   \item{ProteinName}{protein group name as specified in
 #'   \code{example_proteome}}
 #'   }
-"example_peptide_annotation"
+#' @name example_peptide_annotation
+NULL
+
+#' Example multi-center TMT proteomics (MaxQuant)
+#'
+#' A curated example dataset illustrating a typical multi-center TMT (reporter-ion)
+#' proteomics study processed with MaxQuant.
+#' Study design summary:
+#' - Three independent centers, each measured as two TMT plexes.
+#' - Per center: 10 cases (FSGS) and 10 controls, with a reference channel in each pool.
+#' - Metadata maps every TMT reporter channel to the exact quantitative column in `data`.
+#' The object is a named list of length 3
+#' (`"Center1"`, `"Center2"`, `"Center3"`). Each entry is itself a list with two elements:
+#' - `data`: A center-specific MaxQuant `proteinGroups.txt` output. Column names follow MaxQuant conventions
+#'   (`Protein.IDs`, `Gene.names`, `Fasta.headers`, etc.).
+#' - `metadata`: A `data.frame` describing the sample/channel annotation for that center.
+#'
+#' @format
+#' A named list of length 3 (`"Center1"`, `"Center2"`, `"Center3"`).
+#' For each center `x`:
+#'
+#' \describe{
+#'   \item{`example_multicenter_data[[x]]$data`}{`data.frame`. A full
+#'   MaxQuant `proteinGroups.txt` table for that center. Includes protein-level
+#'   identifiers, quantification columns such as
+#'   `Reporter.intensity.*` / `Reporter.intensity.corrected.*`, and other
+#'   MaxQuant fields. Column names are not syntactically altered
+#'   (`check.names = FALSE`).}
+#'
+#'   \item{`example_multicenter_data[[x]]$metadata`}{`data.frame`. Sample/channel
+#'   annotation with the following columns:
+#'     \itemize{
+#'       \item `Quantitative.column.name` (`character`): exact column name in
+#'             `data` that carries the corresponding TMT channel intensities.
+#'       \item `Pool` (`character`): TMT pool/batch identifier (e.g., `"Pool4"`).
+#'       \item `Reporter.ion` (`character`): isobaric tag/channel label
+#'             (e.g., `"126"`, `"127C"`, ...).
+#'       \item `Patient` (`character`): pseudonymized sample ID; `"Common Reference"`
+#'             for the reference channel.
+#'       \item `Group` (`character`): biological group (e.g., `"FSGS"`, `"Control"`,
+#'             `"Common Reference"`).
+#'       \item `Center` (`character`): `"Center1"`, `"Center2"`, or `"Center3"`.
+#'       \item `Sex` (`character`): `"f"`, `"m"`, or empty if unavailable.
+#'       \item `Age` (`integer`): age in years; may contain `NA`.
+#'     }
+#'   }
+#' }
+#'
+#' @source PRIDE ID PXD053560
+#' @name example_multicenter_data
+NULL
