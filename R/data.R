@@ -138,3 +138,42 @@ NULL
 #' @source PRIDE ID PXD053560
 #' @name example_multicenter_data
 NULL
+
+
+#' Example multi-center DIA LFQ E. coli proteomics (DIA-NN)
+#'
+#' An example dataset illustrating a typical multi-center DIA (data-independent acquisition)
+#' proteomics study processed with DIA-NN.
+#' Study design summary:
+#' - Five independent centers.
+#' - Per center: 10(9) samples of E.coli grown in different media (Pyruvate vs Glucose)
+#' The object is a named list of length 5
+#' (`"lab_A"`, `"lab_B"`, `"lab_C"`, `"lab_D"`, `"lab_E"`). Each entry is itself a list with three elements:
+#' - `precursors`: A center-specific DIA-NN output, containing Precursor.Normalised values.
+#' - `protein.groups`: A center-specific DIA-NN output, containing PG.MaxLFQ values.
+#' - `metadata`: A `data.frame` describing the sample annotation for that center.
+#'
+#' @format
+#' A named list of length 5 (`"lab_A"`, `"lab_B"`, `"lab_C"`, `"lab_D"`, `"lab_E"`).
+#' For each center `x`:
+#'
+#' \describe{
+#'   \item{`example_ecoli_data[[x]]$precursors`}{`matrix`. A center-specific DIA-NN
+#'   output containing Precursor.Normalised values. Rows are precursors,
+#'   columns are samples. }
+#'   \item{`example_ecoli_data[[x]]$protein.groups`}{`matrix`. A center-specific DIA-NN
+#'   output containing PG.MaxLFQ values. Rows are protein groups,
+#'   columns are samples. }
+#'  \item{`example_ecoli_data[[x]]$metadata`}{`data.frame`. Sample annotation with the following columns:
+#'     \itemize{
+#'       \item `Run`: exact column name in `data` that carries the corresponding
+#'             sample intensities.
+#'       \item `Lab` (`character`): `"lab_A"`, `"lab_B"`, `"lab_C"`, `"lab_D"`, or `"lab_E"`.
+#'       \item `Condition` (`character`): biological group (e.g., `"Pyr"`, `"Glu"`).
+#'     }
+#'   }
+#' }
+#'
+#' @source PRIDE ID PXD053812
+#' @name example_ecoli_data
+NULL
