@@ -2,10 +2,10 @@
 % Please edit documentation in R/ProBatchFeatures.R
 \name{pb_as_wide}
 \alias{pb_as_wide}
-\title{Get an assay matrix (wide) explicitly}
+\title{Get an assay matrix (wide)}
 \usage{
-pb_as_wide(object)
+pb_as_wide(object, assay = pb_current_assay(object), name = "intensity")
 }
 \description{
-Get an assay matrix (wide) explicitly
+Get an assay matrix (wide)
 }

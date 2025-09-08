@@ -2,28 +2,32 @@
 % Please edit documentation in R/ProBatchFeatures.R
 \name{ProBatchFeatures}
 \alias{ProBatchFeatures}
-\title{Construct a ProBatchFeatures object from a wide matrix + sample annotation}
+\title{Construct a ProBatchFeatures object from a wide matrix + sample annotation.}
 \usage{
 ProBatchFeatures(
   data_matrix,
   sample_annotation = NULL,
   sample_id_col = "FullRunName",
-  name = "raw"
+  name = NULL,
+  level = "feature"
 )
 }
 \arguments{
-\item{data_matrix}{numeric matrix (features x samples) or data.frame}
+\item{data_matrix}{numeric matrix (features x samples)}
 
 \item{sample_annotation}{data.frame with sample metadata (rows = samples)}
 
-\item{sample_id_col}{character(1), column in sample_annotation that must match colnames(data_matrix).
+\item{sample_id_col}{character(1), column in sample_annotation that matches colnames(data_matrix)
 If missing, rownames(sample_annotation) are used.}
 
-\item{name}{character(1) name of the initial assay added to the object (default: "raw").}
+\item{name}{character(1), optional; if missing, name is "<level>::raw".
+If only a single value is provided to the function, without specifying whether it is a name or level, it will be used as the name value.}
+
+\item{level}{character label like "peptide"/"protein" (default "feature").}
 }
 \value{
 A `ProBatchFeatures` object.
 }
 \description{
-Construct a ProBatchFeatures object from a wide matrix + sample annotation
+Construct a ProBatchFeatures object from a wide matrix + sample annotation.
 }
