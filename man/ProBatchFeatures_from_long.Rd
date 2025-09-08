@@ -2,7 +2,7 @@
 % Please edit documentation in R/ProBatchFeatures.R
 \name{ProBatchFeatures_from_long}
 \alias{ProBatchFeatures_from_long}
-\title{Construct a ProBatchFeatures from LONG df (reuses `long_to_matrix`).}
+\title{Construct from LONG df via proBatch::long_to_matrix}
 \usage{
 ProBatchFeatures_from_long(
   df_long,
@@ -10,18 +10,10 @@ ProBatchFeatures_from_long(
   feature_id_col = "peptide_group_label",
   sample_id_col = "FullRunName",
   measure_col = "Intensity",
-  name = "raw"
+  level = "feature",
+  name = NULL
 )
 }
-\arguments{
-\item{df_long}{long df with at least feature_id_col, sample_id_col, measure_col}
-
-\item{sample_annotation}{optional; if provided, must contain sample_id_col}
-
-\item{feature_id_col, }{sample_id_col, measure_col names in df_long}
-
-\item{name}{assay name (default "raw")}
-}
 \description{
-Construct a ProBatchFeatures from LONG df (reuses `long_to_matrix`).
+Construct from LONG df via proBatch::long_to_matrix
 }

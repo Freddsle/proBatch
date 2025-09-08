@@ -2,10 +2,18 @@
 % Please edit documentation in R/ProBatchFeatures.R
 \name{pb_pipeline_name}
 \alias{pb_pipeline_name}
-\title{Pretty pipeline name derived from chain}
+\title{Pretty pipeline name derived from the assay}
 \usage{
-pb_pipeline_name(object)
+pb_pipeline_name(object, assay = pb_current_assay(object))
+}
+\arguments{
+\item{object}{ProBatchFeatures}
+
+\item{assay}{character(1) assay name; defaults to current assay}
+}
+\value{
+character(1) pipeline string like "combat_on_medianNorm_on_log2" or "raw"
 }
 \description{
-Pretty pipeline name derived from chain
+Pretty pipeline name derived from the assay
 }

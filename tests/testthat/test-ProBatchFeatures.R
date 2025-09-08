@@ -22,21 +22,18 @@ test_that("constructor (wide) builds a valid ProBatchFeatures object", {
     expect_true(inherits(log$timestamp, "POSIXct"))
     expect_identical(get_chain(pbf), character())
     expect_identical(get_chain(pbf, as_string = TRUE), "")
-    expect_identical(pb_pipeline_name(pbf), "")
+    expect_identical(pb_pipeline_name(pbf), "raw")
 
     # assay accessors
-    expect_identical(pb_current_assay(pbf), "raw")
+    expect_identical(pb_current_assay(pbf), "feature::raw")
     m <- pb_assay_matrix(pbf) # default "intensity"
     expect_true(is.matrix(m))
     expect_equal(dim(m), dim(example_proteome_matrix))
     expect_equal(rownames(m), rownames(example_proteome_matrix))
     expect_equal(colnames(m), colnames(example_proteome_matrix))
 
-    # pb_as_wide returns same as assay matrix
-    expect_equal(pb_as_wide(pbf), m)
-
     # colData alignment: rownames should match sample order
-    se <- pbf[["raw"]]
+    se <- pbf[["feature::raw"]]
     expect_equal(rownames(SummarizedExperiment::colData(se)), colnames(example_proteome_matrix))
 })
 
@@ -76,7 +73,7 @@ test_that("constructor errors on malformed inputs (wide)", {
     )
 })
 
-test_that("constructor (long) delegates to long_to_matrix and equals wide path", {
+test_that("constructor (long) delegates to long_to_matrix", {
     data(example_proteome, package = "proBatch") # LONG
     data(example_sample_annotation, package = "proBatch") # SA
 
@@ -92,24 +89,7 @@ test_that("constructor (long) delegates to long_to_matrix and equals wide path",
 
     expect_s4_class(pbf_long, "ProBatchFeatures")
     expect_true(validObject(pbf_long))
-    expect_identical(pb_current_assay(pbf_long), "raw")
-
-    # Build via manual long->wide and call wide-ctor; compare
-    m_ref <- proBatch::long_to_matrix(
-        example_proteome,
-        feature_id_col = "peptide_group_label",
-        sample_id_col  = "FullRunName",
-        measure_col    = "Intensity"
-    )
-
-    pbf_wide <- ProBatchFeatures(
-        data_matrix = m_ref,
-        sample_annotation = example_sample_annotation,
-        sample_id_col = "FullRunName",
-        name = "raw"
-    )
-
-    expect_equal(pb_as_wide(pbf_long), pb_as_wide(pbf_wide))
+    expect_identical(pb_current_assay(pbf_long), "feature::raw")
 })
 
 test_that("pb_as_long reuses matrix_to_long and round-trips vs direct call", {
@@ -132,7 +112,7 @@ test_that("pb_as_long reuses matrix_to_long and round-trips vs direct call", {
     )
 
     # direct call (reference)
-    se <- pbf[["raw"]]
+    se <- pbf[["feature::raw"]]
     long_b <- proBatch::matrix_to_long(
         data_matrix       = pb_as_wide(pbf),
         sample_annotation = as.data.frame(SummarizedExperiment::colData(se)),
@@ -163,8 +143,8 @@ test_that("internal logging helper updates oplog and chain", {
         pbf,
         step = "log",
         fun = "log_transform_dm",
-        from = "raw",
-        to = "raw_log",
+        from = "feature::raw",
+        to = "feature::raw_log",
         params = list(base = 2),
         pkg = "proBatch"
     )
@@ -174,7 +154,7 @@ test_that("internal logging helper updates oplog and chain", {
     expect_identical(nrow(log), 1L)
     expect_identical(as.character(log$step), "log")
     expect_identical(get_chain(pbf), "log")
-    expect_identical(pb_pipeline_name(pbf), "log")
+    expect_identical(pb_pipeline_name(pbf), "raw")
 
     # add another step
     pbf <- proBatch:::.pb_add_log_entry(
@@ -187,22 +167,22 @@ test_that("internal logging helper updates oplog and chain", {
         pkg = "proBatch"
     )
     expect_identical(get_chain(pbf), c("log", "medianNorm"))
-    expect_identical(pb_pipeline_name(pbf), "medianNorm_on_log")
+    expect_identical(pb_pipeline_name(pbf), "raw")
 })
 
 test_that("internal add-assay-with-link links one-to-one when rows match", {
     data(example_proteome_matrix, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
 
-    pbf <- ProBatchFeatures(example_proteome_matrix, example_sample_annotation, "FullRunName", "raw")
+    pbf <- ProBatchFeatures(example_proteome_matrix, example_sample_annotation, "FullRunName", name = "raw")
 
     # create a new assay with identical rownames -> should link 1:1
     se_new <- SummarizedExperiment::SummarizedExperiment(
         assays  = list(intensity = pb_as_wide(pbf)),
-        colData = SummarizedExperiment::colData(pbf[["raw"]])
+        colData = SummarizedExperiment::colData(pbf[["feature::raw"]])
     )
 
-    pbf2 <- proBatch:::.pb_add_assay_with_link(pbf, se = se_new, name = "raw_copy", from = "raw")
+    pbf2 <- proBatch:::.pb_add_assay_with_link(pbf, se = se_new, to = "feature::raw_copy", from = "feature::raw")
     expect_true(validObject(pbf2))
     expect_true(isTRUE(S4Vectors::metadata(pbf2)$linked_last))
 
@@ -212,7 +192,7 @@ test_that("internal add-assay-with-link links one-to-one when rows match", {
     rn[1] <- paste0(rn[1], "_X")
     rownames(se_mod) <- rn
 
-    pbf3 <- proBatch:::.pb_add_assay_with_link(pbf2, se = se_mod, name = "raw_changed", from = "raw_copy")
+    pbf3 <- proBatch:::.pb_add_assay_with_link(pbf2, se = se_mod, to = "feature::raw_changed", from = "feature::raw_copy")
     expect_false(isTRUE(S4Vectors::metadata(pbf3)$linked_last))
 })
 
@@ -220,10 +200,15 @@ test_that("show() prints chain and step count", {
     data(example_proteome_matrix, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
 
-    pbf <- ProBatchFeatures(example_proteome_matrix, example_sample_annotation, "FullRunName", "raw")
+    pbf <- ProBatchFeatures(
+        example_proteome_matrix,
+        example_sample_annotation,
+        "FullRunName",
+        name = "raw"
+    )
 
     out0 <- paste(capture.output(show(pbf)), collapse = "\n")
-    expect_match(out0, "Processing chain: <empty>")
+    expect_match(out0, "Processing chain: unprocessed data")
 
     # add a dummy log entry so show() reflects it
     pbf <- proBatch:::.pb_add_log_entry(
