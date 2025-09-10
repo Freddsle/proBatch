@@ -12,3 +12,4 @@
 ^data-raw$
 ^\.travis\.yml$
 ^tmp\.R$
+^prep_code$

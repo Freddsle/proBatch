@@ -152,6 +152,11 @@ NULL
 #' - `precursors`: A center-specific DIA-NN output, containing Precursor.Normalised values.
 #' - `protein.groups`: A center-specific DIA-NN output, containing PG.MaxLFQ values.
 #' - `metadata`: A `data.frame` describing the sample annotation for that center.
+#' Additionally, the list contains four more elements:
+#' - `all_metadata`: Combined metadata from all centers.
+#' - `all_precursors`: Combined precursor-level data from all centers.
+#' - `all_protein_groups`: Combined protein group-level data from all centers.
+#' - `all_precursor_pg_match`: Combined precursor-to-protein group mapping from all centers.
 #'
 #' @format
 #' A named list of length 5 (`"lab_A"`, `"lab_B"`, `"lab_C"`, `"lab_D"`, `"lab_E"`).
@@ -172,6 +177,13 @@ NULL
 #'       \item `Condition` (`character`): biological group (e.g., `"Pyr"`, `"Glu"`).
 #'     }
 #'   }
+#' }
+#' Additionally, the list contains four more elements:
+#' \describe{
+#'  \item{`example_ecoli_data$all_metadata`}{`data.frame`. Combined metadata from all centers.}
+#' \item{`example_ecoli_data$all_precursors`}{`matrix`. Combined precursor-level data from all centers.}
+#' \item{`example_ecoli_data$all_protein_groups`}{`matrix`. Combined protein group-level data from all centers.}
+#' \item{`example_ecoli_data$all_precursor_pg_match`}{`data.frame`. Combined precursor-to-protein group mapping from all centers.}
 #' }
 #'
 #' @source PRIDE ID PXD053812
