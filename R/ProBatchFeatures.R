@@ -144,6 +144,61 @@ pb_register_step <- function(name, fun) {
     m
 }
 
+# Harmonize/validate colData before addAssay
+.pb_harmonize_colData <- function(object, se, from_assay) {
+    stopifnot(from_assay %in% names(object))
+    obj_cd <- S4Vectors::DataFrame(colData(object))
+    se_cd <- S4Vectors::DataFrame(SummarizedExperiment::colData(se))
+
+    samp_obj <- rownames(obj_cd)
+    samp_se <- rownames(se_cd)
+
+    if (!setequal(samp_obj, samp_se)) {
+        stop(
+            "Sample sets differ between object and incoming assay. ",
+            "Missing in object: ", paste(setdiff(samp_se, samp_obj), collapse = ", "),
+            "; missing in assay: ", paste(setdiff(samp_obj, samp_se), collapse = ", ")
+        )
+    }
+
+    # Align order
+    obj_cd <- obj_cd[samp_se, , drop = FALSE]
+
+    # Compare overlapping columns value-wise
+    common_cols <- intersect(colnames(obj_cd), colnames(se_cd))
+
+    # helper equality on vectors (handles POSIXct / factor vs character)
+    .vec_equal <- function(a, b) {
+        if (inherits(a, "POSIXct") && inherits(b, "POSIXct")) {
+            return(identical(as.numeric(a), as.numeric(b))) # ignore tz/attr differences
+        }
+        if (is.factor(a)) a <- as.character(a)
+        if (is.factor(b)) b <- as.character(b)
+        # exact value equality including NAs; avoid attributes noise
+        return(isTRUE(all.equal(a, b, check.attributes = FALSE)))
+    }
+
+    bad <- vapply(common_cols, function(cc) !.vec_equal(obj_cd[[cc]], se_cd[[cc]]), logical(1))
+    if (any(bad)) {
+        stop(
+            "Conflicting colData values in columns: ",
+            paste(common_cols[bad], collapse = ", "),
+            " (assay ‘", from_assay, "’ vs incoming). ",
+            "\nType in object: ", paste(sapply(obj_cd[common_cols[bad]], class), collapse = ", "),
+            "\nType in assay: ", paste(sapply(se_cd[common_cols[bad]], class), collapse = ", "),
+            "\nCommon colData columns overlap: ", paste(common_cols, collapse = ", "),
+            "\nEnsure identical values or rename/remove conflicting columns."
+        )
+    }
+
+    # Merge: keep object columns + append any NEW columns from se
+    new_cols <- setdiff(colnames(se_cd), colnames(obj_cd))
+    merged_cd <- if (length(new_cols)) cbind(obj_cd, se_cd[, new_cols, drop = FALSE]) else obj_cd
+
+    SummarizedExperiment::colData(se) <- merged_cd
+    se
+}
+
 # ---------------------------
 # Constructors
 # ---------------------------
@@ -377,34 +432,27 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
     object
 }
 
-.pb_add_assay_with_link <- function(object, se, to = to, from = from) {
+.pb_add_assay_with_link <- function(object, se, to, from) {
     stopifnot(
         is.character(to), length(to) == 1L,
         is.character(from), length(from) == 1L
     )
 
-    # Check if from exists
     if (!from %in% names(object)) {
         stop("Assay '", from, "' not found in object. Was level/pipeline name misspecified?")
     }
 
-    ## 1) Make sure we have sample IDs
-    m <- SummarizedExperiment::assay(se, "intensity")
-    if (is.null(colnames(m))) stop("New assay matrix must have column names (sample IDs).")
-    samp <- colnames(m)
+    # Harmonize colData (throws if incompatible)
+    se <- .pb_harmonize_colData(object, se, from_assay = from)
 
-    ## 2) Give the new assay *empty* colData (only rownames) to avoid conflicts
-    SummarizedExperiment::colData(se) <- S4Vectors::DataFrame(row.names = samp)
-
-    ## 3) Add the assay under the fully-qualified name `to`
+    # Add assay
     object <- QFeatures::addAssay(object, se, name = to)
 
-    ## 4) Try 1:1 link only when rownames match exactly
+    # Best-effort 1:1 link only if feature rownames match
     ok_link <- FALSE
-    if (identical(
-        rownames(SummarizedExperiment::assay(object[[to]], "intensity")),
-        rownames(SummarizedExperiment::assay(object[[from]], "intensity"))
-    )) {
+    r_to <- rownames(SummarizedExperiment::assay(object[[to]], "intensity"))
+    r_from <- rownames(SummarizedExperiment::assay(object[[from]], "intensity"))
+    if (setequal(r_to, r_from)) {
         object <- QFeatures::addAssayLinkOneToOne(object, from = from, to = to)
         ok_link <- TRUE
     }
@@ -427,16 +475,20 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 #' @param backend "memory","hdf5","auto"
 #' @param hdf5_path optional filepath for HDF5Array
 #' @return list(object=updated, assay=assay_name_or_NULL, matrix=the_result_matrix)
+#'
+#' Note: This is an internal function; users should typically use pb_transform() or pb_eval(). Do not export.
+#' @noRd
 .pb_apply_step <- function(
     object, from, step, fun, params = list(),
     store = TRUE, new_level = NULL,
     backend = c("auto", "memory", "hdf5"),
-    hdf5_path = NULL) {
-    stopifnot(methods::is(object, "ProBatchFeatures"))
+    hdf5_path = NULL, .base_m = NULL) {
     backend <- match.arg(backend)
+    stopifnot(methods::is(object, "ProBatchFeatures"))
 
-    # fetch base matrix
-    base_m <- pb_assay_matrix(object, assay = from)
+
+    # fetch base matrix: use provided .base_m when chaining ephemeral steps
+    base_m <- if (!is.null(.base_m)) .base_m else pb_assay_matrix(object, assay = from)
 
     # run step (reusing user/proBatch functions when provided)
     f <- .pb_get_step_fun(fun)
@@ -446,10 +498,6 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
     from_parts <- strsplit(from, "::", fixed = TRUE)[[1]]
     base_level <- if (length(from_parts) >= 1) from_parts[1] else "feature"
     new_level <- new_level %||% base_level
-
-    # compute new pipeline name by appending this step
-    # recover historical steps that led to 'from' (from the name). If 'from' is the latest assay,
-    # expect its pipeline name to be suffix after '::'
     from_pipeline <- if (length(from_parts) >= 2) from_parts[2] else "raw"
     prev_steps <- if (identical(from_pipeline, "raw")) character() else rev(strsplit(from_pipeline, "_on_")[[1]])
     new_pipeline <- .pb_make_pipeline_name(c(prev_steps, step))
@@ -457,19 +505,19 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 
     saved_assay <- NULL
     if (store) {
-        # materialize (possibly to HDF5) then store
         mat <- .pb_materialize_matrix(res_m, backend = backend, hdf5_path = hdf5_path)
         se <- SummarizedExperiment::SummarizedExperiment(
-            assays = list(intensity = mat),
+            assays  = list(intensity = mat),
             colData = SummarizedExperiment::colData(object[[from]])
         )
-        object <- .pb_add_assay_with_link(object, se, name = to, from = from)
+        object <- .pb_add_assay_with_link(object, se, to = to, from = from)
         saved_assay <- to
     }
 
-    # always log
-    object <- .pb_add_log_entry(object,
-        step = step, fun = if (is.character(fun)) fun else step,
+    object <- .pb_add_log_entry(
+        object,
+        step = step,
+        fun = if (is.character(fun)) fun else step,
         from = from, to = to, params = params
     )
 
@@ -502,62 +550,41 @@ pb_transform <- function(
     final_name = NULL,
     backend = c("auto", "memory", "hdf5"),
     hdf5_path = NULL) {
-    stopifnot(methods::is(object, "ProBatchFeatures"))
     backend <- match.arg(backend)
+    stopifnot(methods::is(object, "ProBatchFeatures"))
     if (is.null(funs)) funs <- steps
     if (is.null(params_list)) params_list <- replicate(length(steps), list(), simplify = FALSE)
     stopifnot(length(steps) == length(funs), length(steps) == length(params_list))
 
     cur_from <- from
+    base_m <- NULL
     last_assay <- NULL
-    last_mat <- NULL
 
     for (k in seq_along(steps)) {
         step <- steps[[k]]
         fun <- funs[[k]]
         par <- params_list[[k]]
-        this_is_fast <- .pb_is_fast_step(step, fast_steps)
 
-        store_this <- if (store_intermediate) TRUE else if (this_is_fast) store_fast_steps else TRUE
+        is_fast <- .pb_is_fast_step(step, fast_steps)
+        store_this <- if (store_intermediate) TRUE else if (is_fast) store_fast_steps else TRUE
 
         out <- .pb_apply_step(
             object = object, from = cur_from,
             step = step, fun = fun, params = par,
             store = store_this, new_level = if (k == length(steps)) level else level,
-            backend = backend, hdf5_path = hdf5_path
+            backend = backend, hdf5_path = hdf5_path,
+            .base_m = base_m
         )
         object <- out$object
-        last_mat <- out$matrix
-        last_assay <- out$assay %||% cur_from # if not stored, no new assay name
-
-        # If stored, move the cursor; if not, keep 'from' but the next step should compute on last_mat.
-        # To support ephemeral chaining, when not stored temporarily inject a volatile assay name
-        # by reusing 'from' matrix in-memory. Will handle this by computing next step on last_mat directly.
-        # Implementation detail: when an intermediate wasn't stored, set cur_from to the same original
-        # but also attach the last_mat to a local variable to be used as base – realized below.
-        if (!isTRUE(store_this)) {
-            # monkey patch: replace base fetch in next iteration
-            assign(".pb_ephemeral_base", last_mat, inherits = FALSE)
-            .pb_fetch_base <- function(obj, assay) get(".pb_ephemeral_base", inherits = FALSE)
-            fetch_fun <- .pb_fetch_base
-        } else {
-            fetch_fun <- pb_assay_matrix
-            cur_from <- out$assay
-        }
-
-        # override the default base fetcher for next loop iteration
-        assign(".pb_fetch_fun", fetch_fun, inherits = FALSE)
-
-        # redefine pb_assay_matrix() binding locally for next iteration:
-        unlockBinding("pb_assay_matrix", as.environment("package:proBatch"))
+        base_m <- out$matrix
+        last_assay <- out$assay %||% cur_from
+        if (store_this) cur_from <- last_assay
     }
-
     # Rename final assay if requested and it exists
     if (!is.null(final_name) && !is.null(last_assay) && last_assay %in% names(object)) {
         names(object)[match(last_assay, names(object))] <- final_name
         last_assay <- final_name
     }
-
     object
 }
 
@@ -618,6 +645,204 @@ pb_aggregate_level <- function(
         from = from, to = to, params = list(fcol = feature_var)
     )
     obj
+}
+
+#' Add a new level from an external matrix and link to an existing assay
+#' @param new_matrix numeric matrix (features x samples)
+#' @param mapping_df data.frame with mapping from 'from' IDs to 'to' IDs
+#' @param from_id column in mapping_df for 'from' IDs (e.g., "Precursor.Id")
+#' @param to_id column in mapping_df for 'to' IDs (e.g., "Protein.Ids")
+#' @param map_strategy how to resolve multiple to-ids per from-id:
+#' "as_is" (error if not 1:1), "first" (take first), "longest" (take longest string)
+#' @param link_var rowData variable name to use for linking (e.g., "ProteinID")
+#' @param to_level e.g. "protein"
+#' @param to_pipeline optional pipeline name (default carries over from 'from')
+#' @param name optional final assay name override
+#' @param backend "memory","hdf5","auto"
+#' @param hdf5_path optional filepath for HDF5Array
+#' @return ProBatchFeatures with new assay and link added
+#' @export
+pb_add_level <- function(
+    object,
+    from, # e.g. "peptide::raw"
+    new_matrix, # numeric matrix (features x samples)
+    to_level, # e.g. "protein"
+    to_pipeline = NULL, # default = carry pipeline from 'from'
+    name = NULL, # override final assay name if desired
+    mapping_df = NULL, # data.frame with mapping
+    from_id = NULL, # column in mapping_df for 'from' IDs (e.g., "Precursor.Id")
+    to_id = NULL, # column in mapping_df for 'to' IDs   (e.g., "Protein.Ids")
+    map_strategy = c("as_is", "first", "longest"), # how to resolve multiple to-ids per from-id
+    link_var = "ProteinID", # rowData variable name to use for linking
+    backend = c("auto", "memory", "hdf5"),
+    hdf5_path = NULL) {
+    stopifnot(methods::is(object, "ProBatchFeatures"))
+    backend <- match.arg(backend)
+    map_strategy <- match.arg(map_strategy)
+
+    # ----- Determine target assay name -----
+    from_parts <- strsplit(from, "::", fixed = TRUE)[[1]]
+    from_pipeline <- if (length(from_parts) >= 2) from_parts[2] else "raw"
+    pipeline <- to_pipeline %||% from_pipeline
+    to <- if (!is.null(name)) name else .pb_assay_name(to_level, pipeline)
+
+    # ----- Build SE for new_matrix and align samples to 'from' assay -----
+    m <- as.matrix(new_matrix)
+    if (is.null(colnames(m))) stop("new_matrix must have column names (sample IDs).")
+    from_cd <- SummarizedExperiment::colData(object[[from]])
+    if (!setequal(rownames(from_cd), colnames(m))) {
+        stop("Samples of new_matrix don't match samples in '", from, "'.")
+    }
+    from_cd <- from_cd[colnames(m), , drop = FALSE]
+    se_new <- SummarizedExperiment::SummarizedExperiment(
+        assays  = list(intensity = .pb_materialize_matrix(m, backend, hdf5_path)),
+        colData = from_cd
+    )
+
+    se_new <- .pb_harmonize_colData(object, se_new, from_assay = from)
+
+    # ----- Add assay -----
+    object <- QFeatures::addAssay(object, se_new, name = to)
+
+    # ----- Linking logic -----
+    # Case A: identical rownames -> 1:1 link
+    r_from <- rownames(SummarizedExperiment::assay(object[[from]], "intensity"))
+    r_to <- rownames(SummarizedExperiment::assay(object[[to]], "intensity"))
+    if (identical(r_from, r_to)) {
+        object <- QFeatures::addAssayLinkOneToOne(object, from = from, to = to)
+        object <- .pb_add_log_entry(object,
+            step = sprintf("add_level(%s)_1to1", to_level),
+            fun = "addAssayLinkOneToOne",
+            from = from, to = to,
+            params = list()
+        )
+        return(object)
+    }
+
+    # Case B: many-to-one (typical peptide->protein) using addAssayLink()
+    # We need a variable present in rowData(from) and rowData(to) to match on.
+    # For the child (protein) side we set varTo to its rownames:
+    SummarizedExperiment::rowData(object[[to]])[[link_var]] <- rownames(object[[to]])
+
+    # For the parent (peptide) side, set varFrom using the mapping_df
+    # mapping_df[from_id] -> mapping_df[to_id]
+    if (is.null(mapping_df) || is.null(from_id) || is.null(to_id)) {
+        stop("Provide mapping_df, from_id and to_id to establish cross-level links.")
+    }
+
+    # in mapping_df, ensure that parents are fully covered; children need not all be referenced
+    r_from_set <- unique(r_from)
+    r_to_set <- unique(r_to)
+    # every parent must appear at least once in mapping_df
+    miss_from <- setdiff(r_from_set, as.character(mapping_df[[from_id]]))
+    if (length(miss_from)) {
+        stop(
+            "Mapping incomplete: ", length(miss_from),
+            " parent IDs from '", from, "' have no mapping. Examples: ",
+            paste(utils::head(miss_from, 10), collapse = ", ")
+        )
+    }
+    # keep only rows that refer to existing parents/children
+    mapping_df <- mapping_df[
+        as.character(mapping_df[[from_id]]) %in% r_from_set &
+            as.character(mapping_df[[to_id]]) %in% r_to_set, ,
+        drop = FALSE
+    ]
+
+    # Build a named vector: from_key -> to_key
+    # If multiple protein groups per precursor, resolve by map_strategy
+    df <- mapping_df[, c(from_id, to_id)]
+    names(df) <- c("from_key", "to_key")
+
+    # Normalize to character
+    df$from_key <- as.character(df$from_key)
+    df$to_key <- as.character(df$to_key)
+
+    # Group mapping rows by parent (peptide/precursor)
+    # group by parent and drop duplicate targets per parent
+    by_parent <- split(df$to_key, df$from_key)
+    by_parent <- lapply(by_parent, unique)
+
+    # Resolve duplicates per from_key - apply chooser per parent
+    picked <- vapply(by_parent, .choose_target, character(1), r_to = r_to, map_strategy = map_strategy)
+
+    parent_ids <- rownames(object[[from]])
+    parent_keys <- unname(picked[parent_ids])
+
+    if (anyNA(parent_keys)) {
+        bad <- parent_ids[is.na(parent_keys)]
+        stop(
+            "Linking failed: ", length(bad),
+            " parents have no exact match under map_strategy='", map_strategy, "'. Examples: ",
+            paste(utils::head(bad, 10), collapse = ", ")
+        )
+    }
+
+    # Write linking variables:
+    SummarizedExperiment::rowData(object[[to]])[[link_var]] <- r_to
+    SummarizedExperiment::rowData(object[[from]])[[link_var]] <- parent_keys
+
+    # Add the link by variable
+    object <- QFeatures::addAssayLink(object,
+        from = from, to = to,
+        varFrom = link_var, varTo = link_var
+    )
+
+    # ----- Log -----
+    # Log
+    object <- .pb_add_log_entry(object,
+        step = sprintf("add_level(%s)_byVar", to_level),
+        fun = "addAssayLink",
+        from = from, to = to,
+        params = list(
+            varFrom = link_var, varTo = link_var,
+            map_strategy = map_strategy
+        )
+    )
+    object
+}
+
+# Choose for each parent, following your 3-case policy
+.choose_target <- function(cands_raw, r_to, map_strategy) {
+    # Helper: exact presence among child rows
+    .has_child <- function(x) x %in% r_to
+
+    # Keep only exact candidates that exist as child rows, preserving original order
+    exact <- unique(cands_raw[.has_child(cands_raw)])
+
+    if (map_strategy == "as_is") {
+        # exactly one, and it must exist as a child row
+        uniq <- unique(cands_raw)
+        if (length(uniq) != 1L || !.has_child(uniq)) {
+            stop("map_strategy='as_is' but multiple or zero targets for a parent feature.")
+        }
+        return(uniq[[1]])
+    }
+
+    if (map_strategy == "first") {
+        # strictly first exact candidate; no splitting fallback
+        if (length(exact)) {
+            return(exact[1])
+        }
+        return(NA_character_)
+    }
+
+    if (map_strategy == "longest") {
+        # choose among exact groups only:
+        # 1) max number of proteins (# of ';' + 1)
+        # 2) tie-break by longer string
+        # 3) tie-break by first occurrence in original order
+        if (length(exact)) {
+            nprot <- vapply(exact, function(s) {
+                length(strsplit(s, ";", fixed = TRUE)[[1]])
+            }, integer(1))
+            ord <- order(-nprot, -nchar(exact), seq_along(exact))
+            return(exact[ord][1])
+        }
+        return(NA_character_)
+    }
+
+    stop("Unknown map_strategy: ", map_strategy)
 }
 
 # ---------------------------
