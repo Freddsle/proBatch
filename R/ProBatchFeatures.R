@@ -48,10 +48,6 @@ methods::setValidity("ProBatchFeatures", function(object) {
     if (!is.character(object@chain)) {
         return("chain must be character()")
     }
-    # keep chain length consistent with oplog rows (optional but helps catch mistakes)
-    if (length(object@chain) != nrow(object@oplog)) {
-        return("chain length must match number of oplog rows")
-    }
     TRUE
 })
 
@@ -421,9 +417,22 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 # ---------------------------
 
 .pb_add_log_entry <- function(object, step, fun, from, to, params, pkg = "proBatch") {
+    fun_name <- if (is.character(fun)) fun else deparse(substitute(fun))
+
+    if (nrow(object@oplog)) {
+        dup <- object@oplog$step == step &
+            object@oplog$fun == fun_name &
+            object@oplog$from == as.character(from) &
+            object@oplog$to == as.character(to) &
+            vapply(object@oplog$params, function(p) identical(p, params), logical(1))
+        if (any(dup)) {
+            return(object)
+        }
+    }
+
     entry <- S4Vectors::DataFrame(
         step      = step,
-        fun       = if (is.character(fun)) fun else deparse(substitute(fun)),
+        fun       = fun_name,
         from      = as.character(from),
         to        = as.character(to),
         params    = I(list(params)),
@@ -489,15 +498,6 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
     backend <- match.arg(backend)
     stopifnot(methods::is(object, "ProBatchFeatures"))
 
-
-    # fetch base matrix: use provided .base_m when chaining ephemeral steps
-    base_m <- if (!is.null(.base_m)) .base_m else pb_assay_matrix(object, assay = from)
-
-    # run step (reusing user/proBatch functions when provided)
-    f <- .pb_get_step_fun(fun)
-    res_m <- do.call(f, c(list(base_m), params))
-
-    # new assay name (level::pipeline)
     from_parts <- strsplit(from, "::", fixed = TRUE)[[1]]
     base_level <- if (length(from_parts) >= 1) from_parts[1] else "feature"
     new_level <- new_level %||% base_level
@@ -505,6 +505,24 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
     prev_steps <- if (identical(from_pipeline, "raw")) character() else rev(strsplit(from_pipeline, "_on_")[[1]])
     new_pipeline <- .pb_make_pipeline_name(c(prev_steps, step))
     to <- .pb_assay_name(new_level, new_pipeline)
+
+    # Avoid duplicate identical entries
+    fun_name <- if (is.character(fun)) fun else step
+    if (to %in% names(object) && nrow(object@oplog)) {
+        dup <- object@oplog$step == step &
+            object@oplog$fun == fun_name &
+            object@oplog$from == from &
+            object@oplog$to == to &
+            vapply(object@oplog$params, function(p) identical(p, params), logical(1))
+        if (any(dup)) {
+            return(list(object = object, assay = to, matrix = pb_assay_matrix(object, to)))
+        }
+    }
+
+    base_m <- if (!is.null(.base_m)) .base_m else pb_assay_matrix(object, assay = from)
+
+    f <- .pb_get_step_fun(fun)
+    res_m <- do.call(f, c(list(base_m), params))
 
     saved_assay <- NULL
     if (store) {
@@ -520,7 +538,7 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
     object <- .pb_add_log_entry(
         object,
         step = step,
-        fun = if (is.character(fun)) fun else step,
+        fun = fun_name,
         from = from, to = to, params = params
     )
 
@@ -875,13 +893,30 @@ methods::setMethod(
 # ---------------------------
 methods::setMethod("show", "ProBatchFeatures", function(object) {
     methods::callNextMethod()
-    ch <- get_chain(object, as_string = TRUE)
-    if (nzchar(ch)) {
-        cat("  Processing chain: ", ch, "\n", sep = "")
-    } else {
+    log <- get_operation_log(object)
+    if (!nrow(log)) {
         cat("  Processing chain: unprocessed data (raw) \n")
+    } else {
+        cat("  Processing chain:\n")
+        idx <- 1L
+        from_lvl <- sub("::.*", "", as.character(log$from))
+        to_lvl <- sub("::.*", "", as.character(log$to))
+        glob <- log[from_lvl != to_lvl | grepl("^add_level", as.character(log$step)), , drop = FALSE]
+        if (nrow(glob)) {
+            for (s in as.character(glob$step)) {
+                cat(sprintf("  [%d] %s\n", idx, s))
+                idx <- idx + 1L
+            }
+        }
+        lvls <- sub("::.*", "", names(object))
+        latest <- tapply(names(object), lvls, tail, 1)
+        pipes <- sub("^[^:]+::", "", latest)
+        for (nm in names(pipes)) {
+            cat(sprintf("  [%d] %s: %s\n", idx, nm, pipes[[nm]]))
+            idx <- idx + 1L
+        }
     }
-    if (nrow(object@oplog)) {
-        cat("  Steps logged: ", nrow(object@oplog), " (see get_operation_log())\n", sep = "")
+    if (nrow(log)) {
+        cat("  Steps logged: ", nrow(log), " (see get_operation_log())\n", sep = "")
     }
 })
