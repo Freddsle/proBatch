@@ -2,11 +2,13 @@
 % Please edit documentation in R/initial_assessment.R
 \name{plot_sample_mean_or_boxplot}
 \alias{plot_sample_mean_or_boxplot}
-\alias{plot_sample_mean}
-\alias{plot_boxplot}
+\alias{plot_sample_mean.default}
+\alias{plot_boxplot.default}
+\alias{plot_sample_mean.ProBatchFeatures}
+\alias{plot_boxplot.ProBatchFeatures}
 \title{Plot per-sample mean or boxplots for initial assessment}
 \usage{
-plot_sample_mean(
+\method{plot_sample_mean}{default}(
   data_matrix,
   sample_annotation,
   sample_id_col = "FullRunName",
@@ -23,10 +25,11 @@ plot_sample_mean(
   plot_title = NULL,
   theme_name = c("classic", "minimal", "bw", "light", "dark"),
   base_size = 20,
-  ylimits = NULL
+  ylimits = NULL,
+  pbf_name = NULL
 )
 
-plot_boxplot(
+\method{plot_boxplot}{default}(
   df_long,
   sample_annotation,
   sample_id_col = "FullRunName",
@@ -44,7 +47,18 @@ plot_boxplot(
   theme_name = c("classic", "minimal", "bw", "light", "dark"),
   base_size = 20,
   ylimits = NULL,
-  outliers = TRUE
+  outliers = TRUE,
+  pbf_name = NULL
+)
+
+\method{plot_sample_mean}{ProBatchFeatures}(x, pbf_name = NULL, plot_title = NULL, ...)
+
+\method{plot_boxplot}{ProBatchFeatures}(
+  x,
+  pbf_name = NULL,
+  sample_id_col = sample_id_col,
+  plot_title = NULL,
+  ...
 )
 }
 \arguments{

@@ -119,7 +119,7 @@ preceding and following batch effects analysis and correction.
     for protein quantity inference. Instead, we do recommend to correct
     the technical noise at the level, which is used to infer the
     proteins (thus, fragment-level for inference tools such as aLFQ or
-    MSstats).
+    MSstats, or peptide-level for methods like MaxLFQ).
 
 # Preparation for the analysis
 
@@ -148,14 +148,14 @@ missing_cran <- cran_deps[!cran_deps %in% rownames(installed.packages())]
 
 # Install only the missing ones
 if (length(missing_bioc) > 0) {
-  BiocManager::install(missing_bioc, ask = FALSE, update = FALSE)
+    BiocManager::install(missing_bioc, ask = FALSE, update = FALSE)
 } else {
-  message("All Bioconductor dependencies are already installed.")
+    message("All Bioconductor dependencies are already installed.")
 }
 if (length(missing_cran) > 0) {
-  install.packages(missing_cran, dependencies = TRUE)
+    install.packages(missing_cran, dependencies = TRUE)
 } else {
-  message("All CRAN dependencies are already installed.")
+    message("All CRAN dependencies are already installed.")
 }
 ```
 
@@ -170,7 +170,9 @@ if (!requireNamespace("devtools", quietly = TRUE)) {
 }
 if (!requireNamespace("proBatch", quietly = TRUE)) {
     devtools::install_github("freddsle/proBatch", build_vignettes = TRUE)
-} else {message("proBatch is already installed.")}
+} else {
+    message("proBatch is already installed.")
+}
 ```
 
 \pagebreak
@@ -472,7 +474,8 @@ plot_sample_mean(
     log_transformed_matrix, example_sample_annotation,
     order_col = "order",
     batch_col = batch_col, color_by_batch = TRUE, ylimits = c(12, 16.5),
-    color_scheme = color_list[[batch_col]]
+    color_scheme = color_list[[batch_col]],
+    base_size = 10
 )
 ```
 
