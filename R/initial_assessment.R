@@ -46,20 +46,21 @@
 #' )
 #' }
 #'
-plot_sample_mean <- function(data_matrix, sample_annotation,
-                             sample_id_col = "FullRunName",
-                             batch_col = "MS_batch",
-                             color_by_batch = FALSE,
-                             color_scheme = "brewer",
-                             order_col = "order",
-                             vline_color = "grey",
-                             facet_col = NULL,
-                             filename = NULL, width = NA, height = NA,
-                             units = c("cm", "in", "mm"),
-                             plot_title = NULL,
-                             theme_name = c("classic", "minimal", "bw", "light", "dark"),
-                             base_size = 20,
-                             ylimits = NULL) {
+plot_sample_mean.default <- function(data_matrix, sample_annotation,
+                                     sample_id_col = "FullRunName",
+                                     batch_col = "MS_batch",
+                                     color_by_batch = FALSE,
+                                     color_scheme = "brewer",
+                                     order_col = "order",
+                                     vline_color = "grey",
+                                     facet_col = NULL,
+                                     filename = NULL, width = NA, height = NA,
+                                     units = c("cm", "in", "mm"),
+                                     plot_title = NULL,
+                                     theme_name = c("classic", "minimal", "bw", "light", "dark"),
+                                     base_size = 20,
+                                     ylimits = NULL,
+                                     pbf_name = NULL) {
     # stop early if sample_annotation missing
     if (is.null(sample_annotation)) {
         stop("`sample_annotation` must be provided.")
@@ -243,20 +244,21 @@ plot_sample_mean <- function(data_matrix, sample_annotation,
 #' width = 14, height = 9, units = 'in')
 #' }
 #'
-plot_boxplot <- function(df_long, sample_annotation,
-                         sample_id_col = "FullRunName",
-                         measure_col = "Intensity",
-                         batch_col = "MS_batch",
-                         color_by_batch = TRUE,
-                         color_scheme = "brewer",
-                         order_col = "order",
-                         facet_col = NULL,
-                         filename = NULL, width = NA, height = NA,
-                         units = c("cm", "in", "mm"),
-                         plot_title = NULL,
-                         theme_name = c("classic", "minimal", "bw", "light", "dark"),
-                         base_size = 20,
-                         ylimits = NULL, outliers = TRUE) {
+plot_boxplot.default <- function(df_long, sample_annotation,
+                                 sample_id_col = "FullRunName",
+                                 measure_col = "Intensity",
+                                 batch_col = "MS_batch",
+                                 color_by_batch = TRUE,
+                                 color_scheme = "brewer",
+                                 order_col = "order",
+                                 facet_col = NULL,
+                                 filename = NULL, width = NA, height = NA,
+                                 units = c("cm", "in", "mm"),
+                                 plot_title = NULL,
+                                 theme_name = c("classic", "minimal", "bw", "light", "dark"),
+                                 base_size = 20,
+                                 ylimits = NULL, outliers = TRUE,
+                                 pbf_name = NULL) {
     # Validate inputs
     if (is.null(sample_annotation)) {
         stop("`sample_annotation` must be provided.")
@@ -296,8 +298,10 @@ plot_boxplot <- function(df_long, sample_annotation,
         stop(sprintf("Faceting column '%s' not found in data.", facet_col))
     }
 
+    order_col_name <- order_col
     # Defining sample order for plotting (even if order_col NULL,
     # it will re-arrange df_long levels as required for plotting)
+    # Defining sample order for plotting
     sample_order <- define_sample_order(
         order_col, sample_annotation, facet_col,
         batch_col, df_long,
@@ -346,6 +350,9 @@ plot_boxplot <- function(df_long, sample_annotation,
     if (!is.null(plot_title)) {
         gg <- gg + ggtitle(plot_title) +
             theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 16))
+    } else if (!is.null(pbf_name)) {
+        gg <- gg + ggtitle(pbf_name) +
+            theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 16))
     }
 
     theme_name <- match.arg(theme_name)
@@ -379,6 +386,11 @@ plot_boxplot <- function(df_long, sample_annotation,
             theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
     }
 
+    # Change the x label to correspond to the order column
+    if (!is.null(order_col_name)) {
+        gg <- gg + xlab(order_col_name)
+    }
+
     if (!is.null(batch_col)) {
         batch_vector <- df_long[[batch_col]]
         is_factor <- is_batch_factor(batch_vector, color_scheme)
@@ -403,3 +415,76 @@ plot_boxplot <- function(df_long, sample_annotation,
 
     return(gg)
 }
+
+
+#' @rdname plot_sample_mean_or_boxplot
+#' @method plot_sample_mean ProBatchFeatures
+#' @export
+plot_sample_mean.ProBatchFeatures <- function(x, pbf_name = NULL, plot_title = NULL, ...) {
+    object <- x # Use 'x' as per convention
+
+    if (is.null(pbf_name)) {
+        pbf_name <- pb_current_assay(object)
+        message("`pbf_name` not provided, using the most recent assay: ", pbf_name)
+    }
+
+    if (!(pbf_name %in% names(object))) {
+        stop("Assay '", pbf_name, "' not found in the ProBatchFeatures object.")
+    }
+
+    data_matrix <- pb_assay_matrix(object, pbf_name)
+    sample_annotation <- as.data.frame(colData(object))
+
+    plot_title <- if (is.null(plot_title)) pbf_name else plot_title
+
+    # Call the default method with the extracted data
+    plot_sample_mean.default(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        plot_title = plot_title,
+        ...
+    )
+}
+
+#' @rdname plot_sample_mean_or_boxplot
+#' @method plot_boxplot ProBatchFeatures
+#' @export
+plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = sample_id_col, plot_title = NULL, ...) {
+    object <- x # Use 'x' as per convention
+
+    if (is.null(pbf_name)) {
+        pbf_name <- pb_current_assay(object)
+        message("`pbf_name` not provided, using the most recent assay: ", pbf_name)
+    }
+
+    if (!(pbf_name %in% names(object))) {
+        stop("Assay '", pbf_name, "' not found in the ProBatchFeatures object.")
+    }
+
+    message("Extracting data from assay: ", pbf_name)
+    df_long <- pb_as_long(
+        object,
+        feature_id_col = "Feature",
+        sample_id_col = sample_id_col,
+        measure_col = "Intensity",
+        pbf_name = pb_current_assay(object)
+    )
+    # remove rows with NA intensities in Intensity column
+    df_long <- df_long[!is.na(df_long$Intensity), ]
+    sample_annotation <- as.data.frame(colData(object))
+
+    plot_title <- if (is.null(plot_title)) pbf_name else plot_title
+
+    # Call the default method with the reshaped data
+    plot_boxplot.default(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        measure_col = "Intensity",
+        plot_title = plot_title,
+        ...
+    )
+}
+
+plot_sample_mean <- function(x, ...) UseMethod("plot_sample_mean")
+plot_boxplot <- function(x, ...) UseMethod("plot_boxplot")
