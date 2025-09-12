@@ -162,7 +162,6 @@ normalize_sample_medians_dm <- function(data_matrix) {
 #'
 #' @export
 #' @rdname normalize
-#'
 normalize_sample_medians_df <- function(df_long,
                                         feature_id_col = "peptide_group_label",
                                         sample_id_col = "FullRunName",
@@ -221,8 +220,6 @@ normalize_sample_medians_df <- function(df_long,
 #'
 #' @export
 #' @rdname normalize
-#'
-#'
 normalize_data_dm <- function(data_matrix,
                               normalize_func = c("quantile", "medianCentering"),
                               log_base = NULL, offset = 1) {
@@ -244,8 +241,6 @@ normalize_data_dm <- function(data_matrix,
 
 #' @export
 #' @rdname normalize
-#'
-#'
 normalize_data_df <- function(df_long,
                               normalize_func = c("quantile", "medianCentering"),
                               log_base = NULL, offset = 1,
