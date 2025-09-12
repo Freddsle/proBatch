@@ -214,7 +214,9 @@ ProBatchFeatures <- function(
     sample_annotation = NULL,
     sample_id_col = "FullRunName",
     name = NULL,
-    level = "feature") {
+    level = "feature"
+    # TODO: add feature chain_sep - currently always "on" - and support it everywhere
+    ) {
     stopifnot(is.matrix(data_matrix) || is.data.frame(data_matrix))
     data_matrix <- as.matrix(data_matrix)
     if (is.null(colnames(data_matrix))) {
@@ -378,7 +380,13 @@ pb_current_assay <- function(object) {
 
 #' Convenience accessor for assay matrix by name/index (returns the 'intensity' assay)
 #' @export
-pb_assay_matrix <- function(object, assay = pb_current_assay(object), name = "intensity") {
+pb_assay_matrix <- function(object, assay = NULL, name = "intensity") {
+    if (is.null(assay)) {
+        assay <- pb_current_assay(object)
+        message("`assay` not provided, using the most recent assay: ", assay)
+    } else {
+        message("Using assay: ", assay)
+    }
     se <- object[[assay]]
     SummarizedExperiment::assay(se, i = name)
 }
@@ -502,8 +510,8 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
     base_level <- if (length(from_parts) >= 1) from_parts[1] else "feature"
     new_level <- new_level %||% base_level
     from_pipeline <- if (length(from_parts) >= 2) from_parts[2] else "raw"
-    prev_steps <- if (identical(from_pipeline, "raw")) character() else rev(strsplit(from_pipeline, "_on_")[[1]])
-    new_pipeline <- .pb_make_pipeline_name(c(prev_steps, step))
+    prev_tokens <- if (identical(from_pipeline, "raw")) "raw" else rev(strsplit(from_pipeline, "_on_", fixed = TRUE)[[1]])
+    new_pipeline <- .pb_make_pipeline_name(c(prev_tokens, step))
     to <- .pb_assay_name(new_level, new_pipeline)
 
     # Avoid duplicate identical entries
@@ -706,6 +714,11 @@ pb_add_level <- function(
     from_pipeline <- if (length(from_parts) >= 2) from_parts[2] else "raw"
     pipeline <- to_pipeline %||% from_pipeline
     to <- if (!is.null(name)) name else .pb_assay_name(to_level, pipeline)
+    # Idempotency: if identical assay recorded, do nothing
+    if (to %in% names(object) && from %in% names(object)) {
+        message("Assay '", to, "' already exists and is linked; skipping addition.")
+        return(object)
+    }
 
     # ----- Build SE for new_matrix and align samples to 'from' assay -----
     m <- as.matrix(new_matrix)
@@ -898,22 +911,29 @@ methods::setMethod("show", "ProBatchFeatures", function(object) {
         cat("  Processing chain: unprocessed data (raw) \n")
     } else {
         cat("  Processing chain:\n")
-        idx <- 1L
-        from_lvl <- sub("::.*", "", as.character(log$from))
-        to_lvl <- sub("::.*", "", as.character(log$to))
-        glob <- log[from_lvl != to_lvl | grepl("^add_level", as.character(log$step)), , drop = FALSE]
-        if (nrow(glob)) {
-            for (s in as.character(glob$step)) {
-                cat(sprintf("  [%d] %s\n", idx, s))
-                idx <- idx + 1L
-            }
+        # for each level, show recorded chains from operation log, from "raw", to latest: raw, step_1_on_raw, step1_on_step2_on_..., ")
+        # all operations stored in oplog should be printed - from get_operation_log()
+        # but grouped by level (peptide/protein/...)
+        .split_level_pipe <- function(x) {
+            x <- as.character(x)
+            parts <- strsplit(x, "::", fixed = TRUE)
+            lvl <- vapply(parts, function(p) if (length(p) >= 1) p[1] else NA_character_, character(1))
+            pipe <- vapply(parts, function(p) if (length(p) >= 2 && nzchar(p[2])) p[2] else "raw", character(1))
+            list(level = lvl, pipeline = pipe)
         }
-        lvls <- sub("::.*", "", names(object))
-        latest <- tapply(names(object), lvls, tail, 1)
-        pipes <- sub("^[^:]+::", "", latest)
-        for (nm in names(pipes)) {
-            cat(sprintf("  [%d] %s: %s\n", idx, nm, pipes[[nm]]))
-            idx <- idx + 1L
+        from_lp <- .split_level_pipe(log$from)
+        to_lp <- .split_level_pipe(log$to)
+        levels <- unique(na.omit(c(from_lp$level, to_lp$level)))
+
+        n_tokens <- function(s) length(strsplit(s, "_on_", fixed = TRUE)[[1]])
+
+        for (lvl in levels) {
+            pipes_from <- from_lp$pipeline[which(from_lp$level == lvl)]
+            pipes_to <- to_lp$pipeline[which(to_lp$level == lvl)]
+            chains <- unique(c(pipes_from, pipes_to, "raw"))
+            chains <- chains[!is.na(chains) & nzchar(chains)]
+            chains <- chains[order(vapply(chains, n_tokens, integer(1)), chains)]
+            cat("   - ", lvl, ": ", paste(chains, collapse = ", "), "\n", sep = "")
         }
     }
     if (nrow(log)) {

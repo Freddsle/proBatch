@@ -261,7 +261,7 @@ test_that("show() prints chain and step count", {
     )
 
     out1 <- paste(capture.output(show(pbf)), collapse = "\n")
-    expect_match(out1, "Processing chain: log")
+    expect_match(out1, "Processing chain:\n  [1] log")
     expect_match(out1, "Steps logged: 1")
 })
 
@@ -639,4 +639,50 @@ test_that("pb_add_level errors when selection leaves NA parents (no exact child 
         ),
         "no exact match|have no exact match|Linking failed"
     )
+})
+
+test_that("show() lists global and level-specific pipelines", {
+    skip_if_not_installed("QFeatures")
+    skip_if_not_installed("SummarizedExperiment")
+
+    m_pep <- matrix(
+        1:6,
+        nrow = 3,
+        dimnames = list(paste0("p", 1:3), c("S1", "S2"))
+    )
+    sa <- data.frame(
+        FullRunName = c("S1", "S2"),
+        row.names = c("S1", "S2"),
+        stringsAsFactors = FALSE
+    )
+    pbf <- ProBatchFeatures(m_pep, sa, "FullRunName", level = "peptide")
+
+    m_prot <- matrix(
+        c(10, 11, 20, 21),
+        nrow = 2,
+        dimnames = list(paste0("prot", 1:2), c("S1", "S2"))
+    )
+    map <- data.frame(
+        Precursor.Id = c("p1", "p2", "p3"),
+        Protein.Ids = c("prot1", "prot1", "prot2"),
+        stringsAsFactors = FALSE
+    )
+    pbf <- pb_add_level(
+        object = pbf,
+        from = "peptide::raw",
+        new_matrix = m_prot,
+        to_level = "protein",
+        mapping_df = map,
+        from_id = "Precursor.Id",
+        to_id = "Protein.Ids",
+        map_strategy = "first"
+    )
+
+    pbf <- pb_transform(pbf, from = "peptide::raw", steps = "log2", store_fast_steps = TRUE)
+    pbf <- pb_transform(pbf, from = "protein::raw", steps = "log2", store_fast_steps = TRUE)
+
+    out <- paste(capture.output(show(pbf)), collapse = "\n")
+    expect_match(out, "add_level\\(protein\\)_byVar")
+    expect_match(out, "peptide: log2_on_raw")
+    expect_match(out, "protein: log2_on_raw")
 })
