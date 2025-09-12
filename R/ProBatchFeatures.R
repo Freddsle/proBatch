@@ -247,8 +247,10 @@ ProBatchFeatures <- function(
         sa <- sa[colnames(data_matrix), , drop = FALSE]
         cd <- S4Vectors::DataFrame(sa)
     } else {
+        message("No sample_annotation provided; using empty colData.")
         cd <- S4Vectors::DataFrame(row.names = colnames(data_matrix))
     }
+    message("Sample annotation has ", ncol(cd), " columns and ", nrow(cd), " samples.")
 
     # Create SummarizedExperiment
     se <- SummarizedExperiment::SummarizedExperiment(
@@ -262,7 +264,8 @@ ProBatchFeatures <- function(
         name <- .pb_assay_name(level, name)
     }
     # Use QFeatures constructor to make a QFeatures, then wrap as ProBatchFeatures
-    qf <- QFeatures::QFeatures(stats::setNames(list(se), name))
+    qf <- QFeatures::QFeatures(stats::setNames(list(se), name),
+  colData = cd)
 
     # start with empty structured oplog
     empty_log <- S4Vectors::DataFrame(
@@ -389,10 +392,9 @@ pb_as_long <- function(
     object,
     feature_id_col = "peptide_group_label",
     sample_id_col = "FullRunName",
-    measure_col = "Intensity") {
-    stopifnot(methods::is(object, "ProBatchFeatures"))
-    assay <- pb_current_assay(object)
-    se <- object[[assay]]
+    measure_col = "Intensity",
+    pbf_name = pb_current_assay(object)) {
+    se <- object[[pbf_name]]
     m <- SummarizedExperiment::assay(se, i = "intensity")
     sa <- as.data.frame(SummarizedExperiment::colData(se))
 

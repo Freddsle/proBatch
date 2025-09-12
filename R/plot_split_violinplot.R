@@ -1,4 +1,4 @@
-GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin,
+GeomSplitViolin <- ggplot2::ggproto("GeomSplitViolin", ggplot2::GeomViolin,
     draw_group = function(self, data, ..., draw_quantiles = NULL) {
         data <- transform(data, xminv = x - violinwidth *
             (x - xmin), xmaxv = x + violinwidth *

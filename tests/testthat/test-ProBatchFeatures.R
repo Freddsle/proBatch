@@ -13,6 +13,33 @@ test_that("constructor (wide) builds a valid ProBatchFeatures object", {
     expect_s4_class(pbf, "ProBatchFeatures")
     expect_true(methods::is(pbf, "QFeatures"))
     expect_true(validObject(pbf))
+    
+    # object-level colData must preserve sample annotation (columns + values)
+    expect_equal(nrow(colData(pbf)), ncol(example_proteome_matrix))
+    expect_gt(ncol(colData(pbf)), 0L)
+    expect_true(all(colnames(example_sample_annotation) %in% colnames(colData(pbf))))
+
+    # Expected sample annotation in matrix-column order
+    exp_sa <- example_sample_annotation[
+      match(colnames(example_proteome_matrix), example_sample_annotation$FullRunName),
+      , drop = FALSE
+    ]
+    rownames(exp_sa) <- exp_sa$FullRunName
+
+    # values equal (ignore attributes/factors)
+    expect_equal(
+      as.data.frame(colData(pbf))[ , colnames(example_sample_annotation), drop = FALSE],
+      exp_sa,
+      ignore_attr = TRUE
+    )
+
+    # per-assay colData must equal top-level colData
+    se0 <- pbf[["feature::raw"]]
+    expect_equal(
+      as.data.frame(colData(pbf)),
+      as.data.frame(SummarizedExperiment::colData(se0)),
+      ignore_attr = TRUE
+    )
 
     # initial state
     log <- get_operation_log(pbf)
@@ -90,6 +117,15 @@ test_that("constructor (long) delegates to long_to_matrix", {
     expect_s4_class(pbf_long, "ProBatchFeatures")
     expect_true(validObject(pbf_long))
     expect_identical(pb_current_assay(pbf_long), "feature::raw")
+    
+    # object-level colData must be non-empty and consistent with per-assay
+    expect_gt(ncol(colData(pbf_long)), 0L)
+    se_long <- pbf_long[["feature::raw"]]
+    expect_equal(
+      as.data.frame(colData(pbf_long)),
+      as.data.frame(SummarizedExperiment::colData(se_long)),
+      ignore_attr = TRUE
+    )
 })
 
 test_that("pb_as_long reuses matrix_to_long and round-trips vs direct call", {
