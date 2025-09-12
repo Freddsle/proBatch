@@ -1,0 +1,437 @@
+---
+title: "proBatch"
+author: |
+  | Yuliya Burankova
+  | Institute for Computational Systems Biology, University of Hamburg, Germany
+date: "`r Sys.Date()`"
+output: pdf_document
+#output: html_document
+bibliography: "references.bib"
+csl: "nature-no-superscript.csl"
+vignette: >
+  %\VignetteIndexEntry{ProBatchFeatures: QFeatures-based pipelines with operation logging for proBatch}
+  %\VignetteEncoding{UTF-8}
+  %\usepackage[utf8]{inputenc}
+  %\VignetteEngine{knitr::rmarkdown}
+abstract: |
+  This vignette describes how to use ProBatchFeatures inside ProBatch package.
+toc: yes
+toc_depth: 2
+numbersections: true
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE, warning = FALSE, message = FALSE, fig.pos = "h",
+    collapse = TRUE,
+    comment = "#>"
+)
+```
+
+```{r setup, include = FALSE}
+chooseCRANmirror(graphics = FALSE, ind = 1)
+options(tinytex.verbose = TRUE)
+```
+
+# 1. Overview
+
+`ProBatchFeatures` is a small extension around **QFeatures**
+[@QFeatures] that stores each processing stage (for example, raw → log →
+normalization → BEC → …) as a new **assay**, and logs every step. It
+keeps data compatible with **SummarizedExperiment**/**QFeatures**
+functions, and enables quick benchmarking of chained pipelines.
+
+This vignette shows:
+
+1.  Creating a `ProBatchFeatures` object from matrix and from long
+    table.
+2.  Running a typical pipeline: NA filtering → log → normalization →
+    ComBat.
+3.  Inspecting the operation chain and structured log.
+4.  Running a grid of pipelines for benchmarking.
+
+# 2. Loading the data
+
+## Loading the libraries
+
+In this vignette, we use functions from `dplyr`, `tibble` , `ggplot2`
+and other `tidyverse` package family to transform some data frames
+
+```{r load_packages, message=FALSE}
+require(dplyr)
+require(tibble)
+require(ggplot2)
+library(plyr)
+```
+
+## Load and prepare example dataset
+
+Here, as example, we will use the E.coli dataset, described in the
+FedProt paper [@burankova2025privacy]. The data contains
+
+```{r load_data}
+library(proBatch)
+data("example_ecoli_data", package = "proBatch")
+```
+
+The dataset contains data from 5 centers, which were analysed
+separately. First, before proceed, we need to merge data from all
+centers into one dataset.
+
+```{r merge-data}
+# Extract data
+all_metadata <- example_ecoli_data$all_metadata
+all_precursors <- example_ecoli_data$all_precursors
+all_protein_groups <- example_ecoli_data$all_protein_groups
+all_precursor_pg_match <- example_ecoli_data$all_precursor_pg_match
+
+# Keep only essential
+rm(example_ecoli_data)
+gc()
+```
+
+# 2. Build `ProBatchFeatures` from a matrix
+
+The dataset consist of two levels (peptides and protein groups), and
+`all_precursor_pg_match` dataframe stores links between them. Here, we
+use the ProBatchFeatures() constructor to create an object for the
+peptide level data first:
+
+```{r build-pbf-from-matrix}
+# Build from LONG directly
+pbf <- ProBatchFeatures(
+    data_matrix = all_precursors, # matrix of peptide intensities (features x samples)
+    sample_annotation = all_metadata, # data.frame of sample metadata
+    sample_id_col = "Run", # column in metadata that matches sample IDs
+    level = "peptide" # label this assay level as "peptide"
+)
+
+pbf # show basic info about the ProBatchFeatures object
+```
+
+Next, we add the protein-level data as a second assay in the same
+ProBatchFeatures instance. We do this by creating a SummarizedExperiment
+for the protein data and then adding it to pb via QFeatures
+functionality. It’s important to use the same sample annotation for the
+new assay to ensure column alignment:
+
+```{r add-new-pbf-level}
+# Add proteins as a new level and link via mapping
+#    all_precursor_pg_match has columns: "Precursor.Id", "Protein.Ids"
+pbf <- pb_add_level(
+    object = pbf,
+    from = "peptide::raw",
+    new_matrix = all_protein_groups,
+    to_level = "protein", # will name "protein::raw" by default
+    mapping_df = all_precursor_pg_match,
+    from_id = "Precursor.Id",
+    to_id = "Protein.Ids",
+    map_strategy = "as_is"
+)
+
+pbf
+```
+
+If a precursor/peptide maps to multiple protein groups, parameter
+`map_strategy` is used to determine how to resolve multiple to-ids per
+from-id. Can be 'first' or 'longest', and 'as_is' expects one-to-one in
+mapping. First two rules ("first" or "longest") yield a single ProteinID
+per peptide for the linking variable. Here we know that there are no
+duplicates, so 'as_is' used.
+
+```{r}
+# Check
+validObject(pbf) # should be TRUE
+assayLink(pbf, "protein::raw") # verify link summary
+```
+
+# 3. Running a typical processing pipeline
+
+Now that we have the data loaded into a `ProBatchFeatures` object with
+peptide and protein assays, we can demonstrate an example of typical preprocessing
+pipeline. This pipeline will include filtering out low-quality features,
+log~2~ transformation, and median normalization. 
+
+## 3.1  Initial assessment of the raw data
+
+First, let's have a look at the data before any processing. We will use several visualization functions from the proBatch package to inspect the proteins::raw assay. 
+
+We will start by examining the intensities across samples by plotting the sample mean. Here, the `plot_sample_mean()` function illustrates global average vs. sample batch. This can be helpful to visualize the global quantitative pattern and to identify discrepancies within or between batches.
+
+```{r plot_mean, fig.show='hold', fig.width=5, fig.height=2}
+# It's good practice to define colors for consistent plotting
+color_scheme <- RColorBrewer::brewer.pal(n = 5, name = "Dark2")
+names(color_scheme) <- unique(pbf$Center)
+
+plot_sample_mean(
+    pbf,
+    sample_id_col = "Run",
+    order_col = "Lab",
+    batch_col = "Condition",
+    color_by_batch = TRUE,
+    color_scheme = color_scheme,
+    base_size = 7,
+    pbf_name = "protein::raw"
+)
+
+plot_boxplot(
+    pbf,
+    sample_id_col = "Run",
+    order_col = "Run",
+    batch_col = "Lab",
+    color_by_batch = TRUE,
+    color_scheme = color_scheme,
+    base_size = 7,
+    pbf_name = "protein::raw"
+)
+```
+
+
+
+
+
+
+
+
+
+
+```{r}
+# It's good practice to define colors for consistent plotting
+color_scheme <- RColorBrewer::brewer.pal(n = 5, name = "Dark2")
+names(color_scheme) <- unique(pbf$Center)
+
+plot_sample_boxplots_on_assay(
+    pbf,
+    assay_name = "protein::raw",
+    color_by = "Center",
+    color_scheme = color_scheme
+) +
+    ggtitle("Raw Peptide Intensities")
+```
+Next, we'll perform a Principal Component Analysis (PCA) to get a high-level overview of the sample clustering. We expect to see a strong batch effect, where samples cluster by their center of origin rather than their biological condition.
+
+```{r}
+plot_pca_on_assay(pbf,
+    assay_name = "peptide::raw",
+    color_by = "Center",
+    color_scheme = color_scheme,
+    plot_title = "PCA on Raw Peptide Data"
+)
+```
+
+As anticipated, the PCA plot clearly shows that the primary source of variation in the raw data is the Center, confirming a strong batch effect that we will need to address.
+
+## 3.2 Filtering missing values
+A common first step in preprocessing is to remove features (in this case, peptides) that have too many missing values across samples. These are often low-abundance peptides that are unreliably detected and can interfere with downstream analysis. First, let's visualize the distribution of missing values. 
+
+```{r}
+# nNA returns a DataFrame with counts of NAs per feature/sample
+na_counts <- QFeatures::nNA(pbf, "peptide::raw")
+
+# Plotting the number of NAs per peptide
+ggplot(data.frame(nNA = na_counts$nNArow), aes(x = nNA)) +
+    geom_histogram(bins = 30, fill = "steelblue") +
+    geom_vline(xintercept = ncol(pbf[["peptide::raw"]]) * 0.5, color = "red", linetype = "dashed") +
+    labs(
+        title = "Distribution of Missing Values per Peptide",
+        x = "Number of Samples with Missing Value",
+        y = "Number of Peptides"
+    ) +
+    theme_bw()
+```
+
+The histogram shows that a large number of peptides have missing values in many samples.
+Here we apply a simple missing-data filter: we require each features (in this case peptide) to be quantified in at least 20% of the samples (you can choose a threshold appropriate for your data):
+
+```{r}
+# Helper function for filtering a matrix by NA proportion
+filter_by_na <- function(m, p_na = 0.5) {
+    # Keep rows where the proportion of NAs is less than p_na
+    row_na_prop <- rowMeans(is.na(m))
+    m[row_na_prop < p_na, ]
+}
+
+# Apply the filtering as a new step in the pipeline
+pbf <- pb_transform(
+    object = pbf,
+    from = "peptide::raw",
+    steps = "raw_filtered",
+    funs = list(filter_by_na),
+    params_list = list(list(p_na = 0.5))
+)
+
+pbf
+```
+After filtering, the ProBatchFeatures object pbf will have fewer peptide features . The protein-level assay remains unchanged by this filtering (since we have not recomputed or linked a filtered protein assay in this step). In a later step, we could update the protein level to reflect only peptides that passed filtering, but for simplicity we proceed with transformations on the filtered peptide set.
+
+## 3.3 Log₂ Transformation
+
+Proteomics data is typically log-transformed to stabilize variance and make the data distribution more symmetric, which benefits many statistical methods. We'll apply a log₂ transformation to our filtered data.
+
+```{r}
+pbf <- pb_transform(
+    object = pbf,
+    from = "peptide::raw_filtered_on_raw",
+    steps = "log2"
+)
+
+pbf
+```
+
+Let's visualize the effect of the transformation by comparing the boxplots of the data before and after.
+
+```{r}
+p1 <- proBatch::plot_sample_boxplots_on_assay(pbf,
+    assay_name = "peptide::raw_filtered_on_raw",
+    color_by = "Center",
+    color_scheme = color_scheme
+) +
+    ggtitle("Before Log2 Transformation")
+
+p2 <- proBatch::plot_sample_boxplots_on_assay(pbf,
+    assay_name = "peptide::log2_on_raw_filtered_on_raw",
+    color_by = "Center",
+    color_scheme = color_scheme
+) +
+    ggtitle("After Log2 Transformation")
+
+# Arrange plots vertically
+gridExtra::grid.arrange(p1, p2, ncol = 1)
+```
+
+The "After" plot shows that the distributions are now more symmetric and the variances across samples are more comparable. However, the differences in medians between samples are still apparent.
+
+## 3.4 Median Normalization
+To make the samples more comparable, we will apply median normalization. This simple yet effective method aligns the distributions of intensities by subtracting the median intensity from each sample.
+
+```{r}
+pbf <- pb_transform(
+    object = pbf,
+    from = "peptide::log2_on_raw_filtered_on_raw",
+    steps = "medianNorm"
+)
+
+pbf
+```
+
+Now let's compare the boxplots of the log-transformed data with the median-normalized data.
+```{r}
+p1 <- proBatch::plot_sample_boxplots_on_assay(pbf,
+    assay_name = "peptide::log2_on_raw_filtered_on_raw",
+    color_by = "Center",
+    color_scheme = color_scheme
+) +
+    ggtitle("Before Median Normalization")
+
+p2 <- proBatch::plot_sample_boxplots_on_assay(pbf,
+    assay_name = "peptide::medianNorm_on_log2_on_raw_filtered_on_raw",
+    color_by = "Center",
+    color_scheme = color_scheme
+) +
+    ggtitle("After Median Normalization")
+
+gridExtra::grid.arrange(p1, p2, ncol = 1)
+```
+
+The effect of median normalization is clear: the medians of all samples are now aligned at zero, making them directly comparable for downstream analysis.
+
+## 3.5 Assessing the Processed Data
+After our preprocessing pipeline (filtering → log₂ transform → median normalization), let's re-evaluate the data to see if we have improved its structure and reduced the unwanted technical variation.
+
+### Principal Component Analysis (PCA)
+We will repeat the PCA on the final processed assay. We hope to see that the influence of the Center (batch effect) is reduced and that biological variation is more prominent.
+
+```{r}
+# PCA on final data, colored by Center
+p1 <- proBatch::plot_pca_on_assay(pbf,
+    assay_name = pb_current_assay(pbf),
+    color_by = "Center",
+    color_scheme = color_scheme,
+    plot_title = "Final PCA, colored by Center"
+)
+
+# PCA on final data, colored by biological Condition
+p2 <- proBatch::plot_pca_on_assay(pbf,
+    assay_name = pb_current_assay(pbf),
+    color_by = "Condition",
+    plot_title = "Final PCA, colored by Condition"
+)
+
+gridExtra::grid.arrange(p1, p2, ncol = 2)
+```
+
+The new PCA plots show a significant improvement. The strong clustering by Center has diminished, and samples now show some grouping by their biological Condition, although some batch effect remains. This demonstrates that our basic preprocessing has successfully reduced a substantial amount of technical noise.
+
+### Hierarchical Clustering
+Hierarchical clustering provides another way to visualize the relationships between samples. We'll generate a dendrogram and color the sample labels by their center.
+
+```{r}
+# Helper to get colored labels for the dendrogram
+library(dendextend)
+col_data <- colData(pbf)
+sample_colors <- color_scheme[col_data$Center]
+
+# Perform clustering
+dist_matrix <- dist(t(pb_assay_matrix(pbf, pb_current_assay(pbf))))
+hc <- hclust(dist_matrix, method = "ward.D2")
+dend <- as.dendrogram(hc)
+
+# Color the labels
+labels_colors(dend) <- sample_colors[order.dendrogram(dend)]
+
+plot(dend, main = "Hierarchical Clustering of Samples")
+legend("topright", legend = names(color_scheme), fill = color_scheme, title = "Center")
+```
+
+The dendrogram also shows that samples no longer cluster strictly by their center of origin, indicating that the batch effect has been mitigated.
+
+### Principal Variance Component Analysis (PVCA)
+PVCA is a powerful method that quantifies the contribution of different known factors (like batch, condition, etc.) to the total variation in the data. We'll use it to see how much variance is explained by Center, instrument, and biological Condition before and after processing.
+
+```{r}
+# Define factors of interest
+factors_to_check <- c("Center", "instrument", "Condition")
+
+# PVCA on raw data
+pvca_raw <- proBatch::pvca_on_assay(pbf,
+    assay_name = "peptide::raw",
+    factors = factors_to_check
+)
+
+# PVCA on processed data
+pvca_processed <- proBatch::pvca_on_assay(pbf,
+    assay_name = pb_current_assay(pbf),
+    factors = factors_to_check
+)
+
+# Plotting the comparison
+plot_pvca_comparison <- function(raw, processed) {
+    df_raw <- data.frame(variance = raw$dat, factor = rownames(raw$dat), type = "Raw")
+    df_proc <- data.frame(variance = processed$dat, factor = rownames(processed$dat), type = "Processed")
+    df_all <- rbind(df_raw, df_proc)
+
+    ggplot(df_all, aes(x = factor, y = variance, fill = type)) +
+        geom_bar(stat = "identity", position = "dodge") +
+        labs(
+            title = "Variance Explained by Factors (PVCA)",
+            y = "Proportion of Variance", x = "Factors"
+        ) +
+        theme_bw() +
+        scale_fill_brewer(palette = "Set1")
+}
+
+plot_pvca_comparison(pvca_raw, pvca_processed)
+```
+
+The PVCA plot provides a quantitative summary of our efforts. In the raw data, Center and instrument (technical factors) explained a large portion of the variance. After processing, their contribution is drastically reduced, while the proportion of variance attributed to the biological Condition has increased. The "resid" (unexplained variance) is also larger, which is expected as systematic noise is removed. This confirms the success of our preprocessing pipeline.
+
+
+
+# Session info
+
+```{r sessionInfo}
+sessionInfo()
+```

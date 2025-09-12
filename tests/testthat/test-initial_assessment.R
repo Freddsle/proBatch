@@ -117,3 +117,28 @@ test_that("boxplot without outliers", {
 
     expect_equal(boxplot$layers[[1]]$geom_params$outlier.shape, NA)
 })
+
+
+test_that("plot_sample_mean with ProBatchFeatures", {
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    pbf <- ProBatchFeatures(
+        data_matrix = log2(example_proteome_matrix + 1),
+        sample_annotation = example_sample_annotation,
+        sample_id_col = "FullRunName",
+        name = "raw"
+    )
+    expect_warning(
+        meanplot <- plot_sample_mean(pbf,
+            sample_id_col = "FullRunName",
+            batch_col = "MS_batch",
+            pbf_name = "feature::raw"
+        ),
+        "inferring order-related batch borders for a plot"
+    )
+    expect_equal(meanplot$labels$x, "order")
+    expect_equal(meanplot$labels$y, "Mean_Intensity")
+    expect_equal(meanplot$plot_env$color_by_batch, FALSE)
+    expect_equal(meanplot$plot_env$facet_col, NULL)
+})

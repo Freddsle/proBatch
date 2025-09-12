@@ -265,7 +265,8 @@ ProBatchFeatures <- function(
     }
     # Use QFeatures constructor to make a QFeatures, then wrap as ProBatchFeatures
     qf <- QFeatures::QFeatures(stats::setNames(list(se), name),
-  colData = cd)
+        colData = cd
+    )
 
     # start with empty structured oplog
     empty_log <- S4Vectors::DataFrame(

@@ -72,13 +72,13 @@ check_sample_consistency <- function(sample_annotation, sample_id_col, df_long,
 
     # Check for duplicated IDs
     dup_ann <- duplicated(sample_annotation[[sample_id_col]])
-    dup_df <- duplicated(df_long[[sample_id_col]])
+    # dup_df <- duplicated(df_long[[sample_id_col]])
     if (any(dup_ann)) {
         warning("Duplicated sample IDs in sample_annotation.")
     }
-    if (any(dup_df)) {
-        message("Duplicated sample IDs in df_long.")
-    }
+    # if (any(dup_df)) {
+    #     message("Duplicated sample IDs in df_long.")
+    # }
 
     # Consistency check
     ids_ann <- unique(sample_annotation[[sample_id_col]])

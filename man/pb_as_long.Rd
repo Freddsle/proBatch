@@ -8,7 +8,8 @@ pb_as_long(
   object,
   feature_id_col = "peptide_group_label",
   sample_id_col = "FullRunName",
-  measure_col = "Intensity"
+  measure_col = "Intensity",
+  pbf_name = pb_current_assay(object)
 )
 }
 \description{
