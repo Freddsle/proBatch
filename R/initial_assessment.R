@@ -97,6 +97,10 @@ plot_sample_mean.default <- function(data_matrix, sample_annotation,
                     is not defined, check sample_annotation and data matrix")
             stop("Batch column '", batch_col, "' not found in data.")
         }
+        # if coloring by batch is true and color scheme is df and contains column with name of batch_col, keep only this column
+        if (color_by_batch && (batch_col %in% names(color_scheme))) {
+            color_scheme <- color_scheme[[batch_col]]
+        }
     } else if (color_by_batch) {
         message("batches cannot be colored as the batch column is defined as NULL,
                 continuing without colors")
@@ -280,6 +284,10 @@ plot_boxplot.default <- function(df_long, sample_annotation,
             message("batches cannot be colored as the batch column or sample ID column
                     is not defined, check sample_annotation and data matrix")
             stop("Batch column '", batch_col, "' not found in data.")
+        }
+        # if coloring by batch is true and color scheme is df and contains column with name of batch_col, keep only this column
+        if (color_by_batch && (batch_col %in% names(color_scheme))) {
+            color_scheme <- color_scheme[[batch_col]]
         }
     } else if (color_by_batch) {
         message("batches cannot be colored as the batch column is defined as NULL,
