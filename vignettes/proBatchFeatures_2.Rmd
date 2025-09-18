@@ -70,7 +70,7 @@ library(plyr)
 ## Load and prepare example dataset
 
 Here, as example, we will use the E.coli dataset, described in the
-FedProt paper [@burankova2025privacy]. The data contains
+FedProt paper [@burankova2025privacy]:
 
 ```{r load_data}
 library(proBatch)
@@ -81,7 +81,7 @@ The dataset contains data from 5 centers, which were analysed
 separately. First, before proceed, we need to merge data from all
 centers into one dataset.
 
-```{r merge-data}
+```{r extract-data}
 # Extract data
 all_metadata <- example_ecoli_data$all_metadata
 all_precursors <- example_ecoli_data$all_precursors
@@ -146,6 +146,10 @@ duplicates, so 'as_is' used.
 # Check
 validObject(pbf) # should be TRUE
 assayLink(pbf, "protein::raw") # verify link summary
+
+# Keep only essential
+rm(all_metadata, all_precursor_pg_match, all_precursors, all_protein_groups)
+gc()
 ```
 
 # 3. Running a typical processing pipeline
@@ -161,12 +165,12 @@ First, let's have a look at the data before any processing. We will use several 
 
 We will start by examining the intensities across samples by plotting the sample mean. Here, the `plot_sample_mean()` function illustrates global average vs. sample batch. This can be helpful to visualize the global quantitative pattern and to identify discrepancies within or between batches.
 
-```{r plot_mean, fig.show='hold', fig.width=5, fig.height=2}
+```{r plot_mean, fig.show='hold', widgth=5}
 # It's good practice to define colors for consistent plotting
 color_scheme <- RColorBrewer::brewer.pal(n = 5, name = "Dark2")
 names(color_scheme) <- unique(pbf$Center)
 
-plot_sample_mean(
+p1 <- plot_sample_mean(
     pbf,
     sample_id_col = "Run",
     order_col = "Lab",
@@ -177,7 +181,45 @@ plot_sample_mean(
     pbf_name = "protein::raw"
 )
 
-plot_boxplot(
+p2 <- plot_boxplot(
+    pbf,
+    sample_id_col = "Run",
+    order_col = "Run",
+    batch_col = "Lab",
+    color_by_batch = TRUE,
+    color_scheme = color_scheme,
+    base_size = 6,
+    pbf_name = "protein::raw"
+)
+
+# Arrange plots vertically
+gridExtra::grid.arrange(p1, p2, ncol = 1, nrow = 2)
+```
+
+## 3.2 Log₂ Transformation
+
+Proteomics data is typically log-transformed to stabilize variance and make the data distribution more symmetric, which benefits many statistical methods. We'll apply a log₂ transformation to our data.
+
+```{r}
+pbf <- log_transform_dm(
+    pbf,
+    log_base = 2, offset = 1,
+    pbf_name = "protein::raw"
+)
+
+pbf <- log_transform_dm(
+    pbf,
+    log_base = 2, offset = 1,
+    pbf_name = "peptide::raw"
+)
+
+pbf
+```
+
+Let's visualize the effect of the transformation by comparing the boxplots of the data before and after.
+
+```{r plot_logmean, fig.show='hold', widgth=5}
+p1 <- plot_boxplot(
     pbf,
     sample_id_col = "Run",
     order_col = "Run",
@@ -185,32 +227,30 @@ plot_boxplot(
     color_by_batch = TRUE,
     color_scheme = color_scheme,
     base_size = 7,
-    pbf_name = "protein::raw"
-)
-```
-
-
-
-
-
-
-
-
-
-
-```{r}
-# It's good practice to define colors for consistent plotting
-color_scheme <- RColorBrewer::brewer.pal(n = 5, name = "Dark2")
-names(color_scheme) <- unique(pbf$Center)
-
-plot_sample_boxplots_on_assay(
-    pbf,
-    assay_name = "protein::raw",
-    color_by = "Center",
-    color_scheme = color_scheme
+    pbf_name = "protein::log2_on_raw"
 ) +
-    ggtitle("Raw Peptide Intensities")
+    ggtitle("After Log2 Transformation, protein level")
+
+p2 <- plot_boxplot(
+    pbf,
+    sample_id_col = "Run",
+    order_col = "Run",
+    batch_col = "Lab",
+    color_by_batch = TRUE,
+    color_scheme = color_scheme,
+    base_size = 7,
+    pbf_name = "peptide::log2_on_raw"
+) +
+    ggtitle("After log2 Transformation, peptide level")
+
+# Arrange plots vertically
+gridExtra::grid.arrange(p1, p2, ncol = 1)
 ```
+
+The "After" plot shows that the distributions are now more symmetric and the variances across samples are more comparable. However, the differences in medians between samples from different batches (labs) are still apparent.
+
+## 3.3 Principal Component Analysis
+
 Next, we'll perform a Principal Component Analysis (PCA) to get a high-level overview of the sample clustering. We expect to see a strong batch effect, where samples cluster by their center of origin rather than their biological condition.
 
 ```{r}
@@ -224,7 +264,7 @@ plot_pca_on_assay(pbf,
 
 As anticipated, the PCA plot clearly shows that the primary source of variation in the raw data is the Center, confirming a strong batch effect that we will need to address.
 
-## 3.2 Filtering missing values
+## 3.4 Filtering missing values
 A common first step in preprocessing is to remove features (in this case, peptides) that have too many missing values across samples. These are often low-abundance peptides that are unreliably detected and can interfere with downstream analysis. First, let's visualize the distribution of missing values. 
 
 ```{r}
@@ -267,44 +307,8 @@ pbf
 ```
 After filtering, the ProBatchFeatures object pbf will have fewer peptide features . The protein-level assay remains unchanged by this filtering (since we have not recomputed or linked a filtered protein assay in this step). In a later step, we could update the protein level to reflect only peptides that passed filtering, but for simplicity we proceed with transformations on the filtered peptide set.
 
-## 3.3 Log₂ Transformation
 
-Proteomics data is typically log-transformed to stabilize variance and make the data distribution more symmetric, which benefits many statistical methods. We'll apply a log₂ transformation to our filtered data.
-
-```{r}
-pbf <- pb_transform(
-    object = pbf,
-    from = "peptide::raw_filtered_on_raw",
-    steps = "log2"
-)
-
-pbf
-```
-
-Let's visualize the effect of the transformation by comparing the boxplots of the data before and after.
-
-```{r}
-p1 <- proBatch::plot_sample_boxplots_on_assay(pbf,
-    assay_name = "peptide::raw_filtered_on_raw",
-    color_by = "Center",
-    color_scheme = color_scheme
-) +
-    ggtitle("Before Log2 Transformation")
-
-p2 <- proBatch::plot_sample_boxplots_on_assay(pbf,
-    assay_name = "peptide::log2_on_raw_filtered_on_raw",
-    color_by = "Center",
-    color_scheme = color_scheme
-) +
-    ggtitle("After Log2 Transformation")
-
-# Arrange plots vertically
-gridExtra::grid.arrange(p1, p2, ncol = 1)
-```
-
-The "After" plot shows that the distributions are now more symmetric and the variances across samples are more comparable. However, the differences in medians between samples are still apparent.
-
-## 3.4 Median Normalization
+## 3.5 Median Normalization
 To make the samples more comparable, we will apply median normalization. This simple yet effective method aligns the distributions of intensities by subtracting the median intensity from each sample.
 
 ```{r}
@@ -338,7 +342,7 @@ gridExtra::grid.arrange(p1, p2, ncol = 1)
 
 The effect of median normalization is clear: the medians of all samples are now aligned at zero, making them directly comparable for downstream analysis.
 
-## 3.5 Assessing the Processed Data
+## 3.6 Assessing the Processed Data
 After our preprocessing pipeline (filtering → log₂ transform → median normalization), let's re-evaluate the data to see if we have improved its structure and reduced the unwanted technical variation.
 
 ### Principal Component Analysis (PCA)
