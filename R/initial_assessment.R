@@ -423,15 +423,6 @@ plot_boxplot.default <- function(df_long, sample_annotation,
 plot_sample_mean.ProBatchFeatures <- function(x, pbf_name = NULL, plot_title = NULL, ...) {
     object <- x # Use 'x' as per convention
 
-    if (is.null(pbf_name)) {
-        pbf_name <- pb_current_assay(object)
-        message("`pbf_name` not provided, using the most recent assay: ", pbf_name)
-    }
-
-    if (!(pbf_name %in% names(object))) {
-        stop("Assay '", pbf_name, "' not found in the ProBatchFeatures object.")
-    }
-
     data_matrix <- pb_assay_matrix(object, pbf_name)
     sample_annotation <- as.data.frame(colData(object))
 
@@ -449,16 +440,11 @@ plot_sample_mean.ProBatchFeatures <- function(x, pbf_name = NULL, plot_title = N
 #' @rdname plot_sample_mean_or_boxplot
 #' @method plot_boxplot ProBatchFeatures
 #' @export
-plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = sample_id_col, plot_title = NULL, ...) {
+plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = NULL, plot_title = NULL, ...) {
     object <- x # Use 'x' as per convention
 
-    if (is.null(pbf_name)) {
-        pbf_name <- pb_current_assay(object)
-        message("`pbf_name` not provided, using the most recent assay: ", pbf_name)
-    }
-
-    if (!(pbf_name %in% names(object))) {
-        stop("Assay '", pbf_name, "' not found in the ProBatchFeatures object.")
+    if (is.null(sample_id_col)) {
+        stop("`sample_id_col` must be provided.")
     }
 
     message("Extracting data from assay: ", pbf_name)
@@ -467,7 +453,7 @@ plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = sa
         feature_id_col = "Feature",
         sample_id_col = sample_id_col,
         measure_col = "Intensity",
-        pbf_name = pb_current_assay(object)
+        pbf_name = pbf_name
     )
     # remove rows with NA intensities in Intensity column
     df_long <- df_long[!is.na(df_long$Intensity), ]

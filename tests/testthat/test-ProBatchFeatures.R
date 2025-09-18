@@ -261,7 +261,7 @@ test_that("show() prints chain and step count", {
     )
 
     out1 <- paste(capture.output(show(pbf)), collapse = "\n")
-    expect_match(out1, "Processing chain:\n  [1] log")
+    expect_match(out1, "Processing chain:\\n +\\[1\\] log")
     expect_match(out1, "Steps logged: 1")
 })
 
@@ -685,4 +685,50 @@ test_that("show() lists global and level-specific pipelines", {
     expect_match(out, "add_level\\(protein\\)_byVar")
     expect_match(out, "peptide: log2_on_raw")
     expect_match(out, "protein: log2_on_raw")
+})
+
+test_that("pb_assay_matrix and pb_as_long compute fast logged assays on demand", {
+    skip_if_not_installed("QFeatures")
+    skip_if_not_installed("SummarizedExperiment")
+
+    mat <- matrix(
+        c(10, 20, 30, 40),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2"))
+    )
+    sa <- data.frame(Sample = c("s1", "s2"), row.names = c("s1", "s2"), stringsAsFactors = FALSE)
+    pbf <- ProBatchFeatures(mat, sa, sample_id_col = "Sample", level = "peptide")
+
+    pbf <- log_transform_dm(
+        pbf,
+        log_base = 2,
+        offset = 1,
+        pbf_name = "peptide::raw"
+    )
+
+    expect_false("peptide::log2_on_raw" %in% names(pbf))
+
+    base_mat <- SummarizedExperiment::assay(pbf[["peptide::raw"]], "intensity")
+    expected <- log_transform_dm.default(base_mat, log_base = 2, offset = 1)
+
+    resolved <- pb_assay_matrix(pbf, "peptide::log2_on_raw")
+    expect_equal(resolved, expected)
+
+    long_fast <- pb_as_long(
+        pbf,
+        feature_id_col = "Feature",
+        sample_id_col = "Sample",
+        measure_col = "Intensity",
+        pbf_name = "peptide::log2_on_raw"
+    )
+    manual_long <- proBatch::matrix_to_long(
+        data_matrix = expected,
+        sample_annotation = as.data.frame(SummarizedExperiment::colData(pbf[["peptide::raw"]])),
+        feature_id_col = "Feature",
+        measure_col = "Intensity",
+        sample_id_col = "Sample"
+    )
+
+    ord <- order(long_fast$Feature, long_fast$Sample)
+    expect_equal(long_fast[ord, ], manual_long[ord, ], ignore_attr = TRUE)
 })

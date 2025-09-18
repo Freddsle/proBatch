@@ -378,6 +378,74 @@ pb_current_assay <- function(object) {
     utils::tail(names(object), 1)
 }
 
+.pb_apply_logged_step <- function(base_matrix, step, fun_name, params) {
+    step <- as.character(step)
+    fun_name <- as.character(fun_name)
+    params <- params %||% list()
+
+    if (step %in% c("log", "log2")) {
+        return(do.call(log_transform_dm.default, c(list(base_matrix), params)))
+    }
+    if (identical(step, "unlog")) {
+        return(do.call(unlog_dm.default, c(list(base_matrix), params)))
+    }
+
+    fun_candidate <- NULL
+    if (length(fun_name) && !is.na(fun_name) && nzchar(fun_name)) {
+        fun_candidate <- tryCatch(.pb_get_step_fun(fun_name), error = function(e) NULL)
+    }
+    if (is.null(fun_candidate) && length(step) && !is.na(step) && nzchar(step)) {
+        fun_candidate <- tryCatch(.pb_get_step_fun(step), error = function(e) NULL)
+    }
+    if (is.null(fun_candidate)) {
+        stop(
+            "Unable to reconstruct fast step '", step,
+            "' (function '", fun_name, "' not found)."
+        )
+    }
+    do.call(fun_candidate, c(list(base_matrix), params))
+}
+
+.pb_resolve_assay_from_log <- function(object, assay, name = "intensity", visited = character()) {
+    if (assay %in% names(object)) {
+        se <- object[[assay]]
+        return(list(
+            matrix = SummarizedExperiment::assay(se, i = name),
+            colData = SummarizedExperiment::colData(se)
+        ))
+    }
+
+    if (assay %in% visited) {
+        stop("Detected cyclic dependency while resolving assay '", assay, "'.")
+    }
+
+    log <- get_operation_log(object)
+    if (!nrow(log)) {
+        return(NULL)
+    }
+
+    matches <- which(as.character(log$to) == assay)
+    if (!length(matches)) {
+        return(NULL)
+    }
+
+    idx <- matches[length(matches)]
+    entry <- log[idx, , drop = FALSE]
+    from_assay <- as.character(entry$from[[1]])
+    params <- entry$params[[1]] %||% list()
+    step <- entry$step[[1]]
+    fun_name <- entry$fun[[1]]
+
+    base <- .pb_resolve_assay_from_log(object, from_assay, name, c(visited, assay))
+    if (is.null(base)) {
+        stop("Unable to resolve base assay '", from_assay, "' for '", assay, "'.")
+    }
+
+    matrix <- .pb_apply_logged_step(base$matrix, step, fun_name, params)
+    list(matrix = matrix, colData = base$colData)
+}
+
+
 #' Convenience accessor for assay matrix by name/index (returns the 'intensity' assay)
 #' @export
 pb_assay_matrix <- function(object, assay = NULL, name = "intensity") {
@@ -387,8 +455,18 @@ pb_assay_matrix <- function(object, assay = NULL, name = "intensity") {
     } else {
         message("Using assay: ", assay)
     }
-    se <- object[[assay]]
-    SummarizedExperiment::assay(se, i = name)
+    if (assay %in% names(object)) {
+        se <- object[[assay]]
+        return(SummarizedExperiment::assay(se, i = name))
+    }
+
+    resolved <- .pb_resolve_assay_from_log(object, assay, name)
+    if (!is.null(resolved)) {
+        message("Assay '", assay, "' not stored; computed from operation log.")
+        return(resolved$matrix)
+    }
+
+    stop("Assay '", assay, "' not found in object or operation log.")
 }
 
 #' Get current assay as LONG (via proBatch::matrix_to_long)
@@ -399,9 +477,19 @@ pb_as_long <- function(
     sample_id_col = "FullRunName",
     measure_col = "Intensity",
     pbf_name = pb_current_assay(object)) {
-    se <- object[[pbf_name]]
-    m <- SummarizedExperiment::assay(se, i = "intensity")
-    sa <- as.data.frame(SummarizedExperiment::colData(se))
+    if (pbf_name %in% names(object)) {
+        se <- object[[pbf_name]]
+        m <- SummarizedExperiment::assay(se, i = "intensity")
+        sa <- as.data.frame(SummarizedExperiment::colData(se))
+        message("Using stored assay '", pbf_name, "'.")
+    } else {
+        resolved <- .pb_resolve_assay_from_log(object, pbf_name, name = "intensity")
+        if (is.null(resolved)) {
+            stop("Assay '", pbf_name, "' not found in object or operation log.")
+        }
+        m <- resolved$matrix
+        sa <- as.data.frame(resolved$colData)
+    }
 
     proBatch::matrix_to_long(
         data_matrix       = m,
