@@ -907,18 +907,21 @@ methods::setMethod(
 methods::setMethod("show", "ProBatchFeatures", function(object) {
     methods::callNextMethod()
     log <- get_operation_log(object)
-    if (!nrow(log)) {
+    if (!length(object@chain)) {
         cat("  Processing chain: unprocessed data (raw) \n")
     } else {
         cat("  Processing chain:\n")
-        # for each level, show recorded chains from operation log, from "raw", to latest: raw, step_1_on_raw, step1_on_step2_on_..., ")
-        # all operations stored in oplog should be printed - from get_operation_log()
-        # but grouped by level (peptide/protein/...)
+        ch_lines <- paste(capture.output(print(noquote(object@chain))), collapse = "; ")
+        cat("  ", ch_lines, "\n", sep = "")
+    }
+    if (nrow(log)) {
+        # for each level, show recorded chains from operation log, from "raw" to latest
+        # all operations stored in oplog should be printed - grouped by level (peptide/protein/...)
         .split_level_pipe <- function(x) {
             x <- as.character(x)
             parts <- strsplit(x, "::", fixed = TRUE)
-            lvl <- vapply(parts, function(p) if (length(p) >= 1) p[1] else NA_character_, character(1))
-            pipe <- vapply(parts, function(p) if (length(p) >= 2 && nzchar(p[2])) p[2] else "raw", character(1))
+            lvl <- vapply(parts, function(p) if (length(p) >= 2) p[1] else NA_character_, character(1))
+            pipe <- vapply(parts, function(p) if (length(p) >= 2 && nzchar(p[2])) p[2] else p[1], character(1))
             list(level = lvl, pipeline = pipe)
         }
         from_lp <- .split_level_pipe(log$from)
@@ -928,15 +931,15 @@ methods::setMethod("show", "ProBatchFeatures", function(object) {
         n_tokens <- function(s) length(strsplit(s, "_on_", fixed = TRUE)[[1]])
 
         for (lvl in levels) {
-            pipes_from <- from_lp$pipeline[which(from_lp$level == lvl)]
-            pipes_to <- to_lp$pipeline[which(to_lp$level == lvl)]
-            chains <- unique(c(pipes_from, pipes_to, "raw"))
-            chains <- chains[!is.na(chains) & nzchar(chains)]
+            pipes_from <- from_lp$pipeline[from_lp$level == lvl]
+            pipes_to <- to_lp$pipeline[to_lp$level == lvl]
+            chains <- unique(c(pipes_from, pipes_to))
+            chains <- chains[chains != "raw" & !is.na(chains) & nzchar(chains)]
             chains <- chains[order(vapply(chains, n_tokens, integer(1)), chains)]
-            cat("   - ", lvl, ": ", paste(chains, collapse = ", "), "\n", sep = "")
+            if (length(chains)) {
+                cat("   - ", lvl, ": ", paste(chains, collapse = ", "), "\n", sep = "")
+            }
         }
-    }
-    if (nrow(log)) {
         cat("  Steps logged: ", nrow(log), " (see get_operation_log())\n", sep = "")
     }
 })
