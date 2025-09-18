@@ -473,7 +473,7 @@ pb_assay_matrix <- function(object, assay = NULL, name = "intensity") {
 #' @export
 pb_as_long <- function(
     object,
-    feature_id_col = "peptide_group_label",
+    feature_id_col = "feature_label",
     sample_id_col = "FullRunName",
     measure_col = "Intensity",
     pbf_name = pb_current_assay(object)) {

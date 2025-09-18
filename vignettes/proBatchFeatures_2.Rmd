@@ -152,6 +152,32 @@ rm(all_metadata, all_precursor_pg_match, all_precursors, all_protein_groups)
 gc()
 ```
 
+## Extract matrices from `pbf` object
+
+It is possible to extract specific matrix from a ProBatchFeatures object using the assay name name:
+
+```{r matr}
+extracted_matrix <- pb_assay_matrix(
+    pbf,
+    assay = "peptide::raw"
+)
+head(extracted_matrix[, 1:5], 3)
+rm(extracted_matrix)
+```
+
+The assay can also be exctracted into "long" form. In this case, the `sample_id_col` needs to be specified:
+
+```{r extract_to_long}
+extracted_long <- pb_as_long(
+    pbf,
+    sample_id_col = "Run",
+    pbf_name = "peptide::raw"
+)
+
+head(extracted_long, 3)
+rm(extracted_long)
+```
+
 # 3. Running a typical processing pipeline
 
 Now that we have the data loaded into a `ProBatchFeatures` object with
@@ -165,12 +191,23 @@ First, let's have a look at the data before any processing. We will use several 
 
 We will start by examining the intensities across samples by plotting the sample mean. Here, the `plot_sample_mean()` function illustrates global average vs. sample batch. This can be helpful to visualize the global quantitative pattern and to identify discrepancies within or between batches.
 
-```{r plot_mean, fig.show='hold', widgth=5}
+```{r}
 # It's good practice to define colors for consistent plotting
-color_scheme <- RColorBrewer::brewer.pal(n = 5, name = "Dark2")
-names(color_scheme) <- unique(pbf$Center)
+# color_scheme <- RColorBrewer::brewer.pal(n = 5, name = "Dark2")
+# names(color_scheme) <- unique(pbf$Center)
 
-p1 <- plot_sample_mean(
+# Alternatively, colors can be defined using:
+color_scheme <- sample_annotation_to_colors(
+    pbf,
+    sample_id_col = "Run",
+    factor_columns = c("Lab", "Condition"),
+    numeric_columns = NULL
+)
+```
+
+
+```{r plot_mean, fig.show='hold', fig.widght=5, fig.height=2}
+plot_sample_mean(
     pbf,
     sample_id_col = "Run",
     order_col = "Lab",
@@ -180,20 +217,6 @@ p1 <- plot_sample_mean(
     base_size = 7,
     pbf_name = "protein::raw"
 )
-
-p2 <- plot_boxplot(
-    pbf,
-    sample_id_col = "Run",
-    order_col = "Run",
-    batch_col = "Lab",
-    color_by_batch = TRUE,
-    color_scheme = color_scheme,
-    base_size = 6,
-    pbf_name = "protein::raw"
-)
-
-# Arrange plots vertically
-gridExtra::grid.arrange(p1, p2, ncol = 1, nrow = 2)
 ```
 
 ## 3.2 Log₂ Transformation
@@ -218,20 +241,8 @@ pbf
 
 Let's visualize the effect of the transformation by comparing the boxplots of the data before and after.
 
-```{r plot_logmean, fig.show='hold', widgth=5}
+```{r plot_logmean, fig.show='hold', fig.widght=5, warning=FALSE}
 p1 <- plot_boxplot(
-    pbf,
-    sample_id_col = "Run",
-    order_col = "Run",
-    batch_col = "Lab",
-    color_by_batch = TRUE,
-    color_scheme = color_scheme,
-    base_size = 7,
-    pbf_name = "protein::log2_on_raw"
-) +
-    ggtitle("After Log2 Transformation, protein level")
-
-p2 <- plot_boxplot(
     pbf,
     sample_id_col = "Run",
     order_col = "Run",
@@ -241,7 +252,19 @@ p2 <- plot_boxplot(
     base_size = 7,
     pbf_name = "peptide::log2_on_raw"
 ) +
-    ggtitle("After log2 Transformation, peptide level")
+    ggtitle("After Log2 Transformation, peptide level")
+
+p2 <- plot_boxplot(
+    pbf,
+    sample_id_col = "Run",
+    order_col = "Run",
+    batch_col = "Lab",
+    color_by_batch = TRUE,
+    color_scheme = color_scheme,
+    base_size = 7,
+    pbf_name = "protein::log2_on_raw"
+) +
+    ggtitle("After log2 Transformation, protein level")
 
 # Arrange plots vertically
 gridExtra::grid.arrange(p1, p2, ncol = 1)
@@ -251,20 +274,42 @@ The "After" plot shows that the distributions are now more symmetric and the var
 
 ## 3.3 Principal Component Analysis
 
-Next, we'll perform a Principal Component Analysis (PCA) to get a high-level overview of the sample clustering. We expect to see a strong batch effect, where samples cluster by their center of origin rather than their biological condition.
+Next, we'll perform a Principal Component Analysis (PCA) to get a high-level overview of the sample clustering. We expect to see a strong batch effect, where samples cluster by their center of origin ("Lab") rather than their biological condition ("Condition"). 
 
-```{r}
-plot_pca_on_assay(pbf,
-    assay_name = "peptide::raw",
-    color_by = "Center",
+```{r plot_PCA, fig.show='hold', fig.width=8, fig.height=4}
+pca1 <- plot_PCA(
+    pbf,
+    pbf_name = "protein::log2_on_raw",
+    sample_id_col = "Run",
     color_scheme = color_scheme,
-    plot_title = "PCA on Raw Peptide Data"
+    color_by = "Lab",
+    shape_by = "Condition",
+    fill_the_missing = NULL,
+    plot_title = "NA rows removed, protein, log2",
+    base_size = 10, point_size = 3, point_transparency = 0.5
 )
+
+pca2 <- plot_PCA(
+    pbf,
+    pbf_name = "protein::log2_on_raw",
+    sample_id_col = "Run",
+    color_scheme = color_scheme,
+    color_by = "Condition",
+    shape_by = "Lab",
+    fill_the_missing = -1, # default value
+    plot_title = "NA replaced with -1, protein, log2",
+    base_size = 10, point_size = 3, point_transparency = 0.5
+)
+
+gridExtra::grid.arrange(pca1, pca2, ncol = 2, nrow = 1)
 ```
+
+
 
 As anticipated, the PCA plot clearly shows that the primary source of variation in the raw data is the Center, confirming a strong batch effect that we will need to address.
 
 ## 3.4 Filtering missing values
+
 A common first step in preprocessing is to remove features (in this case, peptides) that have too many missing values across samples. These are often low-abundance peptides that are unreliably detected and can interfere with downstream analysis. First, let's visualize the distribution of missing values. 
 
 ```{r}

@@ -49,19 +49,19 @@
 #' @seealso \code{\link[stats]{hclust}},
 #'   \code{\link{sample_annotation_to_colors}},
 #'   \code{\link[WGCNA]{plotDendroAndColors}}
-plot_hierarchical_clustering <- function(data_matrix, sample_annotation,
-                                         sample_id_col = "FullRunName",
-                                         color_list = NULL,
-                                         factors_to_plot = NULL,
-                                         fill_the_missing = 0,
-                                         distance = "euclidean",
-                                         agglomeration = "complete",
-                                         label_samples = TRUE, label_font = .2,
-                                         filename = NULL,
-                                         width = 38, height = 25,
-                                         units = c("cm", "in", "mm"),
-                                         plot_title = NULL,
-                                         ...) {
+plot_hierarchical_clustering.default <- function(data_matrix, sample_annotation,
+                                                 sample_id_col = "FullRunName",
+                                                 color_list = NULL,
+                                                 factors_to_plot = NULL,
+                                                 fill_the_missing = 0,
+                                                 distance = "euclidean",
+                                                 agglomeration = "complete",
+                                                 label_samples = TRUE, label_font = .2,
+                                                 filename = NULL,
+                                                 width = 38, height = 25,
+                                                 units = c("cm", "in", "mm"),
+                                                 plot_title = NULL,
+                                                 ...) {
     df_long <- matrix_to_long(data_matrix, sample_id_col = sample_id_col)
     df_long <- check_sample_consistency(sample_annotation, sample_id_col, df_long,
         merge = FALSE
@@ -156,6 +156,35 @@ plot_hierarchical_clustering <- function(data_matrix, sample_annotation,
     }
 }
 
+#' @rdname plot_hierarchical_clustering
+#' @method plot_hierarchical_clustering ProBatchFeatures
+#' @export
+plot_hierarchical_clustering.ProBatchFeatures <- function(x, pbf_name = NULL,
+                                                          sample_annotation = NULL,
+                                                          sample_id_col = "FullRunName",
+                                                          plot_title = NULL,
+                                                          ...) {
+    object <- x
+    assay_name <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
+    data_matrix <- pb_assay_matrix(object, pbf_name)
+    if (is.null(sample_annotation)) {
+        sample_annotation <- as.data.frame(colData(object))
+    }
+
+    plot_title <- if (is.null(plot_title)) assay_name else plot_title
+
+    plot_hierarchical_clustering.default(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        plot_title = plot_title,
+        ...
+    )
+}
+
+#' @export
+plot_hierarchical_clustering <- function(x, ...) UseMethod("plot_hierarchical_clustering")
+
 #' Plot the heatmap of samples (cols) vs features (rows)
 #'
 #' @inheritParams proBatch
@@ -216,30 +245,30 @@ plot_hierarchical_clustering <- function(data_matrix, sample_annotation,
 #' \code{\link[pheatmap]{pheatmap}}
 #'
 #' @name plot_heatmap_diagnostic
-plot_heatmap_diagnostic <- function(data_matrix, sample_annotation = NULL,
-                                    sample_id_col = "FullRunName",
-                                    factors_to_plot = NULL,
-                                    fill_the_missing = -1,
-                                    color_for_missing = "black",
-                                    heatmap_color = colorRampPalette(
-                                        rev(brewer.pal(
-                                            n = 7,
-                                            name = "RdYlBu"
-                                        ))
-                                    )(100),
-                                    cluster_rows = TRUE, cluster_cols = FALSE,
-                                    color_list = NULL,
-                                    peptide_annotation = NULL,
-                                    feature_id_col = "peptide_group_label",
-                                    factors_of_feature_ann = c(
-                                        "KEGG_pathway",
-                                        "evolutionary_distance"
-                                    ),
-                                    color_list_features = NULL,
-                                    filename = NULL, width = 7, height = 7,
-                                    units = c("cm", "in", "mm"),
-                                    plot_title = NULL,
-                                    ...) {
+plot_heatmap_diagnostic.default <- function(data_matrix, sample_annotation = NULL,
+                                            sample_id_col = "FullRunName",
+                                            factors_to_plot = NULL,
+                                            fill_the_missing = -1,
+                                            color_for_missing = "black",
+                                            heatmap_color = colorRampPalette(
+                                                rev(brewer.pal(
+                                                    n = 7,
+                                                    name = "RdYlBu"
+                                                ))
+                                            )(100),
+                                            cluster_rows = TRUE, cluster_cols = FALSE,
+                                            color_list = NULL,
+                                            peptide_annotation = NULL,
+                                            feature_id_col = "peptide_group_label",
+                                            factors_of_feature_ann = c(
+                                                "KEGG_pathway",
+                                                "evolutionary_distance"
+                                            ),
+                                            color_list_features = NULL,
+                                            filename = NULL, width = 7, height = 7,
+                                            units = c("cm", "in", "mm"),
+                                            plot_title = NULL,
+                                            ...) {
     df_long <- matrix_to_long(data_matrix, sample_id_col = sample_id_col)
     df_long <- check_sample_consistency(
         sample_annotation, sample_id_col, df_long,
@@ -298,6 +327,43 @@ plot_heatmap_diagnostic <- function(data_matrix, sample_annotation = NULL,
     return(p)
 }
 
+#' @rdname plot_heatmap_diagnostic
+#' @method plot_heatmap_diagnostic ProBatchFeatures
+#' @export
+plot_heatmap_diagnostic.ProBatchFeatures <- function(x, pbf_name = NULL,
+                                                     sample_annotation = NULL,
+                                                     sample_id_col = "FullRunName",
+                                                     peptide_annotation = NULL,
+                                                     feature_id_col = "peptide_group_label",
+                                                     plot_title = NULL,
+                                                     ...) {
+    object <- x
+    assay_name <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
+    data_matrix <- pb_assay_matrix(object, pbf_name)
+
+    if (is.null(sample_annotation)) {
+        sample_annotation <- as.data.frame(colData(object))
+    }
+    if (is.null(peptide_annotation) && assay_name %in% names(object)) {
+        peptide_annotation <- as.data.frame(rowData(object[[assay_name]]))
+    }
+
+    plot_title <- if (is.null(plot_title)) assay_name else plot_title
+
+    plot_heatmap_diagnostic.default(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        peptide_annotation = peptide_annotation,
+        feature_id_col = feature_id_col,
+        plot_title = plot_title,
+        ...
+    )
+}
+
+#' @export
+plot_heatmap_diagnostic <- function(x, ...) UseMethod("plot_heatmap_diagnostic")
+
 #' Plot the heatmap
 #'
 #' @inheritParams proBatch
@@ -345,35 +411,35 @@ plot_heatmap_diagnostic <- function(data_matrix, sample_annotation = NULL,
 #'     show_rownames = FALSE, show_colnames = FALSE
 #' )
 #'
-plot_heatmap_generic <- function(data_matrix,
-                                 column_annotation_df = NULL,
-                                 row_annotation_df = NULL,
-                                 col_ann_id_col = NULL,
-                                 row_ann_id_col = NULL,
-                                 columns_for_cols = c(
-                                     "MS_batch", "Diet",
-                                     "DateTime", "order"
-                                 ),
-                                 columns_for_rows = c(
-                                     "KEGG_pathway",
-                                     "WGCNA_module",
-                                     "evolutionary_distance"
-                                 ),
-                                 cluster_rows = FALSE, cluster_cols = TRUE,
-                                 annotation_color_cols = NULL,
-                                 annotation_color_rows = NULL,
-                                 fill_the_missing = -1,
-                                 color_for_missing = "black",
-                                 heatmap_color = colorRampPalette(
-                                     rev(brewer.pal(
-                                         n = 7,
-                                         name = "RdYlBu"
-                                     ))
-                                 )(100),
-                                 filename = NULL, width = 7, height = 7,
-                                 units = c("cm", "in", "mm"),
-                                 plot_title = NULL,
-                                 ...) {
+plot_heatmap_generic.default <- function(data_matrix,
+                                         column_annotation_df = NULL,
+                                         row_annotation_df = NULL,
+                                         col_ann_id_col = NULL,
+                                         row_ann_id_col = NULL,
+                                         columns_for_cols = c(
+                                             "MS_batch", "Diet",
+                                             "DateTime", "order"
+                                         ),
+                                         columns_for_rows = c(
+                                             "KEGG_pathway",
+                                             "WGCNA_module",
+                                             "evolutionary_distance"
+                                         ),
+                                         cluster_rows = FALSE, cluster_cols = TRUE,
+                                         annotation_color_cols = NULL,
+                                         annotation_color_rows = NULL,
+                                         fill_the_missing = -1,
+                                         color_for_missing = "black",
+                                         heatmap_color = colorRampPalette(
+                                             rev(brewer.pal(
+                                                 n = 7,
+                                                 name = "RdYlBu"
+                                             ))
+                                         )(100),
+                                         filename = NULL, width = 7, height = 7,
+                                         units = c("cm", "in", "mm"),
+                                         plot_title = NULL,
+                                         ...) {
     # deal with the missing values
     warning_message <- "Heatmap cannot operate with missing values in the matrix"
     data_matrix <- handle_missing_values(
@@ -490,6 +556,43 @@ plot_heatmap_generic <- function(data_matrix,
     return(p)
 }
 
+#' @rdname plot_heatmap_generic
+#' @method plot_heatmap_generic ProBatchFeatures
+#' @export
+plot_heatmap_generic.ProBatchFeatures <- function(x, pbf_name = NULL,
+                                                  column_annotation_df = NULL,
+                                                  row_annotation_df = NULL,
+                                                  col_ann_id_col = NULL,
+                                                  row_ann_id_col = NULL,
+                                                  plot_title = NULL,
+                                                  ...) {
+    object <- x
+    assay_name <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
+    data_matrix <- pb_assay_matrix(object, pbf_name)
+
+    if (is.null(column_annotation_df)) {
+        column_annotation_df <- as.data.frame(colData(object))
+    }
+    if (is.null(row_annotation_df) && assay_name %in% names(object)) {
+        row_annotation_df <- as.data.frame(rowData(object[[assay_name]]))
+    }
+
+    plot_title <- if (is.null(plot_title)) assay_name else plot_title
+
+    plot_heatmap_generic.default(
+        data_matrix = data_matrix,
+        column_annotation_df = column_annotation_df,
+        row_annotation_df = row_annotation_df,
+        col_ann_id_col = col_ann_id_col,
+        row_ann_id_col = row_ann_id_col,
+        plot_title = plot_title,
+        ...
+    )
+}
+
+#' @export
+plot_heatmap_generic <- function(x, ...) UseMethod("plot_heatmap_generic")
+
 #' Calculate variance distribution by variable
 #'
 #' @inheritParams proBatch
@@ -512,15 +615,15 @@ plot_heatmap_generic <- function(data_matrix,
 #'     factors_for_PVCA = c("MS_batch", "digestion_batch", "Diet", "Sex", "Strain"),
 #'     pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1
 #' )
-calculate_PVCA <- function(data_matrix, sample_annotation,
-                           feature_id_col = "peptide_group_label",
-                           sample_id_col = "FullRunName",
-                           factors_for_PVCA = c(
-                               "MS_batch", "digestion_batch",
-                               "Diet", "Sex", "Strain"
-                           ),
-                           pca_threshold = .6, variance_threshold = .01,
-                           fill_the_missing = -1) {
+calculate_PVCA.default <- function(data_matrix, sample_annotation,
+                                   feature_id_col = "peptide_group_label",
+                                   sample_id_col = "FullRunName",
+                                   factors_for_PVCA = c(
+                                       "MS_batch", "digestion_batch",
+                                       "Diet", "Sex", "Strain"
+                                   ),
+                                   pca_threshold = .6, variance_threshold = .01,
+                                   fill_the_missing = -1) {
     df_long <- matrix_to_long(data_matrix, sample_id_col = sample_id_col)
     df_long <- check_sample_consistency(sample_annotation, sample_id_col, df_long,
         batch_col = NULL, order_col = NULL,
@@ -578,6 +681,33 @@ calculate_PVCA <- function(data_matrix, sample_annotation,
     return(pvca_res)
 }
 
+#' @rdname calculate_PVCA
+#' @method calculate_PVCA ProBatchFeatures
+#' @export
+calculate_PVCA.ProBatchFeatures <- function(x, pbf_name = NULL,
+                                            sample_annotation = NULL,
+                                            feature_id_col = "peptide_group_label",
+                                            sample_id_col = "FullRunName",
+                                            ...) {
+    object <- x
+    data_matrix <- pb_assay_matrix(object, pbf_name)
+
+    if (is.null(sample_annotation)) {
+        sample_annotation <- as.data.frame(colData(object))
+    }
+
+    calculate_PVCA.default(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        ...
+    )
+}
+
+#' @export
+calculate_PVCA <- function(x, ...) UseMethod("calculate_PVCA")
+
 #' Plot variance distribution by variable
 #'
 #' @inheritParams proBatch
@@ -619,19 +749,19 @@ calculate_PVCA <- function(data_matrix, sample_annotation,
 #'
 #' @seealso \code{\link{sample_annotation_to_colors}},
 #' \code{\link[ggplot2]{ggplot}}
-plot_PVCA <- function(data_matrix, sample_annotation,
-                      feature_id_col = "peptide_group_label",
-                      sample_id_col = "FullRunName",
-                      technical_factors = c("MS_batch", "instrument"),
-                      biological_factors = c("cell_line", "drug_dose"),
-                      fill_the_missing = -1,
-                      pca_threshold = .6, variance_threshold = .01,
-                      colors_for_bars = NULL,
-                      filename = NULL, width = NA, height = NA,
-                      units = c("cm", "in", "mm"),
-                      plot_title = NULL,
-                      theme = "classic",
-                      base_size = 20) {
+plot_PVCA.default <- function(data_matrix, sample_annotation,
+                              feature_id_col = "peptide_group_label",
+                              sample_id_col = "FullRunName",
+                              technical_factors = c("MS_batch", "instrument"),
+                              biological_factors = c("cell_line", "drug_dose"),
+                              fill_the_missing = -1,
+                              pca_threshold = .6, variance_threshold = .01,
+                              colors_for_bars = NULL,
+                              filename = NULL, width = NA, height = NA,
+                              units = c("cm", "in", "mm"),
+                              plot_title = NULL,
+                              theme = "classic",
+                              base_size = 20) {
     pvca_res <- prepare_PVCA_df(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
@@ -652,6 +782,38 @@ plot_PVCA <- function(data_matrix, sample_annotation,
     )
     return(gg)
 }
+
+#' @rdname plot_PVCA
+#' @method plot_PVCA ProBatchFeatures
+#' @export
+plot_PVCA.ProBatchFeatures <- function(x, pbf_name = NULL,
+                                       sample_annotation = NULL,
+                                       feature_id_col = "peptide_group_label",
+                                       sample_id_col = "FullRunName",
+                                       plot_title = NULL,
+                                       ...) {
+    object <- x
+    assay_name <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
+    data_matrix <- pb_assay_matrix(object, pbf_name)
+
+    if (is.null(sample_annotation)) {
+        sample_annotation <- as.data.frame(colData(object))
+    }
+
+    plot_title <- if (is.null(plot_title)) assay_name else plot_title
+
+    plot_PVCA.default(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        plot_title = plot_title,
+        ...
+    )
+}
+
+#' @export
+plot_PVCA <- function(x, ...) UseMethod("plot_PVCA")
 
 #' prepare the weights of Principal Variance Components
 #'
@@ -680,13 +842,13 @@ plot_PVCA <- function(data_matrix, sample_annotation,
 #'     biological_factors = c("Diet", "Sex", "Strain"),
 #'     pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1
 #' )
-prepare_PVCA_df <- function(data_matrix, sample_annotation,
-                            feature_id_col = "peptide_group_label",
-                            sample_id_col = "FullRunName",
-                            technical_factors = c("MS_batch", "instrument"),
-                            biological_factors = c("cell_line", "drug_dose"),
-                            fill_the_missing = -1,
-                            pca_threshold = .6, variance_threshold = .01) {
+prepare_PVCA_df.default <- function(data_matrix, sample_annotation,
+                                    feature_id_col = "peptide_group_label",
+                                    sample_id_col = "FullRunName",
+                                    technical_factors = c("MS_batch", "instrument"),
+                                    biological_factors = c("cell_line", "drug_dose"),
+                                    fill_the_missing = -1,
+                                    pca_threshold = .6, variance_threshold = .01) {
     factors_for_PVCA <- c(technical_factors, biological_factors)
 
     pvca_res <- calculate_PVCA(
@@ -727,6 +889,33 @@ prepare_PVCA_df <- function(data_matrix, sample_annotation,
     return(pvca_res)
 }
 
+#' @rdname prepare_PVCA_df
+#' @method prepare_PVCA_df ProBatchFeatures
+#' @export
+prepare_PVCA_df.ProBatchFeatures <- function(x, pbf_name = NULL,
+                                             sample_annotation = NULL,
+                                             feature_id_col = "peptide_group_label",
+                                             sample_id_col = "FullRunName",
+                                             ...) {
+    object <- x
+    data_matrix <- pb_assay_matrix(object, pbf_name)
+
+    if (is.null(sample_annotation)) {
+        sample_annotation <- as.data.frame(colData(object))
+    }
+
+    prepare_PVCA_df.default(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        ...
+    )
+}
+
+#' @export
+prepare_PVCA_df <- function(x, ...) UseMethod("prepare_PVCA_df")
+
 #' plot PVCA, when the analysis is completed
 #'
 #' @inheritParams proBatch
@@ -752,13 +941,13 @@ prepare_PVCA_df <- function(data_matrix, sample_annotation,
 #' names(colors_for_bars) <- c("residual", "biological", "biol:techn", "technical")
 #'
 #' pvca_plot <- plot_PVCA.df(pvca_df_res, colors_for_bars)
-plot_PVCA.df <- function(pvca_res,
-                         colors_for_bars = NULL,
-                         filename = NULL, width = NA, height = NA,
-                         units = c("cm", "in", "mm"),
-                         plot_title = NULL,
-                         theme = "classic",
-                         base_size = 20) {
+plot_PVCA.df.default <- function(pvca_res,
+                                 colors_for_bars = NULL,
+                                 filename = NULL, width = NA, height = NA,
+                                 units = c("cm", "in", "mm"),
+                                 plot_title = NULL,
+                                 theme = "classic",
+                                 base_size = 20) {
     pvca_res <- pvca_res %>%
         mutate(label = factor(label, levels = label))
 
@@ -811,6 +1000,50 @@ plot_PVCA.df <- function(pvca_res,
     return(gg)
 }
 
+#' @rdname plot_PVCA.df
+#' @method plot_PVCA.df ProBatchFeatures
+#' @export
+plot_PVCA.df.ProBatchFeatures <- function(x, pbf_name = NULL,
+                                          sample_annotation = NULL,
+                                          feature_id_col = "peptide_group_label",
+                                          sample_id_col = "FullRunName",
+                                          colors_for_bars = NULL,
+                                          filename = NULL, width = NA, height = NA,
+                                          units = c("cm", "in", "mm"),
+                                          plot_title = NULL,
+                                          theme = "classic",
+                                          base_size = 20,
+                                          ...) {
+    object <- x
+    assay_name <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
+
+    pvca_res <- prepare_PVCA_df(
+        object,
+        pbf_name = pbf_name,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        ...
+    )
+
+    plot_title <- if (is.null(plot_title)) assay_name else plot_title
+
+    plot_PVCA.df.default(
+        pvca_res = pvca_res,
+        colors_for_bars = colors_for_bars,
+        filename = filename,
+        width = width,
+        height = height,
+        units = units,
+        plot_title = plot_title,
+        theme = theme,
+        base_size = base_size
+    )
+}
+
+#' @export
+plot_PVCA.df <- function(x, ...) UseMethod("plot_PVCA.df")
+
 #' plot PCA plot
 #'
 #' @inheritParams proBatch
@@ -852,46 +1085,79 @@ plot_PVCA.df <- function(pvca_res,
 #'
 #' @seealso \code{\link[ggfortify]{autoplot.pca_common}},
 #' \code{\link[ggplot2]{ggplot}}
-plot_PCA <- function(data_matrix, sample_annotation,
-                     feature_id_col = "peptide_group_label",
-                     sample_id_col = "FullRunName",
-                     color_by = "MS_batch",
-                     PC_to_plot = c(1, 2), fill_the_missing = -1,
-                     color_scheme = "brewer",
-                     filename = NULL, width = NA, height = NA,
-                     units = c("cm", "in", "mm"),
-                     plot_title = NULL,
-                     theme = "classic",
-                     base_size = 20) {
+plot_PCA.default <- function(data_matrix, sample_annotation,
+                             feature_id_col = "peptide_group_label",
+                             sample_id_col = "FullRunName",
+                             color_by = "MS_batch",
+                             shape_by = NULL,
+                             PC_to_plot = c(1, 2), fill_the_missing = -1,
+                             color_scheme = "brewer",
+                             filename = NULL, width = NA, height = NA,
+                             units = c("cm", "in", "mm"),
+                             plot_title = NULL,
+                             theme = "classic",
+                             base_size = 20, point_size = 3, point_alpha = 0.8) {
     df_long <- matrix_to_long(data_matrix, sample_id_col = sample_id_col)
     df_long <- check_sample_consistency(sample_annotation, sample_id_col, df_long,
         batch_col = color_by, order_col = NULL,
         facet_col = NULL, merge = FALSE
     )
     data_matrix <- long_to_matrix(df_long, sample_id_col = sample_id_col)
-
     data_matrix <- check_feature_id_col_in_dm(feature_id_col, data_matrix)
 
     # if any missing values, print a warning and handle them
     if (any(is.na(data_matrix))) {
         warning_message <- "PCA cannot operate with missing values in the matrix"
+        # if fill the missing is FALSE, remove rows with NAs
+        if (isFALSE(fill_the_missing)) {
+            data_matrix <- data_matrix[complete.cases(data_matrix), ]
+        }
         data_matrix <- handle_missing_values(
             data_matrix, warning_message,
             fill_the_missing
         )
     }
 
+    if (!is.null(shape_by)) {
+        if (length(shape_by) > 1) {
+            warning("Shaping by the first column specified")
+            shape_by <- shape_by[1]
+        }
+        if (!shape_by %in% colnames(sample_annotation)) {
+            stop(sprintf(
+                "Shaping column '%s' not found in sample_annotation",
+                shape_by
+            ))
+        }
+
+        shape_column <- sample_annotation[[shape_by]]
+        if (!is.factor(shape_column) && !is.character(shape_column)) {
+            sample_annotation[[shape_by]] <- as.factor(shape_column)
+        }
+    }
+
     pr_comp_res <- prcomp(t(data_matrix))
     gg <- autoplot(pr_comp_res,
         data = sample_annotation,
-        x = PC_to_plot[1], y = PC_to_plot[2]
+        x = PC_to_plot[1], y = PC_to_plot[2],
+        size = point_size, alpha = point_alpha
     )
+
+    if (!is.null(shape_by)) {
+        gg <- gg + aes(shape = !!rlang::sym(shape_by)) +
+            labs(shape = shape_by)
+    }
 
     # add colors
     if (length(color_by) > 1) {
         warning("Coloring by the first column specified")
         color_by <- color_by[1]
     } # TODO: create the ggpubr graph with multiple panels, colored by factors
+
+    if (color_by %in% names(color_scheme)) {
+        color_scheme <- color_scheme[[color_by]]
+    }
+
     gg <- color_by_factor(
         color_by_batch = TRUE,
         batch_col = color_by, gg = gg,
@@ -918,3 +1184,43 @@ plot_PCA <- function(data_matrix, sample_annotation,
 
     return(gg)
 }
+
+#' @rdname plot_PCA
+#' @method plot_PCA ProBatchFeatures
+#' @export
+plot_PCA.ProBatchFeatures <- function(x, pbf_name = NULL,
+                                      sample_annotation = NULL,
+                                      sample_id_col = "FullRunName",
+                                      plot_title = NULL,
+                                      ...) {
+    object <- x
+    assay_name <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
+    data_matrix <- pb_assay_matrix(object, pbf_name)
+
+    if (is.null(sample_annotation)) {
+        sample_annotation <- as.data.frame(colData(object))
+    }
+
+    plot_title <- if (is.null(plot_title)) {
+        # split pbf_name by :: make title "assay_name, assay_type"
+        pbf_parts <- strsplit(assay_name, "::")[[1]]
+        if (length(pbf_parts) == 2) {
+            paste(pbf_parts, collapse = ", ")
+        } else {
+            assay_name
+        }
+    } else {
+        plot_title
+    }
+
+    plot_PCA.default(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        plot_title = plot_title,
+        ...
+    )
+}
+
+#' @export
+plot_PCA <- function(x, ...) UseMethod("plot_PCA")
