@@ -13,6 +13,8 @@
 #' @param ... other parameters of \code{plotDendroAndColors} from
 #' \code{WGCNA} package
 #'
+#' @name plot_hierarchical_clustering
+#'
 #' @return No return
 #' @examples
 #' # Load necessary datasets
@@ -399,6 +401,8 @@ plot_heatmap_diagnostic <- function(x, ...) UseMethod("plot_heatmap_diagnostic")
 #' @param heatmap_color vector of colors used in heatmap (typicall a gradient)
 #' @param ... other parameters of \code{link[pheatmap]{pheatmap}}
 #'
+#' @name plot_heatmap_generic
+#'
 #' @return pheatmap-type object
 #' @export
 #'
@@ -605,6 +609,8 @@ plot_heatmap_generic <- function(x, ...) UseMethod("plot_heatmap_generic")
 #' @param fill_the_missing numeric value determining how  missing values
 #' should be substituted. If \code{NULL}, features with missing values are
 #' excluded.
+#'
+#' @name calculate_PVCA
 #' @return data frame of weights of Principal Variance Components
 #' @export
 #'
@@ -728,6 +734,7 @@ calculate_PVCA <- function(x, ...) UseMethod("calculate_PVCA")
 #' If \code{NULL}, features with missing values are excluded.
 #' @param base_size base size of the text in the plot
 #'
+#' @name plot_PVCA
 #' @return \code{ggplot} object with the plot
 #' @export
 #'
@@ -842,6 +849,7 @@ plot_PVCA <- function(x, ...) UseMethod("plot_PVCA")
 #'     biological_factors = c("Diet", "Sex", "Strain"),
 #'     pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1
 #' )
+#' @name prepare_PVCA_df
 prepare_PVCA_df.default <- function(data_matrix, sample_annotation,
                                     feature_id_col = "peptide_group_label",
                                     sample_id_col = "FullRunName",
@@ -941,6 +949,7 @@ prepare_PVCA_df <- function(x, ...) UseMethod("prepare_PVCA_df")
 #' names(colors_for_bars) <- c("residual", "biological", "biol:techn", "technical")
 #'
 #' pvca_plot <- plot_PVCA.df(pvca_df_res, colors_for_bars)
+#' @name plot_PVCA.df
 plot_PVCA.df.default <- function(pvca_res,
                                  colors_for_bars = NULL,
                                  filename = NULL, width = NA, height = NA,
@@ -1057,6 +1066,7 @@ plot_PVCA.df <- function(x, ...) UseMethod("plot_PVCA.df")
 #'
 #' @return ggplot scatterplot colored by factor levels of column specified in
 #'   \code{factor_to_color}
+#' @name plot_PCA
 #' @export
 #'
 #' @examples
