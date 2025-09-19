@@ -317,15 +317,6 @@ A common first step in preprocessing is to remove features (in this case, peptid
 na_counts <- QFeatures::nNA(pbf, "peptide::raw")
 
 # Plotting the number of NAs per peptide
-ggplot(data.frame(nNA = na_counts$nNArow), aes(x = nNA)) +
-    geom_histogram(bins = 30, fill = "steelblue") +
-    geom_vline(xintercept = ncol(pbf[["peptide::raw"]]) * 0.5, color = "red", linetype = "dashed") +
-    labs(
-        title = "Distribution of Missing Values per Peptide",
-        x = "Number of Samples with Missing Value",
-        y = "Number of Peptides"
-    ) +
-    theme_bw()
 ```
 
 The histogram shows that a large number of peptides have missing values in many samples.
