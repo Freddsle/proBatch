@@ -78,14 +78,13 @@ handle_missing_values <- function(data_matrix, warning_message, fill_the_missing
 #' @param object A `ProBatchFeatures` object.
 #' @param pbf_name Character vector of assay names. Defaults to
 #'   `pb_current_assay(object)`.
-#' @param inplace Logical (used by `pb_filterNA()`, `pb_infIsNA()` and `pb_zeroIsNA()`), whether to modify
-#'   the object in place. Default: `FALSE`.
+#' @param inplace Logical (used by `pb_filterNA()` only), whether to modify the
+#'   object in place. Default: `FALSE`.
 #'   If `FALSE`, the modified assay(s) will be added to the object with
 #'   `final_name` (if provided) or the original name(s) with suffix `_filteredNA`.
-#' @param final_name Character (used by  by `pb_filterNA()`, `pb_infIsNA()` and `pb_zeroIsNA()`), name for the
-#'   modified assay(s) if
-#'   `inplace` is `FALSE`. If `NULL` (default), the original name(s) with
-#'   suffix `_filteredNA` will be used.
+#' @param final_name Character (used by `pb_filterNA()` only), name for the
+#'   modified assay(s) if `inplace` is `FALSE`. If `NULL` (default), the
+#'   original name(s) with suffix `_filteredNA` will be used.
 #' @param ... Additional parameters forwarded to the underlying
 #'   `QFeatures` method where applicable.
 #' @return `pb_zeroIsNA()`, `pb_infIsNA()` and `pb_filterNA()` return the
@@ -96,76 +95,44 @@ NULL
 
 #' @rdname pb_missing_helpers
 #' @export
-pb_zeroIsNA <- function(
-    object, 
-    pbf_name = pb_current_assay(object),
-    inplace = FALSE,
-    final_name = NULL,
-    ...) {
+pb_zeroIsNA <- function(object, pbf_name = pb_current_assay(object), ...) {
     stopifnot(methods::is(object, "ProBatchFeatures"))
-    stopifnot(is.logical(inplace), length(inplace) == 1L)
-
     assays <- .pb_require_materialised_assays(object, pbf_name)
-    params <- list(...)
-    if (!inplace) {
-        final_name <- .get_final_name(assays, final_name, suffix = "_zeroIsNA")
-    } else if (!is.null(final_name)) {
-        warning("`final_name` is ignored when `inplace = TRUE`.")
-    }
-
-    for (idx in seq_along(assays)) {
-        nm <- assays[[idx]]
-        filtered <- do.call(QFeatures::zeroIsNA, c(list(object[[nm]]), params))
-        if (inplace) {
-            object[[nm]] <- filtered
-            to_nm <- nm
-        } else {
-            new_nm <- final_name[[idx]]
-            existing <- names(object)
-            if (new_nm %in% existing) {
-                new_nm <- make.unique(c(existing, new_nm))[length(existing) + 1L]
-            }
-            object <- QFeatures::addAssay(object, filtered, name = new_nm)
-            to_nm <- new_nm
-        }
+    params <- .pb_collect_missing_params(list(...), forbidden = "i")
+    for (nm in assays) {
+        prior <- object
+        object <- do.call(QFeatures::zeroIsNA, c(list(object, i = nm), params))
+        object <- .as_ProBatchFeatures(object, from = prior)
+        object <- .pb_add_log_entry(
+            object,
+            step = "zeroIsNA",
+            fun = "zeroIsNA",
+            from = nm,
+            to = nm,
+            params = params
+        )
     }
     object
 }
 
 #' @rdname pb_missing_helpers
 #' @export
-pb_infIsNA <- function(
-    object, 
-    pbf_name = pb_current_assay(object),
-    inplace = FALSE,
-    final_name = NULL,
-    ...) {    
+pb_infIsNA <- function(object, pbf_name = pb_current_assay(object), ...) {
     stopifnot(methods::is(object, "ProBatchFeatures"))
-    stopifnot(is.logical(inplace), length(inplace) == 1L)
-
     assays <- .pb_require_materialised_assays(object, pbf_name)
-    params <- list(...)
-    if (!inplace) {
-        final_name <- .get_final_name(assays, final_name, suffix = "_infIsNA")
-    } else if (!is.null(final_name)) {
-        warning("`final_name` is ignored when `inplace = TRUE`.")
-    }
-
-    for (idx in seq_along(assays)) {
-        nm <- assays[[idx]]
-        filtered <- do.call(QFeatures::infIsNA, c(list(object[[nm]]), params))
-        if (inplace) {
-            object[[nm]] <- filtered
-            to_nm <- nm
-        } else {
-            new_nm <- final_name[[idx]]
-            existing <- names(object)
-            if (new_nm %in% existing) {
-                new_nm <- make.unique(c(existing, new_nm))[length(existing) + 1L]
-            }
-            object <- QFeatures::addAssay(object, filtered, name = new_nm)
-            to_nm <- new_nm
-        }
+    params <- .pb_collect_missing_params(list(...), forbidden = "i")
+    for (nm in assays) {
+        prior <- object
+        object <- do.call(QFeatures::infIsNA, c(list(object, i = nm), params))
+        object <- .as_ProBatchFeatures(object, from = prior)
+        object <- .pb_add_log_entry(
+            object,
+            step = "infIsNA",
+            fun = "infIsNA",
+            from = nm,
+            to = nm,
+            params = params
+        )
     }
     object
 }
@@ -175,8 +142,11 @@ pb_infIsNA <- function(
 pb_nNA <- function(object, pbf_name = pb_current_assay(object), ...) {
     stopifnot(methods::is(object, "ProBatchFeatures"))
     assays <- .pb_require_materialised_assays(object, pbf_name)
-    params <- list(...)
-    res <- lapply(assays, function(nm) do.call(QFeatures::nNA, c(list(object[[nm]]), params)))
+    params <- .pb_collect_missing_params(list(...), forbidden = "i")
+    res <- lapply(
+        assays,
+        function(nm) do.call(QFeatures::nNA, c(list(object, i = nm), params))
+    )
     if (length(res) == 1L) {
         return(res[[1L]])
     }
@@ -194,27 +164,29 @@ pb_filterNA <- function(
     stopifnot(methods::is(object, "ProBatchFeatures"))
     stopifnot(is.logical(inplace), length(inplace) == 1L)
     assays <- .pb_require_materialised_assays(object, pbf_name)
-    params <- list(...)
+    params <- .pb_collect_missing_params(list(...), forbidden = c("i", "name"))
 
     if (!inplace) {
-        final_name <- .get_final_name(assays, final_name, suffix = "_filteredNA")
+        final_name <- .pb_prepare_final_names(assays, final_name, suffix = "_filteredNA")
     } else if (!is.null(final_name)) {
         warning("`final_name` is ignored when `inplace = TRUE`.")
     }
 
     for (idx in seq_along(assays)) {
         nm <- assays[[idx]]
-        filtered <- do.call(QFeatures::filterNA, c(list(object[[nm]]), params))
         if (inplace) {
-            object[[nm]] <- filtered
+            prior <- object
+            object <- do.call(QFeatures::filterNA, c(list(object, i = nm), params))
+            object <- .as_ProBatchFeatures(object, from = prior)
             to_nm <- nm
         } else {
-            new_nm <- final_name[[idx]]
-            existing <- names(object)
-            if (new_nm %in% existing) {
-                new_nm <- make.unique(c(existing, new_nm))[length(existing) + 1L]
-            }
+            filtered_obj <- do.call(QFeatures::filterNA, c(list(object, i = nm), params))
+            filtered_obj <- .as_ProBatchFeatures(filtered_obj, from = object)
+            filtered <- filtered_obj[[nm]]
+            new_nm <- .pb_unique_assay_name(object, final_name[[idx]])
+            prior <- object
             object <- QFeatures::addAssay(object, filtered, name = new_nm)
+            object <- .as_ProBatchFeatures(object, from = prior)
             to_nm <- new_nm
         }
         object <- .pb_add_log_entry(
@@ -268,19 +240,44 @@ pb_filterNA <- function(
 }
 
 
-.get_final_name <- function(original, final_name, suffix) {
+.pb_collect_missing_params <- function(params, forbidden = character()) {
+    if (!length(params)) {
+        return(params)
+    }
+    nm <- names(params)
+    if (!is.null(nm)) {
+        bad <- intersect(nm[nzchar(nm)], forbidden)
+        if (length(bad)) {
+            stop(
+                "Argument(s) ", paste(bad, collapse = ", "),
+                " must not be supplied via `...`.",
+                call. = FALSE
+            )
+        }
+    }
+    params
+}
+
+.pb_prepare_final_names <- function(assays, final_name, suffix) {
     if (is.null(final_name)) {
-        final_name <- paste0(original, suffix)
+        final_name <- paste0(assays, suffix)
     }
     if (length(final_name) == 1L && length(assays) > 1L) {
-            final_name <- rep(final_name, length(assays))
-        }
+        final_name <- rep(final_name, length(assays))
+    }
     if (length(final_name) != length(assays)) {
         stop(
             "`final_name` must be length 1 or match `pbf_name` when `inplace = FALSE`.",
             call. = FALSE
         )
     }
-    final_name <- as.character(final_name)
-    final_name
+    as.character(final_name)
+}
+
+.pb_unique_assay_name <- function(object, proposed) {
+    existing <- names(object)
+    if (!length(existing) || !(proposed %in% existing)) {
+        return(proposed)
+    }
+    make.unique(c(existing, proposed))[length(existing) + 1L]
 }
