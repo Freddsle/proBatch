@@ -84,7 +84,7 @@ test_that("pb_nNA returns per-assay results for multiple assays", {
 
     res <- pb_nNA(pbf, c(assay_name, new_name))
     expect_type(res, "list")
-    expect_identical(names(res), c(assay_name, new_name))
+    expect_identical(names(res), c(assay_name, new_name, "nNA"))
 
     qf1 <- QFeatures(setNames(list(pbf[[assay_name]]), assay_name))
     qf2 <- QFeatures(setNames(list(pbf[[new_name]]), new_name))
