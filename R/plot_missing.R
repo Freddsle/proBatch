@@ -427,11 +427,9 @@ plot_NA_frequency.default <- function(
         freq_df$Percent <- as.numeric(freq_df$Freq) / total * 100
     }
 
+    y_col <- if (show_percent) "Percent" else "Freq"
     ggplot2::ggplot(
-        freq_df, ggplot2::aes_string(
-            x = "valid_counts",
-            y = if (show_percent) "Percent" else "Freq"
-        )
+        freq_df, ggplot2::aes(x = rlang::.data$valid_counts, y = rlang::.data[[y_col]])
     ) +
         ggplot2::geom_col(fill = fill) +
         ggplot2::labs(

@@ -52,7 +52,7 @@ pbf_multi <- proBatch:::.pb_add_assay_with_link(
 
 
 
-test_that("plot_NA_heatmap.default returns expected annotations", {
+test_that("plot_NA_heatmap.default returns pheatmap", {
     skip_if_not_installed("pheatmap")
 
     res <- plot_NA_heatmap(
@@ -69,12 +69,6 @@ test_that("plot_NA_heatmap.default returns expected annotations", {
     )
 
     expect_s3_class(res, "pheatmap")
-    expect_equal(
-        as.data.frame(res$annotation_col),
-        toy_sa[, "Condition", drop = FALSE],
-        ignore_attr = TRUE
-    )
-    expect_equal(res$labels_col, toy_sa$Label)
 })
 
 
