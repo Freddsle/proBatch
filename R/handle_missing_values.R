@@ -77,7 +77,7 @@ handle_missing_values <- function(data_matrix, warning_message, fill_the_missing
 #'
 #' @param object A `ProBatchFeatures` object.
 #' @param pbf_name Character vector of assay names. Defaults to
-#'   `pb_current_assay(object)`.
+#'   `names(object)` - all assays.
 #' @param inplace Logical (used by `pb_filterNA()` only), whether to modify the
 #'   object in place. Default: `FALSE`.
 #'   If `FALSE`, the modified assay(s) will be added to the object with
@@ -95,7 +95,7 @@ NULL
 
 #' @rdname pb_missing_helpers
 #' @export
-pb_zeroIsNA <- function(object, pbf_name = pb_current_assay(object), ...) {
+pb_zeroIsNA <- function(object, pbf_name = names(object), ...) {
     stopifnot(methods::is(object, "ProBatchFeatures"))
     assays <- .pb_require_materialised_assays(object, pbf_name)
     params <- .pb_collect_missing_params(list(...), forbidden = "i")
@@ -117,7 +117,7 @@ pb_zeroIsNA <- function(object, pbf_name = pb_current_assay(object), ...) {
 
 #' @rdname pb_missing_helpers
 #' @export
-pb_infIsNA <- function(object, pbf_name = pb_current_assay(object), ...) {
+pb_infIsNA <- function(object, pbf_name = names(object), ...) {
     stopifnot(methods::is(object, "ProBatchFeatures"))
     assays <- .pb_require_materialised_assays(object, pbf_name)
     params <- .pb_collect_missing_params(list(...), forbidden = "i")
@@ -139,7 +139,7 @@ pb_infIsNA <- function(object, pbf_name = pb_current_assay(object), ...) {
 
 #' @rdname pb_missing_helpers
 #' @export
-pb_nNA <- function(object, pbf_name = pb_current_assay(object), ...) {
+pb_nNA <- function(object, pbf_name = names(object), ...) {
     stopifnot(methods::is(object, "ProBatchFeatures"))
     assays <- .pb_require_materialised_assays(object, pbf_name)
     params <- .pb_collect_missing_params(list(...), forbidden = "i")
@@ -150,14 +150,18 @@ pb_nNA <- function(object, pbf_name = pb_current_assay(object), ...) {
     if (length(res) == 1L) {
         return(res[[1L]])
     }
-    stats::setNames(res, assays)
+    res <- stats::setNames(res, assays)
+    # join "nNA" from each assay into a single DataFrame and add it to the result
+    # only for "nNA" and add it as a last result entry
+    res$nNA <- do.call(rbind, lapply(res, `[[`, "nNA"))
+    res
 }
 
 #' @rdname pb_missing_helpers
 #' @export
 pb_filterNA <- function(
     object,
-    pbf_name = pb_current_assay(object),
+    pbf_name = names(object),
     inplace = FALSE,
     final_name = NULL,
     ...) {

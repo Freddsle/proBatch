@@ -27,7 +27,8 @@ editor_options:
 knitr::opts_chunk$set(
     echo = TRUE, warning = FALSE, message = FALSE, fig.pos = "h",
     collapse = TRUE,
-    comment = "#>"
+    comment = "#>",
+    knitr.table.format = "simple"
 )
 ```
 
@@ -161,7 +162,8 @@ extracted_matrix <- pb_assay_matrix(
     pbf,
     assay = "peptide::raw"
 )
-head(extracted_matrix[, 1:5], 3)
+# show
+extracted_matrix[1:5, 1:5]
 rm(extracted_matrix)
 ```
 
@@ -174,7 +176,8 @@ extracted_long <- pb_as_long(
     pbf_name = "peptide::raw"
 )
 
-head(extracted_long, 3)
+# show
+extracted_long[1:3, ]
 rm(extracted_long)
 ```
 
@@ -206,7 +209,7 @@ color_scheme <- sample_annotation_to_colors(
 ```
 
 
-```{r plot_mean, fig.show='hold', fig.widght=5, fig.height=2}
+```{r plot_mean, fig.show='hold', fig.widght=5, fig.height=3}
 plot_sample_mean(
     pbf,
     sample_id_col = "Run",
@@ -214,7 +217,7 @@ plot_sample_mean(
     batch_col = "Condition",
     color_by_batch = TRUE,
     color_scheme = color_scheme,
-    base_size = 7,
+    base_size = 10,
     pbf_name = "protein::raw"
 )
 ```
@@ -286,7 +289,7 @@ pca1 <- plot_PCA(
     shape_by = "Condition",
     fill_the_missing = NULL,
     plot_title = "NA rows removed, protein, log2",
-    base_size = 10, point_size = 3, point_transparency = 0.5
+    base_size = 10, point_size = 3, point_alpha = 0.5
 )
 
 pca2 <- plot_PCA(
@@ -298,7 +301,7 @@ pca2 <- plot_PCA(
     shape_by = "Lab",
     fill_the_missing = -1, # default value
     plot_title = "NA replaced with -1, protein, log2",
-    base_size = 10, point_size = 3, point_transparency = 0.5
+    base_size = 10, point_size = 3, point_alpha = 0.5
 )
 
 gridExtra::grid.arrange(pca1, pca2, ncol = 2, nrow = 1)
@@ -310,38 +313,80 @@ As anticipated, the PCA plot clearly shows that the primary source of variation 
 
 ## 3.4 Filtering missing values
 
-A common first step in preprocessing is to remove features (in this case, peptides) that have too many missing values across samples. These are often low-abundance peptides that are unreliably detected and can interfere with downstream analysis. First, let's visualize the distribution of missing values. 
+A common first step in preprocessing is to remove features that have too many missing values across samples. These are often low-abundance peptides / proteins that are unreliably detected and can interfere with downstream analysis. First, let's visualize the distribution of missing values.
 
-```{r}
+Here, functions from QFeatures package can be used:
+
+```{r nNA_calc}
 # nNA returns a DataFrame with counts of NAs per feature/sample
-na_counts <- QFeatures::nNA(pbf, "peptide::raw")
+na_counts <- pb_nNA(pbf)
 
-# Plotting the number of NAs per peptide
+# na_counts contains info about total number of NAs and % in the data:
+na_counts[["nNA"]]
 ```
 
-The histogram shows that a large number of peptides have missing values in many samples.
+It is possble to check individual result for rows and columns for each assay:
+
+```{r nNA_individual}
+# what is available:
+names(na_counts[["peptide::raw"]])
+
+# check NAs per sample:
+head(na_counts[["peptide::raw"]]$nNAcols)
+```
+
+It's possible to plot missing values using clustering methods or visualize it by its distribution across features. For example, this histogram shows that a large number of peptides have missing values in many samples and also batch-related patterns in the data are visible:
+
+```{r, fig.show='hold', fig.width=10, fig.height=4}
+plot_NA_heatmap(
+    pbf,
+    show_rownames = F, show_row_dend = F,
+    color_by = "Lab"
+)
+```
+
+Also, it is possible to plot multiple assays in one plot:
+
+```{r, fig.show='hold', fig.width=10, fig.height=4}
+plot_NA_heatmap(
+    pbf,
+    pbf_name = c("peptide::raw", "protein::raw"),
+    show_rownames = F, show_row_dend = F,
+    color_by = "Lab"
+)
+```
+
+The intensity distribution of proteins / peptides with and without NAs and peptide / protein identification overlap can be plotted:
+
+```{r, fig.show='hold', fig.width=10, fig.height=4}
+plot_NA_density(
+    pbf,
+    pbf_name = c("peptide::log2_on_raw", "protein::log2_on_raw")
+)
+```
+
+```{r, fig.show='hold', fig.width=10, fig.height=4}
+plot_NA_frequency(
+    pbf,
+    pbf_name = c("peptide::raw", "protein::raw"),
+    show_percent = T
+)
+```
+On the last plot, especially on the peptide panel,  we also can see batch-related pattern, as there are 19/20 samples per batch.
+
+
 Here we apply a simple missing-data filter: we require each features (in this case peptide) to be quantified in at least 20% of the samples (you can choose a threshold appropriate for your data):
 
 ```{r}
-# Helper function for filtering a matrix by NA proportion
-filter_by_na <- function(m, p_na = 0.5) {
-    # Keep rows where the proportion of NAs is less than p_na
-    row_na_prop <- rowMeans(is.na(m))
-    m[row_na_prop < p_na, ]
-}
-
-# Apply the filtering as a new step in the pipeline
-pbf <- pb_transform(
-    object = pbf,
-    from = "peptide::raw",
-    steps = "raw_filtered",
-    funs = list(filter_by_na),
-    params_list = list(list(p_na = 0.5))
+# for that QFeatures functionality can be used:
+pb_filterNA(pbf,
+    inplace = TRUE, # replace current assay with filtered
+    pNA = 0.2
 )
-
-pbf
 ```
-After filtering, the ProBatchFeatures object pbf will have fewer peptide features . The protein-level assay remains unchanged by this filtering (since we have not recomputed or linked a filtered protein assay in this step). In a later step, we could update the protein level to reflect only peptides that passed filtering, but for simplicity we proceed with transformations on the filtered peptide set.
+
+
+ddAfter filtering, the ProBatchFeatures object pbf will have fewer peptide features . The protein-level assay remains unchanged by this filtering (since we have not recomputed or linked a filtered protein assay in this step). In a later step, we could update the protein level to reflect only peptides that passed filtering, but for simplicity we proceed with transformations on the filtered peptide set.
 
 
 ## 3.5 Median Normalization
