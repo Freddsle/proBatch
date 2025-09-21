@@ -8,15 +8,15 @@
 \alias{pb_filterNA}
 \title{Apply `QFeatures` missing-data helpers to stored assays}
 \usage{
-pb_zeroIsNA(object, pbf_name = pb_current_assay(object), ...)
+pb_zeroIsNA(object, pbf_name = names(object), ...)
 
-pb_infIsNA(object, pbf_name = pb_current_assay(object), ...)
+pb_infIsNA(object, pbf_name = names(object), ...)
 
-pb_nNA(object, pbf_name = pb_current_assay(object), ...)
+pb_nNA(object, pbf_name = names(object), ...)
 
 pb_filterNA(
   object,
-  pbf_name = pb_current_assay(object),
+  pbf_name = names(object),
   inplace = FALSE,
   final_name = NULL,
   ...
@@ -26,7 +26,7 @@ pb_filterNA(
 \item{object}{A `ProBatchFeatures` object.}
 
 \item{pbf_name}{Character vector of assay names. Defaults to
-`pb_current_assay(object)`.}
+`names(object)` - all assays.}
 
 \item{...}{Additional parameters forwarded to the underlying
 `QFeatures` method where applicable.}
