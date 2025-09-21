@@ -374,7 +374,6 @@ plot_NA_frequency(
 ```
 On the last plot, especially on the peptide panel,  we also can see batch-related pattern, as there are 19/20 samples per batch.
 
-
 Here we apply a simple missing-data filter: we require each features (in this case peptide) to be quantified in at least 20% of the samples (you can choose a threshold appropriate for your data):
 
 ```{r}
