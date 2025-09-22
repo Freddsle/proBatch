@@ -86,7 +86,7 @@ plot_hierarchical_clustering.default <- function(data_matrix, sample_annotation,
             warning("Too many samples, adjust the font with `label_font` argument or
               remove labels by setting `label_samples = FALSE` in
               function call")
-        }
+        }   
     } else {
         cex.dendroLabels <- 0.9
     }
@@ -119,7 +119,8 @@ plot_hierarchical_clustering.default <- function(data_matrix, sample_annotation,
         plotDendroAndColors(hierarchical_clust, color_df,
             rowTextAlignment = "left",
             main = plot_title,
-            hang = -0.1, addGuide = TRUE, dendroLabels = FALSE,
+            hang = -0.1, addGuide = TRUE, , 
+            dendroLabels = if (label_samples) NULL else FALSE,
             cex.dendroLabels = cex.dendroLabels,
             ...
         )
@@ -149,7 +150,8 @@ plot_hierarchical_clustering.default <- function(data_matrix, sample_annotation,
         plotDendroAndColors(hierarchical_clust, color_df,
             rowTextAlignment = "left",
             main = plot_title,
-            hang = -0.1, addGuide = TRUE, dendroLabels = FALSE,
+            hang = -0.1, addGuide = TRUE, 
+            dendroLabels = if (label_samples) NULL else FALSE,
             cex.dendroLabels = cex.dendroLabels,
             ...
         )
