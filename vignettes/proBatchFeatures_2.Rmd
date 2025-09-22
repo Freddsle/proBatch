@@ -378,23 +378,47 @@ Here we apply a simple missing-data filter: we require each features (in this ca
 
 ```{r}
 # for that QFeatures functionality can be used:
-pb_filterNA(pbf,
-    inplace = TRUE, # replace current assay with filtered
-    pNA = 0.2
+pbf <- pb_filterNA(
+  pbf,
+  inplace = TRUE, # replace current assay with filtered
+  pNA = 0.75
+)
+pbf
+```
+
+After filtering, the ProBatchFeatures object pbf will have fewer features.
+
+
+```{r, fig.show='hold', fig.width=10, fig.height=4}
+plot_NA_frequency(
+    pbf,
+    pbf_name = c("peptide::raw", "protein::raw"),
+    show_percent = F
+)
+
+
+plot_NA_heatmap(
+    pbf,
+    pbf_name = c("peptide::raw", "protein::raw"),
+    show_rownames = F, show_row_dend = F,
+    color_by = "Lab"
 )
 ```
 
-
-ddAfter filtering, the ProBatchFeatures object pbf will have fewer peptide features . The protein-level assay remains unchanged by this filtering (since we have not recomputed or linked a filtered protein assay in this step). In a later step, we could update the protein level to reflect only peptides that passed filtering, but for simplicity we proceed with transformations on the filtered peptide set.
-
-
 ## 3.5 Median Normalization
+
 To make the samples more comparable, we will apply median normalization. This simple yet effective method aligns the distributions of intensities by subtracting the median intensity from each sample.
 
 ```{r}
 pbf <- pb_transform(
     object = pbf,
-    from = "peptide::log2_on_raw_filtered_on_raw",
+    from = "peptide::log2_on_raw",
+    steps = "medianNorm"
+)
+
+pbf <- pb_transform(
+    object = pbf,
+    from = "protein::log2_on_raw",
     steps = "medianNorm"
 )
 
@@ -402,21 +426,35 @@ pbf
 ```
 
 Now let's compare the boxplots of the log-transformed data with the median-normalized data.
-```{r}
-p1 <- proBatch::plot_sample_boxplots_on_assay(pbf,
-    assay_name = "peptide::log2_on_raw_filtered_on_raw",
-    color_by = "Center",
-    color_scheme = color_scheme
-) +
-    ggtitle("Before Median Normalization")
 
-p2 <- proBatch::plot_sample_boxplots_on_assay(pbf,
-    assay_name = "peptide::medianNorm_on_log2_on_raw_filtered_on_raw",
-    color_by = "Center",
-    color_scheme = color_scheme
-) +
-    ggtitle("After Median Normalization")
+```{r plot_logmean, fig.show='hold', fig.widght=5, warning=FALSE}
+p1 <- plot_boxplot(
+    pbf,
+    sample_id_col = "Run",
+    order_col = "Run",
+    batch_col = "Lab",
+    color_by_batch = TRUE,
+    color_scheme = color_scheme,
+    base_size = 7,
+    pbf_name = "protein::log2_on_raw"
+)
+# +
+    # ggtitle("Before Median Normalization, protein level")
 
+p2 <- plot_boxplot(
+    pbf,
+    sample_id_col = "Run",
+    order_col = "Run",
+    batch_col = "Lab",
+    color_by_batch = TRUE,
+    color_scheme = color_scheme,
+    base_size = 7,
+    pbf_name = "protein::medianNorm_on_log2_on_raw"
+) 
+# +
+#     ggtitle("After Median Normalization, protein level")
+
+# Arrange plots vertically
 gridExtra::grid.arrange(p1, p2, ncol = 1)
 ```
 
@@ -428,49 +466,46 @@ After our preprocessing pipeline (filtering → log₂ transform → median norm
 ### Principal Component Analysis (PCA)
 We will repeat the PCA on the final processed assay. We hope to see that the influence of the Center (batch effect) is reduced and that biological variation is more prominent.
 
-```{r}
-# PCA on final data, colored by Center
-p1 <- proBatch::plot_pca_on_assay(pbf,
-    assay_name = pb_current_assay(pbf),
-    color_by = "Center",
+```{r plot_PCA, fig.show='hold', fig.width=8, fig.height=4}
+pca1 <- plot_PCA(
+    pbf,
+    pbf_name = "protein::medianNorm_on_log2_on_raw",
+    sample_id_col = "Run",
     color_scheme = color_scheme,
-    plot_title = "Final PCA, colored by Center"
+    color_by = "Lab",
+    shape_by = "Condition",
+    fill_the_missing = NULL,
+    # plot_title = "NA rows removed, protein, log2",
+    base_size = 10, point_size = 3, point_alpha = 0.5
 )
 
-# PCA on final data, colored by biological Condition
-p2 <- proBatch::plot_pca_on_assay(pbf,
-    assay_name = pb_current_assay(pbf),
+pca2 <- plot_PCA(
+    pbf,
+    pbf_name = "protein::medianNorm_on_log2_on_raw",
+    sample_id_col = "Run",
+    color_scheme = color_scheme,
     color_by = "Condition",
-    plot_title = "Final PCA, colored by Condition"
+    shape_by = "Lab",
+    fill_the_missing = -1, # default value
+    # plot_title = "NA replaced with -1, protein, log2",
+    base_size = 10, point_size = 2, point_alpha = 0.5
 )
 
-gridExtra::grid.arrange(p1, p2, ncol = 2)
+gridExtra::grid.arrange(pca1, pca2, ncol = 2, nrow = 1)
 ```
-
-The new PCA plots show a significant improvement. The strong clustering by Center has diminished, and samples now show some grouping by their biological Condition, although some batch effect remains. This demonstrates that our basic preprocessing has successfully reduced a substantial amount of technical noise.
+The new PCA plots show small improvement, but the strong clustering by Lab is still visible
 
 ### Hierarchical Clustering
 Hierarchical clustering provides another way to visualize the relationships between samples. We'll generate a dendrogram and color the sample labels by their center.
 
-```{r}
-# Helper to get colored labels for the dendrogram
-library(dendextend)
-col_data <- colData(pbf)
-sample_colors <- color_scheme[col_data$Center]
-
-# Perform clustering
-dist_matrix <- dist(t(pb_assay_matrix(pbf, pb_current_assay(pbf))))
-hc <- hclust(dist_matrix, method = "ward.D2")
-dend <- as.dendrogram(hc)
-
-# Color the labels
-labels_colors(dend) <- sample_colors[order.dendrogram(dend)]
-
-plot(dend, main = "Hierarchical Clustering of Samples")
-legend("topright", legend = names(color_scheme), fill = color_scheme, title = "Center")
+```{r, fig.show='hold', fig.width=18, fig.height=4}
+plot_hierarchical_clustering(
+  pbf,
+  sample_id_col = "Run",
+  label_font = 0.5,
+  color_list = color_scheme
+)
 ```
-
-The dendrogram also shows that samples no longer cluster strictly by their center of origin, indicating that the batch effect has been mitigated.
 
 ### Principal Variance Component Analysis (PVCA)
 PVCA is a powerful method that quantifies the contribution of different known factors (like batch, condition, etc.) to the total variation in the data. We'll use it to see how much variance is explained by Center, instrument, and biological Condition before and after processing.
@@ -512,6 +547,18 @@ plot_pvca_comparison(pvca_raw, pvca_processed)
 
 The PVCA plot provides a quantitative summary of our efforts. In the raw data, Center and instrument (technical factors) explained a large portion of the variance. After processing, their contribution is drastically reduced, while the proportion of variance attributed to the biological Condition has increased. The "resid" (unexplained variance) is also larger, which is expected as systematic noise is removed. This confirms the success of our preprocessing pipeline.
 
+
+## 3.7 Batch effects corrections
+
+
+
+....
+
+Strong Lab effect has diminished, and samples now show some grouping by their biological Condition, although some batch effect remains. This demonstrates that our basic preprocessing has successfully reduced a substantial amount of technical noise.
+
+
+
+The dendrogram also shows that samples no longer cluster strictly by their center of origin, indicating that the batch effect has been mitigated.
 
 
 # Session info

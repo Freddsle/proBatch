@@ -161,12 +161,18 @@ pb_nNA <- function(object, pbf_name = names(object), ...) {
 #' @export
 pb_filterNA <- function(
     object,
-    pbf_name = names(object),
+    pbf_name = NULL,
     inplace = FALSE,
     final_name = NULL,
     ...) {
     stopifnot(methods::is(object, "ProBatchFeatures"))
     stopifnot(is.logical(inplace), length(inplace) == 1L)
+
+    if (is.null(pbf_name)) {
+        pbf_name <- names(object)
+        message("`pbf_name` not provided, using all assays: ", paste(pbf_name, collapse = ", "))
+    }
+
     assays <- .pb_require_materialised_assays(object, pbf_name)
     params <- .pb_collect_missing_params(list(...), forbidden = c("i", "name"))
 
@@ -178,11 +184,14 @@ pb_filterNA <- function(
 
     for (idx in seq_along(assays)) {
         nm <- assays[[idx]]
+        message("Processing assay:", nm)
+        message("  Features before filtering:\t", length(object[[nm]]))
         if (inplace) {
             prior <- object
             object <- do.call(QFeatures::filterNA, c(list(object, i = nm), params))
             object <- .as_ProBatchFeatures(object, from = prior)
             to_nm <- nm
+            message("  Features after filtering:\t", length(object[[nm]]))
         } else {
             filtered_obj <- do.call(QFeatures::filterNA, c(list(object, i = nm), params))
             filtered_obj <- .as_ProBatchFeatures(filtered_obj, from = object)
@@ -192,6 +201,7 @@ pb_filterNA <- function(
             object <- QFeatures::addAssay(object, filtered, name = new_nm)
             object <- .as_ProBatchFeatures(object, from = prior)
             to_nm <- new_nm
+            message("  Features after filtering:\t", length(object[[new_nm]]))
         }
         object <- .pb_add_log_entry(
             object,
