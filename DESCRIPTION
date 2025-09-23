@@ -53,6 +53,7 @@ Imports:
     wesanderson,
     WGCNA
 Suggests: 
+    ggplotify,
     knitr,
     ggpubr,
     rmarkdown,

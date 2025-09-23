@@ -448,36 +448,66 @@ plot_sample_mean.ProBatchFeatures <- function(x, pbf_name = NULL, plot_title = N
 #' @rdname plot_sample_mean_or_boxplot
 #' @method plot_boxplot ProBatchFeatures
 #' @export
-plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = NULL, plot_title = NULL, ...) {
+plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = NULL, plot_title = NULL, plot_ncol = NULL, ...) {
     object <- x # Use 'x' as per convention
 
     if (is.null(sample_id_col)) {
         stop("`sample_id_col` must be provided.")
     }
+    assays <- .pb_assays_to_plot(object, pbf_name)
+    dots <- list(...)
 
-    message("Extracting data from assay: ", pbf_name)
-    df_long <- pb_as_long(
-        object,
-        feature_id_col = "Feature",
-        sample_id_col = sample_id_col,
-        measure_col = "Intensity",
-        pbf_name = pbf_name
-    )
-    # remove rows with NA intensities in Intensity column
-    df_long <- df_long[!is.na(df_long$Intensity), ]
+    filename_list <- NULL
+    if ("filename" %in% names(dots)) {
+        filename_list <- .pb_split_arg_by_assay(dots$filename, assays)
+        dots$filename <- NULL
+    }
+
     sample_annotation <- as.data.frame(colData(object))
+    titles <- .pb_resolve_titles(assays, plot_title, default_fun = function(x) x)
 
-    plot_title <- if (is.null(plot_title)) pbf_name else plot_title
+    plot_list <- vector("list", length(assays))
+    names(plot_list) <- assays
 
-    # Call the default method with the reshaped data
-    plot_boxplot.default(
-        df_long = df_long,
-        sample_annotation = sample_annotation,
-        sample_id_col = sample_id_col,
-        measure_col = "Intensity",
-        plot_title = plot_title,
-        ...
-    )
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        message("Extracting data from assay: ", assay_nm)
+        df_long <- pb_as_long(
+            object,
+            feature_id_col = "Feature",
+            sample_id_col = sample_id_col,
+            measure_col = "Intensity",
+            pbf_name = assay_nm
+        )
+        df_long <- df_long[!is.na(df_long$Intensity), ]
+
+        # Drop sample_annotation columns from df_long if they exist to avoid duplication, except sample_id_col
+        overlap_cols <- setdiff(intersect(names(sample_annotation), names(df_long)), sample_id_col)
+        if (length(overlap_cols) > 0) {
+            df_long <- df_long[, !names(df_long) %in% overlap_cols, drop = FALSE]
+        }
+
+        call_args <- dots
+        if (!is.null(filename_list)) {
+            fn <- filename_list[[i]]
+            if (!is.null(fn)) {
+                call_args$filename <- fn
+            }
+        }
+
+        call_args <- c(list(
+            df_long = df_long,
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
+            measure_col = "Intensity",
+            plot_title = titles[i],
+            pbf_name = assay_nm
+        ), call_args)
+
+        plot_list[[i]] <- do.call(plot_boxplot.default, call_args)
+    }
+
+    .pb_arrange_plot_list(plot_list, plot_ncol = plot_ncol, convert_fun = ggplot2::ggplotGrob)
 }
 
 plot_sample_mean <- function(x, ...) UseMethod("plot_sample_mean")
