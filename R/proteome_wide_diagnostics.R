@@ -342,27 +342,59 @@ plot_heatmap_diagnostic.ProBatchFeatures <- function(x, pbf_name = NULL,
                                                      plot_title = NULL,
                                                      ...) {
     object <- x
-    assay_name <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
-    data_matrix <- pb_assay_matrix(object, pbf_name)
+    assays <- .pb_assays_to_plot(object, pbf_name)
+    dots <- list(...)
 
-    if (is.null(sample_annotation)) {
-        sample_annotation <- as.data.frame(colData(object))
+    filename_list <- NULL
+    if ("filename" %in% names(dots)) {
+        filename_list <- .pb_split_arg_by_assay(dots$filename, assays)
+        dots$filename <- NULL
     }
-    if (is.null(peptide_annotation) && assay_name %in% names(object)) {
-        peptide_annotation <- as.data.frame(rowData(object[[assay_name]]))
+    if (length(assays) > 1L && !"silent" %in% names(dots)) {
+        dots$silent <- TRUE
     }
 
-    plot_title <- if (is.null(plot_title)) assay_name else plot_title
+    default_sample_annotation <- as.data.frame(colData(object))
+    sample_ann_list <- .pb_split_arg_by_assay(sample_annotation, assays)
+    peptide_ann_list <- .pb_split_arg_by_assay(peptide_annotation, assays)
+    titles <- .pb_resolve_titles(assays, plot_title, default_fun = function(x) x)
 
-    plot_heatmap_diagnostic.default(
-        data_matrix = data_matrix,
-        sample_annotation = sample_annotation,
-        sample_id_col = sample_id_col,
-        peptide_annotation = peptide_annotation,
-        feature_id_col = feature_id_col,
-        plot_title = plot_title,
-        ...
-    )
+    plot_list <- vector("list", length(assays))
+    names(plot_list) <- assays
+
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        data_matrix <- pb_assay_matrix(object, assay_nm)
+        sample_ann <- sample_ann_list[[i]]
+        if (is.null(sample_ann)) {
+            sample_ann <- default_sample_annotation
+        }
+        peptide_ann <- peptide_ann_list[[i]]
+        if (is.null(peptide_ann) && assay_nm %in% names(object)) {
+            peptide_ann <- as.data.frame(rowData(object[[assay_nm]]))
+        }
+
+        call_args <- dots
+        if (!is.null(filename_list)) {
+            fn <- filename_list[[i]]
+            if (!is.null(fn)) {
+                call_args$filename <- fn
+            }
+        }
+
+        call_args <- c(list(
+            data_matrix = data_matrix,
+            sample_annotation = sample_ann,
+            sample_id_col = sample_id_col,
+            peptide_annotation = peptide_ann,
+            feature_id_col = feature_id_col,
+            plot_title = titles[i]
+        ), call_args)
+
+        plot_list[[i]] <- do.call(plot_heatmap_diagnostic.default, call_args)
+    }
+
+    .pb_arrange_plot_list(plot_list, convert_fun = function(x) x$gtable)
 }
 
 #' @export
@@ -573,27 +605,59 @@ plot_heatmap_generic.ProBatchFeatures <- function(x, pbf_name = NULL,
                                                   plot_title = NULL,
                                                   ...) {
     object <- x
-    assay_name <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
-    data_matrix <- pb_assay_matrix(object, pbf_name)
+    assays <- .pb_assays_to_plot(object, pbf_name)
+    dots <- list(...)
 
-    if (is.null(column_annotation_df)) {
-        column_annotation_df <- as.data.frame(colData(object))
+    filename_list <- NULL
+    if ("filename" %in% names(dots)) {
+        filename_list <- .pb_split_arg_by_assay(dots$filename, assays)
+        dots$filename <- NULL
     }
-    if (is.null(row_annotation_df) && assay_name %in% names(object)) {
-        row_annotation_df <- as.data.frame(rowData(object[[assay_name]]))
+    if (length(assays) > 1L && !"silent" %in% names(dots)) {
+        dots$silent <- TRUE
     }
 
-    plot_title <- if (is.null(plot_title)) assay_name else plot_title
+    default_col_ann <- as.data.frame(colData(object))
+    col_ann_list <- .pb_split_arg_by_assay(column_annotation_df, assays)
+    row_ann_list <- .pb_split_arg_by_assay(row_annotation_df, assays)
+    titles <- .pb_resolve_titles(assays, plot_title, default_fun = function(x) x)
 
-    plot_heatmap_generic.default(
-        data_matrix = data_matrix,
-        column_annotation_df = column_annotation_df,
-        row_annotation_df = row_annotation_df,
-        col_ann_id_col = col_ann_id_col,
-        row_ann_id_col = row_ann_id_col,
-        plot_title = plot_title,
-        ...
-    )
+    plot_list <- vector("list", length(assays))
+    names(plot_list) <- assays
+
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        data_matrix <- pb_assay_matrix(object, assay_nm)
+        col_ann <- col_ann_list[[i]]
+        if (is.null(col_ann)) {
+            col_ann <- default_col_ann
+        }
+        row_ann <- row_ann_list[[i]]
+        if (is.null(row_ann) && assay_nm %in% names(object)) {
+            row_ann <- as.data.frame(rowData(object[[assay_nm]]))
+        }
+
+        call_args <- dots
+        if (!is.null(filename_list)) {
+            fn <- filename_list[[i]]
+            if (!is.null(fn)) {
+                call_args$filename <- fn
+            }
+        }
+
+        call_args <- c(list(
+            data_matrix = data_matrix,
+            column_annotation_df = col_ann,
+            row_annotation_df = row_ann,
+            col_ann_id_col = col_ann_id_col,
+            row_ann_id_col = row_ann_id_col,
+            plot_title = titles[i]
+        ), call_args)
+
+        plot_list[[i]] <- do.call(plot_heatmap_generic.default, call_args)
+    }
+
+    .pb_arrange_plot_list(plot_list, convert_fun = function(x) x$gtable)
 }
 
 #' @export
@@ -802,23 +866,54 @@ plot_PVCA.ProBatchFeatures <- function(x, pbf_name = NULL,
                                        plot_title = NULL,
                                        ...) {
     object <- x
-    assay_name <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
-    data_matrix <- pb_assay_matrix(object, pbf_name)
+    assays <- .pb_assays_to_plot(object, pbf_name)
+    dots <- list(...)
+
+    filename_list <- NULL
+    if ("filename" %in% names(dots)) {
+        filename_list <- .pb_split_arg_by_assay(dots$filename, assays)
+        dots$filename <- NULL
+    }
 
     if (is.null(sample_annotation)) {
         sample_annotation <- as.data.frame(colData(object))
+        rownames(sample_annotation) <- NULL
+    }
+    sample_ann_list <- .pb_split_arg_by_assay(sample_annotation, assays)
+    titles <- .pb_resolve_titles(assays, plot_title, default_fun = function(x) x)
+
+    plot_list <- vector("list", length(assays))
+    names(plot_list) <- assays
+
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        data_matrix <- pb_assay_matrix(object, assay_nm)
+        sample_ann <- sample_ann_list[[i]]
+        if (is.null(sample_ann)) {
+            sample_ann <- as.data.frame(colData(object))
+            rownames(sample_ann) <- NULL
+        }
+
+        call_args <- dots
+        if (!is.null(filename_list)) {
+            fn <- filename_list[[i]]
+            if (!is.null(fn)) {
+                call_args$filename <- fn
+            }
+        }
+
+        call_args <- c(list(
+            data_matrix = data_matrix,
+            sample_annotation = sample_ann,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col,
+            plot_title = titles[i]
+        ), call_args)
+
+        plot_list[[i]] <- do.call(plot_PVCA.default, call_args)
     }
 
-    plot_title <- if (is.null(plot_title)) assay_name else plot_title
-
-    plot_PVCA.default(
-        data_matrix = data_matrix,
-        sample_annotation = sample_annotation,
-        feature_id_col = feature_id_col,
-        sample_id_col = sample_id_col,
-        plot_title = plot_title,
-        ...
-    )
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplot2::ggplotGrob)
 }
 
 #' @export
@@ -1026,30 +1121,51 @@ plot_PVCA.df.ProBatchFeatures <- function(x, pbf_name = NULL,
                                           base_size = 20,
                                           ...) {
     object <- x
-    assay_name <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
+    assays <- .pb_assays_to_plot(object, pbf_name)
+    prepare_dots <- list(...)
 
-    pvca_res <- prepare_PVCA_df(
-        object,
-        pbf_name = pbf_name,
-        sample_annotation = sample_annotation,
-        feature_id_col = feature_id_col,
-        sample_id_col = sample_id_col,
-        ...
-    )
+    if (is.null(sample_annotation)) {
+        sample_annotation <- as.data.frame(colData(object))
+    }
+    sample_ann_list <- .pb_split_arg_by_assay(sample_annotation, assays)
+    filename_list <- .pb_split_arg_by_assay(filename, assays)
+    titles <- .pb_resolve_titles(assays, plot_title, default_fun = function(x) x)
 
-    plot_title <- if (is.null(plot_title)) assay_name else plot_title
+    plot_list <- vector("list", length(assays))
+    names(plot_list) <- assays
 
-    plot_PVCA.df.default(
-        pvca_res = pvca_res,
-        colors_for_bars = colors_for_bars,
-        filename = filename,
-        width = width,
-        height = height,
-        units = units,
-        plot_title = plot_title,
-        theme = theme,
-        base_size = base_size
-    )
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        data_matrix <- pb_assay_matrix(object, assay_nm)
+        sample_ann <- sample_ann_list[[i]]
+        if (is.null(sample_ann)) {
+            sample_ann <- as.data.frame(colData(object))
+        }
+
+        prepare_args <- c(list(
+            data_matrix = data_matrix,
+            sample_annotation = sample_ann,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col
+        ), prepare_dots)
+        pvca_res <- do.call(prepare_PVCA_df.default, prepare_args)
+
+        plot_args <- list(
+            pvca_res = pvca_res,
+            colors_for_bars = colors_for_bars,
+            filename = filename_list[[i]],
+            width = width,
+            height = height,
+            units = units,
+            plot_title = titles[i],
+            theme = theme,
+            base_size = base_size
+        )
+
+        plot_list[[i]] <- do.call(plot_PVCA.df.default, plot_args)
+    }
+
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplot2::ggplotGrob)
 }
 
 #' @export
@@ -1206,32 +1322,51 @@ plot_PCA.ProBatchFeatures <- function(x, pbf_name = NULL,
                                       plot_title = NULL,
                                       ...) {
     object <- x
-    assay_name <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
-    data_matrix <- pb_assay_matrix(object, pbf_name)
+    assays <- .pb_assays_to_plot(object, pbf_name)
+    dots <- list(...)
+
+    filename_list <- NULL
+    if ("filename" %in% names(dots)) {
+        filename_list <- .pb_split_arg_by_assay(dots$filename, assays)
+        dots$filename <- NULL
+    }
 
     if (is.null(sample_annotation)) {
         sample_annotation <- as.data.frame(colData(object))
     }
+    sample_ann_list <- .pb_split_arg_by_assay(sample_annotation, assays)
+    titles <- .pb_resolve_titles(assays, plot_title)
 
-    plot_title <- if (is.null(plot_title)) {
-        # split pbf_name by :: make title "assay_name, assay_type"
-        pbf_parts <- strsplit(assay_name, "::")[[1]]
-        if (length(pbf_parts) == 2) {
-            paste(pbf_parts, collapse = ", ")
-        } else {
-            assay_name
+    plot_list <- vector("list", length(assays))
+    names(plot_list) <- assays
+
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        data_matrix <- pb_assay_matrix(object, assay_nm)
+        sample_ann <- sample_ann_list[[i]]
+        if (is.null(sample_ann)) {
+            sample_ann <- as.data.frame(colData(object))
         }
-    } else {
-        plot_title
+
+        call_args <- dots
+        if (!is.null(filename_list)) {
+            fn <- filename_list[[i]]
+            if (!is.null(fn)) {
+                call_args$filename <- fn
+            }
+        }
+
+        call_args <- c(list(
+            data_matrix = data_matrix,
+            sample_annotation = sample_ann,
+            sample_id_col = sample_id_col,
+            plot_title = titles[i]
+        ), call_args)
+
+        plot_list[[i]] <- do.call(plot_PCA.default, call_args)
     }
 
-    plot_PCA.default(
-        data_matrix = data_matrix,
-        sample_annotation = sample_annotation,
-        sample_id_col = sample_id_col,
-        plot_title = plot_title,
-        ...
-    )
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplot2::ggplotGrob)
 }
 
 #' @export

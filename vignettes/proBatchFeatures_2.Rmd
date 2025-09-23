@@ -379,9 +379,9 @@ Here we apply a simple missing-data filter: we require each features (in this ca
 ```{r}
 # for that QFeatures functionality can be used:
 pbf <- pb_filterNA(
-  pbf,
-  inplace = TRUE, # replace current assay with filtered
-  pNA = 0.75
+    pbf,
+    inplace = TRUE, # replace current assay with filtered
+    pNA = 0.75
 )
 pbf
 ```
@@ -390,13 +390,6 @@ After filtering, the ProBatchFeatures object pbf will have fewer features.
 
 
 ```{r, fig.show='hold', fig.width=10, fig.height=4}
-plot_NA_frequency(
-    pbf,
-    pbf_name = c("peptide::raw", "protein::raw"),
-    show_percent = F
-)
-
-
 plot_NA_heatmap(
     pbf,
     pbf_name = c("peptide::raw", "protein::raw"),
@@ -427,8 +420,8 @@ pbf
 
 Now let's compare the boxplots of the log-transformed data with the median-normalized data.
 
-```{r plot_logmean, fig.show='hold', fig.widght=5, warning=FALSE}
-p1 <- plot_boxplot(
+```{r}
+plot_boxplot(
     pbf,
     sample_id_col = "Run",
     order_col = "Run",
@@ -436,27 +429,15 @@ p1 <- plot_boxplot(
     color_by_batch = TRUE,
     color_scheme = color_scheme,
     base_size = 7,
-    pbf_name = "protein::log2_on_raw"
+    pbf_name = c("protein::log2_on_raw", "protein::medianNorm_on_log2_on_raw"),
+    plot_ncol = 1,
+    plot_title = c(
+        "Before Median Normalization, protein level",
+        "After Median Normalization, protein level"
+    )
 )
-# +
-    # ggtitle("Before Median Normalization, protein level")
-
-p2 <- plot_boxplot(
-    pbf,
-    sample_id_col = "Run",
-    order_col = "Run",
-    batch_col = "Lab",
-    color_by_batch = TRUE,
-    color_scheme = color_scheme,
-    base_size = 7,
-    pbf_name = "protein::medianNorm_on_log2_on_raw"
-) 
-# +
-#     ggtitle("After Median Normalization, protein level")
-
-# Arrange plots vertically
-gridExtra::grid.arrange(p1, p2, ncol = 1)
 ```
+
 
 The effect of median normalization is clear: the medians of all samples are now aligned at zero, making them directly comparable for downstream analysis.
 
@@ -466,33 +447,19 @@ After our preprocessing pipeline (filtering → log₂ transform → median norm
 ### Principal Component Analysis (PCA)
 We will repeat the PCA on the final processed assay. We hope to see that the influence of the Center (batch effect) is reduced and that biological variation is more prominent.
 
-```{r plot_PCA, fig.show='hold', fig.width=8, fig.height=4}
-pca1 <- plot_PCA(
+```{r}
+plot <- plot_PCA(
     pbf,
-    pbf_name = "protein::medianNorm_on_log2_on_raw",
+    pbf_name = c("protein::log2_on_raw", "protein::medianNorm_on_log2_on_raw"),
     sample_id_col = "Run",
     color_scheme = color_scheme,
     color_by = "Lab",
     shape_by = "Condition",
     fill_the_missing = NULL,
-    # plot_title = "NA rows removed, protein, log2",
     base_size = 10, point_size = 3, point_alpha = 0.5
 )
-
-pca2 <- plot_PCA(
-    pbf,
-    pbf_name = "protein::medianNorm_on_log2_on_raw",
-    sample_id_col = "Run",
-    color_scheme = color_scheme,
-    color_by = "Condition",
-    shape_by = "Lab",
-    fill_the_missing = -1, # default value
-    # plot_title = "NA replaced with -1, protein, log2",
-    base_size = 10, point_size = 2, point_alpha = 0.5
-)
-
-gridExtra::grid.arrange(pca1, pca2, ncol = 2, nrow = 1)
 ```
+
 The new PCA plots show small improvement, but the strong clustering by Lab is still visible
 
 ### Hierarchical Clustering
@@ -500,49 +467,25 @@ Hierarchical clustering provides another way to visualize the relationships betw
 
 ```{r, fig.show='hold', fig.width=18, fig.height=4}
 plot_hierarchical_clustering(
-  pbf,
-  sample_id_col = "Run",
-  label_font = 0.5,
-  color_list = color_scheme
+    pbf,
+    sample_id_col = "Run",
+    label_font = 0.5,
+    color_list = color_scheme
 )
 ```
 
 ### Principal Variance Component Analysis (PVCA)
 PVCA is a powerful method that quantifies the contribution of different known factors (like batch, condition, etc.) to the total variation in the data. We'll use it to see how much variance is explained by Center, instrument, and biological Condition before and after processing.
 
-```{r}
-# Define factors of interest
-factors_to_check <- c("Center", "instrument", "Condition")
-
-# PVCA on raw data
-pvca_raw <- proBatch::pvca_on_assay(pbf,
-    assay_name = "peptide::raw",
-    factors = factors_to_check
+```{r, fig.show='hold', fig.width=8, fig.height=4}
+plot_PVCA(
+    pbf,
+    pbf_name = c("protein::log2_on_raw", "protein::medianNorm_on_log2_on_raw"),
+    sample_id_col = "Run",
+    technical_factors = c("Lab"),
+    biological_factors = c("Condition"),
+    fill_the_missing = NULL
 )
-
-# PVCA on processed data
-pvca_processed <- proBatch::pvca_on_assay(pbf,
-    assay_name = pb_current_assay(pbf),
-    factors = factors_to_check
-)
-
-# Plotting the comparison
-plot_pvca_comparison <- function(raw, processed) {
-    df_raw <- data.frame(variance = raw$dat, factor = rownames(raw$dat), type = "Raw")
-    df_proc <- data.frame(variance = processed$dat, factor = rownames(processed$dat), type = "Processed")
-    df_all <- rbind(df_raw, df_proc)
-
-    ggplot(df_all, aes(x = factor, y = variance, fill = type)) +
-        geom_bar(stat = "identity", position = "dodge") +
-        labs(
-            title = "Variance Explained by Factors (PVCA)",
-            y = "Proportion of Variance", x = "Factors"
-        ) +
-        theme_bw() +
-        scale_fill_brewer(palette = "Set1")
-}
-
-plot_pvca_comparison(pvca_raw, pvca_processed)
 ```
 
 The PVCA plot provides a quantitative summary of our efforts. In the raw data, Center and instrument (technical factors) explained a large portion of the variance. After processing, their contribution is drastically reduced, while the proportion of variance attributed to the biological Condition has increased. The "resid" (unexplained variance) is also larger, which is expected as systematic noise is removed. This confirms the success of our preprocessing pipeline.
@@ -550,6 +493,10 @@ The PVCA plot provides a quantitative summary of our efforts. In the raw data, C
 
 ## 3.7 Batch effects corrections
 
+The package contains multiple methods for batch effects correction: ComBat, limma's removeBatchEffect, and their implementations in BERT (combat that allow missing values):
+
+```{r}
+```
 
 
 ....
