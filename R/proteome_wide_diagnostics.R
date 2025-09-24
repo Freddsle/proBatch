@@ -86,7 +86,7 @@ plot_hierarchical_clustering.default <- function(data_matrix, sample_annotation,
             warning("Too many samples, adjust the font with `label_font` argument or
               remove labels by setting `label_samples = FALSE` in
               function call")
-        }   
+        }
     } else {
         cex.dendroLabels <- 0.9
     }
@@ -119,7 +119,7 @@ plot_hierarchical_clustering.default <- function(data_matrix, sample_annotation,
         plotDendroAndColors(hierarchical_clust, color_df,
             rowTextAlignment = "left",
             main = plot_title,
-            hang = -0.1, addGuide = TRUE, , 
+            hang = -0.1, addGuide = TRUE, ,
             dendroLabels = if (label_samples) NULL else FALSE,
             cex.dendroLabels = cex.dendroLabels,
             ...
@@ -150,7 +150,7 @@ plot_hierarchical_clustering.default <- function(data_matrix, sample_annotation,
         plotDendroAndColors(hierarchical_clust, color_df,
             rowTextAlignment = "left",
             main = plot_title,
-            hang = -0.1, addGuide = TRUE, 
+            hang = -0.1, addGuide = TRUE,
             dendroLabels = if (label_samples) NULL else FALSE,
             cex.dendroLabels = cex.dendroLabels,
             ...
@@ -263,11 +263,8 @@ plot_heatmap_diagnostic.default <- function(data_matrix, sample_annotation = NUL
                                             cluster_rows = TRUE, cluster_cols = FALSE,
                                             color_list = NULL,
                                             peptide_annotation = NULL,
-                                            feature_id_col = "peptide_group_label",
-                                            factors_of_feature_ann = c(
-                                                "KEGG_pathway",
-                                                "evolutionary_distance"
-                                            ),
+                                            feature_id_col = NULL,
+                                            factors_of_feature_ann = NULL,
                                             color_list_features = NULL,
                                             filename = NULL, width = 7, height = 7,
                                             units = c("cm", "in", "mm"),
@@ -295,11 +292,31 @@ plot_heatmap_diagnostic.default <- function(data_matrix, sample_annotation = NUL
         )
     }
 
+    if (is.null(factors_of_feature_ann) && !is.null(peptide_annotation)) {
+        # in case c("KEGG_pathway","evolutionary_distance") are present in the annotation, use them
+        factors_of_feature_ann <- intersect(
+            c("KEGG_pathway", "evolutionary_distance"),
+            names(peptide_annotation)
+        )
+    }
+
     # infer the color scheme for feature annotation (rows)
     if (is.null(color_list_features) && !is.null(peptide_annotation)) {
         warning("color_list_features for features (rows) not defined, inferring
             automatically. Numeric/factor columns are guessed, for more
             controlled color mapping use sample_annotation_to_colors()")
+
+        if (is.null(factors_of_feature_ann)) {
+            factors_of_feature_ann <- names(peptide_annotation)[sapply(
+                peptide_annotation,
+                function(x) is.factor(x) || is.character(x)
+            )]
+        }
+        if (is.null(feature_id_col)) {
+            stop("feature_id_col must be specified when peptide_annotation is provided")
+        }
+
+
         color_list_features <- sample_annotation_to_colors(peptide_annotation,
             sample_id_col = feature_id_col,
             factor_columns = factors_of_feature_ann,
@@ -340,6 +357,7 @@ plot_heatmap_diagnostic.ProBatchFeatures <- function(x, pbf_name = NULL,
                                                      peptide_annotation = NULL,
                                                      feature_id_col = "peptide_group_label",
                                                      plot_title = NULL,
+                                                     return_gridExtra = FALSE,
                                                      ...) {
     object <- x
     assays <- .pb_assays_to_plot(object, pbf_name)
@@ -372,6 +390,7 @@ plot_heatmap_diagnostic.ProBatchFeatures <- function(x, pbf_name = NULL,
         peptide_ann <- peptide_ann_list[[i]]
         if (is.null(peptide_ann) && assay_nm %in% names(object)) {
             peptide_ann <- as.data.frame(rowData(object[[assay_nm]]))
+            peptide_ann[[feature_id_col]] <- rownames(peptide_ann)
         }
 
         call_args <- dots
@@ -394,7 +413,7 @@ plot_heatmap_diagnostic.ProBatchFeatures <- function(x, pbf_name = NULL,
         plot_list[[i]] <- do.call(plot_heatmap_diagnostic.default, call_args)
     }
 
-    .pb_arrange_plot_list(plot_list, convert_fun = function(x) x$gtable)
+    .pb_arrange_plot_list(plot_list, convert_fun = function(x) x$gtable, return_gridExtra = return_gridExtra)
 }
 
 #' @export
@@ -512,10 +531,17 @@ plot_heatmap_generic.default <- function(data_matrix,
     }
     # if columns_for_rows is NULL, add default columns
     if (is.null(columns_for_rows)) {
+        message("columns_for_rows is NULL, adding default columns if present")
         columns_for_rows <- intersect(
-            c("DateTime", "order"),
+            c("KEGG_pathway", "WGCNA_module", "evolutionary_distance"),
             names(row_annotation_df)
         )
+        if (length(columns_for_rows) < 1L) {
+            warning("No default columns for row annotation found in row_annotation_df")
+            row_annotation_df <- NULL
+            columns_for_rows <- NULL
+            annotation_color_rows <- NULL
+        }
     }
 
     annotation_col <- NA
@@ -531,6 +557,9 @@ plot_heatmap_generic.default <- function(data_matrix,
             mutate_if(is.POSIXct, as.numeric) %>%
             remove_rownames() %>%
             column_to_rownames(var = col_ann_id_col)
+        if (is.data.frame(annotation_col) && ncol(annotation_col) == 0) {
+            annotation_col <- NULL
+        }
     }
 
     if (!is.null(row_annotation_df)) {
@@ -545,6 +574,9 @@ plot_heatmap_generic.default <- function(data_matrix,
             mutate_if(is.POSIXct, as.numeric) %>%
             remove_rownames() %>%
             column_to_rownames(var = row_ann_id_col)
+        if (is.data.frame(annotation_row) && ncol(annotation_row) == 0) {
+            annotation_row <- NULL
+        }
     }
 
     if (is.null(column_annotation_df) && is.null(row_annotation_df)) {
@@ -575,10 +607,22 @@ plot_heatmap_generic.default <- function(data_matrix,
     width <- units_adjusted$width
     height <- units_adjusted$height
 
-    if (is.null(annotation_color_cols) && is.null(annotation_color_rows)) {
-        annotation_color_list <- NA
+    if (is.list(annotation_color_cols) && !is.null(annotation_col)) {
+        keep_cols <- intersect(names(annotation_color_cols), colnames(annotation_col))
+        annotation_color_cols <- annotation_color_cols[keep_cols]
     } else {
-        annotation_color_list <- c(annotation_color_cols, annotation_color_rows)
+        annotation_color_cols <- list()
+    }
+    if (is.list(annotation_color_rows) && !is.null(annotation_row)) {
+        keep_rows <- intersect(names(annotation_color_rows), colnames(annotation_row))
+        annotation_color_rows <- annotation_color_rows[keep_rows]
+    } else {
+        annotation_color_rows <- list()
+    }
+
+    annotation_color_list <- c(annotation_color_cols, annotation_color_rows)
+    if (!length(annotation_color_list)) {
+        annotation_color_list <- NA
     }
 
     p <- pheatmap(
@@ -603,6 +647,7 @@ plot_heatmap_generic.ProBatchFeatures <- function(x, pbf_name = NULL,
                                                   col_ann_id_col = NULL,
                                                   row_ann_id_col = NULL,
                                                   plot_title = NULL,
+                                                  return_gridExtra = FALSE,
                                                   ...) {
     object <- x
     assays <- .pb_assays_to_plot(object, pbf_name)
@@ -633,8 +678,10 @@ plot_heatmap_generic.ProBatchFeatures <- function(x, pbf_name = NULL,
             col_ann <- default_col_ann
         }
         row_ann <- row_ann_list[[i]]
-        if (is.null(row_ann) && assay_nm %in% names(object)) {
+
+        if (is.null(row_ann) && assay_nm %in% names(object) && (!is.null(rowData(object[[assay_nm]])))) {
             row_ann <- as.data.frame(rowData(object[[assay_nm]]))
+            row_ann[[row_ann_id_col]] <- rownames(row_ann)
         }
 
         call_args <- dots
@@ -653,11 +700,10 @@ plot_heatmap_generic.ProBatchFeatures <- function(x, pbf_name = NULL,
             row_ann_id_col = row_ann_id_col,
             plot_title = titles[i]
         ), call_args)
-
         plot_list[[i]] <- do.call(plot_heatmap_generic.default, call_args)
     }
 
-    .pb_arrange_plot_list(plot_list, convert_fun = function(x) x$gtable)
+    .pb_arrange_plot_list(plot_list, convert_fun = function(x) x$gtable, return_gridExtra = return_gridExtra)
 }
 
 #' @export
@@ -864,6 +910,7 @@ plot_PVCA.ProBatchFeatures <- function(x, pbf_name = NULL,
                                        feature_id_col = "peptide_group_label",
                                        sample_id_col = "FullRunName",
                                        plot_title = NULL,
+                                       return_gridExtra = FALSE,
                                        ...) {
     object <- x
     assays <- .pb_assays_to_plot(object, pbf_name)
@@ -913,7 +960,7 @@ plot_PVCA.ProBatchFeatures <- function(x, pbf_name = NULL,
         plot_list[[i]] <- do.call(plot_PVCA.default, call_args)
     }
 
-    .pb_arrange_plot_list(plot_list, convert_fun = ggplot2::ggplotGrob)
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplot2::ggplotGrob, return_gridExtra = return_gridExtra)
 }
 
 #' @export
@@ -1119,6 +1166,7 @@ plot_PVCA.df.ProBatchFeatures <- function(x, pbf_name = NULL,
                                           plot_title = NULL,
                                           theme = "classic",
                                           base_size = 20,
+                                          return_gridExtra = FALSE,
                                           ...) {
     object <- x
     assays <- .pb_assays_to_plot(object, pbf_name)
@@ -1165,7 +1213,7 @@ plot_PVCA.df.ProBatchFeatures <- function(x, pbf_name = NULL,
         plot_list[[i]] <- do.call(plot_PVCA.df.default, plot_args)
     }
 
-    .pb_arrange_plot_list(plot_list, convert_fun = ggplot2::ggplotGrob)
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplot2::ggplotGrob, return_gridExtra = return_gridExtra)
 }
 
 #' @export
@@ -1320,6 +1368,7 @@ plot_PCA.ProBatchFeatures <- function(x, pbf_name = NULL,
                                       sample_annotation = NULL,
                                       sample_id_col = "FullRunName",
                                       plot_title = NULL,
+                                      return_gridExtra = FALSE,
                                       ...) {
     object <- x
     assays <- .pb_assays_to_plot(object, pbf_name)
@@ -1366,7 +1415,7 @@ plot_PCA.ProBatchFeatures <- function(x, pbf_name = NULL,
         plot_list[[i]] <- do.call(plot_PCA.default, call_args)
     }
 
-    .pb_arrange_plot_list(plot_list, convert_fun = ggplot2::ggplotGrob)
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplot2::ggplotGrob, return_gridExtra = return_gridExtra)
 }
 
 #' @export

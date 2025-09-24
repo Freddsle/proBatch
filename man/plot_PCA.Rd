@@ -33,6 +33,7 @@
   sample_annotation = NULL,
   sample_id_col = "FullRunName",
   plot_title = NULL,
+  return_gridExtra = FALSE,
   ...
 )
 }

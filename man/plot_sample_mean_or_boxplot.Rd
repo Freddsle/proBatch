@@ -53,7 +53,15 @@
 
 \method{plot_sample_mean}{ProBatchFeatures}(x, pbf_name = NULL, plot_title = NULL, ...)
 
-\method{plot_boxplot}{ProBatchFeatures}(x, pbf_name = NULL, sample_id_col = NULL, plot_title = NULL, ...)
+\method{plot_boxplot}{ProBatchFeatures}(
+  x,
+  pbf_name = NULL,
+  sample_id_col = NULL,
+  plot_title = NULL,
+  plot_ncol = NULL,
+  return_gridExtra = FALSE,
+  ...
+)
 }
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
