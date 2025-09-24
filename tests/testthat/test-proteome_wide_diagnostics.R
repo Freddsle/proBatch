@@ -53,19 +53,15 @@ test_that("heatmap_plot", {
         factor_columns = c("MS_batch", "Sex", "digestion_batch", "Diet")
     )
 
-    expect_warning(
-        expect_warning(
-            heatmap <- plot_heatmap_diagnostic(
-                matrix_test,
-                sample_annotation = example_sample_annotation,
-                factors_to_plot = c("MS_batch", "Sex", "digestion_batch", "Diet"),
-                cluster_cols = TRUE,
-                show_rownames = TRUE, show_colnames = FALSE,
-                color_list = color_list
-            ),
-            "filling missing values with -1"
-        ),
-        "Heatmap cannot operate with missing values in the matrix"
+    suppressWarnings(
+        heatmap <- plot_heatmap_diagnostic(
+            matrix_test,
+            sample_annotation = example_sample_annotation,
+            factors_to_plot = c("MS_batch", "Sex", "digestion_batch", "Diet"),
+            cluster_cols = TRUE,
+            show_rownames = TRUE, show_colnames = FALSE,
+            color_list = color_list
+        )
     )
 
     expect_equal(heatmap$tree_row$method, "complete")

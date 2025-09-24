@@ -537,7 +537,7 @@ plot_heatmap_generic.default <- function(data_matrix,
             names(row_annotation_df)
         )
         if (length(columns_for_rows) < 1L) {
-            warning("No default columns for row annotation found in row_annotation_df")
+            # warning("No default columns for row annotation found in row_annotation_df")
             row_annotation_df <- NULL
             columns_for_rows <- NULL
             annotation_color_rows <- NULL
@@ -579,8 +579,8 @@ plot_heatmap_generic.default <- function(data_matrix,
         }
     }
 
-    if (is.null(column_annotation_df) && is.null(row_annotation_df)) {
-        warning("annotation_row and annotation_col are not specified for heatmap
+    if (is.null(column_annotation_df) || is.null(row_annotation_df)) {
+        warning("annotation_row and / or annotation_col are not specified for heatmap
             (annotation of rows/cols such as sample annotation will not be plotted)")
     }
 

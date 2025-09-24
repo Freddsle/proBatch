@@ -6,7 +6,7 @@ test_that("corr_matrix_plots", {
     corr_matrix <- cor(t(matrix_test), use = "complete.obs")
     expect_warning(
         corr_matrix_pheatmap <- plot_corr_matrix(corr_matrix),
-        "annotation_row and annotation_col are not specified for heatmap"
+        "annotation_row and / or annotation_col are not specified for heatmap"
     )
     expect_s3_class(corr_matrix_pheatmap, "pheatmap")
     expect_equal(corr_matrix_pheatmap$gtable$layout$name[4], "legend", ignore_attr = TRUE)
@@ -51,12 +51,16 @@ test_that("sample_corr_heatmap", {
         which(example_sample_annotation$order %in% 110:115)
     ]
 
-    expect_warning(sample_heatmap <- plot_sample_corr_heatmap(example_proteome_matrix,
-        samples_to_plot = specified_samples,
-        cluster_rows = TRUE, cluster_cols = TRUE,
-        annotation_names_col = TRUE, annotation_legend = FALSE,
-        show_colnames = FALSE
-    ))
+    expect_warning(
+        sample_heatmap <- plot_sample_corr_heatmap(
+            example_proteome_matrix,
+            samples_to_plot = specified_samples,
+            cluster_rows = TRUE, cluster_cols = TRUE,
+            annotation_names_col = TRUE, annotation_legend = FALSE,
+            show_colnames = FALSE
+        ), 
+        "annotation_row and / or annotation_col are not specified for heatmap"
+    )
 
     expect_equal(sample_heatmap$tree_row$method, "complete", ignore_attr = TRUE)
     expect_equal(sample_heatmap$tree_row$dist.method, "euclidean", ignore_attr = TRUE)
