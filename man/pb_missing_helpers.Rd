@@ -14,13 +14,7 @@ pb_infIsNA(object, pbf_name = names(object), ...)
 
 pb_nNA(object, pbf_name = names(object), ...)
 
-pb_filterNA(
-  object,
-  pbf_name = names(object),
-  inplace = FALSE,
-  final_name = NULL,
-  ...
-)
+pb_filterNA(object, pbf_name = NULL, inplace = FALSE, final_name = NULL, ...)
 }
 \arguments{
 \item{object}{A `ProBatchFeatures` object.}

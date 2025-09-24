@@ -32,6 +32,7 @@
   plot_title = NULL,
   theme = "classic",
   base_size = 20,
+  return_gridExtra = FALSE,
   ...
 )
 }

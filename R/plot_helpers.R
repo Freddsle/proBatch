@@ -72,7 +72,7 @@
     }, character(1), USE.NAMES = FALSE)
 }
 
-.pb_arrange_plot_list <- function(plot_list, convert_fun = NULL, draw = TRUE, plot_ncol = NULL) {
+.pb_arrange_plot_list <- function(plot_list, convert_fun = NULL, draw = TRUE, plot_ncol = NULL, return_gridExtra = FALSE) {
     if (!length(plot_list)) {
         return(invisible(NULL))
     }
@@ -104,15 +104,19 @@
         grid::grid.draw(arranged)
     }
 
-    if (requireNamespace("ggplotify", quietly = TRUE)) {
-        out <- ggplotify::as.ggplot(arranged)  # true ggplot object
-        return(invisible(out))
-    } else if (requireNamespace("cowplot", quietly = TRUE)) {
-        out <- cowplot::ggdraw(arranged)       # ggplot object wrapper
-        return(invisible(out))
+    if (isTRUE(return_gridExtra)) {
+        return(invisible(list(grob = arranged, plots = plot_list)))
     } else {
-        # Last-resort: return the TableGrob (user can grid::grid.draw() it or ggsave() still works)
-        message("Returning a grid TableGrob object instead. Use grid::grid.draw() it or ggsave() to plot or save. \nInstall the `ggplotify` or `cowplot` package to get a ggplot object instead.")
-        return(invisible(arranged))
+        if (requireNamespace("ggplotify", quietly = TRUE)) {
+            out <- ggplotify::as.ggplot(arranged) # true ggplot object
+            return(invisible(out))
+        } else if (requireNamespace("cowplot", quietly = TRUE)) {
+            out <- cowplot::ggdraw(arranged) # ggplot object wrapper
+            return(invisible(out))
+        } else {
+            # Last-resort: return the TableGrob (user can grid::grid.draw() it or ggsave() still works)
+            message("Returning a grid TableGrob object instead. Use grid::grid.draw() it or ggsave() to plot or save. \nInstall the `ggplotify` or `cowplot` package to get a ggplot object instead.")
+            return(invisible(arranged))
+        }
     }
 }
