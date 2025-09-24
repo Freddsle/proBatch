@@ -37,6 +37,7 @@
   col_ann_id_col = NULL,
   row_ann_id_col = NULL,
   plot_title = NULL,
+  return_gridExtra = FALSE,
   ...
 )
 }

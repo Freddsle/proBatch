@@ -33,6 +33,7 @@
   feature_id_col = "peptide_group_label",
   sample_id_col = "FullRunName",
   plot_title = NULL,
+  return_gridExtra = FALSE,
   ...
 )
 }

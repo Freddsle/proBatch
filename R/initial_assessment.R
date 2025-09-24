@@ -448,7 +448,7 @@ plot_sample_mean.ProBatchFeatures <- function(x, pbf_name = NULL, plot_title = N
 #' @rdname plot_sample_mean_or_boxplot
 #' @method plot_boxplot ProBatchFeatures
 #' @export
-plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = NULL, plot_title = NULL, plot_ncol = NULL, ...) {
+plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = NULL, plot_title = NULL, plot_ncol = NULL, return_gridExtra = FALSE, ...) {
     object <- x # Use 'x' as per convention
 
     if (is.null(sample_id_col)) {
@@ -507,7 +507,7 @@ plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = NU
         plot_list[[i]] <- do.call(plot_boxplot.default, call_args)
     }
 
-    .pb_arrange_plot_list(plot_list, plot_ncol = plot_ncol, convert_fun = ggplot2::ggplotGrob)
+    .pb_arrange_plot_list(plot_list, plot_ncol = plot_ncol, convert_fun = ggplot2::ggplotGrob, return_gridExtra = return_gridExtra)
 }
 
 plot_sample_mean <- function(x, ...) UseMethod("plot_sample_mean")

@@ -152,7 +152,7 @@ test_that("plot_PCA ProBatchFeatures handles multiple assays", {
         store_fast_steps = TRUE
     ))
 
-    res <- suppressWarnings(plot_PCA(pbf, sample_id_col = "FullRunName"))
+    res <- suppressWarnings(plot_PCA(pbf, sample_id_col = "FullRunName", return_gridExtra = TRUE))
 
     expect_type(res, "list")
     expect_named(res$plots, names(pbf))
@@ -186,7 +186,8 @@ test_that("plot_heatmap_diagnostic ProBatchFeatures arranges multiple assays", {
         sample_id_col = "FullRunName",
         factors_to_plot = c("MS_batch"),
         cluster_rows = FALSE,
-        cluster_cols = FALSE
+        cluster_cols = FALSE,
+        return_gridExtra = TRUE
     ))
 
     expect_type(res, "list")
@@ -249,7 +250,8 @@ test_that("plot_PCA ProBatchFeatures respects assay subset order", {
     res <- suppressWarnings(plot_PCA(
         pbf,
         pbf_name = subset_assays,
-        sample_id_col = "FullRunName"
+        sample_id_col = "FullRunName",
+        return_gridExtra = TRUE
     ))
 
     expect_type(res, "list")
@@ -312,7 +314,8 @@ test_that("plot_heatmap_diagnostic ProBatchFeatures respects assay subset order"
         sample_id_col = "FullRunName",
         factors_to_plot = c("MS_batch"),
         cluster_rows = FALSE,
-        cluster_cols = FALSE
+        cluster_cols = FALSE,
+        return_gridExtra = TRUE
     ))
 
     expect_type(res, "list")

@@ -166,7 +166,8 @@ test_that("plot_boxplot ProBatchFeatures handles multiple assays", {
 
     res <- suppressWarnings(plot_boxplot(
         pbf,
-        sample_id_col = "FullRunName"
+        sample_id_col = "FullRunName",
+        return_gridExtra = TRUE
     ))
 
     expect_type(res, "list")
@@ -223,7 +224,8 @@ test_that("plot_boxplot ProBatchFeatures respects assay subset order", {
     res <- suppressWarnings(plot_boxplot(
         pbf,
         pbf_name = subset_assays,
-        sample_id_col = "FullRunName"
+        sample_id_col = "FullRunName",
+        return_gridExtra = TRUE
     ))
 
     expect_type(res, "list")

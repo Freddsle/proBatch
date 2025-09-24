@@ -18,8 +18,8 @@
   cluster_cols = FALSE,
   color_list = NULL,
   peptide_annotation = NULL,
-  feature_id_col = "peptide_group_label",
-  factors_of_feature_ann = c("KEGG_pathway", "evolutionary_distance"),
+  feature_id_col = NULL,
+  factors_of_feature_ann = NULL,
   color_list_features = NULL,
   filename = NULL,
   width = 7,
@@ -37,6 +37,7 @@
   peptide_annotation = NULL,
   feature_id_col = "peptide_group_label",
   plot_title = NULL,
+  return_gridExtra = FALSE,
   ...
 )
 }
