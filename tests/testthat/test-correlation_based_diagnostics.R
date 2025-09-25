@@ -58,7 +58,7 @@ test_that("sample_corr_heatmap", {
             cluster_rows = TRUE, cluster_cols = TRUE,
             annotation_names_col = TRUE, annotation_legend = FALSE,
             show_colnames = FALSE
-        ), 
+        ),
         "annotation_row and / or annotation_col are not specified for heatmap"
     )
 

@@ -40,6 +40,9 @@
 #' required, should be \code{NULL}.
 #' @param discrete_func function to use for adjustment of discrete batch effects
 #' (\code{MedianCentering} or \code{ComBat}).
+#' @param fill_the_missing numeric value used to impute missing measurements before
+#' correction. If \code{NULL} (default) missing values are left untouched, if
+#' \code{FALSE} rows with missing values are removed prior to correction.
 #' @param ... other parameters, usually of \code{adjust_batch_trend},
 #' and \code{fit_func}.
 
@@ -526,6 +529,7 @@ correct_with_ComBat_df <- function(df_long, sample_annotation = NULL,
                                    sample_id_col = "FullRunName",
                                    batch_col = "MS_batch",
                                    par.prior = TRUE,
+                                   fill_the_missing = NULL,
                                    no_fit_imputed = TRUE,
                                    qual_col = NULL,
                                    qual_value = NULL,
@@ -563,12 +567,38 @@ correct_with_ComBat_df <- function(df_long, sample_annotation = NULL,
             qual_col = NULL
         )
     }
+
+    handle_flag <- !is.null(fill_the_missing) || identical(fill_the_missing, FALSE)
+    if (handle_flag && anyNA(data_matrix)) {
+        data_matrix <- handle_missing_values(
+            data_matrix,
+            warning_message = "ComBat cannot operate with missing values in the matrix",
+            fill_the_missing = fill_the_missing
+        )
+
+        if (!nrow(data_matrix) || !ncol(data_matrix)) {
+            stop("No data remaining after handling missing values for ComBat correction")
+        }
+
+        kept_features <- rownames(data_matrix)
+        kept_samples <- colnames(data_matrix)
+
+        feature_idx <- match(df_long[[feature_id_col]], kept_features)
+        sample_idx <- match(df_long[[sample_id_col]], kept_samples)
+        keep_mask <- !is.na(feature_idx) & !is.na(sample_idx)
+        df_long <- df_long[keep_mask, , drop = FALSE]
+        feature_idx <- feature_idx[keep_mask]
+        sample_idx <- sample_idx[keep_mask]
+        df_long[[measure_col]] <- data_matrix[cbind(feature_idx, sample_idx)]
+    }
+
     corrected_matrix <- .combat_matrix_step(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
         batch_col = batch_col,
         sample_id_col = sample_id_col,
-        par.prior = par.prior
+        par.prior = par.prior,
+        fill_the_missing = fill_the_missing
     )
 
     corrected_df <- matrix_to_long(
@@ -608,13 +638,15 @@ correct_with_ComBat_dm <- function(data_matrix, sample_annotation = NULL,
                                    measure_col = "Intensity",
                                    sample_id_col = "FullRunName",
                                    batch_col = "MS_batch",
-                                   par.prior = TRUE) {
+                                   par.prior = TRUE,
+                                   fill_the_missing = NULL) {
     corrected_matrix <- .combat_matrix_step(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
         batch_col = batch_col,
         sample_id_col = sample_id_col,
-        par.prior = par.prior
+        par.prior = par.prior,
+        fill_the_missing = fill_the_missing
     )
 
     return(corrected_matrix)
@@ -622,7 +654,7 @@ correct_with_ComBat_dm <- function(data_matrix, sample_annotation = NULL,
 
 run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
                             par.prior, ...) {
-    # TODO: program for the case of multiple batch factors - "SuperBatch"
+    # TODO: handle the case of multiple batch factors
     if (is.null(sample_annotation)) {
         stop("sample_annotation is required for ComBat correction")
     }
@@ -689,10 +721,82 @@ run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
     sample_annotation[matches, , drop = FALSE]
 }
 
+.handle_missing_for_batch_df <- function(df_long,
+                                         sample_annotation,
+                                         feature_id_col,
+                                         sample_id_col,
+                                         measure_col,
+                                         fill_the_missing,
+                                         warning_message,
+                                         qual_col = NULL,
+                                         qual_value = NULL) {
+    handle_flag <- !is.null(fill_the_missing) || identical(fill_the_missing, FALSE)
+    if (!handle_flag) {
+        return(list(df_long = df_long, sample_annotation = sample_annotation))
+    }
+
+    data_matrix <- long_to_matrix(
+        df_long,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col,
+        sample_id_col = sample_id_col,
+        qual_col = qual_col,
+        qual_value = qual_value
+    )
+
+    if (!anyNA(data_matrix)) {
+        return(list(df_long = df_long, sample_annotation = sample_annotation))
+    }
+
+    data_matrix <- handle_missing_values(
+        data_matrix,
+        warning_message = warning_message,
+        fill_the_missing = fill_the_missing
+    )
+
+    if (!nrow(data_matrix) || !ncol(data_matrix)) {
+        stop("No data remaining after handling missing values for batch correction")
+    }
+
+    kept_features <- rownames(data_matrix)
+    kept_samples <- colnames(data_matrix)
+
+    keep_mask <- df_long[[feature_id_col]] %in% kept_features &
+        df_long[[sample_id_col]] %in% kept_samples
+    df_long <- df_long[keep_mask, , drop = FALSE]
+
+    feature_idx <- match(df_long[[feature_id_col]], kept_features)
+    sample_idx <- match(df_long[[sample_id_col]], kept_samples)
+    df_long[[measure_col]] <- data_matrix[cbind(feature_idx, sample_idx)]
+
+    if (!is.null(sample_annotation)) {
+        sample_annotation <- .align_sample_annotation(
+            sample_annotation,
+            sample_ids = kept_samples,
+            sample_id_col = sample_id_col
+        )
+    }
+
+    list(df_long = df_long, sample_annotation = sample_annotation)
+}
+
 .combat_matrix_step <- function(data_matrix, sample_annotation,
                                 batch_col = "MS_batch",
                                 sample_id_col = NULL,
-                                par.prior = TRUE, ...) {
+                                par.prior = TRUE,
+                                fill_the_missing = NULL, ...) {
+    handle_flag <- !is.null(fill_the_missing) || identical(fill_the_missing, FALSE)
+    if (handle_flag && anyNA(data_matrix)) {
+        data_matrix <- handle_missing_values(
+            data_matrix,
+            warning_message = "ComBat cannot operate with missing values in the matrix",
+            fill_the_missing = fill_the_missing
+        )
+        if (!nrow(data_matrix) || !ncol(data_matrix)) {
+            stop("No data remaining after handling missing values for ComBat correction")
+        }
+    }
+
     sample_annotation <- .align_sample_annotation(
         sample_annotation,
         sample_ids = colnames(data_matrix),
@@ -724,12 +828,27 @@ correct_batch_effects_df <- function(df_long, sample_annotation,
                                      no_fit_imputed = TRUE,
                                      qual_col = NULL,
                                      qual_value = NULL,
+                                     fill_the_missing = NULL,
                                      min_measurements = 8, ...) {
     discrete_func <- match.arg(discrete_func)
 
     sample_annotation[[batch_col]] <- as.factor(sample_annotation[[batch_col]])
 
     original_cols <- names(df_long)
+
+    handled <- .handle_missing_for_batch_df(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        measure_col = measure_col,
+        fill_the_missing = fill_the_missing,
+        warning_message = "Batch correction cannot operate with missing values in the matrix",
+        qual_col = if (no_fit_imputed) qual_col else NULL,
+        qual_value = if (no_fit_imputed) qual_value else NULL
+    )
+    df_long <- handled$df_long
+    sample_annotation <- handled$sample_annotation
 
     if (!is.null(continuous_func)) {
         df_long <- adjust_batch_trend_df(
@@ -787,7 +906,8 @@ correct_batch_effects_df <- function(df_long, sample_annotation,
             measure_col = measure_col,
             sample_id_col = sample_id_col,
             batch_col = batch_col,
-            par.prior = TRUE
+            par.prior = TRUE,
+            fill_the_missing = fill_the_missing
         )
         # TODO: fix for "no_fit_imputed" cases
     }
@@ -828,6 +948,7 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
                                      order_col = "order",
                                      min_measurements = 8,
                                      no_fit_imputed = TRUE,
+                                     fill_the_missing = NULL,
                                      ...) {
     df_long <- matrix_to_long(
         data_matrix,
@@ -848,6 +969,7 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
         order_col = order_col,
         min_measurements = min_measurements,
         no_fit_imputed = no_fit_imputed,
+        fill_the_missing = fill_the_missing,
         qual_col = NULL,
         qual_value = NULL,
         keep_all = "default", ...
@@ -874,6 +996,8 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
 #' @param batch_col column name in \code{sample_annotation} with batch IDs
 #' @param covariates_cols vector of column names in \code{sample_annotation}
 #' with covariates to include in the model
+#' @param fill_the_missing numeric value used to impute missing measurements
+#' before correction. If \code{FALSE} rows with missing values are removed.
 #' @param ... other parameters to pass to \code{limma::removeBatchEffect}
 #' @return data matrix with batch effects removed
 #' @examples
@@ -894,13 +1018,15 @@ correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
                                               measure_col = "Intensity",
                                               sample_id_col = "FullRunName",
                                               batch_col = "MS_batch",
-                                              covariates_cols = NULL, ...) {
+                                              covariates_cols = NULL,
+                                              fill_the_missing = NULL, ...) {
     corrected_matrix <- .removeBatchEffect_matrix_step(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
         batch_col = batch_col,
         sample_id_col = sample_id_col,
         covariates_cols = covariates_cols,
+        fill_the_missing = fill_the_missing,
         ...
     )
     return(corrected_matrix)
@@ -909,7 +1035,20 @@ correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
 .removeBatchEffect_matrix_step <- function(data_matrix, sample_annotation,
                                            batch_col = "MS_batch",
                                            sample_id_col = NULL,
-                                           covariates_cols = NULL, ...) {
+                                           covariates_cols = NULL,
+                                           fill_the_missing = NULL, ...) {
+    handle_flag <- !is.null(fill_the_missing) || identical(fill_the_missing, FALSE)
+    if (handle_flag && anyNA(data_matrix)) {
+        data_matrix <- handle_missing_values(
+            data_matrix,
+            warning_message = "missing values in the matrix",
+            fill_the_missing = fill_the_missing
+        )
+        if (!nrow(data_matrix) || !ncol(data_matrix)) {
+            stop("No data remaining after handling missing values for removeBatchEffect correction")
+        }
+    }
+
     sample_annotation <- .align_sample_annotation(
         sample_annotation,
         sample_ids = colnames(data_matrix),
