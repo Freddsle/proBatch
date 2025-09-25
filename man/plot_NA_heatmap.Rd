@@ -44,6 +44,7 @@ plot_NA_heatmap(x, ...)
   nrow = NULL,
   ncol = NULL,
   draw = TRUE,
+  use_subset = TRUE,
   ...
 )
 }

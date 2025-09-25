@@ -169,6 +169,7 @@ plot_NA_heatmap.ProBatchFeatures <- function(
     nrow = NULL,
     ncol = NULL,
     draw = TRUE,
+    use_subset = TRUE,
     ...) {
     object <- x
     assays <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
@@ -198,20 +199,18 @@ plot_NA_heatmap.ProBatchFeatures <- function(
         data_matrix <- pb_assay_matrix(object, assay = assay_nm)
 
         # if number of rows or columns is bigger than 5000, select a random subset of 5000
-        if (nrow(data_matrix) > 5000) {
+        if (nrow(data_matrix) > 5000 && use_subset) {
             set.seed(123)
             row_idx <- sort(sample(seq_len(nrow(data_matrix)), 5000))
             data_matrix <- data_matrix[row_idx, , drop = FALSE]
             warning("Assay '", assay_nm, "' has more than 5000 rows; plotting a random subset of 5000 rows.")
         }
-        if (ncol(data_matrix) > 5000) {
+        if (ncol(data_matrix) > 5000 && use_subset) {
             set.seed(123)
             col_idx <- sort(sample(seq_len(ncol(data_matrix)), 5000))
             data_matrix <- data_matrix[, col_idx, drop = FALSE]
             warning("Assay '", assay_nm, "' has more than 5000 columns; plotting a random subset of 5000 columns.")
         }
-
-
 
         res <- plot_NA_heatmap.default(
             data_matrix,
