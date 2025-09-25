@@ -142,7 +142,6 @@ pb_register_step <- function(name, fun) {
 
 # Harmonize/validate colData before addAssay
 .pb_harmonize_colData <- function(object, se, from_assay) {
-    stopifnot(from_assay %in% names(object))
     obj_cd <- S4Vectors::DataFrame(colData(object))
     se_cd <- S4Vectors::DataFrame(SummarizedExperiment::colData(se))
 
@@ -445,6 +444,37 @@ pb_current_assay <- function(object) {
     list(matrix = matrix, colData = base$colData)
 }
 
+.pb_coldata_for_assay <- function(object, assay) {
+    if (assay %in% names(object)) {
+        return(SummarizedExperiment::colData(object[[assay]]))
+    }
+    resolved <- .pb_resolve_assay_from_log(object, assay, name = "intensity")
+    if (!is.null(resolved)) {
+        return(resolved$colData)
+    }
+    stop("Unable to retrieve colData for assay '", assay, "'.")
+}
+
+.pb_enrich_step_params <- function(object, assay, fun, params) {
+    if (is.null(params)) {
+        params <- list()
+    } else if (!is.list(params)) {
+        params <- list(params)
+    }
+    fun_formals <- tryCatch(names(formals(fun)), error = function(...) character())
+    needs_sa <- "sample_annotation" %in% fun_formals
+    has_sa <- !is.null(params) && length(params) &&
+        "sample_annotation" %in% names(params) &&
+        !is.null(params[["sample_annotation"]])
+
+    if (needs_sa && !has_sa) {
+        cd <- .pb_coldata_for_assay(object, assay)
+        params$sample_annotation <- as.data.frame(cd)
+    }
+
+    params
+}
+
 
 #' Convenience accessor for assay matrix by name/index (returns the 'intensity' assay)
 #' @export
@@ -541,13 +571,18 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 }
 
 .pb_add_assay_with_link <- function(object, se, to, from) {
+    original_names <- names(object)
     stopifnot(
         is.character(to), length(to) == 1L,
         is.character(from), length(from) == 1L
     )
 
-    if (!from %in% names(object)) {
-        stop("Assay '", from, "' not found in object. Was level/pipeline name misspecified?")
+    has_from <- from %in% names(object)
+    if (!has_from) {
+        resolved <- .pb_resolve_assay_from_log(object, from, name = "intensity")
+        if (is.null(resolved)) {
+            stop("Assay '", from, "' not found in object or operation log; cannot link.")
+        }
     }
 
     # Harmonize colData (throws if incompatible)
@@ -558,13 +593,20 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 
     # Best-effort 1:1 link only if feature rownames match
     ok_link <- FALSE
-    r_to <- rownames(SummarizedExperiment::assay(object[[to]], "intensity"))
-    r_from <- rownames(SummarizedExperiment::assay(object[[from]], "intensity"))
-    if (setequal(r_to, r_from)) {
-        object <- QFeatures::addAssayLinkOneToOne(object, from = from, to = to)
-        ok_link <- TRUE
+    if (has_from) {
+        r_to <- rownames(SummarizedExperiment::assay(object[[to]], "intensity"))
+        r_from <- rownames(SummarizedExperiment::assay(object[[from]], "intensity"))
+        if (setequal(r_to, r_from)) {
+            object <- QFeatures::addAssayLinkOneToOne(object, from = from, to = to)
+            ok_link <- TRUE
+        }
     }
     S4Vectors::metadata(object)$linked_last <- ok_link
+
+    if (!(from %in% original_names) && from %in% names(object)) {
+        object <- object[names(object) != from]
+    }
+
     object
 }
 
@@ -618,14 +660,16 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
     base_m <- if (!is.null(.base_m)) .base_m else pb_assay_matrix(object, assay = from)
 
     f <- .pb_get_step_fun(fun)
+    params <- .pb_enrich_step_params(object, from, f, params)
     res_m <- do.call(f, c(list(base_m), params))
 
     saved_assay <- NULL
     if (store) {
         mat <- .pb_materialize_matrix(res_m, backend = backend, hdf5_path = hdf5_path)
+        cd_from <- .pb_coldata_for_assay(object, from)
         se <- SummarizedExperiment::SummarizedExperiment(
             assays  = list(intensity = mat),
-            colData = SummarizedExperiment::colData(object[[from]])
+            colData = cd_from
         )
         object <- .pb_add_assay_with_link(object, se, to = to, from = from)
         saved_assay <- to
@@ -720,7 +764,8 @@ pb_eval <- function(
     m <- pb_assay_matrix(object, from)
     for (k in seq_along(steps)) {
         f <- .pb_get_step_fun(funs[[k]])
-        m <- do.call(f, c(list(m), params_list[[k]]))
+        params <- .pb_enrich_step_params(object, from, f, params_list[[k]])
+        m <- do.call(f, c(list(m), params))
     }
     m
 }

@@ -100,6 +100,7 @@ correct_with_ComBat_df(
   sample_id_col = "FullRunName",
   batch_col = "MS_batch",
   par.prior = TRUE,
+  fill_the_missing = NULL,
   no_fit_imputed = TRUE,
   qual_col = NULL,
   qual_value = NULL,
@@ -113,7 +114,8 @@ correct_with_ComBat_dm(
   measure_col = "Intensity",
   sample_id_col = "FullRunName",
   batch_col = "MS_batch",
-  par.prior = TRUE
+  par.prior = TRUE,
+  fill_the_missing = NULL
 )
 
 correct_batch_effects_df(
@@ -130,6 +132,7 @@ correct_batch_effects_df(
   no_fit_imputed = TRUE,
   qual_col = NULL,
   qual_value = NULL,
+  fill_the_missing = NULL,
   min_measurements = 8,
   ...
 )
@@ -146,6 +149,7 @@ correct_batch_effects_dm(
   order_col = "order",
   min_measurements = 8,
   no_fit_imputed = TRUE,
+  fill_the_missing = NULL,
   ...
 )
 }
@@ -216,6 +220,10 @@ and \code{fit_func}.}
 \code{adjust_batch_trend_dm} or only the data matrix}
 
 \item{par.prior}{use parametrical or non-parametrical prior}
+
+\item{fill_the_missing}{numeric value used to impute missing measurements before
+correction. If \code{NULL} (default) missing values are left untouched, if
+\code{FALSE} rows with missing values are removed prior to correction.}
 
 \item{continuous_func}{function to use for the fit (currently
 only \code{loess_regression} available); if order-associated fix is not

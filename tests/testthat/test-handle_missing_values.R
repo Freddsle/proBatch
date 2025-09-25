@@ -48,7 +48,7 @@ test_that("symmetric square matrix removes rows and columns with NAs", {
                 "removed 2 rows",
                 fixed = TRUE
             ),
-            "matrix is square, but not symmetric",
+            "Matrix is square but not symmetric",
             fixed = TRUE
         ),
         "warn",
@@ -66,7 +66,7 @@ test_that("square but non-symmetric matrix removes rows only", {
         expect_warning(
             expect_warning(
                 res <- handle_missing_values(mat, "warn"),
-                "matrix is square, but not symmetric",
+                "Matrix is square but not symmetric",
                 fixed = TRUE
             ),
             "removed 1 rows",
@@ -95,7 +95,7 @@ test_that("all rows incomplete leads to empty matrix", {
         expect_warning(
             expect_warning(
                 res <- handle_missing_values(mat, "warn"),
-                "matrix is square, but not symmetric",
+                "Matrix is square but not symmetric",
                 fixed = TRUE
             ),
             "warn",
@@ -118,7 +118,7 @@ test_that("non-numeric fill replaces missing values with 0", {
         expect_warning(
             expect_warning(
                 res <- handle_missing_values(mat, "warn", fill_the_missing = "a"),
-                "filling value is not numeric",
+                "filling value is not a finite numeric scalar",
                 fixed = TRUE
             ),
             "warn",
