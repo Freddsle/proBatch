@@ -358,6 +358,7 @@ plot_heatmap_diagnostic.ProBatchFeatures <- function(x, pbf_name = NULL,
                                                      feature_id_col = "peptide_group_label",
                                                      plot_title = NULL,
                                                      return_gridExtra = FALSE,
+                                                     plot_ncol = NULL,
                                                      ...) {
     object <- x
     assays <- .pb_assays_to_plot(object, pbf_name)
@@ -413,7 +414,7 @@ plot_heatmap_diagnostic.ProBatchFeatures <- function(x, pbf_name = NULL,
         plot_list[[i]] <- do.call(plot_heatmap_diagnostic.default, call_args)
     }
 
-    .pb_arrange_plot_list(plot_list, convert_fun = function(x) x$gtable, return_gridExtra = return_gridExtra)
+    .pb_arrange_plot_list(plot_list, convert_fun = function(x) x$gtable, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
 }
 
 #' @export
@@ -648,6 +649,7 @@ plot_heatmap_generic.ProBatchFeatures <- function(x, pbf_name = NULL,
                                                   row_ann_id_col = NULL,
                                                   plot_title = NULL,
                                                   return_gridExtra = FALSE,
+                                                  plot_ncol = NULL,
                                                   ...) {
     object <- x
     assays <- .pb_assays_to_plot(object, pbf_name)
@@ -703,7 +705,7 @@ plot_heatmap_generic.ProBatchFeatures <- function(x, pbf_name = NULL,
         plot_list[[i]] <- do.call(plot_heatmap_generic.default, call_args)
     }
 
-    .pb_arrange_plot_list(plot_list, convert_fun = function(x) x$gtable, return_gridExtra = return_gridExtra)
+    .pb_arrange_plot_list(plot_list, convert_fun = function(x) x$gtable, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
 }
 
 #' @export
@@ -911,6 +913,7 @@ plot_PVCA.ProBatchFeatures <- function(x, pbf_name = NULL,
                                        sample_id_col = "FullRunName",
                                        plot_title = NULL,
                                        return_gridExtra = FALSE,
+                                       plot_ncol = NULL,
                                        ...) {
     object <- x
     assays <- .pb_assays_to_plot(object, pbf_name)
@@ -960,7 +963,7 @@ plot_PVCA.ProBatchFeatures <- function(x, pbf_name = NULL,
         plot_list[[i]] <- do.call(plot_PVCA.default, call_args)
     }
 
-    .pb_arrange_plot_list(plot_list, convert_fun = ggplot2::ggplotGrob, return_gridExtra = return_gridExtra)
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplot2::ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
 }
 
 #' @export
@@ -1145,7 +1148,7 @@ plot_PVCA.df.default <- function(pvca_res,
             axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)
         ) +
         xlab(NULL) +
-        theme(text = element_text(size = 15)) +
+        theme(text = element_text(size = round(base_size * 1.2, 0))) +
         guides(fill = guide_legend(override.aes = list(color = NA), title = NULL))
 
     save_ggplot(filename, units, width, height, gg)
@@ -1167,6 +1170,7 @@ plot_PVCA.df.ProBatchFeatures <- function(x, pbf_name = NULL,
                                           theme = "classic",
                                           base_size = 20,
                                           return_gridExtra = FALSE,
+                                          plot_ncol = NULL,
                                           ...) {
     object <- x
     assays <- .pb_assays_to_plot(object, pbf_name)
@@ -1213,7 +1217,7 @@ plot_PVCA.df.ProBatchFeatures <- function(x, pbf_name = NULL,
         plot_list[[i]] <- do.call(plot_PVCA.df.default, plot_args)
     }
 
-    .pb_arrange_plot_list(plot_list, convert_fun = ggplot2::ggplotGrob, return_gridExtra = return_gridExtra)
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplot2::ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
 }
 
 #' @export
@@ -1369,6 +1373,7 @@ plot_PCA.ProBatchFeatures <- function(x, pbf_name = NULL,
                                       sample_id_col = "FullRunName",
                                       plot_title = NULL,
                                       return_gridExtra = FALSE,
+                                      plot_ncol = NULL,
                                       ...) {
     object <- x
     assays <- .pb_assays_to_plot(object, pbf_name)
@@ -1415,7 +1420,7 @@ plot_PCA.ProBatchFeatures <- function(x, pbf_name = NULL,
         plot_list[[i]] <- do.call(plot_PCA.default, call_args)
     }
 
-    .pb_arrange_plot_list(plot_list, convert_fun = ggplot2::ggplotGrob, return_gridExtra = return_gridExtra)
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplot2::ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
 }
 
 #' @export
