@@ -34,6 +34,7 @@
   sample_id_col = "FullRunName",
   plot_title = NULL,
   return_gridExtra = FALSE,
+  plot_ncol = NULL,
   ...
 )
 }

@@ -38,6 +38,7 @@
   feature_id_col = "peptide_group_label",
   plot_title = NULL,
   return_gridExtra = FALSE,
+  plot_ncol = NULL,
   ...
 )
 }
