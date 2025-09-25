@@ -438,10 +438,77 @@ plot_boxplot(
 )
 ```
 
+## 3.6 Batch-effect correction 
+
+The package contains two methods for batch effects correction: ComBat from sva and removeBatchEffect from limma. Both of them can be accessed via the same function `pb_transform()`.
+
+```{r}
+# first extract sample annotations
+sa <- colData(pbf) %>% as.data.frame()
+
+# applying limma's removeBatchEffect
+pbf <- pb_transform(
+    pbf,
+    from = "protein::medianNorm_on_log2_on_raw",
+    steps = "limmaRBE",
+    params_list = list(list(
+        sample_annotation = sa,
+        batch_col = "Lab",
+        covariates_cols = c("Condition"),
+        fill_the_missing = FALSE
+    ))
+)
+
+# applying ComBat
+pbf <- pb_transform(
+    pbf,
+    from = "protein::medianNorm_on_log2_on_raw",
+    steps = "combat",
+    params_list = list(list(
+        sample_annotation = sa,
+        batch_col = "Lab",
+        sample_id_col = "Run",
+        par.prior = TRUE,
+        fill_the_missing = "remove"
+    ))
+)
+
+pbf
+get_operation_log(pbf) %>% as_tibble()
+```
+
+
+The PCA shows that samples no longer cluster strictly by their center of origin, indicating that the batch effect has been removed
+
+```{r}
+plot <- plot_PCA(
+    pbf,
+    pbf_name = c(
+        "protein::medianNorm_on_log2_on_raw",
+        "protein::limmaRBE_on_medianNorm_on_log2_on_raw",
+        "protein::combat_on_medianNorm_on_log2_on_raw"
+    ),
+    sample_id_col = "Run",
+    color_scheme = color_scheme,
+    color_by = "Lab",
+    shape_by = "Condition",
+    fill_the_missing = NULL,
+    base_size = 6, point_size = 3, point_alpha = 0.5
+)
+```
+
+Every step is written to the operation log exactly once, so the full
+pipeline can be recovered via `get_operation_log()` or
+`pb_pipeline_name()`:
+
+```{r}
+get_operation_log(pbf_chain) %>% as.tibble()
+```
+
 
 The effect of median normalization is clear: the medians of all samples are now aligned at zero, making them directly comparable for downstream analysis.
 
-## 3.6 Assessing the Processed Data
+## 3.7 Assessing the Processed Data
 After our preprocessing pipeline (filtering → log₂ transform → median normalization), let's re-evaluate the data to see if we have improved its structure and reduced the unwanted technical variation.
 
 ### Principal Component Analysis (PCA)
@@ -480,7 +547,7 @@ PVCA is a powerful method that quantifies the contribution of different known fa
 ```{r, fig.show='hold', fig.width=8, fig.height=4}
 plot_PVCA(
     pbf,
-    pbf_name = c("protein::log2_on_raw", "protein::medianNorm_on_log2_on_raw"),
+    pbf_name = c("protein::log2_on_raw", "protein::medianNorm_on_log2_on_raw", ),
     sample_id_col = "Run",
     technical_factors = c("Lab"),
     biological_factors = c("Condition"),
@@ -491,21 +558,9 @@ plot_PVCA(
 The PVCA plot provides a quantitative summary of our efforts. In the raw data, Center and instrument (technical factors) explained a large portion of the variance. After processing, their contribution is drastically reduced, while the proportion of variance attributed to the biological Condition has increased. The "resid" (unexplained variance) is also larger, which is expected as systematic noise is removed. This confirms the success of our preprocessing pipeline.
 
 
-## 3.7 Batch effects corrections
-
-The package contains multiple methods for batch effects correction: ComBat, limma's removeBatchEffect, and their implementations in BERT (combat that allow missing values):
-
-```{r}
-```
-
-
-....
 
 Strong Lab effect has diminished, and samples now show some grouping by their biological Condition, although some batch effect remains. This demonstrates that our basic preprocessing has successfully reduced a substantial amount of technical noise.
 
-
-
-The dendrogram also shows that samples no longer cluster strictly by their center of origin, indicating that the batch effect has been mitigated.
 
 
 # Session info
