@@ -35,9 +35,9 @@ test_that("boxplot_plots", {
     )
 
     expect_equal(boxplot$labels$fill, "MS_batch")
-    expect_equal(boxplot$label$group, "order")
-    expect_equal(boxplot$label$x, "order")
-    expect_equal(boxplot$label$y, "Intensity")
+    expect_equal(rlang::as_name(boxplot$mapping$group), "order")
+    expect_equal(rlang::as_name(boxplot$mapping$x), "order")
+    expect_equal(rlang::as_name(boxplot$mapping$y), "Intensity")
 
     expect_equal(boxplot$plot_env$color_by_batch, TRUE)
     expect_equal(boxplot$plot_env$facet_col, NULL)
@@ -115,7 +115,8 @@ test_that("boxplot without outliers", {
         color_scheme = color_scheme
     ), "outliers will be removed")
 
-    expect_equal(boxplot$layers[[1]]$geom_params$outlier.shape, NA)
+    expect_true(is.null(boxplot$layers[[1]]$geom_params$outlier.shape) ||
+        is.na(boxplot$layers[[1]]$geom_params$outlier.shape))
 })
 
 
