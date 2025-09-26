@@ -86,8 +86,10 @@ handle_missing_values <- function(data_matrix, warning_message, fill_the_missing
         if (removed_cols > 0) warning(sprintf("removed %d columns", removed_cols))
 
         # Filling doesn't remove rows/cols; still report zeros to mirror previous behavior
-        message(paste(
-            sprintf("removed %d rows", removed_rows)),
+        message(
+            paste(
+                sprintf("removed %d rows", removed_rows)
+            ),
             sprintf("and %d columns", removed_cols)
         )
         return(data_matrix)

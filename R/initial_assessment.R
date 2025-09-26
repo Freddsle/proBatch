@@ -146,6 +146,13 @@ plot_sample_mean.default <- function(data_matrix, sample_annotation,
         fill_or_color = "color"
     )
 
+    axis_x_label <- if (!is.null(order_col)) {
+        order_col
+    } else {
+        sample_id_col
+    }
+    gg <- gg + labs(x = axis_x_label, y = "Mean_Intensity")
+
     # add vertical lines, if required (for order-related effects)
     if (!is.null(batch_col)) {
         batch_vector <- df_ave[[batch_col]]
@@ -347,6 +354,15 @@ plot_boxplot.default <- function(df_long, sample_annotation,
         fill_or_color = "fill"
     )
 
+    axis_x_label <- if (!is.null(order_col_name)) {
+        order_col_name
+    } else if (!is.null(order_col)) {
+        order_col
+    } else {
+        sample_id_col
+    }
+    gg <- gg + labs(x = axis_x_label, y = measure_col)
+
     # Plot each "facet factor" in it's own subplot
     if (!is.null(facet_col)) {
         gg <- gg + facet_wrap(as.formula(paste("~", facet_col)),
@@ -392,11 +408,6 @@ plot_boxplot.default <- function(df_long, sample_annotation,
     if (!is.numeric(df_long[[order_col]])) {
         gg <- gg +
             theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
-    }
-
-    # Change the x label to correspond to the order column
-    if (!is.null(order_col_name)) {
-        gg <- gg + xlab(order_col_name)
     }
 
     if (!is.null(batch_col)) {
