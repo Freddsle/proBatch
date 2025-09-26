@@ -518,7 +518,7 @@ plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = NU
         plot_list[[i]] <- do.call(plot_boxplot.default, call_args)
     }
 
-    .pb_arrange_plot_list(plot_list, plot_ncol = plot_ncol, convert_fun = ggplot2::ggplotGrob, return_gridExtra = return_gridExtra)
+    .pb_arrange_plot_list(plot_list, plot_ncol = plot_ncol, convert_fun = ggplotGrob, return_gridExtra = return_gridExtra)
 }
 
 plot_sample_mean <- function(x, ...) UseMethod("plot_sample_mean")

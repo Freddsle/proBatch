@@ -1,4 +1,4 @@
-GeomSplitViolin <- ggplot2::ggproto("GeomSplitViolin", ggplot2::GeomViolin,
+GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin,
     draw_group = function(self, data, ..., draw_quantiles = NULL) {
         data <- transform(data, xminv = x - violinwidth *
             (x - xmin), xmaxv = x + violinwidth *
@@ -20,10 +20,10 @@ GeomSplitViolin <- ggplot2::ggproto("GeomSplitViolin", ggplot2::GeomViolin,
             "x"
         ] <- round(newdata[1, "x"])
 
-        if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
+        if (length(draw_quantiles) > 0 & !zero_range(range(data$y))) {
             stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <=
                 1))
-            quantiles <- ggplot2:::create_quantile_segment_frame(
+            quantiles <- create_quantile_segment_frame(
                 data,
                 draw_quantiles
             )
@@ -39,7 +39,7 @@ GeomSplitViolin <- ggplot2::ggproto("GeomSplitViolin", ggplot2::GeomViolin,
             )
             ggplot2:::ggname(
                 "geom_split_violin",
-                grid::grobTree(GeomPolygon$draw_panel(
+                grobTree(GeomPolygon$draw_panel(
                     newdata,
                     ...
                 ), quantile_grob)

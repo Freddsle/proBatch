@@ -217,12 +217,12 @@
     ncol <- if (is.null(plot_ncol)) ceiling(sqrt(n)) else plot_ncol
     nrow <- ceiling(n / ncol)
     arranged <- do.call(
-        gridExtra::arrangeGrob,
+        arrangeGrob,
         list(grobs = grobs, nrow = nrow, ncol = ncol)
     )
     if (isTRUE(draw)) {
-        grid::grid.newpage()
-        grid::grid.draw(arranged)
+        grid.newpage()
+        grid.draw(arranged)
     }
 
     if (isTRUE(return_gridExtra)) {

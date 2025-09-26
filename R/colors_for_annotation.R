@@ -160,7 +160,7 @@ map_factors_to_colors <- function(annotation_df_factors) {
         warning(sprintf("Columns %s are non factors, but %s, they will be converted
                     to factors for mapping to colors", col_string, col_classes))
         annotation_df_factors <- annotation_df_factors %>%
-            dplyr::mutate(across(where(~ !is.factor(.)), as.factor))
+            mutate(across(where(~ !is.factor(.)), as.factor))
     }
 
     nlev_covariate <- mapply(nlevels, annotation_df_factors)
