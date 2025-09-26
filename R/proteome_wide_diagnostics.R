@@ -882,7 +882,7 @@ plot_PVCA.default <- function(data_matrix, sample_annotation,
                               units = c("cm", "in", "mm"),
                               plot_title = NULL,
                               theme = "classic",
-                              base_size = 20) {
+                              base_size = 15) {
     pvca_res <- prepare_PVCA_df(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
@@ -1103,15 +1103,13 @@ plot_PVCA.df.default <- function(pvca_res,
                                  units = c("cm", "in", "mm"),
                                  plot_title = NULL,
                                  theme = "classic",
-                                 base_size = 20) {
+                                 base_size = 15) {
     pvca_res <- pvca_res %>%
         mutate(label = factor(label, levels = label))
 
-    y_title <- "Weighted average proportion variance"
     gg <- ggplot(pvca_res, aes(x = label, y = weights, fill = category)) +
         geom_bar(stat = "identity", color = "black") +
-        ylab(y_title)
-
+        ylab("Weighted average proportion variance")
 
     if (is.null(colors_for_bars)) {
         colors_for_bars <- c("grey", wes_palettes$Rushmore[3:5])
@@ -1144,11 +1142,11 @@ plot_PVCA.df.default <- function(pvca_res,
 
     gg <- gg +
         theme(
-            axis.title.x = NULL,
-            axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)
+            axis.title.x = element_blank(),
+            axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5),
+            plot.title = element_text(size = round(base_size * 1.2, 0))
         ) +
         xlab(NULL) +
-        theme(text = element_text(size = round(base_size * 1.2, 0))) +
         guides(fill = guide_legend(override.aes = list(color = NA), title = NULL))
 
     save_ggplot(filename, units, width, height, gg)
@@ -1276,7 +1274,7 @@ plot_PCA.default <- function(data_matrix, sample_annotation,
                              units = c("cm", "in", "mm"),
                              plot_title = NULL,
                              theme = "classic",
-                             base_size = 20, point_size = 3, point_alpha = 0.8) {
+                             base_size = 10, point_size = 3, point_alpha = 0.8) {
     df_long <- matrix_to_long(data_matrix, sample_id_col = sample_id_col)
     df_long <- check_sample_consistency(sample_annotation, sample_id_col, df_long,
         batch_col = color_by, order_col = NULL,
@@ -1332,7 +1330,7 @@ plot_PCA.default <- function(data_matrix, sample_annotation,
     if (length(color_by) > 1) {
         warning("Coloring by the first column specified")
         color_by <- color_by[1]
-    } # TODO: create the ggpubr graph with multiple panels, colored by factors
+    } # TODO: create the gridExtra graph with multiple panels, colored by factors
 
     if (color_by %in% names(color_scheme)) {
         color_scheme <- color_scheme[[color_by]]
