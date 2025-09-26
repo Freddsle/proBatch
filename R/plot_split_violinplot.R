@@ -105,6 +105,8 @@ plot_split_violin_with_boxplot <- function(
             position = "dodge", width = 0.2,
             outlier.shape = NA, coef = 0
         )
+
+    p <- p + labs(x = col_for_box, y = y_col, fill = col_for_color)
     if (!is.null(colors_for_plot)) {
         p <- p + scale_fill_manual(values = colors_for_plot)
     }
