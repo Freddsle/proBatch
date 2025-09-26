@@ -71,11 +71,11 @@ plot_NA_heatmap.default <- function(
     data_matrix <- x
     plot_params <- list(...)
 
-    if (methods::is(data_matrix, "SummarizedExperiment")) {
+    if (is(data_matrix, "SummarizedExperiment")) {
         if (is.null(sample_annotation)) {
-            sample_annotation <- as.data.frame(SummarizedExperiment::colData(data_matrix))
+            sample_annotation <- as.data.frame(colData(data_matrix))
         }
-        data_matrix <- SummarizedExperiment::assay(data_matrix)
+        data_matrix <- assay(data_matrix)
     }
 
     if (!is.matrix(data_matrix)) {
@@ -121,7 +121,7 @@ plot_NA_heatmap.default <- function(
     if (!"fontsize_row" %in% names(plot_params)) plot_params$fontsize_row <- 0.6 * plot_params$fontsize
     if (!"fontsize_col" %in% names(plot_params)) plot_params$fontsize_col <- 0.6 * plot_params$fontsize
 
-    res <- do.call(pheatmap::pheatmap, c(
+    res <- do.call(pheatmap, c(
         list(
             mat = binary_matrix,
             cluster_rows = cluster_features,
@@ -142,8 +142,8 @@ plot_NA_heatmap.default <- function(
         plot_params
     ))
     if (draw && isTRUE(res$silent)) {
-        grid::grid.newpage()
-        grid::grid.draw(res$gtable)
+        grid.newpage()
+        grid.draw(res$gtable)
     }
 
     res
@@ -178,7 +178,7 @@ plot_NA_heatmap.ProBatchFeatures <- function(
         stop("Provide at least one `pbf_name` to plot.")
     }
 
-    sample_annotation <- as.data.frame(SummarizedExperiment::colData(object))
+    sample_annotation <- as.data.frame(colData(object))
     if (!is.null(sample_id_col)) {
         if (!sample_id_col %in% names(sample_annotation)) {
             stop("Column '", sample_id_col, "' not found in `colData(object)`.")
@@ -254,12 +254,12 @@ plot_NA_heatmap.ProBatchFeatures <- function(
     layout <- .pb_missing_layout(length(heatmaps), nrow = nrow, ncol = ncol)
     grob_list <- lapply(heatmaps, function(ht) ht$gtable)
     arranged <- do.call(
-        gridExtra::arrangeGrob,
+        arrangeGrob,
         c(list(grobs = grob_list, nrow = layout$nrow, ncol = layout$ncol), list())
     )
     if (draw) {
-        grid::grid.newpage()
-        grid::grid.draw(arranged)
+        grid.newpage()
+        grid.draw(arranged)
     }
 
     invisible(list(grob = arranged, heatmaps = heatmaps))
@@ -292,21 +292,21 @@ plot_NA_density.default <- function(
     palette = c(`Missing Value` = "#A92C23", `Valid Value` = "#345995"),
     ...) {
     data_matrix <- x
-    if (methods::is(data_matrix, "SummarizedExperiment")) {
-        data_matrix <- SummarizedExperiment::assay(data_matrix)
+    if (is(data_matrix, "SummarizedExperiment")) {
+        data_matrix <- assay(data_matrix)
     }
     if (!is.matrix(data_matrix)) {
         data_matrix <- as.matrix(data_matrix)
     }
     if (!nrow(data_matrix) || !ncol(data_matrix)) {
         warning("Input matrix has zero rows or columns; nothing to plot.")
-        return(ggplot2::ggplot())
+        return(ggplot())
     }
 
     has_observation <- rowSums(!is.na(data_matrix)) > 0
     if (!any(has_observation)) {
         warning("All rows contain only missing values; nothing to plot.")
-        return(ggplot2::ggplot())
+        return(ggplot())
     }
 
     row_means <- rowMeans(data_matrix[has_observation, , drop = FALSE], na.rm = TRUE)
@@ -319,15 +319,15 @@ plot_NA_density.default <- function(
     df <- df[is.finite(df$mean), , drop = FALSE]
     if (!nrow(df)) {
         warning("No finite mean intensities available for plotting.")
-        return(ggplot2::ggplot())
+        return(ggplot())
     }
 
     palette <- .pb_match_palette(palette, c(missing_label, valid_label))
 
-    ggplot2::ggplot(df, ggplot2::aes(x = mean, colour = Type)) +
-        ggplot2::geom_density(na.rm = TRUE) +
-        ggplot2::labs(x = "Intensity", y = "Density", colour = "Value Type") +
-        ggplot2::scale_colour_manual(values = palette, breaks = c(missing_label, valid_label))
+    ggplot(df, aes(x = mean, colour = Type)) +
+        geom_density(na.rm = TRUE) +
+        labs(x = "Intensity", y = "Density", colour = "Value Type") +
+        scale_colour_manual(values = palette, breaks = c(missing_label, valid_label))
 }
 
 #' @rdname plot_NA_density
@@ -356,21 +356,21 @@ plot_NA_density.ProBatchFeatures <- function(
     keep <- vapply(df_list, function(df) !is.null(df) && nrow(df) > 0, logical(1))
     if (!any(keep)) {
         warning("No finite mean intensities available across the requested assays.")
-        return(ggplot2::ggplot())
+        return(ggplot())
     }
 
     combined <- do.call(rbind, df_list[keep])
     combined$pbf_name <- factor(combined$pbf_name, levels = assays[keep])
 
     palette <- .pb_match_palette(palette, c(missing_label, valid_label))
-    p <- ggplot2::ggplot(combined, ggplot2::aes(x = mean, colour = Type)) +
-        ggplot2::geom_density(na.rm = TRUE) +
-        ggplot2::labs(x = "Intensity", y = "Density", colour = "Value Type") +
-        ggplot2::scale_colour_manual(values = palette, breaks = c(missing_label, valid_label))
+    p <- ggplot(combined, aes(x = mean, colour = Type)) +
+        geom_density(na.rm = TRUE) +
+        labs(x = "Intensity", y = "Density", colour = "Value Type") +
+        scale_colour_manual(values = palette, breaks = c(missing_label, valid_label))
 
     if (length(unique(combined$pbf_name)) > 1L) {
         layout <- .pb_missing_layout(length(unique(combined$pbf_name)), nrow = nrow, ncol = ncol)
-        p <- p + ggplot2::facet_wrap(~pbf_name, nrow = layout$nrow, ncol = layout$ncol, scales = facet_scales)
+        p <- p + facet_wrap(~pbf_name, nrow = layout$nrow, ncol = layout$ncol, scales = facet_scales)
     }
 
     p
@@ -398,22 +398,22 @@ plot_NA_frequency.default <- function(
     fill = "#345995",
     ...) {
     data_matrix <- x
-    if (methods::is(data_matrix, "SummarizedExperiment")) {
-        data_matrix <- SummarizedExperiment::assay(data_matrix)
+    if (is(data_matrix, "SummarizedExperiment")) {
+        data_matrix <- assay(data_matrix)
     }
     if (!is.matrix(data_matrix)) {
         data_matrix <- as.matrix(data_matrix)
     }
     if (!nrow(data_matrix) || !ncol(data_matrix)) {
         warning("Input matrix has zero rows or columns; nothing to plot.")
-        return(ggplot2::ggplot())
+        return(ggplot())
     }
 
     valid_counts <- rowSums(!is.na(data_matrix))
     freq_df <- as.data.frame(table(valid_counts), stringsAsFactors = FALSE)
     if (!nrow(freq_df)) {
         warning("No frequency data available.")
-        return(ggplot2::ggplot())
+        return(ggplot())
     }
     freq_df$valid_counts <- as.integer(as.character(freq_df$valid_counts))
 
@@ -421,17 +421,17 @@ plot_NA_frequency.default <- function(
         total <- sum(freq_df$Freq)
         if (total == 0) {
             warning("Total count is zero; cannot compute percentages.")
-            return(ggplot2::ggplot())
+            return(ggplot())
         }
         freq_df$Percent <- as.numeric(freq_df$Freq) / total * 100
     }
 
     y_col <- if (show_percent) "Percent" else "Freq"
-    ggplot2::ggplot(
-        freq_df, ggplot2::aes(x = rlang::.data$valid_counts, y = rlang::.data[[y_col]])
+    ggplot(
+        freq_df, aes(x = .data$valid_counts, y = .data[[y_col]])
     ) +
-        ggplot2::geom_col(fill = fill) +
-        ggplot2::labs(
+        geom_col(fill = fill) +
+        labs(
             x = "Identified in Number of Samples",
             y = if (show_percent) "Percent of Features" else "Number of Features"
         )
@@ -462,7 +462,7 @@ plot_NA_frequency.ProBatchFeatures <- function(
     keep <- vapply(df_list, function(df) !is.null(df) && nrow(df) > 0, logical(1))
     if (!any(keep)) {
         warning("No frequency data available for the requested assays.")
-        return(ggplot2::ggplot())
+        return(ggplot())
     }
 
     if (show_percent) {
@@ -481,26 +481,26 @@ plot_NA_frequency.ProBatchFeatures <- function(
         keep <- vapply(df_list, function(df) !is.null(df) && nrow(df) > 0, logical(1))
         if (!any(keep)) {
             warning("No frequency data available for the requested assays.")
-            return(ggplot2::ggplot())
+            return(ggplot())
         }
     }
 
     combined <- do.call(rbind, df_list[keep])
     combined$pbf_name <- factor(combined$pbf_name, levels = assays[keep])
 
-    p <- ggplot2::ggplot(combined, ggplot2::aes(
+    p <- ggplot(combined, aes(
         x = valid_counts,
         y = if (show_percent) Percent else count
     )) +
-        ggplot2::geom_col(fill = fill) +
-        ggplot2::labs(
+        geom_col(fill = fill) +
+        labs(
             x = "Identified in Number of Samples",
             y = if (show_percent) "Percent" else "Number of Features"
         )
 
     if (length(unique(combined$pbf_name)) > 1L) {
         layout <- .pb_missing_layout(length(unique(combined$pbf_name)), nrow = nrow, ncol = ncol)
-        p <- p + ggplot2::facet_wrap(~pbf_name, nrow = layout$nrow, ncol = layout$ncol, scales = facet_scales)
+        p <- p + facet_wrap(~pbf_name, nrow = layout$nrow, ncol = layout$ncol, scales = facet_scales)
     }
 
     p
@@ -599,9 +599,9 @@ plot_NA_frequency.ProBatchFeatures <- function(
         return(character())
     }
     if (is.null(col_vector)) {
-        qual_info <- RColorBrewer::brewer.pal.info
+        qual_info <- brewer.pal.info
         qual_info <- qual_info[qual_info$category == "qual", , drop = FALSE]
-        palette <- unlist(mapply(RColorBrewer::brewer.pal, qual_info$maxcolors, rownames(qual_info)))
+        palette <- unlist(mapply(brewer.pal, qual_info$maxcolors, rownames(qual_info)))
         palette <- rev(palette)
         if (length(palette) < n) {
             palette <- rep_len(palette, n)
@@ -609,7 +609,7 @@ plot_NA_frequency.ProBatchFeatures <- function(
     } else {
         palette <- rep_len(col_vector, n)
     }
-    stats::setNames(palette[seq_len(n)], values)
+    setNames(palette[seq_len(n)], values)
 }
 
 .pb_missing_layout <- function(k, nrow = NULL, ncol = NULL) {
@@ -679,7 +679,7 @@ plot_NA_frequency.ProBatchFeatures <- function(
     }
     missing <- setdiff(values, names(palette))
     if (length(missing)) {
-        palette <- c(palette, stats::setNames(rep_len(palette, length(missing)), missing))
+        palette <- c(palette, setNames(rep_len(palette, length(missing)), missing))
     }
     palette[values]
 }

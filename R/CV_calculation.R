@@ -89,8 +89,8 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
     base_group <- feature_id_col
     step_group <- if (has_step) "Step" else NULL
 
-    perbatch_groups <- c(base_group, batch_col, step_group) %>% purrr::compact()
-    total_groups <- c(base_group, step_group) %>% purrr::compact()
+    perbatch_groups <- c(base_group, batch_col, step_group) %>% compact()
+    total_groups <- c(base_group, step_group) %>% compact()
 
     # Compute per‐batch CV (if batch_col given)
     if (!is.null(batch_col)) {

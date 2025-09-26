@@ -8,7 +8,7 @@ pb_aggregate_level(
   object,
   from,
   feature_var,
-  fun = matrixStats::colMedians,
+  fun = colMedians,
   new_level = "protein",
   new_pipeline = NULL
 )

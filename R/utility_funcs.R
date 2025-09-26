@@ -402,8 +402,8 @@ subset_keep_cols <- function(df, keep_all = "default",
     minimal_cols <- intersect(minimal_cols, names(df))
     df <- switch(keep_all,
         all = df,
-        default = dplyr::select(df, dplyr::all_of(default_cols)),
-        minimal = dplyr::select(df, dplyr::all_of(minimal_cols))
+        default = select(df, all_of(default_cols)),
+        minimal = select(df, all_of(minimal_cols))
     )
     return(df)
 }

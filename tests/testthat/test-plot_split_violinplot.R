@@ -23,8 +23,8 @@ test_that("split violin plot builds expected layers", {
     )
 
     expect_s3_class(p, "ggplot")
-    expect_equal(rlang::get_expr(p$mapping$x), rlang::sym("x"))
-    expect_equal(rlang::get_expr(p$mapping$fill), rlang::sym("m"))
+    expect_equal(get_expr(p$mapping$x), sym("x"))
+    expect_equal(get_expr(p$mapping$fill), sym("m"))
     expect_equal(p$labels$title, "Title")
 
     expect_true(any(sapply(p$layers, function(x) inherits(x$geom, "GeomSplitViolin"))))

@@ -4,7 +4,7 @@ test_that("quantile_normalize", {
     matrix_test <- example_proteome_matrix[1:10, ]
     quant_normalized_matrix <- quantile_normalize_dm(matrix_test)
 
-    quant_matrix <- preprocessCore::normalize.quantiles(matrix_test)
+    quant_matrix <- normalize.quantiles(matrix_test)
 
     expect_equal(quant_matrix[1:10], quant_normalized_matrix[1:10], ignore_attr = TRUE)
 })

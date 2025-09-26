@@ -61,7 +61,8 @@ Suggests:
     gtable,
     roxygen2,
     testthat (>= 3.0.0),
-    spelling
+    spelling,
+    HDF5Array
 VignetteBuilder: knitr
 RoxygenNote: 7.3.3
 Language: en-US

@@ -391,7 +391,7 @@ pca2 <- plot_PCA(
     base_size = 10, point_size = 3, point_alpha = 0.5
 )
 
-gridExtra::grid.arrange(pca1, pca2, ncol = 2, nrow = 1)
+grid.arrange(pca1, pca2, ncol = 2, nrow = 1)
 ```
 
 As anticipated, the PCA plot clearly shows that the primary source of

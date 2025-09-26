@@ -38,9 +38,9 @@ pbf_toy <- ProBatchFeatures(
 toy_assay <- pb_current_assay(pbf_toy)
 toy_assay_alt <- paste0(toy_assay, "_alt")
 
-se_alt <- SummarizedExperiment::SummarizedExperiment(
+se_alt <- SummarizedExperiment(
     assays = list(intensity = toy_matrix2),
-    colData = SummarizedExperiment::colData(pbf_toy[[toy_assay]])
+    colData = colData(pbf_toy[[toy_assay]])
 )
 
 pbf_multi <- proBatch:::.pb_add_assay_with_link(

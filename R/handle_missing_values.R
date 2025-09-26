@@ -57,7 +57,7 @@ handle_missing_values <- function(data_matrix, warning_message, fill_the_missing
         nc <- ncol(data_matrix)
 
         # Define row-wise completeness
-        keep_rows <- stats::complete.cases(data_matrix)
+        keep_rows <- complete.cases(data_matrix)
 
         if (nr == nc && isSymmetric(data_matrix, na.rm = TRUE)) {
             # Square & (NA-tolerant) symmetric: remove rows AND the corresponding columns

@@ -773,9 +773,9 @@ calculate_PVCA.default <- function(data_matrix, sample_annotation,
         fill_the_missing
     )
 
-    covrts.annodf <- Biobase::AnnotatedDataFrame(data = sample_annotation)
+    covrts.annodf <- AnnotatedDataFrame(data = sample_annotation)
     data_matrix <- data_matrix[, rownames(sample_annotation)]
-    expr_set <- Biobase::ExpressionSet(
+    expr_set <- ExpressionSet(
         assayData = data_matrix,
         phenoData = covrts.annodf
     )
@@ -963,7 +963,7 @@ plot_PVCA.ProBatchFeatures <- function(x, pbf_name = NULL,
         plot_list[[i]] <- do.call(plot_PVCA.default, call_args)
     }
 
-    .pb_arrange_plot_list(plot_list, convert_fun = ggplot2::ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
 }
 
 #' @export
@@ -1215,7 +1215,7 @@ plot_PVCA.df.ProBatchFeatures <- function(x, pbf_name = NULL,
         plot_list[[i]] <- do.call(plot_PVCA.df.default, plot_args)
     }
 
-    .pb_arrange_plot_list(plot_list, convert_fun = ggplot2::ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
 }
 
 #' @export
@@ -1322,7 +1322,7 @@ plot_PCA.default <- function(data_matrix, sample_annotation,
     )
 
     if (!is.null(shape_by)) {
-        gg <- gg + aes(shape = !!rlang::sym(shape_by)) +
+        gg <- gg + aes(shape = !!sym(shape_by)) +
             labs(shape = shape_by)
     }
 
@@ -1418,7 +1418,7 @@ plot_PCA.ProBatchFeatures <- function(x, pbf_name = NULL,
         plot_list[[i]] <- do.call(plot_PCA.default, call_args)
     }
 
-    .pb_arrange_plot_list(plot_list, convert_fun = ggplot2::ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
 }
 
 #' @export

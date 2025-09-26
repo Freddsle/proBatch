@@ -89,8 +89,8 @@ test_that("sample_distribution_plot", {
         plot_param = "batch_replicate"
     )
 
-    expect_equal(sample_dist$labels$x, "batch_replicate", ignore_attr = TRUE)
-    expect_equal(tolower(sample_dist$labels$y), "correlation", ignore_attr = TRUE)
+    expect_equal(as_label(sample_dist$mapping$x), "batch_replicate", ignore_attr = TRUE)
+    expect_equal(as_label(sample_dist$mapping$y), "correlation", ignore_attr = TRUE)
 
     expect_s3_class(sample_dist$plot_env$corr_distribution, "data.frame")
     expect_equal(sample_dist$plot_env$plot_param, "batch_replicate", ignore_attr = TRUE)
@@ -133,8 +133,8 @@ test_that("peptide_distribution_plots", {
         protein_col = "Gene"
     )
 
-    expect_true(is.null(peptide_dist$labels$x) || peptide_dist$labels$x == "same_protein")
-    expect_equal(tolower(peptide_dist$labels$y), "correlation", ignore_attr = TRUE)
+    expect_equal(as_label(peptide_dist$mapping$x), "same_protein", ignore_attr = TRUE)
+    expect_equal(as_label(peptide_dist$mapping$y), "correlation", ignore_attr = TRUE)
 
     expect_s3_class(peptide_dist$plot_env$corr_distribution, "data.frame")
     expect_equal(peptide_dist$plot_env$median_same_prot, 0.7337642, tolerance = 1e-6)

@@ -11,7 +11,7 @@ test_that("constructor (wide) builds a valid ProBatchFeatures object", {
     )
 
     expect_s4_class(pbf, "ProBatchFeatures")
-    expect_true(methods::is(pbf, "QFeatures"))
+    expect_true(is(pbf, "QFeatures"))
     expect_true(validObject(pbf))
 
     # object-level colData must preserve sample annotation (columns + values)
@@ -37,7 +37,7 @@ test_that("constructor (wide) builds a valid ProBatchFeatures object", {
     se0 <- pbf[["feature::raw"]]
     expect_equal(
         as.data.frame(colData(pbf)),
-        as.data.frame(SummarizedExperiment::colData(se0)),
+        as.data.frame(colData(se0)),
         ignore_attr = TRUE
     )
 
@@ -61,7 +61,7 @@ test_that("constructor (wide) builds a valid ProBatchFeatures object", {
 
     # colData alignment: rownames should match sample order
     se <- pbf[["feature::raw"]]
-    expect_equal(rownames(SummarizedExperiment::colData(se)), colnames(example_proteome_matrix))
+    expect_equal(rownames(colData(se)), colnames(example_proteome_matrix))
 })
 
 test_that("constructor errors on malformed inputs (wide)", {
@@ -123,7 +123,7 @@ test_that("constructor (long) delegates to long_to_matrix", {
     se_long <- pbf_long[["feature::raw"]]
     expect_equal(
         as.data.frame(colData(pbf_long)),
-        as.data.frame(SummarizedExperiment::colData(se_long)),
+        as.data.frame(colData(se_long)),
         ignore_attr = TRUE
     )
 })
@@ -151,7 +151,7 @@ test_that("pb_as_long reuses matrix_to_long and round-trips vs direct call", {
     se <- pbf[["feature::raw"]]
     long_b <- proBatch::matrix_to_long(
         data_matrix       = pb_as_wide(pbf),
-        sample_annotation = as.data.frame(SummarizedExperiment::colData(se)),
+        sample_annotation = as.data.frame(colData(se)),
         feature_id_col    = "peptide_group_label",
         measure_col       = "Intensity",
         sample_id_col     = "FullRunName"
@@ -213,9 +213,9 @@ test_that("internal add-assay-with-link links one-to-one when rows match", {
     pbf <- ProBatchFeatures(example_proteome_matrix, example_sample_annotation, "FullRunName", name = "raw")
 
     # create a new assay with identical rownames -> should link 1:1
-    se_new <- SummarizedExperiment::SummarizedExperiment(
+    se_new <- SummarizedExperiment(
         assays  = list(intensity = pb_as_wide(pbf)),
-        colData = SummarizedExperiment::colData(pbf[["feature::raw"]])
+        colData = colData(pbf[["feature::raw"]])
     )
 
     pbf2 <- proBatch:::.pb_add_assay_with_link(pbf, se = se_new, to = "feature::raw_copy", from = "feature::raw")
@@ -229,7 +229,7 @@ test_that("internal add-assay-with-link links one-to-one when rows match", {
     rownames(se_mod) <- rn
 
     # remove a DateTime column to avoid colData conflict error
-    SummarizedExperiment::colData(se_mod)$DateTime <- NULL
+    colData(se_mod)$DateTime <- NULL
 
     pbf3 <- proBatch:::.pb_add_assay_with_link(pbf2, se = se_mod, to = "feature::raw_changed", from = "feature::raw_copy")
     expect_false(isTRUE(S4Vectors::metadata(pbf3)$linked_last))
@@ -338,8 +338,8 @@ test_that("pb_add_level: 1:1 linking works and uses addAssayLinkOneToOne", {
     se_from <- pbf2[["peptide::raw"]]
     se_to <- pbf2[["peptide::copy"]]
     expect_identical(
-        rownames(SummarizedExperiment::colData(se_from)),
-        rownames(SummarizedExperiment::colData(se_to))
+        rownames(colData(se_from)),
+        rownames(colData(se_to))
     )
 
     # Log updated by pb_add_level
@@ -400,7 +400,7 @@ test_that("pb_add_level: many-to-one linking (peptide -> protein) with map_strat
         to_id = "Protein.Ids",
         map_strategy = "first"
     )
-    rf <- SummarizedExperiment::rowData(p_first[["peptide::raw"]])$ProteinID
+    rf <- rowData(p_first[["peptide::raw"]])$ProteinID
     expect_identical(unname(rf), c("A", "A", "B"))
 
     al_first <- QFeatures::assayLink(p_first, "protein::raw")
@@ -418,7 +418,7 @@ test_that("pb_add_level: many-to-one linking (peptide -> protein) with map_strat
         to_id = "Protein.Ids",
         map_strategy = "longest"
     )
-    rl <- SummarizedExperiment::rowData(p_longest[["peptide::raw"]])$ProteinID
+    rl <- rowData(p_longest[["peptide::raw"]])$ProteinID
     expect_identical(unname(rl), c("A", "A", "BBB;B"))
 
     al_long <- QFeatures::assayLink(p_longest, "protein::raw")
@@ -427,12 +427,12 @@ test_that("pb_add_level: many-to-one linking (peptide -> protein) with map_strat
 
     # colData preserved in both
     expect_identical(
-        rownames(SummarizedExperiment::colData(p_first[["peptide::raw"]])),
-        rownames(SummarizedExperiment::colData(p_first[["protein::raw"]]))
+        rownames(colData(p_first[["peptide::raw"]])),
+        rownames(colData(p_first[["protein::raw"]]))
     )
     expect_identical(
-        rownames(SummarizedExperiment::colData(p_longest[["peptide::raw"]])),
-        rownames(SummarizedExperiment::colData(p_longest[["protein::raw"]]))
+        rownames(colData(p_longest[["peptide::raw"]])),
+        rownames(colData(p_longest[["protein::raw"]]))
     )
 })
 
@@ -495,9 +495,9 @@ test_that(".pb_add_assay_with_link requires identical row order for 1:1 linking 
 
     # Create a new SE with shuffled row order
     m2 <- m[sample(rownames(m)), ]
-    se_new <- SummarizedExperiment::SummarizedExperiment(
+    se_new <- SummarizedExperiment(
         assays  = list(intensity = m2),
-        colData = SummarizedExperiment::colData(pbf[["feature::raw"]])
+        colData = colData(pbf[["feature::raw"]])
     )
     pbf2 <- proBatch:::.pb_add_assay_with_link(pbf,
         se = se_new,
@@ -523,7 +523,7 @@ test_that("addAssay colData conflict on DateTime is avoided by using object-leve
     pbf <- ProBatchFeatures(m, sa, "FullRunName", level = "feature") # feature::raw
 
     # First child assay with identical colData: ok
-    se1 <- SummarizedExperiment::SummarizedExperiment(
+    se1 <- SummarizedExperiment(
         assays  = list(intensity = m),
         colData = colData(pbf) # object-level colData (good)
     )
@@ -531,13 +531,13 @@ test_that("addAssay colData conflict on DateTime is avoided by using object-leve
     expect_true(isTRUE(S4Vectors::metadata(pbf)$linked_last))
 
     # Now create a NEW assay but (intentionally) give it assay-level colData copy and mutate DateTime
-    se2 <- SummarizedExperiment::SummarizedExperiment(
+    se2 <- SummarizedExperiment(
         assays  = list(intensity = m),
-        colData = SummarizedExperiment::colData(pbf[["feature::copy"]])
+        colData = colData(pbf[["feature::copy"]])
     )
-    SummarizedExperiment::colData(se2)$DateTime[1] <- se2$DateTime[1] + 3600 # conflict
+    colData(se2)$DateTime[1] <- se2$DateTime[1] + 3600 # conflict
 
-    SummarizedExperiment::colData(se2) <- colData(pbf)
+    colData(se2) <- colData(pbf)
     pbf2 <- proBatch:::.pb_add_assay_with_link(pbf, se = se2, to = "feature::copy2", from = "feature::copy")
     expect_true(validObject(pbf2))
 })
@@ -551,12 +551,12 @@ test_that(".pb_add_assay_with_link links 1:1 even if row order differs", {
     pbf <- ProBatchFeatures(m, sa, "FullRunName", name = "raw")
 
     m2 <- m[sample(rownames(m)), ] # shuffled rows
-    se2 <- SummarizedExperiment::SummarizedExperiment(
+    se2 <- SummarizedExperiment(
         assays  = list(intensity = m2),
         colData = colData(pbf)
     )
     pbf2 <- proBatch:::.pb_add_assay_with_link(pbf, se = se2, to = "feature::copy", from = "feature::raw")
-    expect_true(isTRUE(S4Vectors::metadata(pbf2)$linked_last))
+    expect_true(isTRUE(metadata(pbf2)$linked_last))
 })
 
 test_that("pb_add_level preserves object-level colData and avoids conflicts", {
@@ -584,7 +584,7 @@ test_that("pb_add_level preserves object-level colData and avoids conflicts", {
     expect_true(validObject(pbf2))
     expect_true("protein::raw" %in% names(pbf2))
     # identical colData across assays
-    expect_identical(rownames(colData(pbf2)), rownames(SummarizedExperiment::colData(pbf2[["protein::raw"]])))
+    expect_identical(rownames(colData(pbf2)), rownames(colData(pbf2[["protein::raw"]])))
 })
 
 test_that("pb_add_level errors if any parent (from) is missing in mapping_df", {
@@ -708,7 +708,7 @@ test_that("pb_assay_matrix and pb_as_long compute fast logged assays on demand",
 
     expect_false("peptide::log2_on_raw" %in% names(pbf))
 
-    base_mat <- SummarizedExperiment::assay(pbf[["peptide::raw"]], "intensity")
+    base_mat <- assay(pbf[["peptide::raw"]], "intensity")
     expected <- log_transform_dm.default(base_mat, log_base = 2, offset = 1)
 
     resolved <- pb_assay_matrix(pbf, "peptide::log2_on_raw")
@@ -721,9 +721,9 @@ test_that("pb_assay_matrix and pb_as_long compute fast logged assays on demand",
         measure_col = "Intensity",
         pbf_name = "peptide::log2_on_raw"
     )
-    manual_long <- proBatch::matrix_to_long(
+    manual_long <- matrix_to_long(
         data_matrix = expected,
-        sample_annotation = as.data.frame(SummarizedExperiment::colData(pbf[["peptide::raw"]])),
+        sample_annotation = as.data.frame(colData(pbf[["peptide::raw"]])),
         feature_id_col = "Feature",
         measure_col = "Intensity",
         sample_id_col = "Sample"
