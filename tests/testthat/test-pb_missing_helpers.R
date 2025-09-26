@@ -21,13 +21,13 @@ test_that("pb_zeroIsNA converts zeros to missing values and logs the step", {
     )
     pbf <- make_test_pbf(mat)
     assay_name <- pb_current_assay(pbf)
-    zero_count <- sum(SummarizedExperiment::assay(pbf[[assay_name]], "intensity") == 0)
+    zero_count <- sum(assay(pbf[[assay_name]], "intensity") == 0)
     expect_gt(zero_count, 0L)
 
     res <- suppressMessages(pb_zeroIsNA(pbf))
     expect_s4_class(res, "ProBatchFeatures")
 
-    updated <- SummarizedExperiment::assay(res[[assay_name]], "intensity")
+    updated <- assay(res[[assay_name]], "intensity")
     expect_equal(sum(is.na(updated)), zero_count)
 
     log <- get_operation_log(res)
@@ -47,13 +47,13 @@ test_that("pb_infIsNA replaces infinities and records the operation", {
     )
     pbf <- make_test_pbf(mat)
     assay_name <- pb_current_assay(pbf)
-    inf_count <- sum(is.infinite(SummarizedExperiment::assay(pbf[[assay_name]], "intensity")))
+    inf_count <- sum(is.infinite(assay(pbf[[assay_name]], "intensity")))
     expect_gt(inf_count, 0L)
 
     res <- suppressMessages(pb_infIsNA(pbf))
     expect_s4_class(res, "ProBatchFeatures")
 
-    updated <- SummarizedExperiment::assay(res[[assay_name]], "intensity")
+    updated <- assay(res[[assay_name]], "intensity")
     expect_equal(sum(is.na(updated)), inf_count)
 
     log <- get_operation_log(res)
@@ -76,11 +76,11 @@ test_that("pb_nNA returns per-assay results for multiple assays", {
 
     # Create an additional stored assay with different missing pattern
     se_dup <- pbf[[assay_name]]
-    alt_mat <- SummarizedExperiment::assay(se_dup, "intensity")
+    alt_mat <- assay(se_dup, "intensity")
     alt_mat[1, 1] <- NA
-    SummarizedExperiment::assay(se_dup, "intensity") <- alt_mat
+    assay(se_dup, "intensity") <- alt_mat
     new_name <- paste0(assay_name, "_alt")
-    pbf <- QFeatures::addAssay(pbf, se_dup, name = new_name)
+    pbf <- addAssay(pbf, se_dup, name = new_name)
 
     res <- pb_nNA(pbf, c(assay_name, new_name))
     expect_type(res, "list")
@@ -94,11 +94,11 @@ test_that("pb_nNA returns per-assay results for multiple assays", {
 
     expect_identical(
         res[[1]],
-        QFeatures::nNA(qf1, i = assay_name)
+        nNA(qf1, i = assay_name)
     )
     expect_identical(
         res[[2]],
-        QFeatures::nNA(qf2, i = new_name)
+        nNA(qf2, i = new_name)
     )
 })
 
@@ -123,7 +123,7 @@ test_that("pb_filterNA stores filtered assays when not operating in place", {
     expect_length(new_name, 1L)
     expect_match(new_name, paste0(assay_name, "_filteredNA"))
 
-    filtered <- SummarizedExperiment::assay(res[[new_name]], "intensity")
+    filtered <- assay(res[[new_name]], "intensity")
     expect_true(is.matrix(filtered))
     expect_false(anyNA(filtered))
 
@@ -150,7 +150,7 @@ test_that("pb_filterNA modifies stored assays in place when requested", {
 
     expect_identical(names(res), names(pbf))
 
-    filtered <- SummarizedExperiment::assay(res[[assay_name]], "intensity")
+    filtered <- assay(res[[assay_name]], "intensity")
     expect_true(is.matrix(filtered))
     expect_false(anyNA(filtered))
 

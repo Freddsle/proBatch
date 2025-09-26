@@ -52,15 +52,15 @@ test_that("warning if no biospecimen_id_col provided", {
 test_that("filter out features with ≤2 measurements", {
     df2 <- head(example_proteome, 200)
     annot2 <- example_sample_annotation %>%
-        dplyr::filter(FullRunName %in% df2$FullRunName)
+        filter(FullRunName %in% df2$FullRunName)
     expect_warning(
         cv2 <- calc_cv(df_long = df2, sample_annotation = annot2),
         "only total CV will be calculated"
     )
     low_n <- df2 %>%
-        dplyr::count(peptide_group_label) %>%
-        dplyr::filter(n <= 2) %>%
-        dplyr::pull(peptide_group_label)
+        count(peptide_group_label) %>%
+        filter(n <= 2) %>%
+        pull(peptide_group_label)
     expect_false(any(cv2$peptide_group_label %in% low_n))
 })
 
@@ -77,7 +77,7 @@ test_that("unlog = FALSE keeps log-scale, no unlog warning", {
 })
 
 test_that("features with <=2 replicates are removed with warning", {
-    df <- tibble::tibble(
+    df <- tibble(
         peptide_group_label = c(rep("pep1", 2), rep("pep2", 3)),
         Intensity           = c(1, 2, 10, 12, 11),
         FullRunName         = paste0("sample", 1:5),
@@ -101,13 +101,13 @@ test_that("features with <=2 replicates are removed with warning", {
 })
 
 test_that("unlogging reproduces original CV", {
-    df <- tibble::tibble(
+    df <- tibble(
         peptide_group_label = rep("pep", 3),
         Intensity           = c(4, 5, 6),
         FullRunName         = paste0("s", 1:3),
         biospec             = rep("bio", 3)
     )
-    logged <- dplyr::mutate(df, Intensity = log2(Intensity))
+    logged <- mutate(df, Intensity = log2(Intensity))
     expect_warning(
         expect_message(
             cv_logged <- calculate_feature_CV(
@@ -139,7 +139,7 @@ test_that("unlogging reproduces original CV", {
 })
 
 test_that("Step column preserved and plotting works", {
-    df <- tibble::tibble(
+    df <- tibble(
         peptide_group_label = rep("pep", 6),
         Intensity           = c(1, 2, 1.5, 10, 11, 9),
         FullRunName         = paste0("s", 1:6),
@@ -160,11 +160,11 @@ test_that("Step column preserved and plotting works", {
     expect_true("Step" %in% names(cv))
     gg <- plot_CV_distr.df(cv)
     expect_s3_class(gg, "ggplot")
-    expect_equal(rlang::get_expr(gg$mapping$x), rlang::sym("Step"))
+    expect_equal(get_expr(gg$mapping$x), sym("Step"))
 })
 
 test_that("per-batch CV matches manual calculation", {
-    df <- tibble::tibble(
+    df <- tibble(
         peptide_group_label = rep("pep", 6),
         Intensity           = c(1, 2, 5, 6, 10, 12),
         FullRunName         = paste0("s", 1:6),
@@ -182,8 +182,8 @@ test_that("per-batch CV matches manual calculation", {
         unlog              = FALSE
     )
     manual <- df %>%
-        dplyr::group_by(MS_batch) %>%
-        dplyr::summarise(cv = 100 * sd(Intensity) / mean(Intensity))
+        group_by(MS_batch) %>%
+        summarise(cv = 100 * sd(Intensity) / mean(Intensity))
     expect_equal(cv$CV_perBatch[1], manual$cv[1])
     expect_equal(cv$CV_perBatch[2], manual$cv[2])
 })
@@ -191,7 +191,7 @@ test_that("per-batch CV matches manual calculation", {
 test_that("missing biospecimen column triggers warning", {
     expect_warning(expect_warning(
         res <- calculate_feature_CV(
-            df_long = tibble::tibble(
+            df_long = tibble(
                 peptide_group_label = rep("pep", 3),
                 Intensity           = c(1, 2, 3),
                 FullRunName         = paste0("s", 1:3)
@@ -254,7 +254,7 @@ test_that("full pipeline returns ggplot", {
 test_that("filename argument saves a file", {
     df <- example_proteome %>%
         # filter to keep only finite values or value equal to 0
-        dplyr::filter(is.finite(Intensity) | Intensity == 0)
+        filter(is.finite(Intensity) | Intensity == 0)
     tmpfile <- tempfile(fileext = ".png")
     cv_df <- calculate_feature_CV(
         df_long            = df,
@@ -262,7 +262,7 @@ test_that("filename argument saves a file", {
         batch_col          = "MS_batch",
         biospecimen_id_col = "EarTag"
     ) %>%
-        dplyr::filter(is.finite(CV_total))
+        filter(is.finite(CV_total))
     ggs <- plot_CV_distr.df(
         CV_df = cv_df, ,
         filename = tmpfile,

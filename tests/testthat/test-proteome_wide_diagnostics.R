@@ -6,7 +6,7 @@ test_that("hierarchical_clustering", {
 
     # exclude columns EarTag Strain Sex RunDate RunTime digestion_batch
     example_sample_annotation <- example_sample_annotation %>%
-        dplyr::select("FullRunName", "MS_batch", "Diet")
+        select("FullRunName", "MS_batch", "Diet")
 
     color_list <- sample_annotation_to_colors(
         example_sample_annotation,
@@ -44,7 +44,7 @@ test_that("heatmap_plot", {
 
     matrix_test <- example_proteome_matrix[1:20, ]
     example_sample_annotation <- example_sample_annotation %>%
-        dplyr::select("FullRunName", "MS_batch", "Sex", "digestion_batch", "Diet")
+        select("FullRunName", "MS_batch", "Sex", "digestion_batch", "Diet")
 
 
     color_list <- sample_annotation_to_colors(

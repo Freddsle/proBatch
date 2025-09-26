@@ -663,7 +663,7 @@ run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
         stop("Batch column is not present in sample_annotation")
     }
     batches <- sample_annotation[[batch_col]]
-    modCombat <- stats::model.matrix(~1, data = sample_annotation)
+    modCombat <- model.matrix(~1, data = sample_annotation)
     corrected_matrix <- ComBat(
         dat = data_matrix, batch = batches,
         mod = modCombat, par.prior = par.prior, ...
@@ -986,8 +986,8 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
 }
 
 
-#' @title Batch effect correction with limma::removeBatchEffect
-#' @description Batch effect correction with limma::removeBatchEffect.
+#' @title Batch effect correction with removeBatchEffect from limma
+#' @description Batch effect correction with removeBatchEffect.
 #' @param data_matrix data matrix with features in rows and samples in columns
 #' @param sample_annotation data frame with sample annotations
 #' @param feature_id_col column name in \code{data_matrix} with feature IDs
@@ -998,7 +998,7 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
 #' with covariates to include in the model
 #' @param fill_the_missing numeric value used to impute missing measurements
 #' before correction. If \code{FALSE} rows with missing values are removed.
-#' @param ... other parameters to pass to \code{limma::removeBatchEffect}
+#' @param ... other parameters to pass to \code{removeBatchEffect}
 #' @return data matrix with batch effects removed
 #' @examples
 #' data(
@@ -1011,7 +1011,7 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
 #'     batch_col = "MS_batch",
 #'     covariates_cols = c("Condition", "Type")
 #' )
-#' @seealso \code{\link{limma::removeBatchEffect}}
+#' @seealso \code{\link{removeBatchEffect}}
 #' @export
 correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
                                               feature_id_col = "peptide_group_label",
@@ -1069,12 +1069,12 @@ correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
             )
         }
         covariates <- as.data.frame(sample_annotation[, covariates_cols, drop = FALSE])
-        mod <- stats::model.matrix(~., data = covariates)
+        mod <- model.matrix(~., data = covariates)
     } else {
         mod <- NULL
     }
 
-    limma::removeBatchEffect(
+    removeBatchEffect(
         data_matrix,
         batch = batches,
         design = mod,

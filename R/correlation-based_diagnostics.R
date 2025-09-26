@@ -288,7 +288,7 @@ get_sample_corr_df <- function(cor_proteome, sample_annotation,
             by.x = paste(sample_id_col, "1", sep = "_"),
             by.y = sample_id_col, all.x = TRUE
         ) %>%
-        data.table::setnames(
+        setnames(
             old = spec_cols,
             new = paste(spec_cols, 1, sep = "")
         ) %>%
@@ -296,7 +296,7 @@ get_sample_corr_df <- function(cor_proteome, sample_annotation,
             by.x = paste(sample_id_col, "2", sep = "_"),
             by.y = sample_id_col, all.x = TRUE
         ) %>%
-        data.table::setnames(
+        setnames(
             old = spec_cols,
             new = paste(spec_cols, 2, sep = "")
         ) %>%
@@ -576,7 +576,7 @@ get_peptide_corr_df <- function(peptide_cor, peptide_annotation,
             by.x = paste(feature_id_col, "1", sep = "_"),
             by.y = feature_id_col, all.x = TRUE
         ) %>%
-        data.table::setnames(
+        setnames(
             old = protein_col,
             new = paste(protein_col, 1, sep = "")
         ) %>%
@@ -586,7 +586,7 @@ get_peptide_corr_df <- function(peptide_cor, peptide_annotation,
             by.x = paste(feature_id_col, "2", sep = "_"),
             by.y = feature_id_col, all.x = TRUE
         ) %>%
-        data.table::setnames(
+        setnames(
             old = protein_col,
             new = paste(protein_col, 2, sep = "")
         ) %>%

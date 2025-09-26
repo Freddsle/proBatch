@@ -2,7 +2,7 @@
 % Please edit documentation in R/correct_batch_effects.R
 \name{correct_with_removeBatchEffect_dm}
 \alias{correct_with_removeBatchEffect_dm}
-\title{Batch effect correction with limma::removeBatchEffect}
+\title{Batch effect correction with removeBatchEffect from limma}
 \usage{
 correct_with_removeBatchEffect_dm(
   data_matrix,
@@ -35,13 +35,13 @@ with covariates to include in the model}
 \item{fill_the_missing}{numeric value used to impute missing measurements
 before correction. If \code{FALSE} rows with missing values are removed.}
 
-\item{...}{other parameters to pass to \code{limma::removeBatchEffect}}
+\item{...}{other parameters to pass to \code{removeBatchEffect}}
 }
 \value{
 data matrix with batch effects removed
 }
 \description{
-Batch effect correction with limma::removeBatchEffect.
+Batch effect correction with removeBatchEffect.
 }
 \examples{
 data(
@@ -56,5 +56,5 @@ batch_corrected_matrix <- correct_with_removeBatchEffect_dm(
 )
 }
 \seealso{
-\code{\link{limma::removeBatchEffect}}
+\code{\link{removeBatchEffect}}
 }

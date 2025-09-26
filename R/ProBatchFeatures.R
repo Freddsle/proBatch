@@ -18,7 +18,7 @@
 #' @import methods
 #' @importClassesFrom S4Vectors DataFrame
 #' @exportClass ProBatchFeatures
-methods::setClass(
+setClass(
     "ProBatchFeatures",
     contains = "QFeatures",
     slots = list(
@@ -27,7 +27,7 @@ methods::setClass(
     )
 )
 
-methods::setValidity("ProBatchFeatures", function(object) {
+setValidity("ProBatchFeatures", function(object) {
     # Required columns in oplog
     req <- c("step", "fun", "from", "to", "params", "timestamp", "pkg")
     if (!inherits(object@oplog, "DataFrame")) {
@@ -82,7 +82,7 @@ methods::setValidity("ProBatchFeatures", function(object) {
     reg$log <- function(m, base = exp(1), pseudo = 1) log(m + pseudo, base = base)
     reg$medianNorm <- function(m) {
         # center each sample by its median
-        med <- apply(m, 2, stats::median, na.rm = TRUE)
+        med <- apply(m, 2, median, na.rm = TRUE)
         sweep(m, 2, med, FUN = "-")
     }
     reg
@@ -142,8 +142,8 @@ pb_register_step <- function(name, fun) {
 
 # Harmonize/validate colData before addAssay
 .pb_harmonize_colData <- function(object, se, from_assay) {
-    obj_cd <- S4Vectors::DataFrame(colData(object))
-    se_cd <- S4Vectors::DataFrame(SummarizedExperiment::colData(se))
+    obj_cd <- DataFrame(colData(object))
+    se_cd <- DataFrame(colData(se))
 
     samp_obj <- rownames(obj_cd)
     samp_se <- rownames(se_cd)
@@ -190,7 +190,7 @@ pb_register_step <- function(name, fun) {
     new_cols <- setdiff(colnames(se_cd), colnames(obj_cd))
     merged_cd <- if (length(new_cols)) cbind(obj_cd, se_cd[, new_cols, drop = FALSE]) else obj_cd
 
-    SummarizedExperiment::colData(se) <- merged_cd
+    colData(se) <- merged_cd
     se
 }
 
@@ -242,15 +242,15 @@ ProBatchFeatures <- function(
             stop("Sample annotation missing for: ", paste(miss, collapse = ", "))
         }
         sa <- sa[colnames(data_matrix), , drop = FALSE]
-        cd <- S4Vectors::DataFrame(sa)
+        cd <- DataFrame(sa)
     } else {
         message("No sample_annotation provided; using empty colData.")
-        cd <- S4Vectors::DataFrame(row.names = colnames(data_matrix))
+        cd <- DataFrame(row.names = colnames(data_matrix))
     }
     message("Sample annotation has ", ncol(cd), " columns and ", nrow(cd), " samples.")
 
     # Create SummarizedExperiment
-    se <- SummarizedExperiment::SummarizedExperiment(
+    se <- SummarizedExperiment(
         assays  = list(intensity = data_matrix),
         colData = cd
     )
@@ -261,12 +261,12 @@ ProBatchFeatures <- function(
         name <- .pb_assay_name(level, name)
     }
     # Use QFeatures constructor to make a QFeatures, then wrap as ProBatchFeatures
-    qf <- QFeatures::QFeatures(stats::setNames(list(se), name),
+    qf <- QFeatures(setNames(list(se), name),
         colData = cd
     )
 
     # start with empty structured oplog
-    empty_log <- S4Vectors::DataFrame(
+    empty_log <- DataFrame(
         step      = character(),
         fun       = character(),
         from      = character(),
@@ -275,7 +275,7 @@ ProBatchFeatures <- function(
         timestamp = as.POSIXct(character()),
         pkg       = character()
     )
-    methods::new(
+    new(
         "ProBatchFeatures",
         qf,
         chain = character(),
@@ -295,7 +295,7 @@ ProBatchFeatures_from_long <- function(
     name = NULL) {
     stopifnot(is.data.frame(df_long))
     # 1) long -> wide using existing proBatch utility
-    data_matrix <- proBatch::long_to_matrix(
+    data_matrix <- long_to_matrix(
         df_long,
         feature_id_col = feature_id_col,
         sample_id_col  = sample_id_col,
@@ -328,7 +328,7 @@ ProBatchFeatures_from_long <- function(
 #' @return S4Vectors::DataFrame
 #' @export
 get_operation_log <- function(object) {
-    stopifnot(methods::is(object, "ProBatchFeatures"))
+    stopifnot(is(object, "ProBatchFeatures"))
     object@oplog
 }
 
@@ -339,7 +339,7 @@ get_operation_log <- function(object) {
 #' @return Character vector or string describing the processing chain.
 #' @export
 get_chain <- function(object, as_string = FALSE) {
-    stopifnot(methods::is(object, "ProBatchFeatures"))
+    stopifnot(is(object, "ProBatchFeatures"))
     ch <- object@chain
     if (!as_string) {
         return(ch)
@@ -356,7 +356,7 @@ get_chain <- function(object, as_string = FALSE) {
 #' @return character(1) pipeline string like "combat_on_medianNorm_on_log2" or "raw"
 #' @export
 pb_pipeline_name <- function(object, assay = pb_current_assay(object)) {
-    stopifnot(methods::is(object, "ProBatchFeatures"))
+    stopifnot(is(object, "ProBatchFeatures"))
     nm <- if (length(assay) == 1) assay else pb_current_assay(object)
     # Prefer the assay's own pipeline encoded as "<level>::<pipeline>"
     if (nm %in% names(object)) {
@@ -373,8 +373,8 @@ pb_pipeline_name <- function(object, assay = pb_current_assay(object)) {
 #' Current (latest) assay name
 #' @export
 pb_current_assay <- function(object) {
-    stopifnot(methods::is(object, "ProBatchFeatures"))
-    utils::tail(names(object), 1)
+    stopifnot(is(object, "ProBatchFeatures"))
+    tail(names(object), 1)
 }
 
 .pb_apply_logged_step <- function(base_matrix, step, fun_name, params) {
@@ -409,8 +409,8 @@ pb_current_assay <- function(object) {
     if (assay %in% names(object)) {
         se <- object[[assay]]
         return(list(
-            matrix = SummarizedExperiment::assay(se, i = name),
-            colData = SummarizedExperiment::colData(se)
+            matrix = assay(se, i = name),
+            colData = colData(se)
         ))
     }
 
@@ -446,7 +446,7 @@ pb_current_assay <- function(object) {
 
 .pb_coldata_for_assay <- function(object, assay) {
     if (assay %in% names(object)) {
-        return(SummarizedExperiment::colData(object[[assay]]))
+        return(colData(object[[assay]]))
     }
     resolved <- .pb_resolve_assay_from_log(object, assay, name = "intensity")
     if (!is.null(resolved)) {
@@ -487,7 +487,7 @@ pb_assay_matrix <- function(object, assay = NULL, name = "intensity") {
     }
     if (assay %in% names(object)) {
         se <- object[[assay]]
-        return(SummarizedExperiment::assay(se, i = name))
+        return(assay(se, i = name))
     }
 
     resolved <- .pb_resolve_assay_from_log(object, assay, name)
@@ -509,8 +509,8 @@ pb_as_long <- function(
     pbf_name = pb_current_assay(object)) {
     if (pbf_name %in% names(object)) {
         se <- object[[pbf_name]]
-        m <- SummarizedExperiment::assay(se, i = "intensity")
-        sa <- as.data.frame(SummarizedExperiment::colData(se))
+        m <- assay(se, i = "intensity")
+        sa <- as.data.frame(colData(se))
         message("Using stored assay '", pbf_name, "'.")
     } else {
         resolved <- .pb_resolve_assay_from_log(object, pbf_name, name = "intensity")
@@ -521,7 +521,7 @@ pb_as_long <- function(
         sa <- as.data.frame(resolved$colData)
     }
 
-    proBatch::matrix_to_long(
+    matrix_to_long(
         data_matrix       = m,
         sample_annotation = sa,
         feature_id_col    = feature_id_col,
@@ -533,9 +533,9 @@ pb_as_long <- function(
 #' Get an assay matrix (wide)
 #' @export
 pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensity") {
-    stopifnot(methods::is(object, "ProBatchFeatures"))
+    stopifnot(is(object, "ProBatchFeatures"))
     se <- object[[assay]]
-    SummarizedExperiment::assay(se, i = name)
+    assay(se, i = name)
 }
 
 # ---------------------------
@@ -556,7 +556,7 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
         }
     }
 
-    entry <- S4Vectors::DataFrame(
+    entry <- DataFrame(
         step      = step,
         fun       = fun_name,
         from      = as.character(from),
@@ -565,7 +565,7 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
         timestamp = .pb_now(),
         pkg       = pkg
     )
-    object@oplog <- S4Vectors::rbind(object@oplog, entry)
+    object@oplog <- rbind(object@oplog, entry)
     object@chain <- c(object@chain, step)
     object
 }
@@ -589,19 +589,19 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
     se <- .pb_harmonize_colData(object, se, from_assay = from)
 
     # Add assay
-    object <- QFeatures::addAssay(object, se, name = to)
+    object <- addAssay(object, se, name = to)
 
     # Best-effort 1:1 link only if feature rownames match
     ok_link <- FALSE
     if (has_from) {
-        r_to <- rownames(SummarizedExperiment::assay(object[[to]], "intensity"))
-        r_from <- rownames(SummarizedExperiment::assay(object[[from]], "intensity"))
+        r_to <- rownames(assay(object[[to]], "intensity"))
+        r_from <- rownames(assay(object[[from]], "intensity"))
         if (setequal(r_to, r_from)) {
-            object <- QFeatures::addAssayLinkOneToOne(object, from = from, to = to)
+            object <- addAssayLinkOneToOne(object, from = from, to = to)
             ok_link <- TRUE
         }
     }
-    S4Vectors::metadata(object)$linked_last <- ok_link
+    metadata(object)$linked_last <- ok_link
 
     if (!(from %in% original_names) && from %in% names(object)) {
         object <- object[names(object) != from]
@@ -634,7 +634,7 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
     backend = c("auto", "memory", "hdf5"),
     hdf5_path = NULL, .base_m = NULL) {
     backend <- match.arg(backend)
-    stopifnot(methods::is(object, "ProBatchFeatures"))
+    stopifnot(is(object, "ProBatchFeatures"))
 
     from_parts <- strsplit(from, "::", fixed = TRUE)[[1]]
     base_level <- if (length(from_parts) >= 1) from_parts[1] else "feature"
@@ -667,7 +667,7 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
     if (store) {
         mat <- .pb_materialize_matrix(res_m, backend = backend, hdf5_path = hdf5_path)
         cd_from <- .pb_coldata_for_assay(object, from)
-        se <- SummarizedExperiment::SummarizedExperiment(
+        se <- SummarizedExperiment(
             assays  = list(intensity = mat),
             colData = cd_from
         )
@@ -712,7 +712,7 @@ pb_transform <- function(
     backend = c("auto", "memory", "hdf5"),
     hdf5_path = NULL) {
     backend <- match.arg(backend)
-    stopifnot(methods::is(object, "ProBatchFeatures"))
+    stopifnot(is(object, "ProBatchFeatures"))
     if (is.null(funs)) funs <- steps
     if (is.null(params_list)) params_list <- replicate(length(steps), list(), simplify = FALSE)
     stopifnot(length(steps) == length(funs), length(steps) == length(params_list))
@@ -756,7 +756,7 @@ pb_eval <- function(
     steps,
     funs = NULL,
     params_list = NULL) {
-    stopifnot(methods::is(object, "ProBatchFeatures"))
+    stopifnot(is(object, "ProBatchFeatures"))
     if (is.null(funs)) funs <- steps
     if (is.null(params_list)) params_list <- replicate(length(steps), list(), simplify = FALSE)
     stopifnot(length(steps) == length(funs), length(steps) == length(params_list))
@@ -783,17 +783,17 @@ pb_eval <- function(
 pb_aggregate_level <- function(
     object, from,
     feature_var,
-    fun = matrixStats::colMedians,
+    fun = colMedians,
     new_level = "protein",
     new_pipeline = NULL) {
-    stopifnot(methods::is(object, "ProBatchFeatures"))
+    stopifnot(is(object, "ProBatchFeatures"))
     # Let QFeatures handle both aggregation and linkage book-keeping
     from_parts <- strsplit(from, "::", fixed = TRUE)[[1]]
     from_pipeline <- if (length(from_parts) >= 2) from_parts[2] else "raw"
     pipeline <- new_pipeline %||% from_pipeline
     to <- .pb_assay_name(new_level, pipeline)
 
-    obj <- QFeatures::aggregateFeatures(
+    obj <- aggregateFeatures(
         object,
         i = from,
         fcol = feature_var,
@@ -838,7 +838,7 @@ pb_add_level <- function(
     link_var = "ProteinID", # rowData variable name to use for linking
     backend = c("auto", "memory", "hdf5"),
     hdf5_path = NULL) {
-    stopifnot(methods::is(object, "ProBatchFeatures"))
+    stopifnot(is(object, "ProBatchFeatures"))
     backend <- match.arg(backend)
     map_strategy <- match.arg(map_strategy)
 
@@ -856,12 +856,12 @@ pb_add_level <- function(
     # ----- Build SE for new_matrix and align samples to 'from' assay -----
     m <- as.matrix(new_matrix)
     if (is.null(colnames(m))) stop("new_matrix must have column names (sample IDs).")
-    from_cd <- SummarizedExperiment::colData(object[[from]])
+    from_cd <- colData(object[[from]])
     if (!setequal(rownames(from_cd), colnames(m))) {
         stop("Samples of new_matrix don't match samples in '", from, "'.")
     }
     from_cd <- from_cd[colnames(m), , drop = FALSE]
-    se_new <- SummarizedExperiment::SummarizedExperiment(
+    se_new <- SummarizedExperiment(
         assays  = list(intensity = .pb_materialize_matrix(m, backend, hdf5_path)),
         colData = from_cd
     )
@@ -869,14 +869,14 @@ pb_add_level <- function(
     se_new <- .pb_harmonize_colData(object, se_new, from_assay = from)
 
     # ----- Add assay -----
-    object <- QFeatures::addAssay(object, se_new, name = to)
+    object <- addAssay(object, se_new, name = to)
 
     # ----- Linking logic -----
     # Case A: identical rownames -> 1:1 link
-    r_from <- rownames(SummarizedExperiment::assay(object[[from]], "intensity"))
-    r_to <- rownames(SummarizedExperiment::assay(object[[to]], "intensity"))
+    r_from <- rownames(assay(object[[from]], "intensity"))
+    r_to <- rownames(assay(object[[to]], "intensity"))
     if (identical(r_from, r_to)) {
-        object <- QFeatures::addAssayLinkOneToOne(object, from = from, to = to)
+        object <- addAssayLinkOneToOne(object, from = from, to = to)
         object <- .pb_add_log_entry(object,
             step = sprintf("add_level(%s)_1to1", to_level),
             fun = "addAssayLinkOneToOne",
@@ -889,7 +889,7 @@ pb_add_level <- function(
     # Case B: many-to-one (typical peptide->protein) using addAssayLink()
     # We need a variable present in rowData(from) and rowData(to) to match on.
     # For the child (protein) side we set varTo to its rownames:
-    SummarizedExperiment::rowData(object[[to]])[[link_var]] <- rownames(object[[to]])
+    rowData(object[[to]])[[link_var]] <- rownames(object[[to]])
 
     # For the parent (peptide) side, set varFrom using the mapping_df
     # mapping_df[from_id] -> mapping_df[to_id]
@@ -906,7 +906,7 @@ pb_add_level <- function(
         stop(
             "Mapping incomplete: ", length(miss_from),
             " parent IDs from '", from, "' have no mapping. Examples: ",
-            paste(utils::head(miss_from, 10), collapse = ", ")
+            paste(head(miss_from, 10), collapse = ", ")
         )
     }
     # keep only rows that refer to existing parents/children
@@ -941,16 +941,16 @@ pb_add_level <- function(
         stop(
             "Linking failed: ", length(bad),
             " parents have no exact match under map_strategy='", map_strategy, "'. Examples: ",
-            paste(utils::head(bad, 10), collapse = ", ")
+            paste(head(bad, 10), collapse = ", ")
         )
     }
 
     # Write linking variables:
-    SummarizedExperiment::rowData(object[[to]])[[link_var]] <- r_to
-    SummarizedExperiment::rowData(object[[from]])[[link_var]] <- parent_keys
+    rowData(object[[to]])[[link_var]] <- r_to
+    rowData(object[[from]])[[link_var]] <- parent_keys
 
     # Add the link by variable
-    object <- QFeatures::addAssayLink(object,
+    object <- addAssayLink(object,
         from = from, to = to,
         varFrom = link_var, varTo = link_var
     )
@@ -1018,18 +1018,18 @@ pb_add_level <- function(
 
 # Re-wrap QFeatures results into ProBatchFeatures so slots survive
 .as_ProBatchFeatures <- function(out, from) {
-    if (methods::is(out, "ProBatchFeatures")) {
+    if (is(out, "ProBatchFeatures")) {
         return(out)
     }
-    methods::new("ProBatchFeatures", out, chain = from@chain, oplog = from@oplog)
+    new("ProBatchFeatures", out, chain = from@chain, oplog = from@oplog)
 }
 
 # Override '[' so subsetting doesn't drop subclass or logs
-methods::setMethod(
+setMethod(
     "[",
     signature(x = "ProBatchFeatures", i = "ANY", j = "ANY", drop = "ANY"),
     function(x, i, j, ..., drop = TRUE) {
-        out <- methods::callNextMethod()
+        out <- callNextMethod()
         .as_ProBatchFeatures(out, from = x)
     }
 )
@@ -1037,8 +1037,8 @@ methods::setMethod(
 # ---------------------------
 # Show
 # ---------------------------
-methods::setMethod("show", "ProBatchFeatures", function(object) {
-    methods::callNextMethod()
+setMethod("show", "ProBatchFeatures", function(object) {
+    callNextMethod()
     log <- get_operation_log(object)
     if (!length(object@chain)) {
         cat("  Processing chain: unprocessed data (raw) \n")

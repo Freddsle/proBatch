@@ -1,5 +1,5 @@
 .pb_assays_to_plot <- function(object, pbf_name) {
-    stopifnot(methods::is(object, "ProBatchFeatures"))
+    stopifnot(is(object, "ProBatchFeatures"))
     if (is.null(pbf_name) || length(pbf_name) == 0L) {
         assays <- names(object)
     } else {
@@ -96,12 +96,12 @@
     ncol <- if (is.null(plot_ncol)) ceiling(sqrt(n)) else plot_ncol
     nrow <- ceiling(n / ncol)
     arranged <- do.call(
-        gridExtra::arrangeGrob,
+        arrangeGrob,
         list(grobs = grobs, nrow = nrow, ncol = ncol)
     )
     if (isTRUE(draw)) {
-        grid::grid.newpage()
-        grid::grid.draw(arranged)
+        grid.newpage()
+        grid.draw(arranged)
     }
 
     if (isTRUE(return_gridExtra)) {
@@ -114,8 +114,8 @@
             out <- cowplot::ggdraw(arranged) # ggplot object wrapper
             return(invisible(out))
         } else {
-            # Last-resort: return the TableGrob (user can grid::grid.draw() it or ggsave() still works)
-            message("Returning a grid TableGrob object instead. Use grid::grid.draw() it or ggsave() to plot or save. \nInstall the `ggplotify` or `cowplot` package to get a ggplot object instead.")
+            # Last-resort: return the TableGrob (user can grid.draw() it or ggsave() still works)
+            message("Returning a grid TableGrob object instead. Use grid.draw() it or ggsave() to plot or save. \nInstall the `ggplotify` or `cowplot` package to get a ggplot object instead.")
             return(invisible(arranged))
         }
     }
