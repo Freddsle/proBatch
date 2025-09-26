@@ -31,6 +31,7 @@ Imports:
     data.table,
     ggfortify,
     ggplot2,
+    gridExtra,
     grDevices,
     lazyeval,
     lubridate,
@@ -55,15 +56,13 @@ Imports:
 Suggests: 
     ggplotify,
     knitr,
-    ggpubr,
     rmarkdown,
     devtools,
     gtable,
-    gridExtra,
     roxygen2,
     testthat (>= 3.0.0),
     spelling
 VignetteBuilder: knitr
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Language: en-US
 Config/testthat/edition: 3

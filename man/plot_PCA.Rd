@@ -22,7 +22,7 @@
   units = c("cm", "in", "mm"),
   plot_title = NULL,
   theme = "classic",
-  base_size = 20,
+  base_size = 10,
   point_size = 3,
   point_alpha = 0.8
 )

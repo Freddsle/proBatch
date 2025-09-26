@@ -22,7 +22,7 @@ merge_df_with_annotation <- function(df_long, sample_annotation, sample_id_col,
             select(-all_of(common_cols))
     }
 
-    message("Merging data matrix and sample annotation")
+    # message("Merging data matrix and sample annotation")
     df_long <- df_long %>%
         inner_join(sample_annotation, by = join_cols) %>%
         as.data.frame()
