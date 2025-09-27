@@ -351,9 +351,7 @@ check_feature_id_col_in_dm <- function(feature_id_col, data_matrix,
         if (feature_id_col %in% colnames(data_matrix)) {
             if (is.data.frame(data_matrix) && !issue_reported) {
                 warning(sprintf(
-                    "feature_id_col with name %s in data matrix instead of rownames,
-          this might cause errors in other diagnostic functions,
-          assign values of this column to rowname and remove from the data frame!",
+                    "feature_id_col '%s' detected as a data-matrix column; set row names from this column and remove it to avoid downstream issues.",
                     feature_id_col
                 ))
                 issue_reported <- TRUE
@@ -389,6 +387,9 @@ is_batch_factor <- function(batch_vector, color_scheme) {
 #' @param minimal_cols columns to keep when `keep_all = "minimal"`
 #'
 #' @return data frame with selected columns
+#' @examples
+#' df <- data.frame(a = 1:3, b = 4:6, c = 7:9)
+#' subset_keep_cols(df, keep_all = "minimal", minimal_cols = c("a", "c"))
 #' @keywords internal
 #'
 subset_keep_cols <- function(df, keep_all = "default",

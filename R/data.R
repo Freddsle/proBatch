@@ -31,6 +31,10 @@
 #'   factor of manually annotated batches}
 #'   ...
 #' }
+#' @return A data frame with 233 rows and 11 variables.
+#' @examples
+#' data("example_sample_annotation", package = "proBatch")
+#' head(example_sample_annotation)
 #' @name example_sample_annotation
 NULL
 
@@ -60,6 +64,10 @@ NULL
 #' ...
 #' }
 #' @source PRIDE ID will be added upon the publication of the dataset
+#' @return A data frame with 124655 rows and 7 variables.
+#' @examples
+#' data("example_proteome", package = "proBatch")
+#' head(example_proteome)
 #' @name example_proteome
 NULL
 
@@ -72,6 +80,10 @@ NULL
 #' @format A matrix with 535 rows and 233 columns:
 #'
 #' @source PRIDE ID will be added upon the publication of the dataset
+#' @return A matrix with 535 rows and 233 columns.
+#' @examples
+#' data("example_proteome_matrix", package = "proBatch")
+#' dim(example_proteome_matrix)
 #' @name example_proteome_matrix
 NULL
 
@@ -87,6 +99,10 @@ NULL
 #'   \item{ProteinName}{protein group name as specified in
 #'   \code{example_proteome}}
 #'   }
+#' @return A data frame with 535 rows and 10 variables.
+#' @examples
+#' data("example_peptide_annotation", package = "proBatch")
+#' head(example_peptide_annotation)
 #' @name example_peptide_annotation
 NULL
 
@@ -134,6 +150,11 @@ NULL
 #'     }
 #'   }
 #' }
+#'
+#' @return A named list with center-specific MaxQuant outputs and metadata.
+#' @examples
+#' data("example_multicenter_data", package = "proBatch")
+#' names(example_multicenter_data)
 #'
 #' @source PRIDE ID PXD053560
 #' @name example_multicenter_data
@@ -186,6 +207,10 @@ NULL
 #' \item{`example_ecoli_data$all_precursor_pg_match`}{`data.frame`. Combined precursor-to-protein group mapping from all centers.}
 #' }
 #'
+#' @return A named list containing per-center DIA-NN outputs and combined data.
+#' @examples
+#' data("example_ecoli_data", package = "proBatch")
+#' names(example_ecoli_data)
 #' @source PRIDE ID PXD053812
 #' @name example_ecoli_data
 NULL

@@ -294,6 +294,7 @@ ProBatchFeatures <- function(
 }
 
 #' Construct from LONG df via proBatch::long_to_matrix
+#' @return A `ProBatchFeatures` object constructed from the long-format input.
 #' @export
 ProBatchFeatures_from_long <- function(
     df_long,
