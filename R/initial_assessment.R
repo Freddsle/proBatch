@@ -521,5 +521,10 @@ plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = NU
     .pb_arrange_plot_list(plot_list, plot_ncol = plot_ncol, convert_fun = ggplotGrob, return_gridExtra = return_gridExtra)
 }
 
+#' Generic function for plotting per-sample mean or boxplots for initial assessment
+#' @export
 plot_sample_mean <- function(x, ...) UseMethod("plot_sample_mean")
+
+#' Generic function for plotting per-sample mean or boxplots for initial assessment
+#' @export
 plot_boxplot <- function(x, ...) UseMethod("plot_boxplot")
