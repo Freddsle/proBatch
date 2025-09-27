@@ -13,6 +13,13 @@ A data frame with 535 rows and 10 variables:
   \code{example_proteome}}
   }
 }
+\value{
+A data frame with 535 rows and 10 variables.
+}
 \description{
 This is data from Aging study annotated with gene names
+}
+\examples{
+data("example_peptide_annotation", package = "proBatch")
+head(example_peptide_annotation)
 }

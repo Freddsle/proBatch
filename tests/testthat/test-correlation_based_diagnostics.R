@@ -22,7 +22,7 @@ test_that("protein_corrplot_plots", {
             sample_annotation = example_peptide_annotation,
             factor_columns = "Gene"
         ),
-        "The following columns will not be mapped to colors: peptide_group_label ProteinName ;"
+        "The following columns will not be mapped to colors: peptide_group_label, ProteinName"
     )
 
     corrplot <- plot_protein_corrplot(

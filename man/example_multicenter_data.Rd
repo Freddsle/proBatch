@@ -37,6 +37,9 @@ For each center `x`:
 \source{
 PRIDE ID PXD053560
 }
+\value{
+A named list with center-specific MaxQuant outputs and metadata.
+}
 \description{
 A curated example dataset illustrating a typical multi-center TMT (reporter-ion)
 proteomics study processed with MaxQuant.
@@ -49,4 +52,9 @@ The object is a named list of length 3
 - `data`: A center-specific MaxQuant `proteinGroups.txt` output. Column names follow MaxQuant conventions
   (`Protein.IDs`, `Gene.names`, `Fasta.headers`, etc.).
 - `metadata`: A `data.frame` describing the sample/channel annotation for that center.
+}
+\examples{
+data("example_multicenter_data", package = "proBatch")
+names(example_multicenter_data)
+
 }

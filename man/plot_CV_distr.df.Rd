@@ -33,3 +33,10 @@ ggplot object
 \description{
 Plot the distribution (boxplots) of per-batch per-step CV of features
 }
+\examples{
+cv_example <- data.frame(
+    Step = c("raw", "raw", "raw"),
+    CV_total = c(10, 15, 12)
+)
+plot_CV_distr.df(cv_example, log_y_scale = FALSE)
+}

@@ -34,7 +34,7 @@ test_that("peptides_of_one_protein_plot", {
             sample_id_col = "FullRunName",
             factor_columns = c("MS_batch", "Diet")
         ),
-        "EarTag Strain Sex RunDate RunTime digestion_batch "
+        "The following columns will not be mapped to colors: EarTag, Strain, Sex, RunDate, RunTime, digestion_batch;"
     )
 
     expect_warning(

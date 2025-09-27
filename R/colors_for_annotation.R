@@ -654,9 +654,7 @@ color_by_factor <- function(color_by_batch, batch_col, gg, color_scheme,
         if (is_numeric &&
             (n_batches <= 10 || n_batches < 0.1 * nrow(sample_annotation))) {
             warning(sprintf(
-                "%s column has very few values, but is numeric-like,\n"
-                "should it be treated as factor?\n"
-                "Then modify it with as.factor() function",
+                "%s column has very few values, but is numeric-like,\nshould it be treated as factor?\nThen modify it with as.factor() function",
                 batch_col
             ))
         }

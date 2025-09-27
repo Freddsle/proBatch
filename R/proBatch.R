@@ -141,7 +141,7 @@
 #'
 #' @examples
 #' if (interactive()) {
-#'   browseVignettes(package = "proBatch")
+#'     browseVignettes(package = "proBatch")
 #' }
 #'
 #' @docType package

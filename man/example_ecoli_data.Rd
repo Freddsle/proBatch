@@ -34,6 +34,9 @@ Additionally, the list contains four more elements:
 \source{
 PRIDE ID PXD053812
 }
+\value{
+A named list containing per-center DIA-NN outputs and combined data.
+}
 \description{
 An example dataset illustrating a typical multi-center DIA (data-independent acquisition)
 proteomics study processed with DIA-NN.
@@ -50,4 +53,8 @@ Additionally, the list contains four more elements:
 - `all_precursors`: Combined precursor-level data from all centers.
 - `all_protein_groups`: Combined protein group-level data from all centers.
 - `all_precursor_pg_match`: Combined precursor-to-protein group mapping from all centers.
+}
+\examples{
+data("example_ecoli_data", package = "proBatch")
+names(example_ecoli_data)
 }
