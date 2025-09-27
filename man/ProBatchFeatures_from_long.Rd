@@ -14,6 +14,9 @@ ProBatchFeatures_from_long(
   name = NULL
 )
 }
+\value{
+A `ProBatchFeatures` object constructed from the long-format input.
+}
 \description{
 Construct from LONG df via proBatch::long_to_matrix
 }

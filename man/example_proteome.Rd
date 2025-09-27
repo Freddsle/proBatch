@@ -27,8 +27,15 @@ A data frame with 124655 rows and 7 variables:
 \source{
 PRIDE ID will be added upon the publication of the dataset
 }
+\value{
+A data frame with 124655 rows and 7 variables.
+}
 \description{
 This is OpenSWATH-output data from Aging study with all iRT, spike-in peptides,
 few representative peptides and proteins for signal improvement demonstration.
 Using \code{matrix_to_long} can be converted to \code{example_proteome_matrix}
+}
+\examples{
+data("example_proteome", package = "proBatch")
+head(example_proteome)
 }

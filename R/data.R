@@ -63,11 +63,11 @@ NULL
 #'   column, peptide has been imputed (requantified)}
 #' ...
 #' }
-#' @source PRIDE ID will be added upon the publication of the dataset
 #' @return A data frame with 124655 rows and 7 variables.
 #' @examples
 #' data("example_proteome", package = "proBatch")
 #' head(example_proteome)
+#' @source PRIDE ID will be added upon the publication of the dataset
 #' @name example_proteome
 NULL
 
@@ -79,11 +79,11 @@ NULL
 #'
 #' @format A matrix with 535 rows and 233 columns:
 #'
-#' @source PRIDE ID will be added upon the publication of the dataset
 #' @return A matrix with 535 rows and 233 columns.
 #' @examples
 #' data("example_proteome_matrix", package = "proBatch")
 #' dim(example_proteome_matrix)
+#' @source PRIDE ID will be added upon the publication of the dataset
 #' @name example_proteome_matrix
 NULL
 

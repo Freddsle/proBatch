@@ -20,4 +20,8 @@ vector of colors
 Generates a vector of colors for a vector of numeric, POSIXct (i.e. the
 (signed) number of seconds since the beginning of 1970 , or factors
 }
+\examples{
+generate_colors_for_numeric("brewer", i = 1)
+
+}
 \keyword{internal}

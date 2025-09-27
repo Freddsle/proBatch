@@ -45,7 +45,7 @@
 #'   multiple assays are requested a list is returned invisibly with elements
 #'   `grob` (the arranged heatmaps) and `heatmaps` (individual `pheatmap`
 #'   objects). Assays without missing values are skipped with a warning.
- 
+
 
 #' @export
 plot_NA_heatmap <- function(x, ...) UseMethod("plot_NA_heatmap")

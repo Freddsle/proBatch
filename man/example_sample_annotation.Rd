@@ -32,8 +32,15 @@ A data frame with 233 rows and 11 variables:
   ...
 }
 }
+\value{
+A data frame with 233 rows and 11 variables.
+}
 \description{
 This is data from BXD mouse population aging study with mock instruments to
 show how
 instrument-specific functionality works
+}
+\examples{
+data("example_sample_annotation", package = "proBatch")
+head(example_sample_annotation)
 }

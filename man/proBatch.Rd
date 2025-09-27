@@ -129,6 +129,12 @@ To learn more about proBatch, start with the vignettes:
 Common arguments to the functions.
 }
 
+\examples{
+if (interactive()) {
+    browseVignettes(package = "proBatch")
+}
+
+}
 \seealso{
 Useful links:
 \itemize{
@@ -145,6 +151,7 @@ Authors:
   \item Jelena Cuklina \email{chuklina.jelena@gmail.com}
   \item Chloe H. Lee \email{chloe.h.lee94@gmail.com}
   \item Patrick Pedrioli \email{pedrioli@gmail.com}
+  \item Olga Zolotareva \email{olga.zolotareva@uni-hamburg.de}
 }
 
 }
