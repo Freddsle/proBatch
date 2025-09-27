@@ -6,6 +6,8 @@
 \alias{plot_boxplot.default}
 \alias{plot_sample_mean.ProBatchFeatures}
 \alias{plot_boxplot.ProBatchFeatures}
+\alias{plot_sample_mean}
+\alias{plot_boxplot}
 \title{Plot per-sample mean or boxplots for initial assessment}
 \usage{
 \method{plot_sample_mean}{default}(
@@ -62,6 +64,10 @@
   return_gridExtra = FALSE,
   ...
 )
+
+plot_sample_mean(x, ...)
+
+plot_boxplot(x, ...)
 }
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
