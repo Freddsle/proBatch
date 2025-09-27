@@ -434,7 +434,7 @@ biological and technical factor columns are mapped to qualitative colors
 (maximally distinct), while date and numeric columns are mapped to
 sequential (gradient) colors.
 
-```{r, fig.show='hold'}
+```{r color_scheme, fig.show='hold'}
 color_list <- sample_annotation_to_colors(
     example_sample_annotation,
     factor_columns = c(
@@ -973,7 +973,7 @@ replicate_filenames <- example_sample_annotation %>%
 We plot the 'exploratory' correlation matrix, which can be further
 beautified, see the next chunks.
 
-```{r, fig.show='hold', fig.width=10, fig.height=11}
+```{r corr_heatmap, fig.show='hold', fig.width=10, fig.height=11}
 p1_exp <- plot_sample_corr_heatmap(
     log_transformed_matrix,
     samples_to_plot = replicate_filenames,
@@ -984,7 +984,7 @@ p1_exp <- plot_sample_corr_heatmap(
 To ensure the color scale for correlation is consistent between two
 plots, we create a color vector and breaks
 
-```{r}
+```{r color_scale, fig.show='hold'}
 breaksList <- seq(0.7, 1, by = 0.01) # color scale of pheatmap
 heatmap_colors <- colorRampPalette(
     rev(RColorBrewer::brewer.pal(n = 7, name = "RdYlBu"))
@@ -1091,7 +1091,7 @@ corr_corr <- sample_cor_batchCor +
     ylim(0.7, 1) + xlab(NULL)
 ```
 
-```{r fig.height=2.5, fig.show='hold', fig.width=6, warning=FALSE}
+```{r combine_corr, fig.height=2.5, fig.show='hold', fig.width=6, warning=FALSE}
 grid.arrange(
     grobs = list(raw_corr, corr_corr),
     size = "first", ncol = 2
