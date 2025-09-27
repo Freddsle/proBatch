@@ -1,11 +1,12 @@
 Package: proBatch
 Type: Package
 Title: Tools for Diagnostics and Corrections of Batch Effects in Proteomics 
-Version: 1.3.1
+Version: 2.0.1
 Authors@R: c(
     person("Jelena", "Cuklina", email = "chuklina.jelena@gmail.com", role = "aut"),
     person("Chloe H.", "Lee", email = "chloe.h.lee94@gmail.com", role = "aut"),
     person("Patrick", "Pedrioli", email = "pedrioli@gmail.com", role = "aut"),
+    person("Olga", "Zolotareva", email = "olga.zolotareva@uni-hamburg.de", role = "aut"),
     person("Yuliya", "Burankova", email = "yuliya.burankova@uni-hamburg.de", role = "cre")   
   )
 Description: These tools facilitate batch effects analysis and correction in 
@@ -14,11 +15,11 @@ Description: These tools facilitate batch effects analysis and correction in
   for diagnostics (proteome/genome-wide and feature-level), correction (normalization and batch effects 
   correction) and quality control. Non-linear fitting based approaches were also included to deal with 
   complex, mass spectrometry-specific signal drifts.
-biocViews: BatchEffect, Normalization, Preprocessing, Software, MassSpectrometry, Proteomics, QualityControl
+biocViews: BatchEffect, Normalization, Preprocessing, Software, MassSpectrometry, Proteomics, QualityControl, Visualization
 License: GPL-3
 URL: https://github.com/symbioticMe/proBatch
 BugReports: https://github.com/symbioticMe/proBatch/issues
-Depends: R (>= 4.4)
+Depends: R (>= 4.5.0)
 Encoding: UTF-8
 LazyData: false
 Imports:
