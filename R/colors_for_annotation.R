@@ -342,6 +342,7 @@ merge_rare_levels <- function(column, rare_thr = 2) {
 #' @param columns_for_color_mapping character vector of columns to be mapped.
 #' @param sample_id_col character, the ID column.
 #' @return No return value, called for side effects (warning).
+#' @export
 warn_unmapped_columns <- function(sample_annotation,
                                   columns_for_color_mapping,
                                   sample_id_col) {
@@ -350,12 +351,11 @@ warn_unmapped_columns <- function(sample_annotation,
         c(columns_for_color_mapping, sample_id_col)
     )
     if (length(undefined_cols) > 0) {
-        warning(paste(c(
-            "The following columns will not be mapped to colors:",
-            undefined_cols, "; if these have to be mapped, please assign
-                    them to factor, date or numeric and add to
-                    factor_columns or numeric_columns parameters"
-        ), collapse = " "))
+        warning(
+            "The following columns will not be mapped to colors: ",
+            toString(undefined_cols),
+            "; if these have to be mapped, please assign them to factor, date or numeric and add to factor_columns or numeric_columns parameters"
+        )
     }
 }
 
@@ -365,19 +365,16 @@ warn_unmapped_columns <- function(sample_annotation,
 #' @param factor_columns character vector of factor columns.
 #' @param numeric_columns character vector of numeric columns.
 #' @return List with updated factor_columns and a warning if overlaps exist
+#' @export
 handle_factor_numeric_overlap <- function(factor_columns, numeric_columns) {
     if (!is.null(numeric_columns)) {
         column_intersection <- intersect(factor_columns, numeric_columns)
         if (length(column_intersection) > 0) {
-            warning(paste(
-                c(
-                    "The following columns are repeatedly listed among factors
-                      and numeric-like variables:", column_intersection,
-                    "; they will be excluded from factors and mapped to
-                      continuous palettes"
-                ),
-                collapse = " "
-            ))
+            warning(
+                "The following columns are repeatedly listed among factors and numeric-like variables: ",
+                toString(column_intersection),
+                "; they will be excluded from factors and mapped to continuous palettes"
+            )
         }
         factor_columns <- setdiff(factor_columns, numeric_columns)
     }
@@ -392,6 +389,7 @@ handle_factor_numeric_overlap <- function(factor_columns, numeric_columns) {
 #' @param sample_annotation data frame of sample annotations.
 #' @param guess_factors logical indicating whether to guess numeric columns.
 #' @return Named list containing updated factor_columns and numeric_columns.
+#' @export
 guess_factor_columns_if_needed <- function(factor_columns,
                                            sample_annotation,
                                            guess_factors) {
@@ -448,6 +446,7 @@ guess_factor_columns_if_needed <- function(factor_columns,
 #' @param factor_columns character vector of factor columns.
 #' @param numeric_columns character vector of numeric columns.
 #' @return data frame with converted columns.
+#' @export
 convert_annotation_classes <- function(df, factor_columns, numeric_columns) {
     message("converting columns to corresponding classes
           (factor, numeric)")

@@ -232,7 +232,11 @@ test_that("boxplot maps Step → x when Step present", {
 test_that("applies log scale when requested", {
     p_log <- plot_CV_distr.df(cv_df_min, log_y_scale = TRUE)
     # scale_y_log10 layer must be present
-    scales <- sapply(p_log$scales$scales, class)
+    scales <- vapply(
+        p_log$scales$scales,
+        function(x) paste(class(x), collapse = "/"),
+        character(1)
+    )
     expect_true(any(grepl("ScaleContinuousPosition", scales)))
 })
 

@@ -502,11 +502,10 @@ adjust_batch_trend_dm <- function(data_matrix, sample_annotation,
         # if any of the fit columns are not present in the corrected_df, remove them and warn
         if (any(!fit_columns %in% names(corrected_df))) {
             missing_cols <- fit_columns[!fit_columns %in% names(corrected_df)]
-            message(paste(
-                "The following columns are not present in the corrected_df and
-                            will be removed from fit_df: ",
-                paste(missing_cols, collapse = ", ")
-            ))
+            message(
+                "The following columns are not present in the corrected_df and will be removed from fit_df: ",
+                toString(missing_cols)
+            )
             fit_columns <- fit_columns[fit_columns %in% names(corrected_df)]
         }
         fit_df <- corrected_df[, fit_columns, drop = FALSE]
