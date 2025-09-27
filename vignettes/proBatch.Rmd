@@ -1000,8 +1000,7 @@ p1 <- plot_sample_corr_heatmap(
     samples_to_plot = replicate_filenames,
     sample_annotation = example_sample_annotation,
     factors_to_plot = factors_to_show,
-    plot_title = "Log transformed correlation matrix of
-                              \nselected replicated samples",
+    plot_title = "Log transformed correlation matrix of\nselected replicated samples",
     color_list = color_list,
     heatmap_color = heatmap_colors, breaks = breaksList,
     cluster_rows = FALSE, cluster_cols = FALSE, fontsize = 6,
@@ -1014,8 +1013,7 @@ p2 <- plot_sample_corr_heatmap(
     samples_to_plot = replicate_filenames,
     sample_annotation = example_sample_annotation,
     factors_to_plot = factors_to_show,
-    plot_title = "Batch Corrected
-                              \nselected replicated samples",
+    plot_title = "Batch Corrected\nselected replicated samples",
     color_list = color_list,
     heatmap_color = heatmap_colors, breaks = breaksList,
     cluster_rows = FALSE, cluster_cols = FALSE, fontsize = 6,

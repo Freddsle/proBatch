@@ -24,6 +24,9 @@
 #'   - Non-numeric: coerced to 0 with a warning and used to fill NAs.
 #' @return A matrix with missing values handled as specified.
 #' @keywords internal
+#' @examples
+#' mat <- matrix(c(1, NA, 3, 4), nrow = 2)
+#' suppressWarnings(handle_missing_values(mat, warning_message = "demo", fill_the_missing = 0))
 handle_missing_values <- function(data_matrix, warning_message, fill_the_missing = NULL) {
     # 1) Validate input and coerce to matrix
     if (!is.matrix(data_matrix)) {

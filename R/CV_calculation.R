@@ -121,6 +121,12 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
 #' @param log_y_scale (logical) whether to display the CV on log-scale
 #'
 #' @return ggplot object
+#' @examples
+#' cv_example <- data.frame(
+#'     Step = c("raw", "raw", "raw"),
+#'     CV_total = c(10, 15, 12)
+#' )
+#' plot_CV_distr.df(cv_example, log_y_scale = FALSE)
 #' @export
 plot_CV_distr.df <- function(CV_df,
                              plot_title = NULL,

@@ -139,6 +139,11 @@
 #' @importFrom matrixStats rowMedians colMedians
 #' @importFrom Biobase AnnotatedDataFrame ExpressionSet
 #'
+#' @examples
+#' if (interactive()) {
+#'   browseVignettes(package = "proBatch")
+#' }
+#'
 #' @docType package
 #' @name proBatch
 #' @aliases proBatch-package

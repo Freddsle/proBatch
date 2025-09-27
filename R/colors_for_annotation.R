@@ -276,6 +276,8 @@ map_numbers_to_colors <- function(annotation_df_numbers,
 #'
 #' @return vector of colors
 #' @keywords internal
+#' @examples
+#' generate_colors_for_numeric("brewer", i = 1)
 #'
 generate_colors_for_numeric <- function(palette_type = "brewer",
                                         i = 1) {
@@ -423,10 +425,8 @@ guess_factor_columns_if_needed <- function(factor_columns,
             n_batches <- length(unique(batch_vector))
             if (n_batches <= 10 || n_batches < 0.1 * nrow(sample_annotation)) {
                 warning(sprintf(
-                    "%s column has very few values, but is numeric-like,
-            should it be treated as factor?
-            \nuse both factor_columns and
-            numeric_columns parameters", numcol
+                    "%s column has very few values, but is numeric-like, should it be treated as factor? use both factor_columns and numeric_columns parameters",
+                    numcol
                 ))
             }
         }
@@ -466,7 +466,6 @@ convert_annotation_classes <- function(df, factor_columns, numeric_columns) {
 #' of the sample annotation
 #'
 #' @return a data frame representation of the input color list
-#'
 #' @keywords internal
 #'
 color_list_to_df <- function(color_list, sample_annotation,
@@ -654,9 +653,12 @@ color_by_factor <- function(color_by_batch, batch_col, gg, color_scheme,
 
         if (is_numeric &&
             (n_batches <= 10 || n_batches < 0.1 * nrow(sample_annotation))) {
-            warning(sprintf("%s column has very few values, but is numeric-like,
-                      should it be treated as factor?
-                      \nThen modify it with as.factor() function", batch_col))
+            warning(sprintf(
+                "%s column has very few values, but is numeric-like,\n"
+                "should it be treated as factor?\n"
+                "Then modify it with as.factor() function",
+                batch_col
+            ))
         }
 
         if (is.null(color_scheme)) {

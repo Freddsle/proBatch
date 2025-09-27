@@ -523,8 +523,12 @@ plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = NU
 
 #' Generic function for plotting per-sample mean or boxplots for initial assessment
 #' @export
+#' @rdname plot_sample_mean_or_boxplot
+#' @export
 plot_sample_mean <- function(x, ...) UseMethod("plot_sample_mean")
 
 #' Generic function for plotting per-sample mean or boxplots for initial assessment
+#' @export
+#' @rdname plot_sample_mean_or_boxplot
 #' @export
 plot_boxplot <- function(x, ...) UseMethod("plot_boxplot")
