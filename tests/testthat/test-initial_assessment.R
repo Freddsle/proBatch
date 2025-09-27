@@ -63,7 +63,7 @@ test_that("mean plot adds vertical lines and y limits", {
         ylimits = c(0, 10)
     ))
 
-    expect_true(any(sapply(meanplot$layers, function(x) inherits(x$geom, "GeomVline"))))
+    expect_true(any(vapply(meanplot$layers, function(x) inherits(x$geom, "GeomVline"), logical(1))))
     expect_equal(meanplot$coordinates$limits$y, c(0, 10))
 })
 

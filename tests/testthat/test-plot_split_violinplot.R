@@ -27,11 +27,11 @@ test_that("split violin plot builds expected layers", {
     expect_equal(get_expr(p$mapping$fill), sym("m"))
     expect_equal(p$labels$title, "Title")
 
-    expect_true(any(sapply(p$layers, function(x) inherits(x$geom, "GeomSplitViolin"))))
-    expect_true(any(sapply(p$layers, function(x) inherits(x$geom, "GeomBoxplot"))))
-    expect_true(any(sapply(p$layers, function(x) inherits(x$geom, "GeomHline"))))
+    expect_true(any(vapply(p$layers, function(x) inherits(x$geom, "GeomSplitViolin"), logical(1))))
+    expect_true(any(vapply(p$layers, function(x) inherits(x$geom, "GeomBoxplot"), logical(1))))
+    expect_true(any(vapply(p$layers, function(x) inherits(x$geom, "GeomHline"), logical(1))))
 
-    hline_ind <- which(sapply(p$layers, function(x) inherits(x$geom, "GeomHline")))
+    hline_ind <- which(vapply(p$layers, function(x) inherits(x$geom, "GeomHline"), logical(1)))
     expect_equal(p$layers[[hline_ind]]$data$yintercept, 5)
     expect_equal(p$scales$scales[[1]]$palette(2), c("orange", "purple"))
 })
@@ -40,5 +40,5 @@ test_that("split violin plot builds expected layers", {
 test_that("no hline when argument NULL", {
     df <- data.frame(x = "A", m = "C", y = 1)
     p <- plot_split_violin_with_boxplot(df, hlineintercept = NULL)
-    expect_false(any(sapply(p$layers, function(x) inherits(x$geom, "GeomHline"))))
+    expect_false(any(vapply(p$layers, function(x) inherits(x$geom, "GeomHline"), logical(1))))
 })

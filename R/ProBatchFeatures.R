@@ -175,12 +175,22 @@ pb_register_step <- function(name, fun) {
 
     bad <- vapply(common_cols, function(cc) !.vec_equal(obj_cd[[cc]], se_cd[[cc]]), logical(1))
     if (any(bad)) {
+        type_in_object <- vapply(
+            obj_cd[common_cols[bad]],
+            function(x) paste(class(x), collapse = "/"),
+            character(1)
+        )
+        type_in_assay <- vapply(
+            se_cd[common_cols[bad]],
+            function(x) paste(class(x), collapse = "/"),
+            character(1)
+        )
         stop(
             "Conflicting colData values in columns: ",
             paste(common_cols[bad], collapse = ", "),
             " (assay ‘", from_assay, "’ vs incoming). ",
-            "\nType in object: ", paste(sapply(obj_cd[common_cols[bad]], class), collapse = ", "),
-            "\nType in assay: ", paste(sapply(se_cd[common_cols[bad]], class), collapse = ", "),
+            "\nType in object: ", paste(type_in_object, collapse = ", "),
+            "\nType in assay: ", paste(type_in_assay, collapse = ", "),
             "\nCommon colData columns overlap: ", paste(common_cols, collapse = ", "),
             "\nEnsure identical values or rename/remove conflicting columns."
         )

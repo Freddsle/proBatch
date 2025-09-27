@@ -307,9 +307,10 @@ plot_heatmap_diagnostic.default <- function(data_matrix, sample_annotation = NUL
             controlled color mapping use sample_annotation_to_colors()")
 
         if (is.null(factors_of_feature_ann)) {
-            factors_of_feature_ann <- names(peptide_annotation)[sapply(
+            factors_of_feature_ann <- names(peptide_annotation)[vapply(
                 peptide_annotation,
-                function(x) is.factor(x) || is.character(x)
+                function(x) is.factor(x) || is.character(x),
+                logical(1)
             )]
         }
         if (is.null(feature_id_col)) {

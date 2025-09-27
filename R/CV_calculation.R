@@ -77,7 +77,10 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
             filter(n_total <= 2) %>%
             distinct(!!sym(feature_id_col)) %>%
             nrow()
-        message(paste0("Cannot calculate CV for ", n_peptides, " peptides with 2 or less measurements, removing those peptides"))
+        message(sprintf(
+            "Cannot calculate CV for %d peptides with 2 or less measurements, removing those peptides",
+            n_peptides
+        ))
         df_long <- df_long %>%
             filter(n_total > 2)
     }
