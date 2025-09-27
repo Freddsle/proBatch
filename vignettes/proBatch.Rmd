@@ -168,11 +168,12 @@ To install the latest version of proBatch package, you need `devtools`:
 if (!requireNamespace("devtools", quietly = TRUE)) {
     install.packages("devtools")
 }
-if (!requireNamespace("proBatch", quietly = TRUE)) {
-    devtools::install_github("freddsle/proBatch", build_vignettes = TRUE)
-} else {
-    message("proBatch is already installed.")
-}
+# if (!requireNamespace("proBatch", quietly = TRUE)) {
+#     devtools::install_github("freddsle/proBatch", build_vignettes = TRUE)
+# } else {
+#     message("proBatch is already installed.")
+# }
+library(proBatch)
 ```
 
 \pagebreak
@@ -564,7 +565,7 @@ quantile_normalized_matrix <- normalize_data_dm(
 
 > On some systems `preprocessCore` this code can throw an error. You can
 > try re-install it with disable threading:
-> `BiocManager::install("preprocessCore", configure.args = c(preprocessCore = "--disable-threading"), force= TRUE, update=TRUE, type = "source")`.
+> `BiocManager::install("preprocessCore", configure.args = c(preprocessCore = "--disable-threading"), force= TRUE, update=TRUE, type = "source")` and restart your R session.
 > [Sourse](https://github.com/Bioconductor/bioconductor_docker/issues/2).
 
 After quantile or median normalization, you can easily check if the
