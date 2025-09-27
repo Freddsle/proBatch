@@ -151,7 +151,7 @@ mapping. First two rules ("first" or "longest") yield a single ProteinID
 per peptide for the linking variable. Here we know that there are no
 duplicates, so 'as_is' used.
 
-```{r}
+```{r check_pbf}
 # Check
 validObject(pbf) # should be TRUE
 assayLink(pbf, "protein::raw") # verify link summary
@@ -229,7 +229,7 @@ For each assay the next tables availabe:
 
 Visualisations help highlight batch-specific sparsity patterns:
 
-```{r, fig.show='hold', fig.width=10, fig.height=4}
+```{r plot_na_heatmap_single, fig.show='hold', fig.width=10, fig.height=4}
 plot_NA_heatmap(
     pbf, # by default the last created assay
     show_rownames = FALSE, show_row_dend = FALSE,
@@ -245,7 +245,7 @@ plots using `use_subset = T` parameter.
 
 Also, it is possible to plot multiple assays in one plot:
 
-```{r, fig.show='hold', fig.width=10, fig.height=4}
+```{r plot_na_heatmap_multi, fig.show='hold', fig.width=10, fig.height=4}
 plot_NA_heatmap(
     pbf,
     pbf_name = c("peptide::raw", "protein::raw"),
@@ -256,7 +256,7 @@ plot_NA_heatmap(
 
 The peptide / protein identification overlap can be plotted:
 
-```{r, fig.show='hold', fig.width=7, fig.height=4}
+```{r plot_na_frequency_panel, fig.show='hold', fig.width=7, fig.height=4}
 plot_NA_frequency(
     pbf,
     pbf_name = c("peptide::raw", "protein::raw"),
@@ -271,7 +271,7 @@ Here we apply a simple missing-data filter: we require each feature to
 be quantified in at least 40% of the samples (tune this threshold for
 your study):
 
-```{r}
+```{r apply_missing_filter}
 pbf <- pb_filterNA(
     pbf, # without specifying, the filter will be applied to all assays in the object
     inplace = TRUE, # if false, filtered matrix will be saved as a new assay.
@@ -283,7 +283,7 @@ pbf
 After filtering, the `ProBatchFeatures` object stores fewer features,
 which sharpens downstream diagnostics.
 
-```{r, fig.show='hold', fig.width=7, fig.height=4}
+```{r plot_na_heatmap_filtered, fig.show='hold', fig.width=7, fig.height=4}
 plot_NA_heatmap(
     pbf,
     pbf_name = c("peptide::raw", "protein::raw"),
@@ -303,7 +303,7 @@ make the data distribution more symmetric, which benefits many
 statistical methods. We'll apply a log2 transformation to both peptides
 and protein data.
 
-```{r}
+```{r run_log_transform}
 pbf <- log_transform_dm(
     pbf,
     log_base = 2, offset = 1,
@@ -353,7 +353,7 @@ persist and will need to be addressed downstream.
 The intensity distribution of proteins / peptides with and without NAs
 can be plotted:
 
-```{r, fig.show='hold', fig.width=10, fig.height=4}
+```{r plot_na_density_panels, fig.show='hold', fig.width=10, fig.height=4}
 plot_NA_density(
     pbf,
     pbf_name = c("peptide::log2_on_raw", "protein::log2_on_raw")
@@ -405,7 +405,7 @@ To make the samples more comparable, we will try to apply median
 normalization. This simple yet effective method aligns the distributions
 of intensities by subtracting the median intensity from each sample.
 
-```{r}
+```{r apply_median_normalization}
 pbf <- pb_transform(
     object = pbf,
     from = "peptide::log2_on_raw",
@@ -427,7 +427,7 @@ pbf
 We can compare these assays with their log2 inputs using the same
 boxplot diagnostic.
 
-```{r, fig.show='hold', fig.width=8, fig.height=4}
+```{r compare_median_norm_diagnostics, fig.show='hold', fig.width=8, fig.height=4}
 # boxplot
 plot_boxplot(
     pbf,
@@ -472,7 +472,7 @@ ProBatchFeatures class: ComBat from sva and `removeBatchEffect()` from
 limma. Both of them can be accessed via the same function
 `pb_transform()`.
 
-```{r}
+```{r prepare_sample_annotations}
 # sample annotations used by both correction methods
 sa <- colData(pbf) %>% as.data.frame()
 ```
@@ -480,7 +480,7 @@ sa <- colData(pbf) %>% as.data.frame()
 Apply `removeBatchEffect()` from limma to log-transformed data and
 normalized data:
 
-```{r}
+```{r apply_limma_correction}
 # limma::removeBatchEffect wrapped via pb_transform()
 pbf <- pb_transform(
     pbf,
@@ -512,13 +512,13 @@ assay was added under "protein" level: [3]
 protein::limmaRBE_on_log2_on_raw and [4]
 protein::limmaRBE_on_medianNorm_on_log2_on_raw.
 
-```{r}
+```{r inspect_pbf_after_limma}
 print(pbf)
 ```
 
 Do the same using combat-based batch effect correction:
 
-```{r}
+```{r apply_combat_correction}
 # sva::ComBat wrapped via pb_transform()
 pbf <- pb_transform(
     pbf,
@@ -552,7 +552,7 @@ values. Bacause of that, here we removed features with them. It is also
 possible to impute the data with used-defined value using
 `fill_the_missing` parameter (default is -1).
 
-```{r}
+```{r inspect_pbf_after_combat}
 print(pbf)
 ```
 
@@ -578,7 +578,7 @@ variation is more prominent.
 
 -   for limma-corrected data:
 
-```{r fig.height=7, fig.show='hold', fig.width=8, message=FALSE, warning=FALSE}
+```{r plot_pca_limma_series, fig.height=7, fig.show='hold', fig.width=8, message=FALSE, warning=FALSE}
 plot_PCA(
     pbf,
     pbf_name = c(
@@ -598,7 +598,7 @@ plot_PCA(
 
 -   for combat-corrected data:
 
-```{r fig.height=7, fig.show='hold', fig.width=8, message=FALSE, warning=FALSE}
+```{r plot_pca_combat_series, fig.height=7, fig.show='hold', fig.width=8, message=FALSE, warning=FALSE}
 plot_PCA(
     pbf,
     pbf_name = c(
@@ -627,7 +627,7 @@ We focus on the `protein::combat_on_medianNorm_on_log2_on_raw` and
 `protein::limmaRBE_on_medianNorm_on_log2_on_raw` assays and colour
 samples by lab.
 
-```{r, fig.show='hold', fig.width=12, fig.height=4}
+```{r plot_hclust_combat, fig.show='hold', fig.width=12, fig.height=4}
 plot_hierarchical_clustering(
     pbf,
     pbf_name = "protein::combat_on_medianNorm_on_log2_on_raw",
@@ -637,7 +637,7 @@ plot_hierarchical_clustering(
 )
 ```
 
-```{r, fig.show='hold', fig.width=12, fig.height=4}
+```{r plot_hclust_limma, fig.show='hold', fig.width=12, fig.height=4}
 plot_hierarchical_clustering(
     pbf,
     pbf_name = "protein::limmaRBE_on_medianNorm_on_log2_on_raw",
@@ -652,7 +652,7 @@ plot_hierarchical_clustering(
 PVCA quantifies the contribution of known factors to the observed
 variance. We contrast the raw, normalised, and ComBat-corrected assays.
 
-```{r fig.height=6, fig.show='hold', fig.width=11, message=FALSE, warning=FALSE}
+```{r plot_pvca_panels, fig.height=6, fig.show='hold', fig.width=11, message=FALSE, warning=FALSE}
 plot_PVCA(
     pbf,
     pbf_name = c(
@@ -686,7 +686,7 @@ Each call to `pb_transform()` or `pb_filterNA()` records a new entry
 that captures the source assay, operation, and resulting assay name.
 Inspecting the log keeps long pipelines reproducible.
 
-```{r}
+```{r show_operation_log}
 get_operation_log(pbf) %>%
     as_tibble()
 ```
@@ -695,7 +695,7 @@ If you need a compact name for the current assay chain (for example, to
 label benchmark results), use
 `pb_pipeline_name(pbf, "protein::combat_on_medianNorm_on_log2_on_raw")`.
 
-```{r}
+```{r compute_pipeline_name}
 pb_pipeline_name(pbf, "protein::combat_on_medianNorm_on_log2_on_raw")
 ```
 
