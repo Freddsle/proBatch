@@ -67,6 +67,7 @@ data manipulation and plotting.
 library(dplyr)
 library(tibble)
 library(ggplot2)
+library(QFeatures)
 ```
 
 ## Load and prepare example dataset
@@ -75,8 +76,8 @@ Here, as example, we will use the E.coli dataset, described in the
 FedProt paper [@burankova2025privacy]:
 
 ```{r load_data}
-# library(proBatch)
-devtools::load_all("../")
+library(proBatch)
+# devtools::load_all("../")
 data("example_ecoli_data", package = "proBatch")
 ```
 

@@ -135,6 +135,7 @@ sample_annotation_to_colors.ProBatchFeatures <- function(x, ...) {
 }
 
 #' Generic function for sample annotation to colors
+#' @export
 sample_annotation_to_colors <- function(x, ...) UseMethod("sample_annotation_to_colors")
 
 map_numeric_colors_to_intervals <- function(color_vector, col_values) {
