@@ -734,5 +734,12 @@ rm(extracted_long)
 ```{r sessionInfo}
 sessionInfo()
 ```
+# Citation
+
+To cite this package, please use:
+
+```{r citation}
+citation("proBatch")
+```
 
 # References

@@ -297,14 +297,14 @@ single_feature_plot <- plot_single_feature(
 )
 
 # saving the plot
-\donttest{
+single_feature_file <- tempfile("single_feature", fileext = ".png")
 single_feature_plot <- plot_single_feature(
     feature_name = c("46213_NVGVSFYADKPEVTQEQK_2", "10081_NVQGIIDILK_2"),
     df_long = example_proteome, example_sample_annotation,
-    qual_col = NULL, filename = "test_peptide.png",
+    qual_col = NULL, filename = single_feature_file,
     width = 28, height = 18, units = "cm"
 )
-}
+unlink(single_feature_file)
 
 # to examine peptides of a single protein:
 peptides_of_one_protein_plot <- plot_peptides_of_one_protein(
@@ -316,16 +316,16 @@ peptides_of_one_protein_plot <- plot_peptides_of_one_protein(
 )
 
 # saving the peptides of one protein
-\donttest{
+protein_plot_file <- tempfile("protein_plot", fileext = ".png")
 peptides_of_one_protein_plot <- plot_peptides_of_one_protein(
     protein_name = "Haao", peptide_annotation = example_peptide_annotation,
     protein_col = "Gene", df_long = example_proteome,
     sample_annotation = example_sample_annotation,
     order_col = "order", sample_id_col = "FullRunName",
     batch_col = "MS_batch",
-    filename = "test_protein.png", width = 14, height = 9, units = "in"
+    filename = protein_plot_file, width = 14, height = 9, units = "in"
 )
-}
+unlink(protein_plot_file)
 
 # to illustrate spike-ins:
 spike_in_plot <- plot_spike_in(
