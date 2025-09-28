@@ -345,9 +345,7 @@ merge_rare_levels <- function(column, rare_thr = 2) {
 #' @param sample_id_col character, the ID column.
 #' @return No return value, called for side effects (warning).
 #' @export
-warn_unmapped_columns <- function(sample_annotation,
-                                  columns_for_color_mapping,
-                                  sample_id_col) {
+warn_unmapped_columns <- function(sample_annotation, columns_for_color_mapping, sample_id_col) {
     undefined_cols <- setdiff(
         names(sample_annotation),
         c(columns_for_color_mapping, sample_id_col)
