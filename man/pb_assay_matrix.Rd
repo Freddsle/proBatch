@@ -6,6 +6,9 @@
 \usage{
 pb_assay_matrix(object, assay = NULL, name = "intensity")
 }
+\value{
+assay data matrix with features in rows and samples in columns
+}
 \description{
 Convenience accessor for assay matrix by name/index (returns the 'intensity' assay)
 }

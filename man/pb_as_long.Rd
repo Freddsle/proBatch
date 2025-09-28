@@ -12,6 +12,9 @@ pb_as_long(
   pbf_name = pb_current_assay(object)
 )
 }
+\value{
+tibble/data.frame containing one row per feature-sample combination
+}
 \description{
 Get current assay as LONG (via proBatch::matrix_to_long)
 }
