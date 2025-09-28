@@ -1,7 +1,7 @@
 Package: proBatch
 Type: Package
 Title: Tools for Diagnostics and Corrections of Batch Effects in Proteomics 
-Version: 1.9.1
+Version: 1.99.1
 Authors@R: c(
     person("Jelena", "Cuklina", email = "chuklina.jelena@gmail.com", role = "aut"),
     person("Chloe H.", "Lee", email = "chloe.h.lee94@gmail.com", role = "aut"),
