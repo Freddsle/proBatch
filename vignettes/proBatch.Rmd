@@ -132,9 +132,10 @@ are not installed, you will need to do that before running `proBatch`.
 To install the latest version of proBatch package, you need `BiocManager`:
 
 ```{r install_proBatch, fig.show='hold', eval = FALSE}
-if (!requireNamespace("BiocManager", quietly = TRUE))
+if (!requireNamespace("BiocManager", quietly = TRUE)) {
     install.packages("BiocManager")
-BiocManager::install("proBatch") 
+}
+BiocManager::install("proBatch")
 
 library(proBatch)
 ```

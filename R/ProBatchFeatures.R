@@ -90,10 +90,11 @@ setValidity("ProBatchFeatures", function(object) {
     reg
 })
 
-# allow to register/override steps at runtime (e.g., map "combat" -> proBatch::combat_dm)
-# Example: pb_register_step("medianNorm", proBatch::median_normalize_dm)
+#' Allow to register/override steps at runtime (e.g., map "combat" -> proBatch::combat_dm)
+#' @param name character(1) step name
+#' @param fun function implementing the step
+#' @return NULL (invisible)
 #' @example inst/examples/ProBatchFeatures-basic.R
-#'
 #' @export
 pb_register_step <- function(name, fun) {
     stopifnot(is.character(name), length(name) == 1, is.function(fun))

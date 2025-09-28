@@ -4,55 +4,35 @@
 \alias{example_ecoli_data}
 \title{Example multi-center DIA LFQ E. coli proteomics (DIA-NN)}
 \format{
-A named list of length 5 (`"lab_A"`, `"lab_B"`, `"lab_C"`, `"lab_D"`, `"lab_E"`).
-For each center `x`:
+A named list with four elements:
 
 \describe{
-  \item{`example_ecoli_data[[x]]$precursors`}{`matrix`. A center-specific DIA-NN
-  output containing Precursor.Normalised values. Rows are precursors,
-  columns are samples. }
-  \item{`example_ecoli_data[[x]]$protein.groups`}{`matrix`. A center-specific DIA-NN
-  output containing PG.MaxLFQ values. Rows are protein groups,
-  columns are samples. }
- \item{`example_ecoli_data[[x]]$metadata`}{`data.frame`. Sample annotation with the following columns:
-    \itemize{
-      \item `Run`: exact column name in `data` that carries the corresponding
-            sample intensities.
-      \item `Lab` (`character`): `"lab_A"`, `"lab_B"`, `"lab_C"`, `"lab_D"`, or `"lab_E"`.
-      \item `Condition` (`character`): biological group (e.g., `"Pyr"`, `"Glu"`).
-    }
-  }
-}
-Additionally, the list contains four more elements:
-\describe{
- \item{`example_ecoli_data$all_metadata`}{`data.frame`. Combined metadata from all centers.}
-\item{`example_ecoli_data$all_precursors`}{`matrix`. Combined precursor-level data from all centers.}
-\item{`example_ecoli_data$all_protein_groups`}{`matrix`. Combined protein group-level data from all centers.}
-\item{`example_ecoli_data$all_precursor_pg_match`}{`data.frame`. Combined precursor-to-protein group mapping from all centers.}
+  \item{`all_metadata`}{`data.frame` (118 rows × 3 columns) with per-sample annotation.
+  Columns: `Run`, `Lab`, and `Condition`.}
+  \item{`all_precursors`}{`data.frame` (11131 rows × 118 columns) containing the
+  combined precursor-level Precursor.Normalised intensities (rows = precursors,
+  columns = samples).}
+  \item{`all_protein_groups`}{`data.frame` (400 rows × 118 columns) containing the
+  combined protein group-level PG.MaxLFQ intensities.}
+  \item{`all_precursor_pg_match`}{`data.frame` (11169 rows × 2 columns) linking
+  `Precursor.Id` to `Protein.Ids`.}
 }
 }
 \source{
 PRIDE ID PXD053812
 }
 \value{
-A named list containing per-center DIA-NN outputs and combined data.
+A named list containing the combined metadata, quantification matrices, and precursor-to-protein mapping.
 }
 \description{
 An example dataset illustrating a typical multi-center DIA (data-independent acquisition)
-proteomics study processed with DIA-NN.
+proteomics study processed with DIA-NN. Subset of 400 proteins and 5000 precursors
+from the PRIDE ID PXD053812.
 Study design summary:
 - Five independent centers.
 - Per center: 10(9) samples of E.coli grown in different media (Pyruvate vs Glucose)
-The object is a named list of length 5
-(`"lab_A"`, `"lab_B"`, `"lab_C"`, `"lab_D"`, `"lab_E"`). Each entry is itself a list with three elements:
-- `precursors`: A center-specific DIA-NN output, containing Precursor.Normalised values.
-- `protein.groups`: A center-specific DIA-NN output, containing PG.MaxLFQ values.
-- `metadata`: A `data.frame` describing the sample annotation for that center.
-Additionally, the list contains four more elements:
-- `all_metadata`: Combined metadata from all centers.
-- `all_precursors`: Combined precursor-level data from all centers.
-- `all_protein_groups`: Combined protein group-level data from all centers.
-- `all_precursor_pg_match`: Combined precursor-to-protein group mapping from all centers.
+The distributed object is a named list that contains the combined study-level tables
+derived from all centers (per-center sub-lists were removed to keep the package size below 5 MB).
 }
 \examples{
 data("example_ecoli_data", package = "proBatch")
