@@ -861,13 +861,13 @@ calculate_PVCA <- function(x, ...) UseMethod("calculate_PVCA")
 #'     biological_factors = c("Diet", "Sex", "Strain")
 #' )
 #'
-#' \donttest{
+#' pvca_file <- tempfile("pvca", fileext = ".png")
 #' pvca_plot <- plot_PVCA(matrix_test, example_sample_annotation,
 #'     technical_factors = c("MS_batch", "digestion_batch"),
 #'     biological_factors = c("Diet", "Sex", "Strain"),
-#'     filename = "test_PVCA.png", width = 28, height = 22, units = "cm"
+#'     filename = pvca_file, width = 28, height = 22, units = "cm"
 #' )
-#' }
+#' unlink(pvca_file)
 #'
 #' @seealso \code{\link{sample_annotation_to_colors}},
 #' \code{\link[ggplot2]{ggplot}}
@@ -1255,12 +1255,12 @@ plot_PVCA.df <- function(x, ...) UseMethod("plot_PVCA.df")
 #'     color_by = "DateTime", color_scheme = color_list[["DateTime"]]
 #' )
 #'
-#' \donttest{
+#' pca_file <- tempfile("pca_plot", fileext = ".png")
 #' pca_plot <- plot_PCA(example_proteome_matrix, example_sample_annotation,
 #'     color_by = "DateTime", plot_title = "PCA colored by DateTime",
-#'     filename = "test_PCA.png", width = 14, height = 9, units = "cm"
+#'     filename = pca_file, width = 14, height = 9, units = "cm"
 #' )
-#' }
+#' unlink(pca_file)
 #'
 #' @seealso \code{\link[ggfortify]{autoplot.pca_common}},
 #' \code{\link[ggplot2]{ggplot}}

@@ -506,13 +506,13 @@ plot_sample_corr_distribution <- function(data_matrix, sample_annotation,
 #'     plot_param = "batch_replicate"
 #' )
 #'
-#' \donttest{
+#' sample_corr_file <- tempfile("sample_corr", fileext = ".png")
 #' sample_corr_distribution_plot <- plot_sample_corr_distribution.corrDF(corr_distribution,
 #'     plot_param = "batch_replicate",
-#'     filename = "test_sampleCorr.png",
+#'     filename = sample_corr_file,
 #'     width = 28, height = 28, units = "cm"
 #' )
-#' }
+#' unlink(sample_corr_file)
 #'
 #' @export
 #'
@@ -718,12 +718,12 @@ plot_peptide_corr_distribution <- function(data_matrix, peptide_annotation,
 #' )
 #' peptide_corr_distribution <- plot_peptide_corr_distribution.corrDF(corr_distribution)
 #'
-#' \donttest{
+#' peptide_corr_file <- tempfile("peptide_corr", fileext = ".png")
 #' peptide_corr_distribution <- plot_peptide_corr_distribution.corrDF(corr_distribution,
-#'     filename = "test_peptide.png",
+#'     filename = peptide_corr_file,
 #'     width = 28, height = 28, units = "cm"
 #' )
-#' }
+#' unlink(peptide_corr_file)
 #'
 #' @export
 #'
