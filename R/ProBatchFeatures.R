@@ -13,6 +13,8 @@
 #' - step (character), fun (character), from (character), to (character),
 #' params (list), timestamp (POSIXct), pkg (character)
 #'
+#' @example inst/examples/ProBatchFeatures-basic.R
+#'
 #' @import QFeatures
 #' @import SummarizedExperiment
 #' @import methods
@@ -90,6 +92,8 @@ setValidity("ProBatchFeatures", function(object) {
 
 # allow to register/override steps at runtime (e.g., map "combat" -> proBatch::combat_dm)
 # Example: pb_register_step("medianNorm", proBatch::median_normalize_dm)
+#' @example inst/examples/ProBatchFeatures-basic.R
+#'
 #' @export
 pb_register_step <- function(name, fun) {
     stopifnot(is.character(name), length(name) == 1, is.function(fun))
@@ -217,6 +221,8 @@ pb_register_step <- function(name, fun) {
 #' @param name character(1), optional; if missing, name is "<level>::raw".
 #' If only a single value is provided to the function, without specifying whether it is a name or level, it will be used as the name value.
 #' @return A `ProBatchFeatures` object.
+#'
+#' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 ProBatchFeatures <- function(
     data_matrix,
@@ -295,6 +301,7 @@ ProBatchFeatures <- function(
 
 #' Construct from LONG df via proBatch::long_to_matrix
 #' @return A `ProBatchFeatures` object constructed from the long-format input.
+#' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 ProBatchFeatures_from_long <- function(
     df_long,
@@ -337,6 +344,7 @@ ProBatchFeatures_from_long <- function(
 #' Access the operation log (structured)
 #' @param object A `ProBatchFeatures` object.
 #' @return S4Vectors::DataFrame
+#' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 get_operation_log <- function(object) {
     stopifnot(is(object, "ProBatchFeatures"))
@@ -348,6 +356,7 @@ get_operation_log <- function(object) {
 #' @param as_string logical(1). if `TRUE` returns the chain as a single string
 #'   of the form `"combat_on_mediannorm_on_log"`.
 #' @return Character vector or string describing the processing chain.
+#' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 get_chain <- function(object, as_string = FALSE) {
     stopifnot(is(object, "ProBatchFeatures"))
@@ -365,6 +374,7 @@ get_chain <- function(object, as_string = FALSE) {
 #' @param object ProBatchFeatures
 #' @param assay character(1) assay name; defaults to current assay
 #' @return character(1) pipeline string like "combat_on_medianNorm_on_log2" or "raw"
+#' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_pipeline_name <- function(object, assay = pb_current_assay(object)) {
     stopifnot(is(object, "ProBatchFeatures"))
@@ -382,6 +392,7 @@ pb_pipeline_name <- function(object, assay = pb_current_assay(object)) {
 }
 
 #' Current (latest) assay name
+#' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_current_assay <- function(object) {
     stopifnot(is(object, "ProBatchFeatures"))
@@ -488,6 +499,7 @@ pb_current_assay <- function(object) {
 
 
 #' Convenience accessor for assay matrix by name/index (returns the 'intensity' assay)
+#' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_assay_matrix <- function(object, assay = NULL, name = "intensity") {
     if (is.null(assay)) {
@@ -511,6 +523,7 @@ pb_assay_matrix <- function(object, assay = NULL, name = "intensity") {
 }
 
 #' Get current assay as LONG (via proBatch::matrix_to_long)
+#' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_as_long <- function(
     object,
@@ -542,6 +555,7 @@ pb_as_long <- function(
 }
 
 #' Get an assay matrix (wide)
+#' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensity") {
     stopifnot(is(object, "ProBatchFeatures"))
@@ -709,6 +723,9 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 #' @param store_intermediate logical; if TRUE store every step (overrides fast behavior)
 #' @param final_name optional final assay name override
 #' @param backend "memory","hdf5","auto"
+#'
+#' @example inst/examples/ProBatchFeatures-basic.R
+#'
 #' @export
 pb_transform <- function(
     object, from,
@@ -761,6 +778,15 @@ pb_transform <- function(
 }
 
 #' Evaluate a pipeline and return the matrix, without storing
+#' @param object ProBatchFeatures
+#' @param from assay name (e.g., "peptide::raw")
+#' @param steps character vector, e.g. c("log2","medianNorm","combat")
+#' @param funs optional same-length vector/list of functions/names (default: steps
+#' for registry lookup)
+#' @param params_list list of parameter lists (same length as steps)
+#' @return numeric matrix (features x samples)
+#' @example inst/examples/ProBatchFeatures-basic.R
+#'
 #' @export
 pb_eval <- function(
     object, from,
@@ -786,10 +812,13 @@ pb_eval <- function(
 # ---------------------------
 
 #' Aggregate features (e.g., peptide -> protein) and store as new level
+#' @param object ProBatchFeatures
+#' @param from assay name (e.g., "peptide::raw")
 #' @param feature_var name of a column in rowData(from) holding group labels (e.g. protein IDs)
 #' @param fun summarization function (e.g., matrixStats::colMedians), or name
 #' @param new_level new level label (e.g., "protein")
 #' @param new_pipeline optional pipeline name (default carries over from 'from')
+#' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_aggregate_level <- function(
     object, from,
@@ -821,6 +850,8 @@ pb_aggregate_level <- function(
 }
 
 #' Add a new level from an external matrix and link to an existing assay
+#' @param object ProBatchFeatures
+#' @param from assay name (e.g., "peptide::raw")
 #' @param new_matrix numeric matrix (features x samples)
 #' @param mapping_df data.frame with mapping from 'from' IDs to 'to' IDs
 #' @param from_id column in mapping_df for 'from' IDs (e.g., "Precursor.Id")
@@ -834,6 +865,7 @@ pb_aggregate_level <- function(
 #' @param backend "memory","hdf5","auto"
 #' @param hdf5_path optional filepath for HDF5Array
 #' @return ProBatchFeatures with new assay and link added
+#' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_add_level <- function(
     object,
