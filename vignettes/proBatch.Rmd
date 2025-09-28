@@ -279,7 +279,7 @@ biospecimen_id_col <- "EarTag"
 
 For illustration purposes, we will focus on one technical factor:
 
-```{r}
+```{r set_batch_col}
 batch_col <- "MS_batch"
 ```
 
@@ -419,7 +419,7 @@ example_matrix <- long_to_matrix(
 
 Additionally, if the data are expected to be log-transformed, one can:
 
-```{r}
+```{r log_transform}
 log_transformed_matrix <- log_transform_dm(
     example_matrix,
     log_base = 2, offset = 1
