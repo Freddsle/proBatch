@@ -106,65 +106,11 @@ NULL
 #' @name example_peptide_annotation
 NULL
 
-#' Example multi-center TMT proteomics (MaxQuant)
-#'
-#' A curated example dataset illustrating a typical multi-center TMT (reporter-ion)
-#' proteomics study processed with MaxQuant.
-#' Study design summary:
-#' - Three independent centers, each measured as two TMT plexes.
-#' - Per center: 10 cases (FSGS) and 10 controls, with a reference channel in each pool.
-#' - Metadata maps every TMT reporter channel to the exact quantitative column in `data`.
-#' The object is a named list of length 3
-#' (`"Center1"`, `"Center2"`, `"Center3"`). Each entry is itself a list with two elements:
-#' - `data`: A center-specific MaxQuant `proteinGroups.txt` output. Column names follow MaxQuant conventions
-#'   (`Protein.IDs`, `Gene.names`, `Fasta.headers`, etc.).
-#' - `metadata`: A `data.frame` describing the sample/channel annotation for that center.
-#'
-#' @format
-#' A named list of length 3 (`"Center1"`, `"Center2"`, `"Center3"`).
-#' For each center `x`:
-#'
-#' \describe{
-#'   \item{`example_multicenter_data[[x]]$data`}{`data.frame`. A full
-#'   MaxQuant `proteinGroups.txt` table for that center. Includes protein-level
-#'   identifiers, quantification columns such as
-#'   `Reporter.intensity.*` / `Reporter.intensity.corrected.*`, and other
-#'   MaxQuant fields. Column names are not syntactically altered
-#'   (`check.names = FALSE`).}
-#'
-#'   \item{`example_multicenter_data[[x]]$metadata`}{`data.frame`. Sample/channel
-#'   annotation with the following columns:
-#'     \itemize{
-#'       \item `Quantitative.column.name` (`character`): exact column name in
-#'             `data` that carries the corresponding TMT channel intensities.
-#'       \item `Pool` (`character`): TMT pool/batch identifier (e.g., `"Pool4"`).
-#'       \item `Reporter.ion` (`character`): isobaric tag/channel label
-#'             (e.g., `"126"`, `"127C"`, ...).
-#'       \item `Patient` (`character`): pseudonymized sample ID; `"Common Reference"`
-#'             for the reference channel.
-#'       \item `Group` (`character`): biological group (e.g., `"FSGS"`, `"Control"`,
-#'             `"Common Reference"`).
-#'       \item `Center` (`character`): `"Center1"`, `"Center2"`, or `"Center3"`.
-#'       \item `Sex` (`character`): `"f"`, `"m"`, or empty if unavailable.
-#'       \item `Age` (`integer`): age in years; may contain `NA`.
-#'     }
-#'   }
-#' }
-#'
-#' @return A named list with center-specific MaxQuant outputs and metadata.
-#' @examples
-#' data("example_multicenter_data", package = "proBatch")
-#' names(example_multicenter_data)
-#'
-#' @source PRIDE ID PXD053560
-#' @name example_multicenter_data
-NULL
-
-
 #' Example multi-center DIA LFQ E. coli proteomics (DIA-NN)
 #'
 #' An example dataset illustrating a typical multi-center DIA (data-independent acquisition)
-#' proteomics study processed with DIA-NN.
+#' proteomics study processed with DIA-NN. Subset of 400 proteins and 5000 precursors 
+#' from the PRIDE ID PXD053812.
 #' Study design summary:
 #' - Five independent centers.
 #' - Per center: 10(9) samples of E.coli grown in different media (Pyruvate vs Glucose)
