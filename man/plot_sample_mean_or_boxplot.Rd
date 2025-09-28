@@ -170,14 +170,14 @@ plot_sample_mean(example_proteome_matrix, example_sample_annotation,
     color_scheme = color_list[["MS_batch"]]
 )
 
-\donttest{
+mean_file <- tempfile("meanplot", fileext = ".png")
 mean_plot <- plot_sample_mean(example_proteome_matrix,
     example_sample_annotation,
     order_col = "order", batch_col = "MS_batch",
-    filename = "test_meanplot.png",
+    filename = mean_file,
     width = 28, height = 18, units = "cm"
 )
-}
+unlink(mean_file)
 
 data(list = c("example_proteome", "example_sample_annotation"), package = "proBatch")
 boxplot <- plot_boxplot(log_transform_df(example_proteome),
@@ -193,13 +193,13 @@ plot_boxplot(log_transform_df(example_proteome),
     sample_annotation = example_sample_annotation,
     batch_col = "MS_batch", color_scheme = color_list[["MS_batch"]]
 )
-
-\donttest{
+boxplot_file <- tempfile("boxplot", fileext = ".png")
 boxplot <- plot_boxplot(log_transform_df(example_proteome),
-sample_annotation = example_sample_annotation,
-batch_col = "MS_batch", filename = 'test_boxplot.png',
-width = 14, height = 9, units = 'in')
-}
+    sample_annotation = example_sample_annotation,
+    batch_col = "MS_batch", filename = boxplot_file,
+    width = 14, height = 9, units = "in"
+)
+unlink(boxplot_file)
 
 }
 \seealso{
