@@ -123,56 +123,19 @@ preceding and following batch effects analysis and correction.
 
 # Preparation for the analysis
 
-## Installing dependencies and `proBatch`
+## IInstallation
 
 `proBatch` is primarily a wrapper of functions from other packages,
 therefore it has numerous dependencies. If some of these dependencies
 are not installed, you will need to do that before running `proBatch`.
 
-```{r dependencies, eval = FALSE}
-# Bioconductor packages
-bioc_deps <- c("GO.db", "impute", "preprocessCore", "pvca", "sva")
-# CRAN packages
-cran_deps <- c(
-    "corrplot", "data.table", "ggplot2", "ggfortify", "lazyeval",
-    "lubridate", "pheatmap", "reshape2", "readr", "rlang",
-    "tibble", "dplyr", "tidyr", "wesanderson", "WGCNA"
-)
-
-if (!requireNamespace("BiocManager", quietly = TRUE)) {
-    install.packages("BiocManager")
-}
-# Determine which bioc packages are not installed
-missing_bioc <- bioc_deps[!bioc_deps %in% rownames(installed.packages())]
-missing_cran <- cran_deps[!cran_deps %in% rownames(installed.packages())]
-
-# Install only the missing ones
-if (length(missing_bioc) > 0) {
-    BiocManager::install(missing_bioc, ask = FALSE, update = FALSE)
-} else {
-    message("All Bioconductor dependencies are already installed.")
-}
-if (length(missing_cran) > 0) {
-    install.packages(missing_cran, dependencies = TRUE)
-} else {
-    message("All CRAN dependencies are already installed.")
-}
-```
-
-# Installation
-
-To install the latest version of proBatch package, you need `devtools`:
+To install the latest version of proBatch package, you need `BiocManager`:
 
 ```{r install_proBatch, fig.show='hold', eval = FALSE}
-# install the development version from GitHub:
-if (!requireNamespace("devtools", quietly = TRUE)) {
-    install.packages("devtools")
-}
-# if (!requireNamespace("proBatch", quietly = TRUE)) {
-#     devtools::install_github("freddsle/proBatch", build_vignettes = TRUE)
-# } else {
-#     message("proBatch is already installed.")
-# }
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("proBatch") 
+
 library(proBatch)
 ```
 
