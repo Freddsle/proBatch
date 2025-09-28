@@ -113,12 +113,12 @@ pca_plot <- plot_PCA(example_proteome_matrix, example_sample_annotation,
     color_by = "DateTime", color_scheme = color_list[["DateTime"]]
 )
 
-\donttest{
+pca_file <- tempfile("pca_plot", fileext = ".png")
 pca_plot <- plot_PCA(example_proteome_matrix, example_sample_annotation,
     color_by = "DateTime", plot_title = "PCA colored by DateTime",
-    filename = "test_PCA.png", width = 14, height = 9, units = "cm"
+    filename = pca_file, width = 14, height = 9, units = "cm"
 )
-}
+unlink(pca_file)
 
 }
 \seealso{

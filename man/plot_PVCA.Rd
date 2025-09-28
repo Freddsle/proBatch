@@ -111,13 +111,13 @@ pvca_plot <- plot_PVCA(matrix_test, example_sample_annotation,
     biological_factors = c("Diet", "Sex", "Strain")
 )
 
-\donttest{
+pvca_file <- tempfile("pvca", fileext = ".png")
 pvca_plot <- plot_PVCA(matrix_test, example_sample_annotation,
     technical_factors = c("MS_batch", "digestion_batch"),
     biological_factors = c("Diet", "Sex", "Strain"),
-    filename = "test_PVCA.png", width = 28, height = 22, units = "cm"
+    filename = pvca_file, width = 28, height = 22, units = "cm"
 )
-}
+unlink(pvca_file)
 
 }
 \seealso{

@@ -94,12 +94,12 @@ corr_distribution <- calculate_peptide_corr_distr(matrix_test,
 )
 peptide_corr_distribution <- plot_peptide_corr_distribution.corrDF(corr_distribution)
 
-\donttest{
+peptide_corr_file <- tempfile("peptide_corr", fileext = ".png")
 peptide_corr_distribution <- plot_peptide_corr_distribution.corrDF(corr_distribution,
-    filename = "test_peptide.png",
+    filename = peptide_corr_file,
     width = 28, height = 28, units = "cm"
 )
-}
+unlink(peptide_corr_file)
 
 }
 \seealso{
