@@ -6,7 +6,7 @@ test_that("corr_matrix_plots", {
     corr_matrix <- cor(t(matrix_test), use = "complete.obs")
     expect_warning(
         corr_matrix_pheatmap <- plot_corr_matrix(corr_matrix),
-        "annotation_row and annotation_col are not specified for heatmap"
+        "annotation_row and / or annotation_col are not specified for heatmap"
     )
     expect_s3_class(corr_matrix_pheatmap, "pheatmap")
     expect_equal(corr_matrix_pheatmap$gtable$layout$name[4], "legend", ignore_attr = TRUE)
@@ -22,7 +22,7 @@ test_that("protein_corrplot_plots", {
             sample_annotation = example_peptide_annotation,
             factor_columns = "Gene"
         ),
-        "The following columns will not be mapped to colors: peptide_group_label ProteinName ;"
+        "The following columns will not be mapped to colors: peptide_group_label, ProteinName"
     )
 
     corrplot <- plot_protein_corrplot(
@@ -51,12 +51,16 @@ test_that("sample_corr_heatmap", {
         which(example_sample_annotation$order %in% 110:115)
     ]
 
-    expect_warning(sample_heatmap <- plot_sample_corr_heatmap(example_proteome_matrix,
-        samples_to_plot = specified_samples,
-        cluster_rows = TRUE, cluster_cols = TRUE,
-        annotation_names_col = TRUE, annotation_legend = FALSE,
-        show_colnames = FALSE
-    ))
+    expect_warning(
+        sample_heatmap <- plot_sample_corr_heatmap(
+            example_proteome_matrix,
+            samples_to_plot = specified_samples,
+            cluster_rows = TRUE, cluster_cols = TRUE,
+            annotation_names_col = TRUE, annotation_legend = FALSE,
+            show_colnames = FALSE
+        ),
+        "annotation_row and / or annotation_col are not specified for heatmap"
+    )
 
     expect_equal(sample_heatmap$tree_row$method, "complete", ignore_attr = TRUE)
     expect_equal(sample_heatmap$tree_row$dist.method, "euclidean", ignore_attr = TRUE)
@@ -85,8 +89,8 @@ test_that("sample_distribution_plot", {
         plot_param = "batch_replicate"
     )
 
-    expect_equal(sample_dist$labels$x, "batch_replicate", ignore_attr = TRUE)
-    expect_equal(sample_dist$labels$y, "correlation", ignore_attr = TRUE)
+    expect_equal(as_label(sample_dist$mapping$x), "batch_replicate", ignore_attr = TRUE)
+    expect_equal(as_label(sample_dist$mapping$y), "correlation", ignore_attr = TRUE)
 
     expect_s3_class(sample_dist$plot_env$corr_distribution, "data.frame")
     expect_equal(sample_dist$plot_env$plot_param, "batch_replicate", ignore_attr = TRUE)
@@ -129,8 +133,8 @@ test_that("peptide_distribution_plots", {
         protein_col = "Gene"
     )
 
-    expect_equal(peptide_dist$labels$x, NULL, ignore_attr = TRUE)
-    expect_equal(peptide_dist$labels$y, "correlation", ignore_attr = TRUE)
+    expect_equal(as_label(peptide_dist$mapping$x), "same_protein", ignore_attr = TRUE)
+    expect_equal(as_label(peptide_dist$mapping$y), "correlation", ignore_attr = TRUE)
 
     expect_s3_class(peptide_dist$plot_env$corr_distribution, "data.frame")
     expect_equal(peptide_dist$plot_env$median_same_prot, 0.7337642, tolerance = 1e-6)

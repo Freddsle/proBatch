@@ -2,9 +2,11 @@
 % Please edit documentation in R/proteome_wide_diagnostics.R
 \name{plot_PVCA}
 \alias{plot_PVCA}
+\alias{plot_PVCA.default}
+\alias{plot_PVCA.ProBatchFeatures}
 \title{Plot variance distribution by variable}
 \usage{
-plot_PVCA(
+\method{plot_PVCA}{default}(
   data_matrix,
   sample_annotation,
   feature_id_col = "peptide_group_label",
@@ -21,7 +23,19 @@ plot_PVCA(
   units = c("cm", "in", "mm"),
   plot_title = NULL,
   theme = "classic",
-  base_size = 20
+  base_size = 15
+)
+
+\method{plot_PVCA}{ProBatchFeatures}(
+  x,
+  pbf_name = NULL,
+  sample_annotation = NULL,
+  feature_id_col = "peptide_group_label",
+  sample_id_col = "FullRunName",
+  plot_title = NULL,
+  return_gridExtra = FALSE,
+  plot_ncol = NULL,
+  ...
 )
 }
 \arguments{

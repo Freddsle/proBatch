@@ -2,14 +2,17 @@
 % Please edit documentation in R/proteome_wide_diagnostics.R
 \name{plot_PCA}
 \alias{plot_PCA}
+\alias{plot_PCA.default}
+\alias{plot_PCA.ProBatchFeatures}
 \title{plot PCA plot}
 \usage{
-plot_PCA(
+\method{plot_PCA}{default}(
   data_matrix,
   sample_annotation,
   feature_id_col = "peptide_group_label",
   sample_id_col = "FullRunName",
   color_by = "MS_batch",
+  shape_by = NULL,
   PC_to_plot = c(1, 2),
   fill_the_missing = -1,
   color_scheme = "brewer",
@@ -19,7 +22,20 @@ plot_PCA(
   units = c("cm", "in", "mm"),
   plot_title = NULL,
   theme = "classic",
-  base_size = 20
+  base_size = 10,
+  point_size = 3,
+  point_alpha = 0.8
+)
+
+\method{plot_PCA}{ProBatchFeatures}(
+  x,
+  pbf_name = NULL,
+  sample_annotation = NULL,
+  sample_id_col = "FullRunName",
+  plot_title = NULL,
+  return_gridExtra = FALSE,
+  plot_ncol = NULL,
+  ...
 )
 }
 \arguments{

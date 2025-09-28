@@ -20,10 +20,10 @@ GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin,
             "x"
         ] <- round(newdata[1, "x"])
 
-        if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
+        if (length(draw_quantiles) > 0 & !zero_range(range(data$y))) {
             stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <=
                 1))
-            quantiles <- ggplot2:::create_quantile_segment_frame(
+            quantiles <- create_quantile_segment_frame(
                 data,
                 draw_quantiles
             )
@@ -39,7 +39,7 @@ GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin,
             )
             ggplot2:::ggname(
                 "geom_split_violin",
-                grid::grobTree(GeomPolygon$draw_panel(
+                grobTree(GeomPolygon$draw_panel(
                     newdata,
                     ...
                 ), quantile_grob)
@@ -105,6 +105,8 @@ plot_split_violin_with_boxplot <- function(
             position = "dodge", width = 0.2,
             outlier.shape = NA, coef = 0
         )
+
+    p <- p + labs(x = col_for_box, y = y_col, fill = col_for_color)
     if (!is.null(colors_for_plot)) {
         p <- p + scale_fill_manual(values = colors_for_plot)
     }

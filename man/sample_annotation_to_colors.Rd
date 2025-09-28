@@ -2,9 +2,11 @@
 % Please edit documentation in R/colors_for_annotation.R
 \name{sample_annotation_to_colors}
 \alias{sample_annotation_to_colors}
+\alias{sample_annotation_to_colors.default}
+\alias{sample_annotation_to_colors.ProBatchFeatures}
 \title{Generate colors for sample annotation}
 \usage{
-sample_annotation_to_colors(
+\method{sample_annotation_to_colors}{default}(
   sample_annotation,
   sample_id_col = "FullRunName",
   factor_columns = NULL,
@@ -13,6 +15,10 @@ sample_annotation_to_colors(
   guess_factors = FALSE,
   numeric_palette_type = "brewer"
 )
+
+\method{sample_annotation_to_colors}{ProBatchFeatures}(x, ...)
+
+sample_annotation_to_colors(x, ...)
 }
 \arguments{
 \item{sample_annotation}{data frame with:

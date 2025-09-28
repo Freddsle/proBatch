@@ -99,7 +99,9 @@
 #' @import ggplot2
 #' @import reshape2
 #' @import lazyeval
+#' @import QFeatures
 #' @importFrom corrplot corrplot.mixed
+#' @importFrom data.table setnames
 #' @importFrom grDevices colorRampPalette
 #' @importFrom grDevices png pdf dev.off
 #' @importFrom lubridate is.POSIXct
@@ -107,24 +109,40 @@
 #' @importFrom pheatmap pheatmap
 #' @importFrom preprocessCore normalize.quantiles
 #' @importFrom pvca pvcaBatchAssess
-#' @importFrom purrr pmap negate map
+#' @importFrom purrr pmap negate map compact
 #' @importFrom RColorBrewer brewer.pal brewer.pal.info
 #' @importFrom rlang :=
 #' @importFrom rlang !!
 #' @importFrom rlang !!!
 #' @importFrom rlang sym syms
+#' @importFrom rlang .data as_label get_expr
+#' @importFrom limma removeBatchEffect
 #' @importFrom sva ComBat
 #' @importFrom tidyr complete nest unnest
-#' @importFrom utils combn
-#' @importFrom scales brewer_pal
+#' @importFrom utils combn tail head
+#' @importFrom scales brewer_pal zero_range
 #' @importFrom stats as.formula complete.cases cor dist hclust sd
 #' @importFrom stats ksmooth loess median
 #' @importFrom stats model.matrix prcomp predict reformulate setNames
 #' @importFrom tibble remove_rownames rownames_to_column column_to_rownames
+#' @importFrom tibble tibble
 #' @importFrom tools file_ext
+#' @importFrom methods is setClass setValidity new setMethod callNextMethod
 #' @importFrom viridis viridis_pal
 #' @importFrom wesanderson wes_palettes
 #' @importFrom WGCNA plotDendroAndColors standardColors
+#' @importFrom gridExtra grid.arrange arrangeGrob
+#' @importFrom grid grid.newpage grid.draw grobTree
+#' @importFrom ggplotify as.ggplot
+#' @importFrom SummarizedExperiment SummarizedExperiment colData rowData assay
+#' @importFrom S4Vectors DataFrame rbind metadata
+#' @importFrom matrixStats rowMedians colMedians
+#' @importFrom Biobase AnnotatedDataFrame ExpressionSet
+#'
+#' @examples
+#' if (interactive()) {
+#'     browseVignettes(package = "proBatch")
+#' }
 #'
 #' @docType package
 #' @name proBatch

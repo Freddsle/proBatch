@@ -22,7 +22,7 @@ merge_df_with_annotation <- function(df_long, sample_annotation, sample_id_col,
             select(-all_of(common_cols))
     }
 
-    message("Merging data matrix and sample annotation")
+    # message("Merging data matrix and sample annotation")
     df_long <- df_long %>%
         inner_join(sample_annotation, by = join_cols) %>%
         as.data.frame()
@@ -72,13 +72,13 @@ check_sample_consistency <- function(sample_annotation, sample_id_col, df_long,
 
     # Check for duplicated IDs
     dup_ann <- duplicated(sample_annotation[[sample_id_col]])
-    dup_df <- duplicated(df_long[[sample_id_col]])
+    # dup_df <- duplicated(df_long[[sample_id_col]])
     if (any(dup_ann)) {
         warning("Duplicated sample IDs in sample_annotation.")
     }
-    if (any(dup_df)) {
-        message("Duplicated sample IDs in df_long.")
-    }
+    # if (any(dup_df)) {
+    #     message("Duplicated sample IDs in df_long.")
+    # }
 
     # Consistency check
     ids_ann <- unique(sample_annotation[[sample_id_col]])
@@ -351,9 +351,7 @@ check_feature_id_col_in_dm <- function(feature_id_col, data_matrix,
         if (feature_id_col %in% colnames(data_matrix)) {
             if (is.data.frame(data_matrix) && !issue_reported) {
                 warning(sprintf(
-                    "feature_id_col with name %s in data matrix instead of rownames,
-          this might cause errors in other diagnostic functions,
-          assign values of this column to rowname and remove from the data frame!",
+                    "feature_id_col '%s' detected as a data-matrix column; set row names from this column and remove it to avoid downstream issues.",
                     feature_id_col
                 ))
                 issue_reported <- TRUE
@@ -389,6 +387,9 @@ is_batch_factor <- function(batch_vector, color_scheme) {
 #' @param minimal_cols columns to keep when `keep_all = "minimal"`
 #'
 #' @return data frame with selected columns
+#' @examples
+#' df <- data.frame(a = 1:3, b = 4:6, c = 7:9)
+#' subset_keep_cols(df, keep_all = "minimal", minimal_cols = c("a", "c"))
 #' @keywords internal
 #'
 subset_keep_cols <- function(df, keep_all = "default",
@@ -402,8 +403,8 @@ subset_keep_cols <- function(df, keep_all = "default",
     minimal_cols <- intersect(minimal_cols, names(df))
     df <- switch(keep_all,
         all = df,
-        default = dplyr::select(df, dplyr::all_of(default_cols)),
-        minimal = dplyr::select(df, dplyr::all_of(minimal_cols))
+        default = select(df, all_of(default_cols)),
+        minimal = select(df, all_of(minimal_cols))
     )
     return(df)
 }

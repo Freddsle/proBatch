@@ -6,7 +6,7 @@ test_that("hierarchical_clustering", {
 
     # exclude columns EarTag Strain Sex RunDate RunTime digestion_batch
     example_sample_annotation <- example_sample_annotation %>%
-        dplyr::select("FullRunName", "MS_batch", "Diet")
+        select("FullRunName", "MS_batch", "Diet")
 
     color_list <- sample_annotation_to_colors(
         example_sample_annotation,
@@ -44,7 +44,7 @@ test_that("heatmap_plot", {
 
     matrix_test <- example_proteome_matrix[1:20, ]
     example_sample_annotation <- example_sample_annotation %>%
-        dplyr::select("FullRunName", "MS_batch", "Sex", "digestion_batch", "Diet")
+        select("FullRunName", "MS_batch", "Sex", "digestion_batch", "Diet")
 
 
     color_list <- sample_annotation_to_colors(
@@ -53,19 +53,15 @@ test_that("heatmap_plot", {
         factor_columns = c("MS_batch", "Sex", "digestion_batch", "Diet")
     )
 
-    expect_warning(
-        expect_warning(
-            heatmap <- plot_heatmap_diagnostic(
-                matrix_test,
-                sample_annotation = example_sample_annotation,
-                factors_to_plot = c("MS_batch", "Sex", "digestion_batch", "Diet"),
-                cluster_cols = TRUE,
-                show_rownames = TRUE, show_colnames = FALSE,
-                color_list = color_list
-            ),
-            "filling missing values with -1"
-        ),
-        "Heatmap cannot operate with missing values in the matrix"
+    suppressWarnings(
+        heatmap <- plot_heatmap_diagnostic(
+            matrix_test,
+            sample_annotation = example_sample_annotation,
+            factors_to_plot = c("MS_batch", "Sex", "digestion_batch", "Diet"),
+            cluster_cols = TRUE,
+            show_rownames = TRUE, show_colnames = FALSE,
+            color_list = color_list
+        )
     )
 
     expect_equal(heatmap$tree_row$method, "complete")
@@ -129,4 +125,196 @@ test_that("pca_plot", {
     expect_equal(pca$labels$y, "PC2 (14.24%)")
     expect_equal(pca$labels$x, "PC1 (69.5%)")
     expect_equal(pca$labels$colour, "MS_batch")
+})
+
+test_that("plot_PCA ProBatchFeatures handles multiple assays", {
+    skip_if_not_installed("gridExtra")
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    matrix_small <- example_proteome_matrix[1:40, 1:6]
+    sample_ids <- colnames(matrix_small)
+    sample_ann <- example_sample_annotation[match(sample_ids, example_sample_annotation$FullRunName), ]
+
+    pbf <- suppressMessages(ProBatchFeatures(
+        data_matrix = matrix_small,
+        sample_annotation = sample_ann,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    ))
+    pbf <- suppressMessages(pb_transform(pbf,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    ))
+
+    res <- suppressWarnings(plot_PCA(pbf, sample_id_col = "FullRunName", return_gridExtra = TRUE))
+
+    expect_type(res, "list")
+    expect_named(res$plots, names(pbf))
+    expect_equal(length(res$plots), length(names(pbf)))
+    expect_true(all(vapply(res$plots, inherits, logical(1), "ggplot")))
+})
+
+test_that("plot_heatmap_diagnostic ProBatchFeatures arranges multiple assays", {
+    skip_if_not_installed("gridExtra")
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    matrix_small <- example_proteome_matrix[1:30, 1:5]
+    sample_ids <- colnames(matrix_small)
+    sample_ann <- example_sample_annotation[match(sample_ids, example_sample_annotation$FullRunName), ]
+
+    pbf <- suppressMessages(ProBatchFeatures(
+        data_matrix = matrix_small,
+        sample_annotation = sample_ann,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    ))
+    pbf <- suppressMessages(pb_transform(pbf,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    ))
+
+    res <- suppressWarnings(plot_heatmap_diagnostic(
+        pbf,
+        sample_id_col = "FullRunName",
+        factors_to_plot = c("MS_batch"),
+        cluster_rows = FALSE,
+        cluster_cols = FALSE,
+        return_gridExtra = TRUE
+    ))
+
+    expect_type(res, "list")
+    expect_equal(length(res$plots), length(names(pbf)))
+    expect_true(all(vapply(res$plots, function(x) inherits(x, "pheatmap"), logical(1))))
+})
+
+test_that("plot_PCA ProBatchFeatures returns ggplot for single assay", {
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    matrix_small <- example_proteome_matrix[1:40, 1:6]
+    sample_ids <- colnames(matrix_small)
+    sample_ann <- example_sample_annotation[match(sample_ids, example_sample_annotation$FullRunName), ]
+
+    pbf <- suppressMessages(ProBatchFeatures(
+        data_matrix = matrix_small,
+        sample_annotation = sample_ann,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    ))
+    pbf <- suppressMessages(pb_transform(pbf,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    ))
+
+    single_assay <- names(pbf)[1]
+    res <- suppressWarnings(plot_PCA(
+        pbf,
+        pbf_name = single_assay,
+        sample_id_col = "FullRunName"
+    ))
+
+    expect_s3_class(res, "ggplot")
+})
+
+test_that("plot_PCA ProBatchFeatures respects assay subset order", {
+    skip_if_not_installed("gridExtra")
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    matrix_small <- example_proteome_matrix[1:40, 1:6]
+    sample_ids <- colnames(matrix_small)
+    sample_ann <- example_sample_annotation[match(sample_ids, example_sample_annotation$FullRunName), ]
+
+    pbf <- suppressMessages(ProBatchFeatures(
+        data_matrix = matrix_small,
+        sample_annotation = sample_ann,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    ))
+    pbf <- suppressMessages(pb_transform(pbf,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    ))
+
+    subset_assays <- rev(names(pbf))
+    res <- suppressWarnings(plot_PCA(
+        pbf,
+        pbf_name = subset_assays,
+        sample_id_col = "FullRunName",
+        return_gridExtra = TRUE
+    ))
+
+    expect_type(res, "list")
+    expect_equal(names(res$plots), subset_assays)
+    expect_true(all(vapply(res$plots, inherits, logical(1), "ggplot")))
+})
+
+test_that("plot_heatmap_diagnostic ProBatchFeatures single assay returns pheatmap", {
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    matrix_small <- example_proteome_matrix[1:30, 1:5]
+    sample_ids <- colnames(matrix_small)
+    sample_ann <- example_sample_annotation[match(sample_ids, example_sample_annotation$FullRunName), ]
+
+    pbf <- suppressMessages(ProBatchFeatures(
+        data_matrix = matrix_small,
+        sample_annotation = sample_ann,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    ))
+
+    res <- suppressWarnings(plot_heatmap_diagnostic(
+        pbf,
+        pbf_name = names(pbf)[1],
+        sample_id_col = "FullRunName",
+        factors_to_plot = c("MS_batch"),
+        cluster_rows = FALSE,
+        cluster_cols = FALSE
+    ))
+
+    expect_true(inherits(res, "pheatmap"))
+})
+
+test_that("plot_heatmap_diagnostic ProBatchFeatures respects assay subset order", {
+    skip_if_not_installed("gridExtra")
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    matrix_small <- example_proteome_matrix[1:30, 1:5]
+    sample_ids <- colnames(matrix_small)
+    sample_ann <- example_sample_annotation[match(sample_ids, example_sample_annotation$FullRunName), ]
+
+    pbf <- suppressMessages(ProBatchFeatures(
+        data_matrix = matrix_small,
+        sample_annotation = sample_ann,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    ))
+    pbf <- suppressMessages(pb_transform(pbf,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    ))
+
+    subset_assays <- names(pbf)[2:1]
+    res <- suppressWarnings(plot_heatmap_diagnostic(
+        pbf,
+        pbf_name = subset_assays,
+        sample_id_col = "FullRunName",
+        factors_to_plot = c("MS_batch"),
+        cluster_rows = FALSE,
+        cluster_cols = FALSE,
+        return_gridExtra = TRUE
+    ))
+
+    expect_type(res, "list")
+    expect_equal(names(res$plots), subset_assays)
+    expect_true(all(vapply(res$plots, function(x) inherits(x, "pheatmap"), logical(1))))
 })

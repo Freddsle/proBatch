@@ -5,16 +5,34 @@
 \alias{log_transform_df}
 \alias{unlog_df}
 \alias{log_transform_dm}
+\alias{log_transform_dm.default}
+\alias{log_transform_dm.ProBatchFeatures}
 \alias{unlog_dm}
+\alias{unlog_dm.default}
+\alias{unlog_dm.ProBatchFeatures}
 \title{Functions to log transform raw data before normalization and batch correction}
 \usage{
 log_transform_df(df_long, log_base = 2, offset = 1, measure_col = "Intensity")
 
 unlog_df(df_long, log_base = 2, offset = 1, measure_col = "Intensity")
 
-log_transform_dm(data_matrix, log_base = 2, offset = 1)
+log_transform_dm(x, ...)
 
-unlog_dm(data_matrix, log_base = 2, offset = 1)
+\method{log_transform_dm}{default}(data_matrix, log_base = 2, offset = 1)
+
+\method{log_transform_dm}{ProBatchFeatures}(
+  x,
+  log_base = 2,
+  offset = 1,
+  pbf_name = NULL,
+  final_name = NULL
+)
+
+unlog_dm(x, ...)
+
+\method{unlog_dm}{default}(data_matrix, log_base = 2, offset = 1)
+
+\method{unlog_dm}{ProBatchFeatures}(x, log_base = 2, offset = 1, pbf_name = NULL, final_name = NULL)
 }
 \arguments{
 \item{df_long}{data frame where each row is a single feature in a single
@@ -45,9 +63,11 @@ called "beforeLog_intensity" if "intensity" was the value of
 \description{
 Functions to log transform raw data before normalization and batch correction
 
-Log transformation of the data
+Log transformation of the data long format.
 
 "Unlog" transformation of the data to pre-log form (for quantification, forcing log-transform)
+
+Log transformation of the data matrix format.
 }
 \examples{
 data(list = c("example_proteome", "example_proteome_matrix"), package = "proBatch")

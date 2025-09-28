@@ -2,9 +2,11 @@
 % Please edit documentation in R/proteome_wide_diagnostics.R
 \name{plot_heatmap_diagnostic}
 \alias{plot_heatmap_diagnostic}
+\alias{plot_heatmap_diagnostic.default}
+\alias{plot_heatmap_diagnostic.ProBatchFeatures}
 \title{Plot the heatmap of samples (cols) vs features (rows)}
 \usage{
-plot_heatmap_diagnostic(
+\method{plot_heatmap_diagnostic}{default}(
   data_matrix,
   sample_annotation = NULL,
   sample_id_col = "FullRunName",
@@ -16,14 +18,27 @@ plot_heatmap_diagnostic(
   cluster_cols = FALSE,
   color_list = NULL,
   peptide_annotation = NULL,
-  feature_id_col = "peptide_group_label",
-  factors_of_feature_ann = c("KEGG_pathway", "evolutionary_distance"),
+  feature_id_col = NULL,
+  factors_of_feature_ann = NULL,
   color_list_features = NULL,
   filename = NULL,
   width = 7,
   height = 7,
   units = c("cm", "in", "mm"),
   plot_title = NULL,
+  ...
+)
+
+\method{plot_heatmap_diagnostic}{ProBatchFeatures}(
+  x,
+  pbf_name = NULL,
+  sample_annotation = NULL,
+  sample_id_col = "FullRunName",
+  peptide_annotation = NULL,
+  feature_id_col = "peptide_group_label",
+  plot_title = NULL,
+  return_gridExtra = FALSE,
+  plot_ncol = NULL,
   ...
 )
 }

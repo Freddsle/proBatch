@@ -2,9 +2,11 @@
 % Please edit documentation in R/proteome_wide_diagnostics.R
 \name{prepare_PVCA_df}
 \alias{prepare_PVCA_df}
+\alias{prepare_PVCA_df.default}
+\alias{prepare_PVCA_df.ProBatchFeatures}
 \title{prepare the weights of Principal Variance Components}
 \usage{
-prepare_PVCA_df(
+\method{prepare_PVCA_df}{default}(
   data_matrix,
   sample_annotation,
   feature_id_col = "peptide_group_label",
@@ -14,6 +16,15 @@ prepare_PVCA_df(
   fill_the_missing = -1,
   pca_threshold = 0.6,
   variance_threshold = 0.01
+)
+
+\method{prepare_PVCA_df}{ProBatchFeatures}(
+  x,
+  pbf_name = NULL,
+  sample_annotation = NULL,
+  feature_id_col = "peptide_group_label",
+  sample_id_col = "FullRunName",
+  ...
 )
 }
 \arguments{

@@ -2,9 +2,11 @@
 % Please edit documentation in R/proteome_wide_diagnostics.R
 \name{plot_heatmap_generic}
 \alias{plot_heatmap_generic}
+\alias{plot_heatmap_generic.default}
+\alias{plot_heatmap_generic.ProBatchFeatures}
 \title{Plot the heatmap}
 \usage{
-plot_heatmap_generic(
+\method{plot_heatmap_generic}{default}(
   data_matrix,
   column_annotation_df = NULL,
   row_annotation_df = NULL,
@@ -24,6 +26,19 @@ plot_heatmap_generic(
   height = 7,
   units = c("cm", "in", "mm"),
   plot_title = NULL,
+  ...
+)
+
+\method{plot_heatmap_generic}{ProBatchFeatures}(
+  x,
+  pbf_name = NULL,
+  column_annotation_df = NULL,
+  row_annotation_df = NULL,
+  col_ann_id_col = NULL,
+  row_ann_id_col = NULL,
+  plot_title = NULL,
+  return_gridExtra = FALSE,
+  plot_ncol = NULL,
   ...
 )
 }

@@ -2,9 +2,11 @@
 % Please edit documentation in R/proteome_wide_diagnostics.R
 \name{plot_hierarchical_clustering}
 \alias{plot_hierarchical_clustering}
+\alias{plot_hierarchical_clustering.default}
+\alias{plot_hierarchical_clustering.ProBatchFeatures}
 \title{cluster the data matrix to visually inspect which confounder dominates}
 \usage{
-plot_hierarchical_clustering(
+\method{plot_hierarchical_clustering}{default}(
   data_matrix,
   sample_annotation,
   sample_id_col = "FullRunName",
@@ -19,6 +21,15 @@ plot_hierarchical_clustering(
   width = 38,
   height = 25,
   units = c("cm", "in", "mm"),
+  plot_title = NULL,
+  ...
+)
+
+\method{plot_hierarchical_clustering}{ProBatchFeatures}(
+  x,
+  pbf_name = NULL,
+  sample_annotation = NULL,
+  sample_id_col = "FullRunName",
   plot_title = NULL,
   ...
 )

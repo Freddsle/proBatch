@@ -13,8 +13,8 @@ test_that("single_feature_plot", {
 
     expect_equal(single_feature$plot_env$feature_name, "46213_NVGVSFYADKPEVTQEQK_2")
 
-    expect_equal(single_feature$labels$x, "order")
-    expect_equal(single_feature$labels$y, "Intensity")
+    expect_equal(as_label(single_feature$mapping$x), "order")
+    expect_equal(as_label(single_feature$mapping$y), "Intensity")
 
     expect_equal(single_feature$plot_env$batch_col, "MS_batch")
     expect_equal(single_feature$plot_env$color_by_batch, FALSE)
@@ -34,7 +34,7 @@ test_that("peptides_of_one_protein_plot", {
             sample_id_col = "FullRunName",
             factor_columns = c("MS_batch", "Diet")
         ),
-        "EarTag Strain Sex RunDate RunTime digestion_batch "
+        "The following columns will not be mapped to colors: EarTag, Strain, Sex, RunDate, RunTime, digestion_batch;"
     )
 
     expect_warning(
@@ -54,8 +54,8 @@ test_that("peptides_of_one_protein_plot", {
     expect_equal(peptides_plot$plot_env$feature_name[1], "10231_QDVDVWLWQQEGSSK_2")
     expect_equal(peptides_plot$plot_env$feature_name[2], "10768_RLESELDGLR_2")
 
-    expect_equal(peptides_plot$labels$x, "order")
-    expect_equal(peptides_plot$labels$y, "Intensity")
+    expect_equal(as_label(peptides_plot$mapping$x), "order")
+    expect_equal(as_label(peptides_plot$mapping$y), "Intensity")
 
     expect_equal(peptides_plot$plot_env$batch_col, "MS_batch")
     expect_equal(peptides_plot$plot_env$color_by_batch, TRUE)
@@ -81,8 +81,8 @@ test_that("spike_in_peptides_plot", {
     expect_equal(spike_in$plot_env$feature_name[1], "10062_NVGVSFYADKPEVTQEQK_3")
     expect_equal(spike_in$plot_env$feature_name[2], "10063_NVGVSFYADKPEVTQEQKK_3")
 
-    expect_equal(spike_in$labels$x, "order")
-    expect_equal(spike_in$labels$y, "Intensity")
+    expect_equal(as_label(spike_in$mapping$x), "order")
+    expect_equal(as_label(spike_in$mapping$y), "Intensity")
 
     expect_equal(spike_in$plot_env$batch_col, "MS_batch")
     expect_equal(spike_in$plot_env$color_by_batch, FALSE)
@@ -110,8 +110,8 @@ test_that("iRT_peptides_plot", {
     expect_equal(iRT$plot_env$feature_name[1], "1146_ADVTPADFSEWSK_3")
     expect_equal(iRT$plot_env$feature_name[2], "12476_TPVISGGPYEYR_2")
 
-    expect_equal(iRT$labels$x, "order")
-    expect_equal(iRT$labels$y, "Intensity")
+    expect_equal(as_label(iRT$mapping$x), "order")
+    expect_equal(as_label(iRT$mapping$y), "Intensity")
 
     expect_equal(iRT$plot_env$batch_col, "MS_batch")
     expect_equal(iRT$plot_env$color_by_batch, FALSE)
@@ -145,8 +145,8 @@ test_that("fitting_trend_plots", {
 
     expect_equal(fit_plot$plot_env$feature_name[1], "10062_NVGVSFYADKPEVTQEQK_3")
 
-    expect_equal(fit_plot$labels$x, "order")
-    expect_equal(fit_plot$labels$y, "Intensity")
+    expect_equal(as_label(fit_plot$mapping$x), "order")
+    expect_equal(as_label(fit_plot$mapping$y), "Intensity")
 
     expect_equal(fit_plot$plot_env$batch_col, "MS_batch")
     expect_equal(fit_plot$plot_env$color_by_batch, FALSE)

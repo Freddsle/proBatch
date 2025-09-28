@@ -46,20 +46,21 @@
 #' )
 #' }
 #'
-plot_sample_mean <- function(data_matrix, sample_annotation,
-                             sample_id_col = "FullRunName",
-                             batch_col = "MS_batch",
-                             color_by_batch = FALSE,
-                             color_scheme = "brewer",
-                             order_col = "order",
-                             vline_color = "grey",
-                             facet_col = NULL,
-                             filename = NULL, width = NA, height = NA,
-                             units = c("cm", "in", "mm"),
-                             plot_title = NULL,
-                             theme_name = c("classic", "minimal", "bw", "light", "dark"),
-                             base_size = 20,
-                             ylimits = NULL) {
+plot_sample_mean.default <- function(data_matrix, sample_annotation,
+                                     sample_id_col = "FullRunName",
+                                     batch_col = "MS_batch",
+                                     color_by_batch = FALSE,
+                                     color_scheme = "brewer",
+                                     order_col = "order",
+                                     vline_color = "grey",
+                                     facet_col = NULL,
+                                     filename = NULL, width = NA, height = NA,
+                                     units = c("cm", "in", "mm"),
+                                     plot_title = NULL,
+                                     theme_name = c("classic", "minimal", "bw", "light", "dark"),
+                                     base_size = 20,
+                                     ylimits = NULL,
+                                     pbf_name = NULL) {
     # stop early if sample_annotation missing
     if (is.null(sample_annotation)) {
         stop("`sample_annotation` must be provided.")
@@ -95,6 +96,10 @@ plot_sample_mean <- function(data_matrix, sample_annotation,
             message("batches cannot be colored as the batch column or sample ID column
                     is not defined, check sample_annotation and data matrix")
             stop("Batch column '", batch_col, "' not found in data.")
+        }
+        # if coloring by batch is true and color scheme is df and contains column with name of batch_col, keep only this column
+        if (color_by_batch && (batch_col %in% names(color_scheme))) {
+            color_scheme <- color_scheme[[batch_col]]
         }
     } else if (color_by_batch) {
         message("batches cannot be colored as the batch column is defined as NULL,
@@ -140,6 +145,13 @@ plot_sample_mean <- function(data_matrix, sample_annotation,
         sample_annotation = df_ave,
         fill_or_color = "color"
     )
+
+    axis_x_label <- if (!is.null(order_col)) {
+        order_col
+    } else {
+        sample_id_col
+    }
+    gg <- gg + labs(x = axis_x_label, y = "Mean_Intensity")
 
     # add vertical lines, if required (for order-related effects)
     if (!is.null(batch_col)) {
@@ -243,20 +255,21 @@ plot_sample_mean <- function(data_matrix, sample_annotation,
 #' width = 14, height = 9, units = 'in')
 #' }
 #'
-plot_boxplot <- function(df_long, sample_annotation,
-                         sample_id_col = "FullRunName",
-                         measure_col = "Intensity",
-                         batch_col = "MS_batch",
-                         color_by_batch = TRUE,
-                         color_scheme = "brewer",
-                         order_col = "order",
-                         facet_col = NULL,
-                         filename = NULL, width = NA, height = NA,
-                         units = c("cm", "in", "mm"),
-                         plot_title = NULL,
-                         theme_name = c("classic", "minimal", "bw", "light", "dark"),
-                         base_size = 20,
-                         ylimits = NULL, outliers = TRUE) {
+plot_boxplot.default <- function(df_long, sample_annotation,
+                                 sample_id_col = "FullRunName",
+                                 measure_col = "Intensity",
+                                 batch_col = "MS_batch",
+                                 color_by_batch = TRUE,
+                                 color_scheme = "brewer",
+                                 order_col = "order",
+                                 facet_col = NULL,
+                                 filename = NULL, width = NA, height = NA,
+                                 units = c("cm", "in", "mm"),
+                                 plot_title = NULL,
+                                 theme_name = c("classic", "minimal", "bw", "light", "dark"),
+                                 base_size = 20,
+                                 ylimits = NULL, outliers = TRUE,
+                                 pbf_name = NULL) {
     # Validate inputs
     if (is.null(sample_annotation)) {
         stop("`sample_annotation` must be provided.")
@@ -279,6 +292,10 @@ plot_boxplot <- function(df_long, sample_annotation,
                     is not defined, check sample_annotation and data matrix")
             stop("Batch column '", batch_col, "' not found in data.")
         }
+        # if coloring by batch is true and color scheme is df and contains column with name of batch_col, keep only this column
+        if (color_by_batch && (batch_col %in% names(color_scheme))) {
+            color_scheme <- color_scheme[[batch_col]]
+        }
     } else if (color_by_batch) {
         message("batches cannot be colored as the batch column is defined as NULL,
             continuing without colors")
@@ -296,8 +313,10 @@ plot_boxplot <- function(df_long, sample_annotation,
         stop(sprintf("Faceting column '%s' not found in data.", facet_col))
     }
 
+    order_col_name <- order_col
     # Defining sample order for plotting (even if order_col NULL,
     # it will re-arrange df_long levels as required for plotting)
+    # Defining sample order for plotting
     sample_order <- define_sample_order(
         order_col, sample_annotation, facet_col,
         batch_col, df_long,
@@ -335,6 +354,15 @@ plot_boxplot <- function(df_long, sample_annotation,
         fill_or_color = "fill"
     )
 
+    axis_x_label <- if (!is.null(order_col_name)) {
+        order_col_name
+    } else if (!is.null(order_col)) {
+        order_col
+    } else {
+        sample_id_col
+    }
+    gg <- gg + labs(x = axis_x_label, y = measure_col)
+
     # Plot each "facet factor" in it's own subplot
     if (!is.null(facet_col)) {
         gg <- gg + facet_wrap(as.formula(paste("~", facet_col)),
@@ -345,6 +373,9 @@ plot_boxplot <- function(df_long, sample_annotation,
     # Add the title
     if (!is.null(plot_title)) {
         gg <- gg + ggtitle(plot_title) +
+            theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 16))
+    } else if (!is.null(pbf_name)) {
+        gg <- gg + ggtitle(pbf_name) +
             theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 16))
     }
 
@@ -403,3 +434,99 @@ plot_boxplot <- function(df_long, sample_annotation,
 
     return(gg)
 }
+
+
+#' @rdname plot_sample_mean_or_boxplot
+#' @method plot_sample_mean ProBatchFeatures
+#' @export
+plot_sample_mean.ProBatchFeatures <- function(x, pbf_name = NULL, plot_title = NULL, ...) {
+    object <- x # Use 'x' as per convention
+
+    data_matrix <- pb_assay_matrix(object, pbf_name)
+    sample_annotation <- as.data.frame(colData(object))
+
+    plot_title <- if (is.null(plot_title)) pbf_name else plot_title
+
+    # Call the default method with the extracted data
+    plot_sample_mean.default(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        plot_title = plot_title,
+        ...
+    )
+}
+
+#' @rdname plot_sample_mean_or_boxplot
+#' @method plot_boxplot ProBatchFeatures
+#' @export
+plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = NULL, plot_title = NULL, plot_ncol = NULL, return_gridExtra = FALSE, ...) {
+    object <- x # Use 'x' as per convention
+
+    if (is.null(sample_id_col)) {
+        stop("`sample_id_col` must be provided.")
+    }
+    assays <- .pb_assays_to_plot(object, pbf_name)
+    dots <- list(...)
+
+    filename_list <- NULL
+    if ("filename" %in% names(dots)) {
+        filename_list <- .pb_split_arg_by_assay(dots$filename, assays)
+        dots$filename <- NULL
+    }
+
+    sample_annotation <- as.data.frame(colData(object))
+    titles <- .pb_resolve_titles(assays, plot_title, default_fun = function(x) x)
+
+    plot_list <- vector("list", length(assays))
+    names(plot_list) <- assays
+
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        message("Extracting data from assay: ", assay_nm)
+        df_long <- pb_as_long(
+            object,
+            feature_id_col = "Feature",
+            sample_id_col = sample_id_col,
+            measure_col = "Intensity",
+            pbf_name = assay_nm
+        )
+        df_long <- df_long[!is.na(df_long$Intensity), ]
+
+        # Drop sample_annotation columns from df_long if they exist to avoid duplication, except sample_id_col
+        overlap_cols <- setdiff(intersect(names(sample_annotation), names(df_long)), sample_id_col)
+        if (length(overlap_cols) > 0) {
+            df_long <- df_long[, !names(df_long) %in% overlap_cols, drop = FALSE]
+        }
+
+        call_args <- dots
+        if (!is.null(filename_list)) {
+            fn <- filename_list[[i]]
+            if (!is.null(fn)) {
+                call_args$filename <- fn
+            }
+        }
+
+        call_args <- c(list(
+            df_long = df_long,
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
+            measure_col = "Intensity",
+            plot_title = titles[i],
+            pbf_name = assay_nm
+        ), call_args)
+
+        plot_list[[i]] <- do.call(plot_boxplot.default, call_args)
+    }
+
+    .pb_arrange_plot_list(plot_list, plot_ncol = plot_ncol, convert_fun = ggplotGrob, return_gridExtra = return_gridExtra)
+}
+
+#' Generic function for plotting per-sample mean or boxplots for initial assessment
+#' @rdname plot_sample_mean_or_boxplot
+#' @export
+plot_sample_mean <- function(x, ...) UseMethod("plot_sample_mean")
+
+#' Generic function for plotting per-sample mean or boxplots for initial assessment
+#' @rdname plot_sample_mean_or_boxplot
+#' @export
+plot_boxplot <- function(x, ...) UseMethod("plot_boxplot")

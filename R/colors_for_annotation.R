@@ -1,3 +1,152 @@
+#' Generate colors for sample annotation
+#'
+#' Convert the sample annotation data frame to list of colors
+#' the list is named as columns included to use in plotting functions
+#'
+#' @inheritParams proBatch
+#' @param factor_columns columns of \code{sample_annotation} to be
+#' treated as factors. Sometimes categorical variables are depicted as integers
+#' (e.g. in column "Batch", values are 1, 2 and 3), specification here allows to
+#' map them correctly to qualitative palettes.
+#' @param numeric_columns columns of \code{sample_annotation} to be
+#' treated as continuous numeric values.
+#' @param rare_categories_to_other if \code{True} rare categories
+#' will be merged into the value \code{"other"}
+#' @param guess_factors whether attempt which of the \code{factor_columns}
+#'  are actually numeric
+#' @param numeric_palette_type palette to be used for
+#' numeric values coloring (can be \code{'brewer' and 'viridis'})
+#'
+#' @return list of colors for the selected annotation columns. Use
+#' \code{\link{color_list_to_df}} if a data frame representation is
+#' needed.
+#'
+#' @examples
+#' data("example_sample_annotation", package = "proBatch")
+#' color_scheme <- sample_annotation_to_colors(
+#'     example_sample_annotation,
+#'     factor_columns = c(
+#'         "MS_batch", "EarTag", "Strain",
+#'         "Diet", "digestion_batch", "Sex"
+#'     ),
+#'     numeric_columns = c("DateTime", "order")
+#' )
+#' @export
+#'
+#' @name sample_annotation_to_colors
+sample_annotation_to_colors.default <- function(sample_annotation,
+                                                sample_id_col = "FullRunName",
+                                                factor_columns = NULL,
+                                                numeric_columns = NULL,
+                                                rare_categories_to_other = TRUE,
+                                                guess_factors = FALSE,
+                                                numeric_palette_type = "brewer") {
+    sample_annotation <- as.data.frame(sample_annotation)
+
+    # if factor_columns is NULL, add default columns
+    if (is.null(factor_columns)) {
+        factor_columns <- intersect(
+            c("MS_batch", "EarTag", "digestion_batch", "Strain", "Diet"),
+            names(sample_annotation)
+        )
+    }
+    # if numeric_columns is NULL, add default columns
+    if (is.null(numeric_columns)) {
+        numeric_columns <- intersect(
+            c("DateTime", "order"),
+            names(sample_annotation)
+        )
+    }
+
+    columns_for_color_mapping <- union(factor_columns, numeric_columns)
+
+    # Warn if some columns won't be mapped
+    warn_unmapped_columns(
+        sample_annotation, columns_for_color_mapping, sample_id_col
+    )
+
+    # Subset annotation to relevant columns
+    sample_annotation <- sample_annotation %>%
+        select(all_of(columns_for_color_mapping))
+
+    # Handle overlap between factor and numeric columns
+    factor_columns <- handle_factor_numeric_overlap(
+        factor_columns, numeric_columns
+    )
+
+    # Possibly guess numeric columns from factor columns
+    guessed <- guess_factor_columns_if_needed(
+        factor_columns, sample_annotation, guess_factors
+    )
+    factor_columns <- guessed$factor_columns
+    if (!is.null(guessed$numeric_columns)) {
+        numeric_columns <- guessed$numeric_columns
+    }
+
+    # Convert classes
+    sample_annotation <- convert_annotation_classes(
+        sample_annotation, factor_columns, numeric_columns
+    )
+
+    # Handle factor columns: merge rare levels if needed
+    if (!is.null(factor_columns) && length(factor_columns) != 0) {
+        factor_df <- sample_annotation %>%
+            select(all_of(factor_columns))
+        if (rare_categories_to_other) {
+            factor_df <- factor_df %>%
+                mutate(across(where(check_rare_levels), merge_rare_levels))
+            sample_annotation[factor_columns] <- factor_df
+        }
+        list_of_col_for_factors <- map_factors_to_colors(factor_df)
+    } else {
+        list_of_col_for_factors <- list()
+    }
+
+    # Handle numeric columns
+    non_factor_cols <- setdiff(columns_for_color_mapping, factor_columns)
+    if (!is.null(non_factor_cols) && !identical(non_factor_cols, character(0))) {
+        numeric_df <- sample_annotation %>%
+            select(all_of(non_factor_cols))
+        list_of_col_for_numeric <- map_numbers_to_colors(
+            numeric_df,
+            palette_type = numeric_palette_type
+        )
+    } else {
+        list_of_col_for_numeric <- list()
+    }
+
+    color_list <- c(list_of_col_for_factors, list_of_col_for_numeric)
+    return(color_list)
+}
+
+#' Sample annotation to colors for ProBatchFeatures object
+#' @rdname sample_annotation_to_colors
+#' @method sample_annotation_to_colors ProBatchFeatures
+#' @export
+sample_annotation_to_colors.ProBatchFeatures <- function(x, ...) {
+    object <- x # Use 'x' as per convention
+
+    sample_annotation <- as.data.frame(colData(object))
+    color_list <- sample_annotation_to_colors.default(
+        sample_annotation = sample_annotation,
+        ...
+    )
+    return(color_list)
+}
+
+#' Generic function for sample annotation to colors
+#' @export
+sample_annotation_to_colors <- function(x, ...) UseMethod("sample_annotation_to_colors")
+
+map_numeric_colors_to_intervals <- function(color_vector, col_values) {
+    breaks <- pretty(col_values)
+    col_intervals <- cut(col_values, breaks = breaks)
+    col_for_colors <- colorRampPalette(color_vector)(nlevels(col_intervals))
+    names(col_for_colors) <- levels(col_intervals)
+    col_colors <- col_for_colors[col_intervals]
+    return(col_colors)
+}
+
 map_factors_to_colors <- function(annotation_df_factors) {
     # calculate number of colors to create
     col_class <- vapply(annotation_df_factors,
@@ -12,7 +161,7 @@ map_factors_to_colors <- function(annotation_df_factors) {
         warning(sprintf("Columns %s are non factors, but %s, they will be converted
                     to factors for mapping to colors", col_string, col_classes))
         annotation_df_factors <- annotation_df_factors %>%
-            dplyr::mutate(across(where(~ !is.factor(.)), as.factor))
+            mutate(across(where(~ !is.factor(.)), as.factor))
     }
 
     nlev_covariate <- mapply(nlevels, annotation_df_factors)
@@ -127,6 +276,8 @@ map_numbers_to_colors <- function(annotation_df_numbers,
 #'
 #' @return vector of colors
 #' @keywords internal
+#' @examples
+#' generate_colors_for_numeric("brewer", i = 1)
 #'
 generate_colors_for_numeric <- function(palette_type = "brewer",
                                         i = 1) {
@@ -193,6 +344,7 @@ merge_rare_levels <- function(column, rare_thr = 2) {
 #' @param columns_for_color_mapping character vector of columns to be mapped.
 #' @param sample_id_col character, the ID column.
 #' @return No return value, called for side effects (warning).
+#' @export
 warn_unmapped_columns <- function(sample_annotation,
                                   columns_for_color_mapping,
                                   sample_id_col) {
@@ -201,12 +353,11 @@ warn_unmapped_columns <- function(sample_annotation,
         c(columns_for_color_mapping, sample_id_col)
     )
     if (length(undefined_cols) > 0) {
-        warning(paste(c(
-            "The following columns will not be mapped to colors:",
-            undefined_cols, "; if these have to be mapped, please assign
-                    them to factor, date or numeric and add to
-                    factor_columns or numeric_columns parameters"
-        ), collapse = " "))
+        warning(
+            "The following columns will not be mapped to colors: ",
+            toString(undefined_cols),
+            "; if these have to be mapped, please assign them to factor, date or numeric and add to factor_columns or numeric_columns parameters"
+        )
     }
 }
 
@@ -216,19 +367,16 @@ warn_unmapped_columns <- function(sample_annotation,
 #' @param factor_columns character vector of factor columns.
 #' @param numeric_columns character vector of numeric columns.
 #' @return List with updated factor_columns and a warning if overlaps exist
+#' @export
 handle_factor_numeric_overlap <- function(factor_columns, numeric_columns) {
     if (!is.null(numeric_columns)) {
         column_intersection <- intersect(factor_columns, numeric_columns)
         if (length(column_intersection) > 0) {
-            warning(paste(
-                c(
-                    "The following columns are repeatedly listed among factors
-                      and numeric-like variables:", column_intersection,
-                    "; they will be excluded from factors and mapped to
-                      continuous palettes"
-                ),
-                collapse = " "
-            ))
+            warning(
+                "The following columns are repeatedly listed among factors and numeric-like variables: ",
+                toString(column_intersection),
+                "; they will be excluded from factors and mapped to continuous palettes"
+            )
         }
         factor_columns <- setdiff(factor_columns, numeric_columns)
     }
@@ -243,6 +391,7 @@ handle_factor_numeric_overlap <- function(factor_columns, numeric_columns) {
 #' @param sample_annotation data frame of sample annotations.
 #' @param guess_factors logical indicating whether to guess numeric columns.
 #' @return Named list containing updated factor_columns and numeric_columns.
+#' @export
 guess_factor_columns_if_needed <- function(factor_columns,
                                            sample_annotation,
                                            guess_factors) {
@@ -276,10 +425,8 @@ guess_factor_columns_if_needed <- function(factor_columns,
             n_batches <- length(unique(batch_vector))
             if (n_batches <= 10 || n_batches < 0.1 * nrow(sample_annotation)) {
                 warning(sprintf(
-                    "%s column has very few values, but is numeric-like,
-            should it be treated as factor?
-            \nuse both factor_columns and
-            numeric_columns parameters", numcol
+                    "%s column has very few values, but is numeric-like, should it be treated as factor? use both factor_columns and numeric_columns parameters",
+                    numcol
                 ))
             }
         }
@@ -299,6 +446,7 @@ guess_factor_columns_if_needed <- function(factor_columns,
 #' @param factor_columns character vector of factor columns.
 #' @param numeric_columns character vector of numeric columns.
 #' @return data frame with converted columns.
+#' @export
 convert_annotation_classes <- function(df, factor_columns, numeric_columns) {
     message("converting columns to corresponding classes
           (factor, numeric)")
@@ -309,136 +457,6 @@ convert_annotation_classes <- function(df, factor_columns, numeric_columns) {
 }
 
 
-#' Generate colors for sample annotation
-#'
-#' Convert the sample annotation data frame to list of colors
-#' the list is named as columns included to use in plotting functions
-#'
-#' @inheritParams proBatch
-#' @param factor_columns columns of \code{sample_annotation} to be
-#' treated as factors. Sometimes categorical variables are depicted as integers
-#' (e.g. in column "Batch", values are 1, 2 and 3), specification here allows to
-#' map them correctly to qualitative palettes.
-#' @param numeric_columns columns of \code{sample_annotation} to be
-#' treated as continuous numeric values.
-#' @param rare_categories_to_other if \code{True} rare categories
-#' will be merged into the value \code{"other"}
-#' @param guess_factors whether attempt which of the \code{factor_columns}
-#'  are actually numeric
-#' @param numeric_palette_type palette to be used for
-#' numeric values coloring (can be \code{'brewer' and 'viridis'})
-#'
-#' @return list of colors for the selected annotation columns. Use
-#' \code{\link{color_list_to_df}} if a data frame representation is
-#' needed.
-#'
-#' @examples
-#' data("example_sample_annotation", package = "proBatch")
-#' color_scheme <- sample_annotation_to_colors(
-#'     example_sample_annotation,
-#'     factor_columns = c(
-#'         "MS_batch", "EarTag", "Strain",
-#'         "Diet", "digestion_batch", "Sex"
-#'     ),
-#'     numeric_columns = c("DateTime", "order")
-#' )
-#' @export
-#'
-#' @name sample_annotation_to_colors
-sample_annotation_to_colors <- function(sample_annotation,
-                                        sample_id_col = "FullRunName",
-                                        factor_columns = NULL,
-                                        numeric_columns = NULL,
-                                        rare_categories_to_other = TRUE,
-                                        guess_factors = FALSE,
-                                        numeric_palette_type = "brewer") {
-    sample_annotation <- as.data.frame(sample_annotation)
-
-    # if factor_columns is NULL, add default columns
-    if (is.null(factor_columns)) {
-        factor_columns <- intersect(
-            c("MS_batch", "EarTag", "digestion_batch", "Strain", "Diet"),
-            names(sample_annotation)
-        )
-    }
-    # if numeric_columns is NULL, add default columns
-    if (is.null(numeric_columns)) {
-        numeric_columns <- intersect(
-            c("DateTime", "order"),
-            names(sample_annotation)
-        )
-    }
-
-    columns_for_color_mapping <- union(factor_columns, numeric_columns)
-
-    # Warn if some columns won't be mapped
-    warn_unmapped_columns(
-        sample_annotation, columns_for_color_mapping, sample_id_col
-    )
-
-    # Subset annotation to relevant columns
-    sample_annotation <- sample_annotation %>%
-        select(all_of(columns_for_color_mapping))
-
-    # Handle overlap between factor and numeric columns
-    factor_columns <- handle_factor_numeric_overlap(
-        factor_columns, numeric_columns
-    )
-
-    # Possibly guess numeric columns from factor columns
-    guessed <- guess_factor_columns_if_needed(
-        factor_columns, sample_annotation, guess_factors
-    )
-    factor_columns <- guessed$factor_columns
-    if (!is.null(guessed$numeric_columns)) {
-        numeric_columns <- guessed$numeric_columns
-    }
-
-    # Convert classes
-    sample_annotation <- convert_annotation_classes(
-        sample_annotation, factor_columns, numeric_columns
-    )
-
-    # Handle factor columns: merge rare levels if needed
-    if (!is.null(factor_columns) && length(factor_columns) != 0) {
-        factor_df <- sample_annotation %>%
-            select(all_of(factor_columns))
-        if (rare_categories_to_other) {
-            factor_df <- factor_df %>%
-                mutate(across(where(check_rare_levels), merge_rare_levels))
-            sample_annotation[factor_columns] <- factor_df
-        }
-        list_of_col_for_factors <- map_factors_to_colors(factor_df)
-    } else {
-        list_of_col_for_factors <- list()
-    }
-
-    # Handle numeric columns
-    non_factor_cols <- setdiff(columns_for_color_mapping, factor_columns)
-    if (!is.null(non_factor_cols) && !identical(non_factor_cols, character(0))) {
-        numeric_df <- sample_annotation %>%
-            select(all_of(non_factor_cols))
-        list_of_col_for_numeric <- map_numbers_to_colors(
-            numeric_df,
-            palette_type = numeric_palette_type
-        )
-    } else {
-        list_of_col_for_numeric <- list()
-    }
-
-    color_list <- c(list_of_col_for_factors, list_of_col_for_numeric)
-    return(color_list)
-}
-
-map_numeric_colors_to_intervals <- function(color_vector, col_values) {
-    breaks <- pretty(col_values)
-    col_intervals <- cut(col_values, breaks = breaks)
-    col_for_colors <- colorRampPalette(color_vector)(nlevels(col_intervals))
-    names(col_for_colors) <- levels(col_intervals)
-    col_colors <- col_for_colors[col_intervals]
-    return(col_colors)
-}
-
 #' Color list to data frame
 #'
 #' Turn color list to df (to use in the hierarchical clustering)
@@ -448,7 +466,6 @@ map_numeric_colors_to_intervals <- function(color_vector, col_values) {
 #' of the sample annotation
 #'
 #' @return a data frame representation of the input color list
-#'
 #' @keywords internal
 #'
 color_list_to_df <- function(color_list, sample_annotation,
@@ -636,9 +653,10 @@ color_by_factor <- function(color_by_batch, batch_col, gg, color_scheme,
 
         if (is_numeric &&
             (n_batches <= 10 || n_batches < 0.1 * nrow(sample_annotation))) {
-            warning(sprintf("%s column has very few values, but is numeric-like,
-                      should it be treated as factor?
-                      \nThen modify it with as.factor() function", batch_col))
+            warning(sprintf(
+                "%s column has very few values, but is numeric-like,\nshould it be treated as factor?\nThen modify it with as.factor() function",
+                batch_col
+            ))
         }
 
         if (is.null(color_scheme)) {

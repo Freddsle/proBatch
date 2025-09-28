@@ -1,3 +1,19 @@
+proBatch  v2.0.1
+==============
+Changes:
+* Added support for extended QFeatures object - `ProBatchFeatures` - as input data format. 
+  All functions that previously accepted `data_matrix` and `df_long` formats, 
+  now also accept `ProBatchFeatures` objects. 
+* Added support for multiple assays in `ProBatchFeatures` objects. All functions that
+  previously accepted only a single data matrix, now also accept multiple data
+  matrices stored in different assays of a `ProBatchFeatures` object, inluding plotting functions: `plot_heatmap_diagnostic`, `plot_pca`, `plot_sample_mean`, `plot_boxplot`.
+* Added support for multiple features in `ProBatchFeatures` objects. 
+* Added limma-based batch correction method (`removeBatchEffect`) for `ProBatchFeatures` objects.
+* Added new visualization functions to plot missing value patterns in `ProBatchFeatures` objects:
+  - `plot_NA_heatmap()`
+  - `plot_NA_density()`
+  - `plot_NA_frequency()`
+
 proBatch  v1.1.0
 ==============
 

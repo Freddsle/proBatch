@@ -21,11 +21,9 @@
 #' @name transform_raw_data
 NULL
 
-#' Log transformation of the data
-#'
-#' @export
+#' Log transformation of the data long format.
 #' @rdname transform_raw_data
-#'
+#' @export
 log_transform_df <- function(df_long, log_base = 2, offset = 1,
                              measure_col = "Intensity") {
     if (!is.null(log_base)) {
@@ -39,6 +37,7 @@ log_transform_df <- function(df_long, log_base = 2, offset = 1,
     }
     return(df_long)
 }
+
 
 #' "Unlog" transformation of the data to pre-log form (for quantification, forcing log-transform)
 #'
@@ -59,11 +58,16 @@ unlog_df <- function(df_long, log_base = 2, offset = 1,
     return(df_long)
 }
 
-#'
 #' @export
 #' @rdname transform_raw_data
 #'
-log_transform_dm <- function(data_matrix, log_base = 2, offset = 1) {
+log_transform_dm <- function(x, ...) UseMethod("log_transform_dm")
+
+#' Log transformation of the data matrix format.
+#' @method log_transform_dm default
+#' @export
+#' @rdname transform_raw_data
+log_transform_dm.default <- function(data_matrix, log_base = 2, offset = 1) {
     if (!is.null(log_base)) {
         # Validate numeric data_matrix
         if (!is.numeric(data_matrix)) {
@@ -77,11 +81,37 @@ log_transform_dm <- function(data_matrix, log_base = 2, offset = 1) {
     return(data_matrix_log)
 }
 
-#'
+#' @rdname transform_raw_data
+#' @method log_transform_dm ProBatchFeatures
+#' @export
+log_transform_dm.ProBatchFeatures <- function(x, log_base = 2, offset = 1,
+                                              pbf_name = NULL, final_name = NULL) {
+    object <- x
+    if (is.null(pbf_name)) {
+        pbf_name <- pb_current_assay(object)
+        message("`pbf_name` not provided, using the most recent assay: ", pbf_name)
+    }
+    step <- if (!is.null(log_base) && log_base == 2 && offset == 1) "log2" else "log"
+    object <- pb_transform(
+        object,
+        from = pbf_name,
+        steps = step,
+        funs = list(log_transform_dm.default),
+        params_list = list(list(log_base = log_base, offset = offset)),
+        final_name = final_name
+    )
+    object
+}
+
 #' @export
 #' @rdname transform_raw_data
 #'
-unlog_dm <- function(data_matrix, log_base = 2, offset = 1) {
+unlog_dm <- function(x, ...) UseMethod("unlog_dm")
+
+#' @rdname transform_raw_data
+#' @method unlog_dm default
+#' @export
+unlog_dm.default <- function(data_matrix, log_base = 2, offset = 1) {
     if (!is.null(log_base)) {
         data_matrix_unlog <- log_base^(data_matrix) - offset
     } else {
@@ -89,4 +119,25 @@ unlog_dm <- function(data_matrix, log_base = 2, offset = 1) {
         data_matrix_unlog <- data_matrix
     }
     return(data_matrix_unlog)
+}
+
+#' @rdname transform_raw_data
+#' @method unlog_dm ProBatchFeatures
+#' @export
+unlog_dm.ProBatchFeatures <- function(x, log_base = 2, offset = 1,
+                                      pbf_name = NULL, final_name = NULL) {
+    object <- x
+    if (is.null(pbf_name)) {
+        pbf_name <- pb_current_assay(object)
+        message("`pbf_name` not provided, using the most recent assay: ", pbf_name)
+    }
+    object <- pb_transform(
+        object,
+        from = pbf_name,
+        steps = "unlog",
+        funs = list(unlog_dm.default),
+        params_list = list(list(log_base = log_base, offset = offset)),
+        final_name = final_name
+    )
+    object
 }

@@ -77,7 +77,10 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
             filter(n_total <= 2) %>%
             distinct(!!sym(feature_id_col)) %>%
             nrow()
-        message(paste0("Cannot calculate CV for ", n_peptides, " peptides with 2 or less measurements, removing those peptides"))
+        message(sprintf(
+            "Cannot calculate CV for %d peptides with 2 or less measurements, removing those peptides",
+            n_peptides
+        ))
         df_long <- df_long %>%
             filter(n_total > 2)
     }
@@ -89,8 +92,8 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
     base_group <- feature_id_col
     step_group <- if (has_step) "Step" else NULL
 
-    perbatch_groups <- c(base_group, batch_col, step_group) %>% purrr::compact()
-    total_groups <- c(base_group, step_group) %>% purrr::compact()
+    perbatch_groups <- c(base_group, batch_col, step_group) %>% compact()
+    total_groups <- c(base_group, step_group) %>% compact()
 
     # Compute per‐batch CV (if batch_col given)
     if (!is.null(batch_col)) {
@@ -118,6 +121,12 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
 #' @param log_y_scale (logical) whether to display the CV on log-scale
 #'
 #' @return ggplot object
+#' @examples
+#' cv_example <- data.frame(
+#'     Step = c("raw", "raw", "raw"),
+#'     CV_total = c(10, 15, 12)
+#' )
+#' plot_CV_distr.df(cv_example, log_y_scale = FALSE)
 #' @export
 plot_CV_distr.df <- function(CV_df,
                              plot_title = NULL,

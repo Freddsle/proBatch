@@ -272,10 +272,10 @@ get_sample_corr_df <- function(cor_proteome, sample_annotation,
     spec_cols <- c(biospecimen_id_col, batch_col)
 
     if (!all(spec_cols %in% names(sample_annotation))) {
+        missing_cols <- setdiff(spec_cols, names(sample_annotation))
         stop(sprintf(
-            "Columns %s are not in sample_annotation",
-            setdiff(spec_cols, names(sample_annotation)),
-            "Please provide valid biospecimen_id_col and batch_col"
+            "Columns %s are not in sample_annotation. Please provide valid biospecimen_id_col and batch_col.",
+            paste(missing_cols, collapse = ", ")
         ))
     }
 
@@ -288,7 +288,7 @@ get_sample_corr_df <- function(cor_proteome, sample_annotation,
             by.x = paste(sample_id_col, "1", sep = "_"),
             by.y = sample_id_col, all.x = TRUE
         ) %>%
-        data.table::setnames(
+        setnames(
             old = spec_cols,
             new = paste(spec_cols, 1, sep = "")
         ) %>%
@@ -296,7 +296,7 @@ get_sample_corr_df <- function(cor_proteome, sample_annotation,
             by.x = paste(sample_id_col, "2", sep = "_"),
             by.y = sample_id_col, all.x = TRUE
         ) %>%
-        data.table::setnames(
+        setnames(
             old = spec_cols,
             new = paste(spec_cols, 2, sep = "")
         ) %>%
@@ -576,7 +576,7 @@ get_peptide_corr_df <- function(peptide_cor, peptide_annotation,
             by.x = paste(feature_id_col, "1", sep = "_"),
             by.y = feature_id_col, all.x = TRUE
         ) %>%
-        data.table::setnames(
+        setnames(
             old = protein_col,
             new = paste(protein_col, 1, sep = "")
         ) %>%
@@ -586,7 +586,7 @@ get_peptide_corr_df <- function(peptide_cor, peptide_annotation,
             by.x = paste(feature_id_col, "2", sep = "_"),
             by.y = feature_id_col, all.x = TRUE
         ) %>%
-        data.table::setnames(
+        setnames(
             old = protein_col,
             new = paste(protein_col, 2, sep = "")
         ) %>%

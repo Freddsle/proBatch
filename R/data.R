@@ -31,7 +31,12 @@
 #'   factor of manually annotated batches}
 #'   ...
 #' }
-"example_sample_annotation"
+#' @return A data frame with 233 rows and 11 variables.
+#' @examples
+#' data("example_sample_annotation", package = "proBatch")
+#' head(example_sample_annotation)
+#' @name example_sample_annotation
+NULL
 
 #' Example protein data in long format
 #'
@@ -58,8 +63,13 @@
 #'   column, peptide has been imputed (requantified)}
 #' ...
 #' }
+#' @return A data frame with 124655 rows and 7 variables.
+#' @examples
+#' data("example_proteome", package = "proBatch")
+#' head(example_proteome)
 #' @source PRIDE ID will be added upon the publication of the dataset
-"example_proteome"
+#' @name example_proteome
+NULL
 
 #' Example protein data in matrix
 #'
@@ -69,8 +79,13 @@
 #'
 #' @format A matrix with 535 rows and 233 columns:
 #'
+#' @return A matrix with 535 rows and 233 columns.
+#' @examples
+#' data("example_proteome_matrix", package = "proBatch")
+#' dim(example_proteome_matrix)
 #' @source PRIDE ID will be added upon the publication of the dataset
-"example_proteome_matrix"
+#' @name example_proteome_matrix
+NULL
 
 #' Peptide annotation data
 #'
@@ -84,4 +99,118 @@
 #'   \item{ProteinName}{protein group name as specified in
 #'   \code{example_proteome}}
 #'   }
-"example_peptide_annotation"
+#' @return A data frame with 535 rows and 10 variables.
+#' @examples
+#' data("example_peptide_annotation", package = "proBatch")
+#' head(example_peptide_annotation)
+#' @name example_peptide_annotation
+NULL
+
+#' Example multi-center TMT proteomics (MaxQuant)
+#'
+#' A curated example dataset illustrating a typical multi-center TMT (reporter-ion)
+#' proteomics study processed with MaxQuant.
+#' Study design summary:
+#' - Three independent centers, each measured as two TMT plexes.
+#' - Per center: 10 cases (FSGS) and 10 controls, with a reference channel in each pool.
+#' - Metadata maps every TMT reporter channel to the exact quantitative column in `data`.
+#' The object is a named list of length 3
+#' (`"Center1"`, `"Center2"`, `"Center3"`). Each entry is itself a list with two elements:
+#' - `data`: A center-specific MaxQuant `proteinGroups.txt` output. Column names follow MaxQuant conventions
+#'   (`Protein.IDs`, `Gene.names`, `Fasta.headers`, etc.).
+#' - `metadata`: A `data.frame` describing the sample/channel annotation for that center.
+#'
+#' @format
+#' A named list of length 3 (`"Center1"`, `"Center2"`, `"Center3"`).
+#' For each center `x`:
+#'
+#' \describe{
+#'   \item{`example_multicenter_data[[x]]$data`}{`data.frame`. A full
+#'   MaxQuant `proteinGroups.txt` table for that center. Includes protein-level
+#'   identifiers, quantification columns such as
+#'   `Reporter.intensity.*` / `Reporter.intensity.corrected.*`, and other
+#'   MaxQuant fields. Column names are not syntactically altered
+#'   (`check.names = FALSE`).}
+#'
+#'   \item{`example_multicenter_data[[x]]$metadata`}{`data.frame`. Sample/channel
+#'   annotation with the following columns:
+#'     \itemize{
+#'       \item `Quantitative.column.name` (`character`): exact column name in
+#'             `data` that carries the corresponding TMT channel intensities.
+#'       \item `Pool` (`character`): TMT pool/batch identifier (e.g., `"Pool4"`).
+#'       \item `Reporter.ion` (`character`): isobaric tag/channel label
+#'             (e.g., `"126"`, `"127C"`, ...).
+#'       \item `Patient` (`character`): pseudonymized sample ID; `"Common Reference"`
+#'             for the reference channel.
+#'       \item `Group` (`character`): biological group (e.g., `"FSGS"`, `"Control"`,
+#'             `"Common Reference"`).
+#'       \item `Center` (`character`): `"Center1"`, `"Center2"`, or `"Center3"`.
+#'       \item `Sex` (`character`): `"f"`, `"m"`, or empty if unavailable.
+#'       \item `Age` (`integer`): age in years; may contain `NA`.
+#'     }
+#'   }
+#' }
+#'
+#' @return A named list with center-specific MaxQuant outputs and metadata.
+#' @examples
+#' data("example_multicenter_data", package = "proBatch")
+#' names(example_multicenter_data)
+#'
+#' @source PRIDE ID PXD053560
+#' @name example_multicenter_data
+NULL
+
+
+#' Example multi-center DIA LFQ E. coli proteomics (DIA-NN)
+#'
+#' An example dataset illustrating a typical multi-center DIA (data-independent acquisition)
+#' proteomics study processed with DIA-NN.
+#' Study design summary:
+#' - Five independent centers.
+#' - Per center: 10(9) samples of E.coli grown in different media (Pyruvate vs Glucose)
+#' The object is a named list of length 5
+#' (`"lab_A"`, `"lab_B"`, `"lab_C"`, `"lab_D"`, `"lab_E"`). Each entry is itself a list with three elements:
+#' - `precursors`: A center-specific DIA-NN output, containing Precursor.Normalised values.
+#' - `protein.groups`: A center-specific DIA-NN output, containing PG.MaxLFQ values.
+#' - `metadata`: A `data.frame` describing the sample annotation for that center.
+#' Additionally, the list contains four more elements:
+#' - `all_metadata`: Combined metadata from all centers.
+#' - `all_precursors`: Combined precursor-level data from all centers.
+#' - `all_protein_groups`: Combined protein group-level data from all centers.
+#' - `all_precursor_pg_match`: Combined precursor-to-protein group mapping from all centers.
+#'
+#' @format
+#' A named list of length 5 (`"lab_A"`, `"lab_B"`, `"lab_C"`, `"lab_D"`, `"lab_E"`).
+#' For each center `x`:
+#'
+#' \describe{
+#'   \item{`example_ecoli_data[[x]]$precursors`}{`matrix`. A center-specific DIA-NN
+#'   output containing Precursor.Normalised values. Rows are precursors,
+#'   columns are samples. }
+#'   \item{`example_ecoli_data[[x]]$protein.groups`}{`matrix`. A center-specific DIA-NN
+#'   output containing PG.MaxLFQ values. Rows are protein groups,
+#'   columns are samples. }
+#'  \item{`example_ecoli_data[[x]]$metadata`}{`data.frame`. Sample annotation with the following columns:
+#'     \itemize{
+#'       \item `Run`: exact column name in `data` that carries the corresponding
+#'             sample intensities.
+#'       \item `Lab` (`character`): `"lab_A"`, `"lab_B"`, `"lab_C"`, `"lab_D"`, or `"lab_E"`.
+#'       \item `Condition` (`character`): biological group (e.g., `"Pyr"`, `"Glu"`).
+#'     }
+#'   }
+#' }
+#' Additionally, the list contains four more elements:
+#' \describe{
+#'  \item{`example_ecoli_data$all_metadata`}{`data.frame`. Combined metadata from all centers.}
+#' \item{`example_ecoli_data$all_precursors`}{`matrix`. Combined precursor-level data from all centers.}
+#' \item{`example_ecoli_data$all_protein_groups`}{`matrix`. Combined protein group-level data from all centers.}
+#' \item{`example_ecoli_data$all_precursor_pg_match`}{`data.frame`. Combined precursor-to-protein group mapping from all centers.}
+#' }
+#'
+#' @return A named list containing per-center DIA-NN outputs and combined data.
+#' @examples
+#' data("example_ecoli_data", package = "proBatch")
+#' names(example_ecoli_data)
+#' @source PRIDE ID PXD053812
+#' @name example_ecoli_data
+NULL
