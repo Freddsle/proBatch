@@ -6,6 +6,9 @@
 \usage{
 pb_as_wide(object, assay = pb_current_assay(object), name = "intensity")
 }
+\value{
+numeric matrix (wide) corresponding to the requested assay
+}
 \description{
 Get an assay matrix (wide)
 }

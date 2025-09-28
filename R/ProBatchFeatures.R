@@ -392,6 +392,7 @@ pb_pipeline_name <- function(object, assay = pb_current_assay(object)) {
 }
 
 #' Current (latest) assay name
+#' @return character(1) assay identifier for the most recently stored assay
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_current_assay <- function(object) {
@@ -499,6 +500,7 @@ pb_current_assay <- function(object) {
 
 
 #' Convenience accessor for assay matrix by name/index (returns the 'intensity' assay)
+#' @return assay data matrix with features in rows and samples in columns
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_assay_matrix <- function(object, assay = NULL, name = "intensity") {
@@ -523,6 +525,7 @@ pb_assay_matrix <- function(object, assay = NULL, name = "intensity") {
 }
 
 #' Get current assay as LONG (via proBatch::matrix_to_long)
+#' @return tibble/data.frame containing one row per feature-sample combination
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_as_long <- function(
@@ -555,6 +558,7 @@ pb_as_long <- function(
 }
 
 #' Get an assay matrix (wide)
+#' @return numeric matrix (wide) corresponding to the requested assay
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensity") {
@@ -723,6 +727,7 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 #' @param store_intermediate logical; if TRUE store every step (overrides fast behavior)
 #' @param final_name optional final assay name override
 #' @param backend "memory","hdf5","auto"
+#' @return ProBatchFeatures with the requested pipeline added (as log and/or assay)
 #'
 #' @example inst/examples/ProBatchFeatures-basic.R
 #'
@@ -818,6 +823,7 @@ pb_eval <- function(
 #' @param fun summarization function (e.g., matrixStats::colMedians), or name
 #' @param new_level new level label (e.g., "protein")
 #' @param new_pipeline optional pipeline name (default carries over from 'from')
+#' @return ProBatchFeatures with an additional aggregated assay appended
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_aggregate_level <- function(

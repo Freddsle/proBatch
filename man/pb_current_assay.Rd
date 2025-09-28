@@ -6,6 +6,9 @@
 \usage{
 pb_current_assay(object)
 }
+\value{
+character(1) assay identifier for the most recently stored assay
+}
 \description{
 Current (latest) assay name
 }

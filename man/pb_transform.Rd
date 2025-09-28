@@ -36,6 +36,9 @@ pb_transform(
 
 \item{backend}{"memory","hdf5","auto"}
 }
+\value{
+ProBatchFeatures with the requested pipeline added (as log and/or assay)
+}
 \description{
 Compute a pipeline and optionally store only the final result
 }

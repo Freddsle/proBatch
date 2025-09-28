@@ -26,6 +26,9 @@ pb_aggregate_level(
 
 \item{new_pipeline}{optional pipeline name (default carries over from 'from')}
 }
+\value{
+ProBatchFeatures with an additional aggregated assay appended
+}
 \description{
 Aggregate features (e.g., peptide -> protein) and store as new level
 }
