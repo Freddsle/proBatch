@@ -58,6 +58,19 @@ This vignette shows how to:
 
 # Setup
 
+
+## Installation
+
+To install the latest version of proBatch package, you need `BiocManager`:
+
+```{r install_proBatch, fig.show='hold', eval = FALSE}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("proBatch") 
+
+library(proBatch)
+```
+
 ## Load required packages
 
 We rely on `dplyr`, `tibble`, and `ggplot2` (alongside `proBatch`) for
@@ -70,14 +83,13 @@ library(ggplot2)
 library(QFeatures)
 ```
 
+
 ## Load and prepare example dataset
 
 Here, as example, we will use the E.coli dataset, described in the
 FedProt paper [@burankova2025privacy]:
 
 ```{r load_data}
-library(proBatch)
-# devtools::load_all("../")
 data("example_ecoli_data", package = "proBatch")
 ```
 

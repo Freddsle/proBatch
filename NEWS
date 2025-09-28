@@ -1,4 +1,4 @@
-proBatch  v1.9.1
+proBatch  v1.99.0
 ==============
 Changes:
 * Added support for extended QFeatures object - `ProBatchFeatures` - as input data format. 
