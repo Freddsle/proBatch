@@ -73,6 +73,34 @@ test_that("find_duplicated_columns.ProBatchFeatures can inspect rowData and cust
     expect_identical(custom_pairs, list(c("x", "y")))
 })
 
+test_that("metadata diagnostics accept data.table inputs", {
+    skip_if_not_installed("data.table")
+
+    dt <- data.table::data.table(
+        a = c(1, NA, 3, NA),
+        b = c(1, NA, 3, NA),
+        c = c("x", "y", "z", "w"),
+        d = c("x", "y", "z", "w")
+    )
+
+    dup <- find_duplicated_columns(dt)
+    dup_pairs <- vapply(dup, function(x) paste(sort(x), collapse = ","), character(1))
+    expect_setequal(dup_pairs, c("a,b", "c,d"))
+
+    summary_dt <- metadata_column_summary(dt)
+    expect_s3_class(summary_dt, "data.frame")
+    expect_true("a" %in% summary_dt$colname)
+
+    filtered_dt <- filter_metadata_columns(
+        data.table::copy(dt),
+        duplicate_keep = "pattern",
+        duplicate_pattern = "^a$",
+        min_non_na = 2
+    )
+    expect_s3_class(filtered_dt, "data.table")
+    expect_false("b" %in% names(filtered_dt))
+})
+
 test_that("metadata_column_summary handles data frames", {
     df <- data.frame(
         a = c(1, 1, NA, 2),

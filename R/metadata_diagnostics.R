@@ -72,8 +72,7 @@ find_duplicated_columns.ProBatchFeatures <- function(
     component = c("colData", "rowData"),
     assay = NULL,
     df = NULL,
-    ...
-) {
+    ...) {
     object <- x
 
     if (!is.null(df)) {
@@ -139,11 +138,11 @@ metadata_column_summary <- function(x, ...) {
 }
 
 #' @rdname metadata_column_summary
-#' @method metadata_column_summary data.frame
+#' @method metadata_column_summary default
 #' @export
-metadata_column_summary.data.frame <- function(x, sort = TRUE, ...) {
+metadata_column_summary.default <- function(x, sort = TRUE, ...) {
     if (!is.data.frame(x)) {
-        stop("`x` must be a data frame.")
+        x <- as.data.frame(x)
     }
 
     if (!ncol(x)) {
@@ -198,15 +197,14 @@ metadata_column_summary.ProBatchFeatures <- function(
     assay = NULL,
     df = NULL,
     sort = TRUE,
-    ...
-) {
+    ...) {
     object <- x
 
     if (!is.null(df)) {
         if (!is.data.frame(df)) {
             stop("`df` must be a data frame when supplied.")
         }
-        return(metadata_column_summary.data.frame(df, sort = sort, ...))
+        return(metadata_column_summary.default(df, sort = sort, ...))
     }
 
     component <- match.arg(component)
@@ -287,9 +285,9 @@ filter_metadata_columns <- function(x, ...) {
 }
 
 #' @rdname filter_metadata_columns
-#' @method filter_metadata_columns data.frame
+#' @method filter_metadata_columns default
 #' @export
-filter_metadata_columns.data.frame <- function(
+filter_metadata_columns.default <- function(
     x,
     duplicate_keep = c("first", "last", "pattern"),
     duplicate_pattern = NULL,
@@ -298,10 +296,9 @@ filter_metadata_columns.data.frame <- function(
     min_non_na = NULL,
     max_pct_na = NULL,
     sort = FALSE,
-    ...
-) {
+    ...) {
     if (!is.data.frame(x)) {
-        stop("`x` must be a data frame.")
+        x <- as.data.frame(x)
     }
 
     duplicate_keep <- match.arg(duplicate_keep)
@@ -339,8 +336,7 @@ filter_metadata_columns.data.frame <- function(
 
     if (length(groups)) {
         for (cols in groups) {
-            keep <- switch(
-                duplicate_keep,
+            keep <- switch(duplicate_keep,
                 first = cols[[1]],
                 last = cols[[length(cols)]],
                 pattern = {
@@ -356,16 +352,24 @@ filter_metadata_columns.data.frame <- function(
         }
         dropped_duplicates <- unique(dropped_duplicates)
     }
-
-    missing_summary <- metadata_column_summary.data.frame(x, sort = sort)
-    missing_summary$n_non_na <- nrow(x) - missing_summary$n_NA
-
+    
     dropped_missing <- character(0)
-    if (!is.null(min_non_na)) {
-        dropped_missing <- union(dropped_missing, missing_summary$colname[missing_summary$n_non_na < min_non_na])
+    if (!is.null(min_non_na) || !is.null(max_pct_na)) {
+        missing_summary <- metadata_column_summary.default(x, sort = sort)
+        missing_summary$n_non_na <- nrow(x) - missing_summary$n_NA
+        if (!is.null(min_non_na)) {
+            dropped_missing <- union(dropped_missing, missing_summary$colname[missing_summary$n_non_na < min_non_na])
+        }
+        if (!is.null(max_pct_na)) {
+            dropped_missing <- union(dropped_missing, missing_summary$colname[missing_summary$pct_NA > max_pct_na])
+        }
     }
-    if (!is.null(max_pct_na)) {
-        dropped_missing <- union(dropped_missing, missing_summary$colname[missing_summary$pct_NA > max_pct_na])
+    
+    if (length(dropped_duplicates)) {
+        message(sprintf("Dropping %s duplicated columns.", length(dropped_duplicates)))
+    }
+    if (length(dropped_missing)) {
+        message(sprintf("Dropping %s columns based on missingness thresholds.", length(dropped_missing)))
     }
 
     drop_candidates <- union(dropped_duplicates, dropped_missing)
@@ -377,15 +381,19 @@ filter_metadata_columns.data.frame <- function(
         return(x)
     }
 
-    keep_cols <- setdiff(col_names, drop_candidates)
+    keep_mask <- !(col_names %in% drop_candidates)
+    keep_cols <- col_names[keep_mask]
     if (!length(keep_cols)) {
         stop("All columns would be removed; adjust filtering thresholds or duplicate strategy.")
     }
 
-    keep_indices <- match(keep_cols, col_names)
-    filtered <- x[, keep_indices, drop = FALSE]
+    filtered <- if (inherits(x, "data.table")) {
+        x[, ..keep_cols]
+    } else {
+        x[, keep_cols, drop = FALSE]
+    }
 
-    attr(filtered, "dropped_columns") <- setdiff(col_names, keep_cols)
+    attr(filtered, "dropped_columns") <- col_names[!keep_mask]
     attr(filtered, "dropped_duplicates") <- dropped_duplicates
     attr(filtered, "dropped_missing") <- dropped_missing
 
@@ -411,15 +419,14 @@ filter_metadata_columns.ProBatchFeatures <- function(
     assay = NULL,
     df = NULL,
     inplace = FALSE,
-    ...
-) {
+    ...) {
     object <- x
 
     if (!is.null(df)) {
         if (!is.data.frame(df)) {
             stop("`df` must be a data frame when supplied.")
         }
-        return(filter_metadata_columns.data.frame(df, ...))
+        return(filter_metadata_columns.default(df, ...))
     }
 
     component <- match.arg(component)
@@ -427,7 +434,7 @@ filter_metadata_columns.ProBatchFeatures <- function(
         target <- SummarizedExperiment::colData(object)
         base_target <- as.data.frame(target)
         row_ids <- rownames(base_target)
-        filtered_df <- filter_metadata_columns.data.frame(base_target, ...)
+        filtered_df <- filter_metadata_columns.default(base_target, ...)
         kept <- colnames(filtered_df)
         if (inplace) {
             filtered_target <- target[, kept, drop = FALSE]
@@ -465,7 +472,7 @@ filter_metadata_columns.ProBatchFeatures <- function(
     target <- SummarizedExperiment::rowData(object[[chosen_assay]])
     base_target <- as.data.frame(target)
     row_ids <- rownames(base_target)
-    filtered_df <- filter_metadata_columns.data.frame(base_target, ...)
+    filtered_df <- filter_metadata_columns.default(base_target, ...)
     kept <- colnames(filtered_df)
 
     if (inplace) {
