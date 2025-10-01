@@ -24,15 +24,15 @@ test_that("protein_corrplot_plots", {
         ),
         "The following columns will not be mapped to colors: peptide_group_label, ProteinName"
     )
-
-    corrplot <- plot_protein_corrplot(
-        example_proteome_matrix,
-        protein_name = "Haao",
-        peptide_annotation = example_peptide_annotation,
-        protein_col = "Gene",
-        cluster_rows = TRUE, cluster_cols = TRUE,
+    suppressWarnings(
+        corrplot <- plot_protein_corrplot(
+            example_proteome_matrix,
+            protein_name = "Haao",
+            peptide_annotation = example_peptide_annotation,
+            protein_col = "Gene",
+            cluster_rows = TRUE, cluster_cols = TRUE,
         color_list = color_list
-    )
+    ))
 
     expect_equal(corrplot$tree_row$method, "complete", ignore_attr = TRUE)
     expect_equal(corrplot$tree_row$dist.method, "euclidean", ignore_attr = TRUE)

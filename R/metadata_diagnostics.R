@@ -228,7 +228,7 @@ metadata_column_summary.ProBatchFeatures <- function(
     }
 
     target_df <- .pb_to_base_df(target)
-    metadata_column_summary.data_frame(target_df, sort = sort, ...)
+    metadata_column_summary.default(target_df, sort = sort, ...)
 }
 
 #' Filter metadata columns based on duplication and completeness
@@ -352,7 +352,7 @@ filter_metadata_columns.default <- function(
         }
         dropped_duplicates <- unique(dropped_duplicates)
     }
-    
+
     dropped_missing <- character(0)
     if (!is.null(min_non_na) || !is.null(max_pct_na)) {
         missing_summary <- metadata_column_summary.default(x, sort = sort)
@@ -361,10 +361,10 @@ filter_metadata_columns.default <- function(
             dropped_missing <- union(dropped_missing, missing_summary$colname[missing_summary$n_non_na < min_non_na])
         }
         if (!is.null(max_pct_na)) {
-            dropped_missing <- union(dropped_missing, missing_summary$colname[missing_summary$pct_NA > max_pct_na])
+            dropped_missing <- union(dropped_missing, missing_summary$colname[missing_summary$pct_NA >= max_pct_na])
         }
     }
-    
+
     if (length(dropped_duplicates)) {
         message(sprintf("Dropping %s duplicated columns.", length(dropped_duplicates)))
     }
@@ -431,14 +431,14 @@ filter_metadata_columns.ProBatchFeatures <- function(
 
     component <- match.arg(component)
     if (component == "colData") {
-        target <- SummarizedExperiment::colData(object)
+        target <- colData(object)
         base_target <- as.data.frame(target)
         row_ids <- rownames(base_target)
         filtered_df <- filter_metadata_columns.default(base_target, ...)
         kept <- colnames(filtered_df)
         if (inplace) {
             filtered_target <- target[, kept, drop = FALSE]
-            SummarizedExperiment::colData(object) <- filtered_target
+            colData(object) <- filtered_target
             info <- list(
                 component = "colData",
                 assay = NA_character_,

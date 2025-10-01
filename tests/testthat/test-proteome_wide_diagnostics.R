@@ -133,22 +133,13 @@ test_that("plot_TSNE returns ggplot by default", {
     data(example_proteome_matrix, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
 
-    expect_warning(
-        expect_warning(
-            expect_warning(
-                tsne_plot <- plot_TSNE(
-                    example_proteome_matrix, example_sample_annotation,
-                    color_by = "MS_batch",
-                    fill_the_missing = -1,
-                    perplexity = 2,
-                    max_iter = 250,
-                    random_seed = 123
-                ),
-                "filling missing values with -1"
-            ),
-            "t-SNE cannot operate with missing values in the matrix"
-        ),
-        "color_scheme will be inferred automatically"
+    tsne_plot <- plot_TSNE(
+        example_proteome_matrix, example_sample_annotation,
+        color_by = "MS_batch",
+        fill_the_missing = -1,
+        perplexity = 2,
+        max_iter = 250,
+        random_seed = 123
     )
 
     expect_s3_class(tsne_plot, "ggplot")

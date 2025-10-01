@@ -681,8 +681,8 @@ calculate_PVCA.default <- function(data_matrix, sample_annotation,
         select(all_of(c(sample_id_col, factors_for_PVCA))) %>%
         mutate(across(where(is.POSIXct), as.numeric)) %>%
         as.data.frame() %>%
+        remove_rownames() %>%
         column_to_rownames(var = sample_id_col)
-
     data_matrix <- check_feature_id_col_in_dm(feature_id_col, data_matrix)
 
     data_matrix <- .pb_handle_missing_wrapper(
@@ -1386,10 +1386,11 @@ plot_PCA <- function(x, ...) UseMethod("plot_PCA")
 
 #' Plot t-SNE embedding of samples
 #'
-#' Generate an interactive t-SNE visualization for a data matrix or
-#' `ProBatchFeatures` object, while using `plotly` for rendering.
+#' Generate a t-SNE visualization for a data matrix or `ProBatchFeatures`
+#' object. A ggplot scatter plot is produced by default, with optional
+#' Plotly-based rendering when requested.
 #'
-#' @inheritParams plot_PCA.default
+#' @inheritParams plot_PCA
 #' @param perplexity positive numeric controlling the effective number of
 #'   neighbours in t-SNE.
 #' @param initial_dims number of principal components retained to initialise the
@@ -1399,18 +1400,34 @@ plot_PCA <- function(x, ...) UseMethod("plot_PCA")
 #'   visualised).
 #' @param random_seed optional integer passed to `set.seed()` for reproducible
 #'   t-SNE initialisation.
+#' @param return_gridExtra logical; when `TRUE` and plotting multiple assays,
+#'   return a list containing the arranged grob along with the individual
+#'   ggplot objects.
+#' @param plot_ncol optional integer controlling the number of columns used when
+#'   arranging multiple ggplots.
+#' @param return_subplots logical; when `TRUE` and `use_plotlyrender = TRUE`,
+#'   combine multiple assays into a single subplot layout produced by
+#'   `plotly::subplot()`.
+#' @param subplot_ncol optional integer specifying the number of subplot columns
+#'   when `return_subplots = TRUE`.
+#' @param share_axes logical indicating whether subplot axes should be shared in
+#'   the Plotly output.
 #' @param ... additional arguments forwarded to `Rtsne::Rtsne()` (for the default
 #'   method) or to the respective default method when called on
 #'   `ProBatchFeatures`.
 #'
-#' @return A `plotly` object displaying the t-SNE embedding.
+#' @return A `ggplot` object displaying the t-SNE embedding by default, or a
+#'   `plotly` object when `use_plotlyrender = TRUE`.
+#' @name plot_TSNE
 #'
 #' @examples
 #' \dontrun{
 #' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
 #' tsne_plot <- plot_TSNE(example_proteome_matrix, example_sample_annotation,
-#'     color_by = "MS_batch", perplexity = 5, max_iter = 500)
+#'     color_by = "MS_batch", perplexity = 5, max_iter = 500
+#' )
 #' }
+#' @method plot_TSNE default
 #' @export
 plot_TSNE.default <- function(data_matrix, sample_annotation,
                               feature_id_col = "peptide_group_label",
@@ -1433,8 +1450,12 @@ plot_TSNE.default <- function(data_matrix, sample_annotation,
     }
 
     if (tsne_dims < 2) {
-        stop("tsne_dims must be >= 2 to create a 2D plotly scatter plot.")
+        stop("tsne_dims must be >= 2 to create a 2D scatter plot.")
     }
+
+    dots <- list(...)
+    use_plotlyrender <- isTRUE(dots$use_plotlyrender)
+    dots$use_plotlyrender <- NULL
 
     sample_annotation <- as.data.frame(sample_annotation)
 
@@ -1453,6 +1474,26 @@ plot_TSNE.default <- function(data_matrix, sample_annotation,
     data_matrix <- prep$data_matrix
     sample_annotation <- prep$sample_annotation
     sample_ids <- prep$sample_ids
+
+    if (!is.null(shape_by)) {
+        if (length(shape_by) > 1) {
+            warning("Shaping by the first column specified")
+            shape_by <- shape_by[1]
+        }
+        if (!shape_by %in% colnames(sample_annotation)) {
+            stop(sprintf("Shaping column '%s' not found in sample_annotation", shape_by))
+        }
+
+        shape_column <- sample_annotation[[shape_by]]
+        if (!is.factor(shape_column) && !is.character(shape_column)) {
+            sample_annotation[[shape_by]] <- as.factor(shape_column)
+        }
+    }
+
+    if (length(color_by) > 1) {
+        warning("Coloring by the first column specified")
+        color_by <- color_by[1]
+    }
 
     n_samples <- length(sample_ids)
     if (n_samples < 2) {
@@ -1473,15 +1514,15 @@ plot_TSNE.default <- function(data_matrix, sample_annotation,
     }
 
     tsne_input <- t(as.matrix(data_matrix))
-    tsne_res <- Rtsne::Rtsne(
-        tsne_input,
+    tsne_args <- c(list(
+        X = tsne_input,
         dims = tsne_dims,
         initial_dims = initial_dims,
         perplexity = perplexity,
         max_iter = max_iter,
-        check_duplicates = FALSE,
-        ...
-    )
+        check_duplicates = FALSE
+    ), dots)
+    tsne_res <- do.call(Rtsne::Rtsne, tsne_args)
 
     tsne_matrix <- as.matrix(tsne_res$Y)
     if (ncol(tsne_matrix) < 2) {
@@ -1494,8 +1535,30 @@ plot_TSNE.default <- function(data_matrix, sample_annotation,
         y = "t-SNE 2"
     )
 
-    plot <- .pb_create_embedding_plotly(
-        embedding_matrix = tsne_matrix[, seq_len(tsne_dims), drop = FALSE],
+    if (isTRUE(use_plotlyrender)) {
+        if (!requireNamespace("plotly", quietly = TRUE)) {
+            stop("Package 'plotly' is required when use_plotlyrender = TRUE; install it with install.packages('plotly').", call. = FALSE)
+        }
+
+        plot <- .pb_create_embedding_plotly(
+            embedding_matrix = tsne_matrix,
+            sample_ids = sample_ids,
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
+            color_by = color_by,
+            shape_by = shape_by,
+            color_scheme = color_scheme,
+            point_size = point_size,
+            point_alpha = point_alpha,
+            plot_title = plot_title,
+            axis_labels = axis_labels
+        )
+
+        return(plot)
+    }
+
+    plot <- .pb_create_embedding_ggplot(
+        embedding_matrix = tsne_matrix,
         sample_ids = sample_ids,
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
@@ -1518,6 +1581,8 @@ plot_TSNE.ProBatchFeatures <- function(x, pbf_name = NULL,
                                        sample_annotation = NULL,
                                        sample_id_col = "FullRunName",
                                        plot_title = NULL,
+                                       return_gridExtra = FALSE,
+                                       plot_ncol = NULL,
                                        return_subplots = FALSE,
                                        subplot_ncol = NULL,
                                        share_axes = TRUE,
@@ -1531,6 +1596,7 @@ plot_TSNE.ProBatchFeatures <- function(x, pbf_name = NULL,
     )
     assays <- prep$assays
     dots <- prep$dots
+    use_plotlyrender <- isTRUE(dots$use_plotlyrender)
     filename_list <- prep$filename_list
     split_arg <- prep$split_arg
     titles <- prep$titles
@@ -1564,32 +1630,48 @@ plot_TSNE.ProBatchFeatures <- function(x, pbf_name = NULL,
         return(plot_list[[1L]])
     }
 
-    if (isTRUE(return_subplots)) {
-        n_plots <- length(plot_list)
-        ncol <- if (is.null(subplot_ncol)) ceiling(sqrt(n_plots)) else subplot_ncol
-        nrow <- ceiling(n_plots / ncol)
-        subplot_args <- c(plot_list, list(
-            nrows = nrow,
-            shareX = share_axes,
-            shareY = share_axes,
-            titleX = TRUE,
-            titleY = TRUE
-        ))
-        return(do.call(plotly::subplot, subplot_args))
+    if (isTRUE(use_plotlyrender)) {
+        if (isTRUE(return_gridExtra)) {
+            warning("return_gridExtra is ignored when use_plotlyrender = TRUE; returning list of plotly objects instead.")
+        }
+        if (isTRUE(return_subplots)) {
+            if (!requireNamespace("plotly", quietly = TRUE)) {
+                stop("Package 'plotly' is required to build subplots; install it with install.packages('plotly').", call. = FALSE)
+            }
+            n_plots <- length(plot_list)
+            ncol <- if (is.null(subplot_ncol)) ceiling(sqrt(n_plots)) else subplot_ncol
+            nrow <- ceiling(n_plots / ncol)
+            subplot_args <- c(plot_list, list(
+                nrows = nrow,
+                shareX = share_axes,
+                shareY = share_axes,
+                titleX = TRUE,
+                titleY = TRUE
+            ))
+            return(do.call(plotly::subplot, subplot_args))
+        }
+
+        return(plot_list)
     }
 
-    return(plot_list)
+    if (isTRUE(return_subplots)) {
+        warning("return_subplots = TRUE is only supported when use_plotlyrender = TRUE; arranging ggplot outputs instead.")
+    }
+
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
 }
 
+#' @rdname plot_TSNE
 #' @export
 plot_TSNE <- function(x, ...) UseMethod("plot_TSNE")
 
 #' Plot UMAP embedding of samples
 #'
-#' Produce an interactive UMAP visualization for a data matrix or
-#' `ProBatchFeatures` object, using `plotly` for rendering.
+#' Produce a UMAP visualization for a data matrix or `ProBatchFeatures`
+#' object. A ggplot representation is returned by default, with optional
+#' Plotly-based rendering when requested.
 #'
-#' @inheritParams plot_PCA.default
+#' @inheritParams plot_PCA
 #' @param n_neighbors size of the local neighbourhood used by UMAP.
 #' @param min_dist minimum distance between embedded points.
 #' @param metric distance metric used by UMAP.
@@ -1601,17 +1683,33 @@ plot_TSNE <- function(x, ...) UseMethod("plot_TSNE")
 #'   embedding (forwarded to the UMAP configuration when supplied).
 #' @param learning_rate optional numeric learning rate for the UMAP optimiser
 #'   (forwarded to the configuration when supplied).
+#' @param return_gridExtra logical; when `TRUE` and plotting multiple assays,
+#'   return a list containing the arranged grob along with the individual
+#'   ggplot objects.
+#' @param plot_ncol optional integer controlling the number of columns used when
+#'   arranging multiple ggplots.
+#' @param return_subplots logical; when `TRUE` and `use_plotlyrender = TRUE`,
+#'   combine multiple assays into a single subplot layout produced by
+#'   `plotly::subplot()`.
+#' @param subplot_ncol optional integer specifying the number of subplot columns
+#'   when `return_subplots = TRUE`.
+#' @param share_axes logical indicating whether subplot axes should be shared in
+#'   the Plotly output.
 #' @param ... additional arguments forwarded to `umap::umap()` (default method)
 #'   or the respective default method when called on `ProBatchFeatures`.
 #'
-#' @return A `plotly` object displaying the UMAP embedding.
+#' @return A `ggplot` object displaying the UMAP embedding by default, or a
+#'   `plotly` object when `use_plotlyrender = TRUE`.
+#' @name plot_UMAP
 #'
 #' @examples
 #' \dontrun{
 #' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
 #' umap_plot <- plot_UMAP(example_proteome_matrix, example_sample_annotation,
-#'     color_by = "MS_batch", n_neighbors = 10)
+#'     color_by = "MS_batch", n_neighbors = 10
+#' )
 #' }
+#' @method plot_UMAP default
 #' @export
 plot_UMAP.default <- function(data_matrix, sample_annotation,
                               feature_id_col = "peptide_group_label",
@@ -1636,8 +1734,12 @@ plot_UMAP.default <- function(data_matrix, sample_annotation,
     }
 
     if (n_components < 2) {
-        stop("n_components must be >= 2 to create a 2D plotly scatter plot.")
+        stop("n_components must be >= 2 to create a 2D scatter plot.")
     }
+
+    dots <- list(...)
+    use_plotlyrender <- isTRUE(dots$use_plotlyrender)
+    dots$use_plotlyrender <- NULL
 
     sample_annotation <- as.data.frame(sample_annotation)
 
@@ -1657,6 +1759,26 @@ plot_UMAP.default <- function(data_matrix, sample_annotation,
     sample_annotation <- prep$sample_annotation
     sample_ids <- prep$sample_ids
 
+    if (!is.null(shape_by)) {
+        if (length(shape_by) > 1) {
+            warning("Shaping by the first column specified")
+            shape_by <- shape_by[1]
+        }
+        if (!shape_by %in% colnames(sample_annotation)) {
+            stop(sprintf("Shaping column '%s' not found in sample_annotation", shape_by))
+        }
+
+        shape_column <- sample_annotation[[shape_by]]
+        if (!is.factor(shape_column) && !is.character(shape_column)) {
+            sample_annotation[[shape_by]] <- as.factor(shape_column)
+        }
+    }
+
+    if (length(color_by) > 1) {
+        warning("Coloring by the first column specified")
+        color_by <- color_by[1]
+    }
+
     config <- umap::umap.defaults
     config$n_neighbors <- n_neighbors
     config$min_dist <- min_dist
@@ -1673,7 +1795,11 @@ plot_UMAP.default <- function(data_matrix, sample_annotation,
     }
 
     umap_input <- t(as.matrix(data_matrix))
-    umap_res <- umap::umap(umap_input, config = config, ...)
+    umap_args <- c(list(
+        d = umap_input,
+        config = config
+    ), dots)
+    umap_res <- do.call(umap::umap, umap_args)
     umap_matrix <- as.matrix(umap_res$layout)
 
     if (ncol(umap_matrix) < 2) {
@@ -1686,8 +1812,30 @@ plot_UMAP.default <- function(data_matrix, sample_annotation,
         y = "UMAP 2"
     )
 
-    plot <- .pb_create_embedding_plotly(
-        embedding_matrix = umap_matrix[, seq_len(n_components), drop = FALSE],
+    if (isTRUE(use_plotlyrender)) {
+        if (!requireNamespace("plotly", quietly = TRUE)) {
+            stop("Package 'plotly' is required when use_plotlyrender = TRUE; install it with install.packages('plotly').", call. = FALSE)
+        }
+
+        plot <- .pb_create_embedding_plotly(
+            embedding_matrix = umap_matrix,
+            sample_ids = sample_ids,
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
+            color_by = color_by,
+            shape_by = shape_by,
+            color_scheme = color_scheme,
+            point_size = point_size,
+            point_alpha = point_alpha,
+            plot_title = plot_title,
+            axis_labels = axis_labels
+        )
+
+        return(plot)
+    }
+
+    plot <- .pb_create_embedding_ggplot(
+        embedding_matrix = umap_matrix,
         sample_ids = sample_ids,
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
@@ -1710,6 +1858,8 @@ plot_UMAP.ProBatchFeatures <- function(x, pbf_name = NULL,
                                        sample_annotation = NULL,
                                        sample_id_col = "FullRunName",
                                        plot_title = NULL,
+                                       return_gridExtra = FALSE,
+                                       plot_ncol = NULL,
                                        return_subplots = FALSE,
                                        subplot_ncol = NULL,
                                        share_axes = TRUE,
@@ -1723,6 +1873,7 @@ plot_UMAP.ProBatchFeatures <- function(x, pbf_name = NULL,
     )
     assays <- prep$assays
     dots <- prep$dots
+    use_plotlyrender <- isTRUE(dots$use_plotlyrender)
     filename_list <- prep$filename_list
     split_arg <- prep$split_arg
     titles <- prep$titles
@@ -1756,27 +1907,91 @@ plot_UMAP.ProBatchFeatures <- function(x, pbf_name = NULL,
         return(plot_list[[1L]])
     }
 
-    if (isTRUE(return_subplots)) {
-        n_plots <- length(plot_list)
-        ncol <- if (is.null(subplot_ncol)) ceiling(sqrt(n_plots)) else subplot_ncol
-        nrow <- ceiling(n_plots / ncol)
-        subplot_args <- c(plot_list, list(
-            nrows = nrow,
-            shareX = share_axes,
-            shareY = share_axes,
-            titleX = TRUE,
-            titleY = TRUE
-        ))
-        return(do.call(plotly::subplot, subplot_args))
+    if (isTRUE(use_plotlyrender)) {
+        if (isTRUE(return_gridExtra)) {
+            warning("return_gridExtra is ignored when use_plotlyrender = TRUE; returning list of plotly objects instead.")
+        }
+        if (isTRUE(return_subplots)) {
+            if (!requireNamespace("plotly", quietly = TRUE)) {
+                stop("Package 'plotly' is required to build subplots; install it with install.packages('plotly').", call. = FALSE)
+            }
+            n_plots <- length(plot_list)
+            ncol <- if (is.null(subplot_ncol)) ceiling(sqrt(n_plots)) else subplot_ncol
+            nrow <- ceiling(n_plots / ncol)
+            subplot_args <- c(plot_list, list(
+                nrows = nrow,
+                shareX = share_axes,
+                shareY = share_axes,
+                titleX = TRUE,
+                titleY = TRUE
+            ))
+            return(do.call(plotly::subplot, subplot_args))
+        }
+
+        return(plot_list)
     }
 
-    return(plot_list)
+    if (isTRUE(return_subplots)) {
+        warning("return_subplots = TRUE is only supported when use_plotlyrender = TRUE; arranging ggplot outputs instead.")
+    }
+
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
 }
 
+#' @rdname plot_UMAP
 #' @export
 plot_UMAP <- function(x, ...) UseMethod("plot_UMAP")
 
-# Internal helpers for interactive embedding plots ----------------------------
+# Internal helpers for embedding plots ---------------------------------------
+
+.pb_create_embedding_ggplot <- function(embedding_matrix, sample_ids, sample_annotation,
+                                        sample_id_col, color_by, shape_by,
+                                        color_scheme, point_size, point_alpha,
+                                        plot_title, axis_labels) {
+    plot_df <- data.frame(
+        sample_id = sample_ids,
+        Dim1 = embedding_matrix[, 1],
+        Dim2 = embedding_matrix[, 2],
+        stringsAsFactors = FALSE
+    )
+
+    plot_df <- cbind(plot_df, sample_annotation)
+
+    point_aes <- aes(color = !!sym(color_by))
+    if (!is.null(shape_by)) {
+        point_aes <- aes(color = !!sym(color_by), shape = !!sym(shape_by))
+    }
+
+    gg <- ggplot(plot_df, aes(x = Dim1, y = Dim2)) +
+        geom_point(mapping = point_aes, size = point_size, alpha = point_alpha) +
+        labs(x = axis_labels$x, y = axis_labels$y, color = color_by)
+
+    if (!is.null(shape_by)) {
+        gg <- gg + labs(shape = shape_by)
+    }
+
+    title_to_use <- if (is.null(plot_title)) axis_labels$title else plot_title
+    if (!is.null(title_to_use) && nzchar(title_to_use)) {
+        gg <- gg + ggtitle(title_to_use) +
+            theme(plot.title = element_text(face = "bold", hjust = 0.5))
+    }
+
+    scheme_to_use <- color_scheme
+    if (is.list(scheme_to_use) && !is.null(names(scheme_to_use)) && color_by %in% names(scheme_to_use)) {
+        scheme_to_use <- scheme_to_use[[color_by]]
+    }
+
+    gg <- color_by_factor(
+        color_by_batch = TRUE,
+        batch_col = color_by,
+        gg = gg,
+        color_scheme = scheme_to_use,
+        sample_annotation = sample_annotation,
+        fill_or_color = "color"
+    )
+
+    gg
+}
 
 .pb_prepare_annotation_for_samples <- function(sample_annotation, sample_id_col, sample_ids, allow_partial = FALSE) {
     if (is.null(sample_annotation)) {
