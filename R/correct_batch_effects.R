@@ -219,30 +219,6 @@ center_feature_batch_medians_df <- function(df_long, sample_annotation = NULL,
     )
 }
 
-#' @export
-#' @rdname correct_batch_effects
-#'
-center_feature_batch_means_dm <- function(data_matrix, sample_annotation,
-                                          sample_id_col = "FullRunName",
-                                          batch_col = "MS_batch",
-                                          feature_id_col = "peptide_group_label",
-                                          measure_col = "Intensity") {
-    df_long <- matrix_to_long(
-        data_matrix,
-        feature_id_col = feature_id_col,
-        measure_col = measure_col, sample_id_col = sample_id_col
-    )
-    corrected_df <- center_feature_batch_means_df(
-        df_long, sample_annotation,
-        sample_id_col = sample_id_col, batch_col = batch_col,
-        feature_id_col = feature_id_col, measure_col = measure_col
-    )
-    long_to_matrix(corrected_df,
-        sample_id_col = sample_id_col,
-        measure_col = measure_col, feature_id_col = feature_id_col
-    )
-}
-
 #'
 #' @export
 #' @rdname correct_batch_effects
@@ -289,9 +265,9 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
     # If no per-batch stratification; fit per-feature across all samples
     group_vars <- c(feature_id_col, if (!is.null(batch_col)) batch_col)
     corrected_df <- df_long %>%
-        nest(data = -all_of(group_vars)) %>%
-        mutate(
-            fit = pmap(
+        tidyr::nest(data = -dplyr::all_of(group_vars)) %>%
+        dplyr::mutate(
+            fit = purrr::pmap(
                 list(data = .data$data),
                 function(data) {
                     fit_nonlinear(
@@ -502,13 +478,19 @@ correct_with_ComBat_df <- function(df_long, sample_annotation = NULL,
         sample_id_col = sample_id_col
     )
 
-    old_measure_col <- paste("preBatchCorr", measure_col, sep = "_")
+    old_measure_col <- .make_pre_col("preBatchCorr", measure_col)
 
     df_long <- df_long %>%
         rename(!!sym(old_measure_col) := !!sym(measure_col))
 
-    corrected_df <- corrected_df %>%
-        merge(df_long, by = c(feature_id_col, sample_id_col))
+    corrected_df <- dplyr::left_join(
+        corrected_df,
+        df_long, # already has old measure col name set above
+        by = setNames(
+            c(feature_id_col, sample_id_col),
+            c(feature_id_col, sample_id_col)
+        )
+    )
 
     default_cols <- c(original_cols, old_measure_col)
     minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
@@ -945,12 +927,12 @@ correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
         fill_the_missing = fill_the_missing,
         missing_warning = "ComBat cannot operate with missing values in the matrix",
         method_fun = function(data_matrix, sample_annotation) {
-            if (!(batch_col %in% names(sample_annotation))) {
-                stop("Batch column is not present in sample_annotation")
-            }
-            batches <- as.factor(sample_annotation[[batch_col]])
-            modCombat <- model.matrix(~1, data = sample_annotation)
-            ComBat(dat = data_matrix, batch = batches, mod = modCombat, par.prior = par.prior, ...)
+            run_ComBat_core(
+                sample_annotation = sample_annotation,
+                batch_col = batch_col,
+                data_matrix = data_matrix,
+                par.prior = par.prior, ...
+            )
         }
     )
 }
