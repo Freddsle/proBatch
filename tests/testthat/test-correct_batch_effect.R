@@ -8,7 +8,7 @@ test_that("center_feature_batch_medians", {
     median_proteome <- center_feature_batch_medians_df(proteome, example_sample_annotation, no_fit_imputed = FALSE)
 
     n_batch <- length(unique(median_proteome$MS_batch))
-    expect_equal(length(unique(median_proteome$diff)), n_batch)
+    expect_equal(length(unique(median_proteome$diff_medians)), n_batch)
     expect_equal(length(unique(median_proteome$median_batch)), n_batch)
 })
 

@@ -141,7 +141,7 @@ correct_batch_effects_dm(
   data_matrix,
   sample_annotation,
   continuous_func = NULL,
-  discrete_func = c("MedianCentering", "ComBat"),
+  discrete_func = c("MedianCentering", "MeanCentering", "ComBat"),
   batch_col = "MS_batch",
   feature_id_col = "peptide_group_label",
   sample_id_col = "FullRunName",

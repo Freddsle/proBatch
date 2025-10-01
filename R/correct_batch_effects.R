@@ -134,10 +134,10 @@ center_feature_batch_medians_df <- function(df_long, sample_annotation = NULL,
     old_measure_col <- paste("preBatchCorr", measure_col, sep = "_")
 
     corrected_df <- df_long %>%
-        group_by_at(vars(one_of(batch_col, feature_id_col)))
+        group_by(across(any_of(c(batch_col, feature_id_col))))
 
-    if (is.null(qual_col) & no_fit_imputed) {
-        warning("imputed value flag column is NULL, changing no_fit_imputed to FALSE")
+    if (is.null(qual_col) && no_fit_imputed) {
+        warning("`qual_col` is NULL, setting `no_fit_imputed = FALSE` so imputed flags are ignored.")
         no_fit_imputed <- FALSE
     }
 
@@ -146,38 +146,39 @@ center_feature_batch_medians_df <- function(df_long, sample_annotation = NULL,
             stop("imputed value flag column (qual_col) is not in the data frame!")
         }
         temp_measure_col <- paste("temp", measure_col, sep = "_")
+
         corrected_df <- corrected_df %>%
-            mutate(!!(sym(temp_measure_col)) := ifelse(!!sym(qual_col) == qual_value,
-                NA, !!(sym(measure_col))
+            mutate(!!sym(temp_measure_col) := ifelse(!!sym(qual_col) == qual_value,
+                NA, !!sym(measure_col)
             )) %>%
-            mutate(median_batch = median(!!(sym(temp_measure_col)), na.rm = TRUE)) %>%
+            mutate(median_batch = median(!!sym(temp_measure_col), na.rm = TRUE)) %>%
             ungroup() %>%
-            group_by_at(vars(one_of(feature_id_col))) %>%
-            mutate(median_global = median(!!(sym(temp_measure_col)), na.rm = TRUE))
+            group_by(across(any_of(feature_id_col))) %>%
+            mutate(median_global = median(!!sym(temp_measure_col), na.rm = TRUE)) %>%
+            ungroup() %>%
+            # ensure the internal temp column never leaks to outputs
+            select(-all_of(temp_measure_col))
     } else {
         if (!is.null(qual_col)) {
-            warning(
-                "imputed values are specified not to be used for median inference, however,
-              no_fit_imputed is FALSE"
-            )
+            warning("`qual_col` provided but `no_fit_imputed = FALSE`; imputed flags will be ignored for median inference.")
         }
         corrected_df <- corrected_df %>%
             mutate(median_batch = median(!!(sym(measure_col)), na.rm = TRUE)) %>%
             ungroup() %>%
-            group_by_at(vars(one_of(feature_id_col))) %>%
+            group_by(across(any_of(feature_id_col))) %>%
             mutate(median_global = median(!!(sym(measure_col)), na.rm = TRUE))
     }
     corrected_df <- corrected_df %>%
         ungroup() %>%
-        mutate(diff = median_global - median_batch) %>% # rename here from diff_medians to diff
+        mutate(diff_medians = median_global - median_batch) %>%
         rename(!!(sym(old_measure_col)) := !!(sym(measure_col))) %>%
-        mutate(!!(sym(measure_col)) := !!(sym(old_measure_col)) + diff)
+        mutate(!!(sym(measure_col)) := !!(sym(old_measure_col)) + .data$diff_medians)
 
     # Ensure batch_col is present in default_cols/minimal_cols
-    default_cols <- unique(c(original_cols, batch_col, old_measure_col, "median_batch", "median_global", "diff"))
+    default_cols <- unique(c(original_cols, batch_col, old_measure_col, "median_batch", "median_global", "diff_medians"))
     minimal_cols <- unique(c(
         sample_id_col, feature_id_col, measure_col, old_measure_col,
-        batch_col, "median_batch", "diff"
+        batch_col, "median_batch", "diff_medians"
     ))
 
     if (!is.null(qual_col) && qual_col %in% names(corrected_df)) {
@@ -256,10 +257,10 @@ center_feature_batch_means_df <- function(df_long, sample_annotation = NULL,
     old_measure_col <- paste("preBatchCorr", measure_col, sep = "_")
 
     corrected_df <- df_long %>%
-        group_by_at(vars(one_of(batch_col, feature_id_col)))
+        group_by(across(any_of(c(batch_col, feature_id_col))))
 
-    if (is.null(qual_col) & no_fit_imputed) {
-        warning("imputed value flag column is NULL, changing no_fit_imputed to FALSE")
+    if (is.null(qual_col) && no_fit_imputed) {
+        warning("`qual_col` is NULL, setting `no_fit_imputed = FALSE` so imputed flags are ignored.")
         no_fit_imputed <- FALSE
     }
 
@@ -274,28 +275,33 @@ center_feature_batch_means_df <- function(df_long, sample_annotation = NULL,
             )) %>%
             mutate(mean_batch = mean(!!(sym(temp_measure_col)), na.rm = TRUE)) %>%
             ungroup() %>%
-            group_by_at(vars(one_of(feature_id_col))) %>%
-            mutate(mean_global = mean(!!(sym(temp_measure_col)), na.rm = TRUE))
+            group_by(across(any_of(feature_id_col))) %>%
+            mutate(mean_global = mean(!!(sym(temp_measure_col)), na.rm = TRUE)) %>%
+            ungroup() %>%
+            select(-all_of(temp_measure_col))
     } else {
         if (!is.null(qual_col)) {
-            warning("imputed values are specified not to be used for mean inference,
-              however,
-              no_fit_imputed is FALSE")
+            warning("`qual_col` provided but `no_fit_imputed = FALSE`; imputed flags will be ignored for mean inference.")
         }
         corrected_df <- corrected_df %>%
             mutate(mean_batch = mean(!!(sym(measure_col)), na.rm = TRUE)) %>%
             ungroup() %>%
-            group_by_at(vars(one_of(feature_id_col))) %>%
+            group_by(across(any_of(feature_id_col))) %>%
             mutate(mean_global = mean(!!(sym(measure_col)), na.rm = TRUE))
     }
     corrected_df <- corrected_df %>%
         ungroup() %>%
         mutate(diff_means = mean_global - mean_batch) %>%
         rename(!!(sym(old_measure_col)) := !!(sym(measure_col))) %>%
-        mutate(!!(sym(measure_col)) := !!(sym(old_measure_col)) + diff_means)
+        mutate(!!(sym(measure_col)) := !!(sym(old_measure_col)) + .data$diff_means)
 
-    default_cols <- c(original_cols, old_measure_col)
-    minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
+    default_cols <- unique(c(
+        original_cols, batch_col, old_measure_col, "mean_batch", "mean_global", "diff_means"
+    ))
+    minimal_cols <- unique(c(
+        sample_id_col, feature_id_col, measure_col, old_measure_col,
+        batch_col, "mean_batch", "diff_means"
+    ))
 
     if (!is.null(qual_col) && qual_col %in% names(corrected_df)) {
         default_cols <- c(default_cols, qual_col)
@@ -362,6 +368,7 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
                                   qual_value = NULL,
                                   min_measurements = 8, ...) {
     original_cols <- names(df_long)
+
     df_long <- check_sample_consistency(
         sample_annotation,
         sample_id_col, df_long,
@@ -371,82 +378,108 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
         merge = TRUE
     )
 
-    if (!is.null(qual_col) & no_fit_imputed) {
-        if (!(qual_col %in% names(df_long))) {
-            stop("imputed value flag column is not in the data frame!")
+    if (no_fit_imputed) {
+        if (is.null(qual_col)) {
+            warning("`qual_col` is NULL, setting `no_fit_imputed = FALSE` so imputed flags are ignored.")
+            no_fit_imputed <- FALSE
+        } else if (!(qual_col %in% names(df_long))) {
+            stop("imputed value flag column (qual_col) is not in the data frame!")
         }
     } else {
-        if (is.null(qual_col) & no_fit_imputed) {
-            warning("imputed value flag column is NULL, changing no_fit_imputed to FALSE")
-            no_fit_imputed <- FALSE
+        if (!is.null(qual_col)) {
+            # flags provided but explicitly ignored -- keep behavior, inform user
+            warning("`qual_col` provided but `no_fit_imputed = FALSE`; imputed flags will be ignored for curve fitting.")
         }
     }
 
+    # If a batch column is requested, ensure it's present after consistency checks.
     if (!is.null(batch_col)) {
-        if (!(batch_col %in% union(names(df_long), names(sample_annotation)))) {
-            stop("Batch column is neither in sample annotation nor in data matrix")
+        if (!(batch_col %in% names(df_long))) {
+            stop("`batch_col` not found in the working data after merging sample annotation.")
         }
-        sample_annotation[[batch_col]] <- as.factor(sample_annotation[[batch_col]])
+        # Factorize where it actually matters (in df_long), not in sample_annotation
+        df_long[[batch_col]] <- as.factor(df_long[[batch_col]])
+
         corrected_df <- df_long %>%
-            # filter(!is.na(!!(sym(measure_col)))) %>% #filter(!is.na(Intensity))
-            group_nest(!!!syms(c(feature_id_col, batch_col))) %>%
-            mutate(fit = pmap(
-                list(
-                    df_feature_batch = data,
-                    feature_id = !!sym(feature_id_col),
-                    batch_id = as.character(!!sym(batch_col))
-                ),
-                fit_nonlinear,
-                measure_col = measure_col,
-                order_col = order_col,
-                fit_func = fit_func,
-                no_fit_imputed = no_fit_imputed,
-                qual_col = qual_col,
-                qual_value = qual_value,
-                min_measurements = min_measurements, ...
-            ))
+            group_nest(!!sym(feature_id_col), !!sym(batch_col)) %>%
+            mutate(
+                fit = pmap(
+                    list(
+                        df_feature_batch = .data$data,
+                        feature_id       = .data[[feature_id_col]],
+                        batch_id         = as.character(.data[[batch_col]])
+                    ),
+                    fit_nonlinear,
+                    measure_col = measure_col,
+                    order_col = order_col,
+                    fit_func = fit_func,
+                    no_fit_imputed = no_fit_imputed,
+                    qual_col = qual_col,
+                    qual_value = qual_value,
+                    min_measurements = min_measurements, ...
+                )
+            )
     } else {
+        # No per-batch stratification; fit per-feature across all samples
         corrected_df <- df_long %>%
-            # filter(!is.na(!!(sym(measure_col)))) %>% #filter(!is.na(Intensity))
-            nest(!!sym(feature_id_col)) %>%
-            mutate(fit = map(
-                data,
-                fit_nonlinear,
-                measure_col = measure_col,
-                order_col = order_col,
-                fit_func = fit_func,
-                min_measurements = min_measurements, ...
-            ))
+            group_nest(!!sym(feature_id_col)) %>%
+            mutate(
+                fit = map(
+                    .data$data,
+                    fit_nonlinear,
+                    measure_col = measure_col,
+                    order_col = order_col,
+                    fit_func = fit_func,
+                    min_measurements = min_measurements, ...
+                )
+            )
     }
+
     old_measure_col <- paste("preTrendFit", measure_col, sep = "_")
 
     corrected_df <- corrected_df %>%
-        unnest(cols = where(is.list)) %>%
-        group_by(!!!syms(c(feature_id_col, batch_col))) %>%
+        # only unnest 'data' (original rows) and 'fit' (vector of fitted values)
+        unnest(cols = c(data, fit)) %>%
+        group_by(across(any_of(c(feature_id_col, batch_col)))) %>%
         mutate(mean_fit = mean(fit, na.rm = TRUE)) %>%
         ungroup() %>%
-        mutate(diff_fit = mean_fit - fit) %>%
-        mutate(diff.na = ifelse(is.na(diff_fit), 0, diff_fit)) %>%
-        rename(!!(old_measure_col) := !!(sym(measure_col))) %>%
-        # TODO: make the conditional shift: if we keep the requants,
-        # then we can fit the curve without, but shift them nevertheless
-        mutate(!!(sym(measure_col)) := !!sym("diff.na") + !!sym(old_measure_col))
+        mutate(
+            diff_fit = mean_fit - fit,
+            diff.na  = ifelse(is.na(diff_fit), 0, diff_fit)
+        ) %>%
+        rename(!!rlang::sym(old_measure_col) := !!rlang::sym(measure_col)) %>%
+        # Conditional shift: use diff.na so NA in fit doesn't propagate the shift
+        mutate(!!rlang::sym(measure_col) := diff.na + .data[[old_measure_col]]) %>%
+        select(-any_of("diff.na"))
 
-    default_cols <- c(original_cols, old_measure_col, "fit", batch_col)
-    minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col, "fit")
+
+    default_cols <- unique(c(
+        original_cols,
+        old_measure_col,
+        "fit",
+        if (!is.null(batch_col)) batch_col
+    ))
+    minimal_cols <- unique(c(
+        sample_id_col,
+        feature_id_col,
+        measure_col,
+        old_measure_col,
+        "fit",
+        if (!is.null(batch_col) && batch_col %in% names(corrected_df)) batch_col
+    ))
 
     if (!is.null(qual_col) && qual_col %in% names(corrected_df)) {
         default_cols <- c(default_cols, qual_col)
-        minimal_cols <- c(minimal_cols, batch_col, qual_col)
-    } else {
-        minimal_cols <- c(minimal_cols)
+        minimal_cols <- c(minimal_cols, qual_col)
     }
+
     corrected_df <- subset_keep_cols(
         corrected_df,
         keep_all,
         default_cols = default_cols,
         minimal_cols = minimal_cols
     )
+
     return(corrected_df)
 }
 
@@ -544,8 +577,7 @@ correct_with_ComBat_df <- function(df_long, sample_annotation = NULL,
         merge = FALSE
     )
 
-    # TODO: no_impute_values fix
-    if (!is.null(qual_col) & no_fit_imputed) {
+    if (!is.null(qual_col) && no_fit_imputed) {
         if (!(qual_col %in% names(df_long))) {
             stop("imputed value flag column is not in the data frame!")
         }
@@ -610,7 +642,7 @@ correct_with_ComBat_df <- function(df_long, sample_annotation = NULL,
     old_measure_col <- paste("preBatchCorr", measure_col, sep = "_")
 
     df_long <- df_long %>%
-        rename(!!(old_measure_col) := !!(sym(measure_col)))
+        rename(!!sym(old_measure_col) := !!sym(measure_col))
 
     corrected_df <- corrected_df %>%
         merge(df_long, by = c(feature_id_col, sample_id_col))
@@ -661,7 +693,8 @@ run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
     if (!(batch_col %in% names(sample_annotation))) {
         stop("Batch column is not present in sample_annotation")
     }
-    batches <- sample_annotation[[batch_col]]
+    # Coerce to factor
+    batches <- as.factor(sample_annotation[[batch_col]])
     modCombat <- model.matrix(~1, data = sample_annotation)
     corrected_matrix <- ComBat(
         dat = data_matrix, batch = batches,
@@ -914,12 +947,14 @@ correct_batch_effects_df <- function(df_long, sample_annotation,
     old_measure_col <- paste("preBatchCorr", measure_col, sep = "_")
     if (!is.null(continuous_func)) {
         preFit_measure_col <- paste("preTrendFit", measure_col, sep = "_")
-        default_cols <- c(original_cols, old_measure_col, preFit_measure_col, "fit")
+        default_cols <- c(original_cols, batch_col, old_measure_col, preFit_measure_col, "fit")
     } else {
-        default_cols <- c(original_cols, old_measure_col)
+        default_cols <- c(original_cols, batch_col, old_measure_col)
     }
 
-    minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
+    # Keep batch_col in minimal as well for symmetry and downstream QA
+    minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col, batch_col)
+
     corrected_df <- subset_keep_cols(
         corrected_df,
         keep_all,
@@ -938,6 +973,7 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
                                      continuous_func = NULL,
                                      discrete_func = c(
                                          "MedianCentering",
+                                         "MeanCentering",
                                          "ComBat"
                                      ),
                                      batch_col = "MS_batch",
@@ -1040,7 +1076,7 @@ correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
     if (handle_flag && anyNA(data_matrix)) {
         data_matrix <- handle_missing_values(
             data_matrix,
-            warning_message = "missing values in the matrix",
+            warning_message = "removeBatchEffect cannot operate with missing values in the matrix",
             fill_the_missing = fill_the_missing
         )
         if (!nrow(data_matrix) || !ncol(data_matrix)) {
@@ -1058,7 +1094,9 @@ correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
         stop("Batch column is not present in sample_annotation")
     }
 
-    batches <- sample_annotation[[batch_col]]
+    # limma expects a factor for batch
+    batches <- as.factor(sample_annotation[[batch_col]])
+
     if (!is.null(covariates_cols)) {
         missing_cov <- setdiff(covariates_cols, names(sample_annotation))
         if (length(missing_cov)) {
@@ -1067,10 +1105,13 @@ correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
                 paste(missing_cov, collapse = ", ")
             )
         }
+        if (batch_col %in% covariates_cols) {
+            stop("`covariates_cols` must not include `batch_col` when using removeBatchEffect.")
+        }
         covariates <- as.data.frame(sample_annotation[, covariates_cols, drop = FALSE])
-        mod <- model.matrix(~., data = covariates)
+        mod <- stats::model.matrix(~., data = covariates)
     } else {
-        mod <- NULL
+        mod <- stats::model.matrix(~1, data = sample_annotation)
     }
 
     removeBatchEffect(

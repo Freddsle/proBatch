@@ -130,7 +130,7 @@ test_that("fitting_trend_plots", {
 
     expect_warning(
         loess_fit <- adjust_batch_trend_df(short_df, example_sample_annotation, span = 0.7),
-        "imputed value flag column is NULL, changing no_fit_imputed to FALSE"
+        "`qual_col` is NULL, setting `no_fit_imputed = FALSE` so imputed flags are ignored."
     )
 
     expect_warning(
