@@ -21,7 +21,7 @@
   height = NA,
   units = c("cm", "in", "mm"),
   plot_title = NULL,
-  theme = "classic",
+  theme_name = "classic",
   base_size = 10,
   point_size = 3,
   point_alpha = 0.8
@@ -84,8 +84,6 @@ pdf and png format is supported}
 
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
-
-\item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
 
 \item{base_size}{base size of the text in the plot}
 }

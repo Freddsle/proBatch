@@ -134,6 +134,8 @@
 #' @importFrom gridExtra grid.arrange arrangeGrob
 #' @importFrom grid grid.newpage grid.draw grobTree
 #' @importFrom ggplotify as.ggplot
+#' @importFrom umap umap umap.defaults
+#' @importFrom Rtsne Rtsne
 #' @importFrom SummarizedExperiment SummarizedExperiment colData rowData assay
 #' @importFrom S4Vectors DataFrame rbind metadata
 #' @importFrom matrixStats rowMedians colMedians

@@ -23,6 +23,7 @@
   point_size = 8,
   point_alpha = 0.85,
   random_seed = NULL,
+  theme_name = "classic",
   ...
 )
 

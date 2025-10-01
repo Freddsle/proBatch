@@ -123,7 +123,7 @@ test_that("pca_plot", {
     )
 
     expect_equal(pca$labels$y, "PC2 (14.24%)")
-    expect_equal(pca$labels$x, "PC1 (69.5%)")
+    expect_equal(pca$labels$x, "PC1 (69.50%)")
     expect_equal(pca$labels$colour, "MS_batch")
 })
 

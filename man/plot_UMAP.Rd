@@ -25,6 +25,7 @@
   random_state = NULL,
   spread = NULL,
   learning_rate = NULL,
+  theme_name = "classic",
   ...
 )
 

@@ -202,9 +202,9 @@ plot_NA_heatmap.ProBatchFeatures <- function(
 
         # if number of rows or columns is bigger than 5000, select a random subset of 5000
         if (nrow(data_matrix) > 5000 && use_subset) {
+            warning("Assay '", assay_nm, "' has more than 5000 rows; plotting a random subset of 5000 rows.")
             row_idx <- sort(sample(seq_len(nrow(data_matrix)), 5000))
             data_matrix <- data_matrix[row_idx, , drop = FALSE]
-            warning("Assay '", assay_nm, "' has more than 5000 rows; plotting a random subset of 5000 rows.")
         }
         if (ncol(data_matrix) > 5000 && use_subset) {
             col_idx <- sort(sample(seq_len(ncol(data_matrix)), 5000))
