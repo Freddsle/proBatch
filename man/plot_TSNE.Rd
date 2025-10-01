@@ -24,6 +24,7 @@
   point_alpha = 0.85,
   random_seed = NULL,
   theme_name = "classic",
+  plotly_param = list(width = 800, height = 600),
   ...
 )
 

@@ -1515,6 +1515,7 @@ plot_TSNE.default <- function(data_matrix, sample_annotation,
                               point_alpha = 0.85,
                               random_seed = NULL,
                               theme_name = "classic",
+                              plotly_param = list(width = 800, height = 600),
                               ...) {
     if (!requireNamespace("Rtsne", quietly = TRUE)) {
         stop("Package 'Rtsne' is required for plot_TSNE(); install it with install.packages('Rtsne').", call. = FALSE)
@@ -1612,7 +1613,8 @@ plot_TSNE.default <- function(data_matrix, sample_annotation,
             point_size = point_size,
             point_alpha = point_alpha,
             plot_title = plot_title,
-            axis_labels = axis_labels
+            axis_labels = axis_labels,
+            plotly_param = plotly_param
         )
 
         return(plot)
@@ -1769,6 +1771,7 @@ plot_UMAP.default <- function(data_matrix, sample_annotation,
                               spread = NULL,
                               learning_rate = NULL,
                               theme_name = "classic",
+                              plotly_param = list(width = 800, height = 600),
                               ...) {
     if (!requireNamespace("umap", quietly = TRUE)) {
         stop("Package 'umap' is required for plot_UMAP(); install it with install.packages('umap').", call. = FALSE)
@@ -1859,7 +1862,8 @@ plot_UMAP.default <- function(data_matrix, sample_annotation,
             point_size = point_size,
             point_alpha = point_alpha,
             plot_title = plot_title,
-            axis_labels = axis_labels
+            axis_labels = axis_labels,
+            plotly_param = plotly_param
         )
 
         return(plot)
@@ -2065,7 +2069,7 @@ plot_UMAP <- function(x, ...) UseMethod("plot_UMAP")
 .pb_create_embedding_plotly <- function(embedding_matrix, sample_ids, sample_annotation,
                                         sample_id_col, color_by, shape_by,
                                         color_scheme, point_size, point_alpha,
-                                        plot_title, axis_labels) {
+                                        plot_title, axis_labels, plotly_param) {
     plot_df <- data.frame(
         sample_id = sample_ids,
         Dim1 = embedding_matrix[, 1],
@@ -2102,6 +2106,10 @@ plot_UMAP <- function(x, ...) UseMethod("plot_UMAP")
         color = ~.color_value,
         colors = color_info$palette
     )
+
+    if (!is.null(plotly_param$width)) {
+        plot_args <- c(plot_args, plotly_param)
+    }
 
     if (!is.null(shape_info)) {
         plot_args$symbol <- ~.shape_value

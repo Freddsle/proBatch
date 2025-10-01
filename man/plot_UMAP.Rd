@@ -26,6 +26,7 @@
   spread = NULL,
   learning_rate = NULL,
   theme_name = "classic",
+  plotly_param = list(width = 800, height = 600),
   ...
 )
 
