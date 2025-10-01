@@ -165,7 +165,7 @@ test_that("pca_plot", {
     )
 
     expect_equal(pca$labels$y, "PC2 (14.24%)")
-    expect_equal(pca$labels$x, "PC1 (69.50%)")
+    expect_equal(pca$labels$x, "PC1 (69.5%)")
     expect_equal(pca$labels$colour, "MS_batch")
 })
 
@@ -175,13 +175,22 @@ test_that("plot_TSNE returns ggplot by default", {
     data(example_proteome_matrix, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
 
-    tsne_plot <- plot_TSNE(
-        example_proteome_matrix, example_sample_annotation,
-        color_by = "MS_batch",
-        fill_the_missing = -1,
-        perplexity = 2,
-        max_iter = 250,
-        random_seed = 123
+    expect_warning(
+        expect_warning(
+            expect_warning(
+                tsne_plot <- plot_TSNE(
+                    example_proteome_matrix, example_sample_annotation,
+                    color_by = "MS_batch",
+                    fill_the_missing = -1,
+                    perplexity = 2,
+                    max_iter = 250,
+                    random_seed = 123
+                ),
+                "filling missing values with -1"
+            ),
+            "t-SNE cannot operate with missing values in the matrix"
+        ),
+        "color_scheme will be inferred automatically"
     )
 
     expect_s3_class(tsne_plot, "ggplot")
