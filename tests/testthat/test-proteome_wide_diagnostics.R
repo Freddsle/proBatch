@@ -127,6 +127,110 @@ test_that("pca_plot", {
     expect_equal(pca$labels$colour, "MS_batch")
 })
 
+test_that("plot_TSNE returns ggplot by default", {
+    skip_if_not_installed("Rtsne")
+
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    expect_warning(
+        expect_warning(
+            expect_warning(
+                tsne_plot <- plot_TSNE(
+                    example_proteome_matrix, example_sample_annotation,
+                    color_by = "MS_batch",
+                    fill_the_missing = -1,
+                    perplexity = 2,
+                    max_iter = 250,
+                    random_seed = 123
+                ),
+                "filling missing values with -1"
+            ),
+            "t-SNE cannot operate with missing values in the matrix"
+        ),
+        "color_scheme will be inferred automatically"
+    )
+
+    expect_s3_class(tsne_plot, "ggplot")
+})
+
+test_that("plot_TSNE use_plotlyrender returns plotly object", {
+    skip_if_not_installed("plotly")
+    skip_if_not_installed("Rtsne")
+
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    expect_warning(
+        expect_warning(
+            tsne_plot <- plot_TSNE(
+                example_proteome_matrix, example_sample_annotation,
+                color_by = "MS_batch",
+                fill_the_missing = -1,
+                perplexity = 2,
+                max_iter = 250,
+                random_seed = 123,
+                use_plotlyrender = TRUE
+            ),
+            "filling missing values with -1"
+        ),
+        "t-SNE cannot operate with missing values in the matrix"
+    )
+
+    expect_s3_class(tsne_plot, "plotly")
+})
+
+test_that("plot_UMAP returns ggplot by default", {
+    skip_if_not_installed("umap")
+
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    expect_warning(
+        expect_warning(
+            expect_warning(
+                umap_plot <- plot_UMAP(
+                    example_proteome_matrix, example_sample_annotation,
+                    color_by = "MS_batch",
+                    fill_the_missing = -1,
+                    n_neighbors = 5,
+                    random_state = 42
+                ),
+                "filling missing values with -1"
+            ),
+            "UMAP cannot operate with missing values in the matrix"
+        ),
+        "color_scheme will be inferred automatically"
+    )
+
+    expect_s3_class(umap_plot, "ggplot")
+})
+
+test_that("plot_UMAP use_plotlyrender returns plotly object", {
+    skip_if_not_installed("plotly")
+    skip_if_not_installed("umap")
+
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    expect_warning(
+        expect_warning(
+            umap_plot <- plot_UMAP(
+                example_proteome_matrix, example_sample_annotation,
+                color_by = "MS_batch",
+                fill_the_missing = -1,
+                n_neighbors = 5,
+                random_state = 42,
+                use_plotlyrender = TRUE
+            ),
+            "filling missing values with -1"
+        ),
+        "UMAP cannot operate with missing values in the matrix"
+    )
+
+    expect_s3_class(umap_plot, "plotly")
+})
+
 test_that("plot_PCA ProBatchFeatures handles multiple assays", {
     skip_if_not_installed("gridExtra")
     data(example_proteome_matrix, package = "proBatch")
@@ -189,6 +293,150 @@ test_that("plot_heatmap_diagnostic ProBatchFeatures arranges multiple assays", {
     expect_type(res, "list")
     expect_equal(length(res$plots), length(names(pbf)))
     expect_true(all(vapply(res$plots, function(x) inherits(x, "pheatmap"), logical(1))))
+})
+
+test_that("plot_TSNE ProBatchFeatures arranges multiple assays by default", {
+    skip_if_not_installed("Rtsne")
+
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    matrix_small <- example_proteome_matrix[1:30, 1:6]
+    sample_ids <- colnames(matrix_small)
+    sample_ann <- example_sample_annotation[match(sample_ids, example_sample_annotation$FullRunName), ]
+
+    pbf <- suppressMessages(ProBatchFeatures(
+        data_matrix = matrix_small,
+        sample_annotation = sample_ann,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    ))
+    pbf <- suppressMessages(pb_transform(pbf,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    ))
+
+    res <- suppressWarnings(plot_TSNE(
+        pbf,
+        sample_id_col = "FullRunName",
+        perplexity = 2,
+        max_iter = 250,
+        random_seed = 321,
+        return_gridExtra = TRUE
+    ))
+
+    expect_type(res, "list")
+    expect_named(res$plots, names(pbf))
+    expect_true(all(vapply(res$plots, inherits, logical(1), "ggplot")))
+})
+
+test_that("plot_TSNE ProBatchFeatures use_plotlyrender returns plotly objects", {
+    skip_if_not_installed("plotly")
+    skip_if_not_installed("Rtsne")
+
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    matrix_small <- example_proteome_matrix[1:30, 1:6]
+    sample_ids <- colnames(matrix_small)
+    sample_ann <- example_sample_annotation[match(sample_ids, example_sample_annotation$FullRunName), ]
+
+    pbf <- suppressMessages(ProBatchFeatures(
+        data_matrix = matrix_small,
+        sample_annotation = sample_ann,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    ))
+    pbf <- suppressMessages(pb_transform(pbf,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    ))
+
+    res <- suppressWarnings(plot_TSNE(
+        pbf,
+        sample_id_col = "FullRunName",
+        perplexity = 2,
+        max_iter = 250,
+        random_seed = 321,
+        use_plotlyrender = TRUE
+    ))
+
+    expect_type(res, "list")
+    expect_named(res, names(pbf))
+    expect_true(all(vapply(res, inherits, logical(1), "plotly")))
+})
+
+test_that("plot_UMAP ProBatchFeatures arranges multiple assays by default", {
+    skip_if_not_installed("umap")
+
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    matrix_small <- example_proteome_matrix[1:30, 1:6]
+    sample_ids <- colnames(matrix_small)
+    sample_ann <- example_sample_annotation[match(sample_ids, example_sample_annotation$FullRunName), ]
+
+    pbf <- suppressMessages(ProBatchFeatures(
+        data_matrix = matrix_small,
+        sample_annotation = sample_ann,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    ))
+    pbf <- suppressMessages(pb_transform(pbf,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    ))
+
+    res <- suppressWarnings(plot_UMAP(
+        pbf,
+        sample_id_col = "FullRunName",
+        n_neighbors = 5,
+        random_state = 99,
+        return_gridExtra = TRUE
+    ))
+
+    expect_type(res, "list")
+    expect_named(res$plots, names(pbf))
+    expect_true(all(vapply(res$plots, inherits, logical(1), "ggplot")))
+})
+
+test_that("plot_UMAP ProBatchFeatures use_plotlyrender returns plotly objects", {
+    skip_if_not_installed("plotly")
+    skip_if_not_installed("umap")
+
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    matrix_small <- example_proteome_matrix[1:30, 1:6]
+    sample_ids <- colnames(matrix_small)
+    sample_ann <- example_sample_annotation[match(sample_ids, example_sample_annotation$FullRunName), ]
+
+    pbf <- suppressMessages(ProBatchFeatures(
+        data_matrix = matrix_small,
+        sample_annotation = sample_ann,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    ))
+    pbf <- suppressMessages(pb_transform(pbf,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    ))
+
+    res <- suppressWarnings(plot_UMAP(
+        pbf,
+        sample_id_col = "FullRunName",
+        n_neighbors = 5,
+        random_state = 99,
+        use_plotlyrender = TRUE
+    ))
+
+    expect_type(res, "list")
+    expect_named(res, names(pbf))
+    expect_true(all(vapply(res, inherits, logical(1), "plotly")))
 })
 
 test_that("plot_PCA ProBatchFeatures returns ggplot for single assay", {

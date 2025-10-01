@@ -72,6 +72,41 @@
     }, character(1), USE.NAMES = FALSE)
 }
 
+.pb_prepare_multi_assay <- function(object, pbf_name, dots, plot_title,
+                                    default_title_fun = .pb_default_title,
+                                    set_silent = FALSE) {
+    assays <- .pb_assays_to_plot(object, pbf_name)
+
+    filename_list <- NULL
+    if ("filename" %in% names(dots)) {
+        filename_list <- .pb_split_arg_by_assay(dots$filename, assays)
+        dots$filename <- NULL
+    }
+
+    if (isTRUE(set_silent) && length(assays) > 1L && !"silent" %in% names(dots)) {
+        dots$silent <- TRUE
+    }
+
+    list(
+        assays = assays,
+        dots = dots,
+        titles = .pb_resolve_titles(assays, plot_title, default_fun = default_title_fun),
+        filename_list = filename_list,
+        split_arg = function(arg) .pb_split_arg_by_assay(arg, assays)
+    )
+}
+
+.pb_per_assay_dots <- function(dots, filename_list, index) {
+    call_args <- dots
+    if (!is.null(filename_list)) {
+        fn <- filename_list[[index]]
+        if (!is.null(fn)) {
+            call_args$filename <- fn
+        }
+    }
+    call_args
+}
+
 .pb_arrange_plot_list <- function(plot_list, convert_fun = NULL, draw = TRUE, plot_ncol = NULL, return_gridExtra = FALSE) {
     if (!length(plot_list)) {
         return(invisible(NULL))
