@@ -26,7 +26,7 @@ editor_options:
 
 ```{r global_options, include=FALSE}
 knitr::opts_chunk$set(
-    echo = TRUE, warning = FALSE, message = FALSE, fig.pos = "h",
+    echo = TRUE, warning = TRUE, message = TRUE, fig.pos = "h",
     collapse = TRUE,
     comment = "#>",
     knitr.table.format = "simple"
@@ -412,6 +412,51 @@ As anticipated, the PCA plot clearly shows that the primary source of
 variation in the raw data is the Center, confirming a strong batch
 effect that we will need to address.
 
+### Plot t-SNE and UMAP
+
+Linear methods such as PCA are often complemented by non-linear
+embeddings that emphasise local neighbourhood structure. The
+`plot_TSNE()` and `plot_UMAP()` helpers follow the same interface as
+`plot_PCA()`:
+
+```{r plot_embeddings, fig.show='hold', fig.width=8, fig.height=4}
+tsne_plot <- plot_TSNE(
+    pbf,
+    pbf_name = "protein::log2_on_raw",
+    sample_id_col = "Run",
+    color_scheme = color_scheme,
+    color_by = "Lab",
+    shape_by = "Condition",
+    fill_the_missing = 0,
+    perplexity = 15,
+    random_seed = 42,
+    plot_title = "t-SNE after log2 transform",
+    point_size = 3,
+    point_alpha = 0.5
+)
+
+umap_plot <- plot_UMAP(
+    pbf,
+    pbf_name = "protein::log2_on_raw",
+    sample_id_col = "Run",
+    color_scheme = color_scheme,
+    color_by = "Lab",
+    shape_by = "Condition",
+    fill_the_missing = 0,
+    n_neighbors = 15,
+    random_state = 42,
+    plot_title = "UMAP after log2 transform",
+    point_size = 3,
+    point_alpha = 0.5
+)
+
+gridExtra::grid.arrange(tsne_plot, umap_plot, ncol = 2)
+```
+
+Both embeddings reproduce the lab-driven separation seen in the PCA
+plots while emphasising finer structure within each group, offering a
+complementary view on the same batch effects.
+
 ## Step 3 - median normalization
 
 To make the samples more comparable, we will try to apply median
@@ -613,6 +658,25 @@ plot_PCA(
 
 ```{r plot_pca_combat_series, fig.height=7, fig.show='hold', fig.width=8, message=FALSE, warning=FALSE}
 plot_PCA(
+    pbf,
+    pbf_name = c(
+        "protein::log2_on_raw",
+        "protein::combat_on_log2_on_raw",
+        "protein::medianNorm_on_log2_on_raw",
+        "protein::combat_on_medianNorm_on_log2_on_raw"
+    ),
+    sample_id_col = "Run",
+    color_scheme = color_scheme,
+    color_by = "Lab",
+    shape_by = "Condition",
+    fill_the_missing = NULL,
+    base_size = 8, point_size = 3, point_alpha = 0.5
+)
+```
+
+or UMAP:
+```{r plot_umap_combat_series, fig.height=7, fig.show='hold', fig.width=8, message=FALSE, warning=FALSE}
+plot_UMAP(
     pbf,
     pbf_name = c(
         "protein::log2_on_raw",

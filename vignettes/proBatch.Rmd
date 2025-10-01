@@ -662,6 +662,41 @@ pca_spec <- plot_PCA(
 pca_spec
 ```
 
+### Plot t-SNE and UMAP
+
+PCA captures the dominant sources of variation, yet non-linear
+embeddings (`plot_TSNE()` and `plot_UMAP()`) can highlight local structure that might otherwise be hidden.
+
+```{r plot_embeddings, fig.show='hold', fig.width=14, fig.height=6.5}
+tsne_batch <- plot_TSNE(
+    quantile_normalized_matrix,
+    example_sample_annotation,
+    color_by = "MS_batch",
+    color_scheme = color_list[["MS_batch"]],
+    fill_the_missing = 0,
+    perplexity = 20,
+    random_seed = 42,
+    plot_title = "t-SNE coloured by MS batch",
+    point_size = 3,
+    point_alpha = 0.7
+)
+
+umap_batch <- plot_UMAP(
+    quantile_normalized_matrix,
+    example_sample_annotation,
+    color_by = "MS_batch",
+    color_scheme = color_list[["MS_batch"]],
+    fill_the_missing = 0,
+    n_neighbors = 15,
+    random_state = 42,
+    plot_title = "UMAP coloured by MS batch",
+    point_size = 3,
+    point_alpha = 0.7
+)
+
+gridExtra::grid.arrange(tsne_batch, umap_batch, ncol = 2)
+```
+
 \pagebreak
 
 ### Principal variance component analysis (PVCA)
@@ -984,6 +1019,10 @@ p2 <- plot_sample_corr_heatmap(
     annotation_names_col = TRUE, annotation_legend = FALSE,
     show_colnames = FALSE
 )
+
+# combine two plots side by side
+
+grid.arrange(grobs = list(p1$gtable, p2$gtable), ncol = 2)
 ```
 
 or on one plot: 
