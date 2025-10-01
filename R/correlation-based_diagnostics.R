@@ -45,18 +45,13 @@ plot_corr_matrix <- function(corr_matrix,
                              units = c("cm", "in", "mm"),
                              plot_title = NULL, ...) {
     # infer the color scheme for annotation (cols & rows)
-    if (is.null(color_list) && !is.null(annotation)) {
-        warning("color_list for annotation (cols & rows) not defined, inferring automatically.
-            Numeric/factor columns are guessed, for more controlled color mapping use
-            sample_annotation_to_colors()")
-        color_list <- sample_annotation_to_colors(
-            sample_annotation = annotation,
-            sample_id_col = annotation_id_col,
-            factor_columns = factors_to_plot,
-            numeric_columns = NULL,
-            guess_factors = TRUE
-        )
-    }
+    color_list <- .pb_resolve_color_list(
+        color_list = color_list,
+        annotation_df = annotation,
+        id_col = annotation_id_col,
+        columns = factors_to_plot,
+        warn_message = "color_list for annotation (cols & rows) not defined, inferring automatically. Numeric/factor columns are guessed, for more controlled color mapping use sample_annotation_to_colors()"
+    )
 
     if (cluster_rows != cluster_cols) {
         warning("different arguments for clustering of rows and columns, this will make
