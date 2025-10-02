@@ -1,5 +1,5 @@
-merge_df_with_annotation <- function(df_long, sample_annotation, sample_id_col,
-                                     batch_col, order_col, facet_col) {
+.merge_df_with_annotation <- function(df_long, sample_annotation, sample_id_col,
+                                      batch_col, order_col, facet_col) {
     join_cols <- unique(c(sample_id_col, batch_col, order_col, facet_col))
     join_cols <- join_cols[!is.null(join_cols)]
     # keep only columns that are in both data frames
@@ -92,7 +92,7 @@ check_sample_consistency <- function(sample_annotation, sample_id_col, df_long,
 
     # Merge if requested
     if (merge) {
-        df_long <- merge_df_with_annotation(
+        df_long <- .merge_df_with_annotation(
             df_long, sample_annotation,
             sample_id_col, batch_col, order_col, facet_col
         )
@@ -128,7 +128,7 @@ define_sample_order <- function(order_col, sample_annotation, facet_col,
     annotation_cols <- c(batch_col, order_col, facet_col)
     if (!is.null(sample_annotation) &&
         !any(annotation_cols %in% names(df_long))) {
-        df_long <- merge_df_with_annotation(
+        df_long <- .merge_df_with_annotation(
             df_long, sample_annotation,
             sample_id_col, batch_col, order_col, facet_col
         )

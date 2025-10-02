@@ -1,222 +1,409 @@
-#' @title Batch correction of normalized data
+#' @title Batch correction methods for normalized data
 #'
-#' @description Batch correction of normalized data. Batch correction
-#' brings each feature in each batch to the comparable shape.
-#' Currently the following batch correction functions are implemented:
+#' @description
+#' Batch correction of normalized data to bring each feature within each batch
+#' to a comparable scale. The following methods are available:
 #' \enumerate{
-#'   \item Per-feature median centering:
-#'   \code{center_feature_batch_medians_df()}.
-#'   Median centering of the features (per batch median).
-#'   \item correction with ComBat:  \code{correct_with_ComBat_df()}.
-#' Adjusts for discrete batch effects using ComBat. ComBat, described in
-#' Johnson et al. 2007. It uses either parametric or
-#' non-parametric empirical Bayes frameworks for adjusting data for batch
-#' effects. Users are returned an expression matrix that has been corrected for
-#' batch effects. The input data are assumed to be free of missing values
-#' and normalized before batch effect removal. Please note that missing values
-#' are common in proteomics, which is why in some cases corrections like
-#' \code{center_peptide_batch_medians_df} are more appropriate.
-#'   \item Continuous drift correction:  \code{adjust_batch_trend_df()}.
-#' Adjust batch signal trend with the custom (continuous) fit.
-#' Should be followed by discrete corrections,
-#' e.g. \code{center_feature_batch_medians_df()} or
-#' \code{correct_with_ComBat_df()}.
+#'   \item \strong{Per-feature centering by median/mean}:
+#'     \code{\link{center_feature_batch}()} — unified API for long (\code{"long"})
+#'     and wide (\code{"wide"}) data via \code{format}, and for medians/means via
+#'     \code{stat}. \emph{Deprecated wrappers}:
+#'     \code{center_feature_batch_medians_df()}, \code{center_feature_batch_means_df()},
+#'     \code{center_feature_batch_medians_dm()}, \code{center_feature_batch_means_dm()}
+#'     now forward to \code{center_feature_batch()} and emit deprecation warnings.
+#'   \item \strong{Discrete batch correction with ComBat}:
+#'     \code{\link{correct_with_ComBat_df}()} adjusts for discrete batch effects
+#'     (Johnson et al., 2007) using parametric or non-parametric empirical Bayes.
+#'     Inputs are expected to be normalized and (ideally) free of missing values.
+#'     Since missingness is common in proteomics, per-feature centering may be
+#'     preferable in some cases.
+#'   \item \strong{Continuous drift correction}:
+#'     \code{\link{adjust_batch_trend_df}()} fits and removes within-batch trends
+#'     (e.g., LOESS); typically followed by a discrete adjustment such as
+#'     \code{center_feature_batch()} or \code{correct_with_ComBat_df()}.
 #' }
-#' Alternatively, one can call the correction function with
-#' \code{correct_batch_effects_df()} wrapper.
-#' Batch correction method allows correction of
-#' continuous signal drift within batch (if required) and adjustment for
-#' discrete difference across batches.
 #'
+#' Alternatively, use the wrapper \code{\link{correct_batch_effects_df}()} to
+#' combine continuous and/or discrete corrections in one call.
 #'
 #' @inheritParams proBatch
-#' @param return_fit_df (logical) whether to return the \code{fit_df} from
-#' \code{adjust_batch_trend_dm} or only the data matrix
-#' @param fit_func function to fit the (non)-linear trend
-#' @param min_measurements the number of samples in a batch required for curve fitting.
-#' @param par.prior use parametrical or non-parametrical prior
-#' @param continuous_func function to use for the fit (currently
-#' only \code{loess_regression} available); if order-associated fix is not
-#' required, should be \code{NULL}.
-#' @param discrete_func function to use for adjustment of discrete batch effects
-#' (\code{MedianCentering} or \code{ComBat}).
-#' @param fill_the_missing numeric value used to impute missing measurements before
-#' correction. If \code{NULL} (default) missing values are left untouched, if
-#' \code{FALSE} rows with missing values are removed prior to correction.
-#' @param ... other parameters, usually of \code{adjust_batch_trend},
-#' and \code{fit_func}.
-
+#' @param return_fit_df (logical) whether \code{\link{adjust_batch_trend_dm}()}
+#'   returns the \code{fit_df} (for curve inspection) alongside the corrected matrix.
+#' @param fit_func function used for trend fitting (e.g., \code{"loess_regression"}).
+#' @param min_measurements minimum number of samples per batch required for fitting.
+#' @param par.prior logical; use parametric prior (ComBat) or non-parametric.
+#' @param continuous_func which function to use for the continuous fit (currently
+#'   only \code{"loess_regression"}); set \code{NULL} if order-associated drift
+#'   correction is not required.
+#' @param discrete_func which function to use for discrete batch effects
+#'   (\code{"MedianCentering"} / \code{"ComBat"}), used by the wrapper.
+#' @param fill_the_missing numeric value for imputing missing measurements prior
+#'   to correction; if \code{NULL} (default), missing values are left as is; if
+#'   \code{FALSE}, rows containing missing values are removed before correction.
+#' @param ... additional parameters passed to \code{adjust_batch_trend_df()} and
+#'   the chosen \code{fit_func}.
 #'
-#' @return the data in the same format as input (\code{data_matrix} or
-#' \code{df_long}).
-#' For \code{df_long} the data frame stores the original values of
-#' \code{measure_col}
-#' in another column called "preBatchCorr_[measure_col]", and the normalized
-#' values in \code{measure_col} column.
+#' @return
+#' Returns data in the same format as input (\code{data_matrix} or \code{df_long}).
+#' For long format, original values from \code{measure_col} are preserved in
+#' \code{"preBatchCorr_[measure_col]"} and corrected values are written to
+#' \code{measure_col}.
 #'
-#' The function \code{adjust_batch_trend_dm()}, if \code{return_fit_df} is
-#' \code{TRUE} returns list of two items:
+#' The function \code{\link{adjust_batch_trend_dm}()}, if \code{return_fit_df = TRUE},
+#' returns a list with:
 #' \enumerate{
-#'   \item \code{data_matrix}
-#'   \item \code{fit_df}, used to examine the fitting curves
+#'   \item \code{corrected_dm} — corrected data matrix
+#'   \item \code{fit_df} — data frame to inspect fitted curves
 #' }
-
 #'
 #' @examples
-#' # Load necessary datasets
+#' # Load example data
 #' data(
 #'     list = c("example_sample_annotation", "example_proteome"),
 #'     package = "proBatch"
 #' )
 #'
-#' # Median centering per feature per batch:
-#' median_centered_df <- center_feature_batch_medians_df(
+#' # 1) Per-feature centering (LONG): medians
+#' median_centered_df <- center_feature_batch(
+#'     x = example_proteome,
+#'     sample_annotation = example_sample_annotation,
+#'     format = "long", stat = "medians",
+#'     sample_id_col = "FullRunName", batch_col = "MS_batch",
+#'     feature_id_col = "peptide_group_label", measure_col = "Intensity"
+#' )
+#'
+#' # 2) Per-feature centering (WIDE): means
+#' data(example_proteome_matrix, package = "proBatch")
+#' mean_centered_mat <- center_feature_batch(
+#'     x = example_proteome_matrix,
+#'     sample_annotation = example_sample_annotation,
+#'     format = "wide", stat = "means",
+#'     sample_id_col = "FullRunName", batch_col = "MS_batch",
+#'     feature_id_col = "peptide_group_label", measure_col = "Intensity"
+#' )
+#'
+#' # 3) ComBat (discrete)
+#' combat_corrected_df <- correct_with_ComBat_df(
 #'     example_proteome, example_sample_annotation
 #' )
 #'
-#' # Correct with ComBat:
-#' combat_corrected_df <- correct_with_ComBat_df(
-#'     example_proteome,
-#'     example_sample_annotation
-#' )
-#'
-#' # Adjust the MS signal drift:
+#' # 4) Continuous drift correction (LOESS), then discrete centering if desired
 #' test_peptides <- unique(example_proteome$peptide_group_label)[1:3]
-#' test_peptide_filter <- example_proteome$peptide_group_label %in% test_peptides
-#' test_proteome <- example_proteome[test_peptide_filter, ]
-#' adjusted_df <- adjust_batch_trend_df(test_proteome,
-#'     example_sample_annotation,
-#'     span = 0.7,
-#'     min_measurements = 8
+#' test_df <- subset(example_proteome, peptide_group_label %in% test_peptides)
+#' adjusted_df <- adjust_batch_trend_df(
+#'     df_long = test_df,
+#'     sample_annotation = example_sample_annotation,
+#'     span = 0.7, min_measurements = 8
 #' )
-#' plot_fit <- plot_with_fitting_curve(unique(adjusted_df$peptide_group_label),
+#' plot_fit <- plot_with_fitting_curve(
+#'     unique(adjusted_df$peptide_group_label),
 #'     df_long = adjusted_df, measure_col = "preTrendFit_Intensity",
 #'     fit_df = adjusted_df, sample_annotation = example_sample_annotation
 #' )
 #'
-#' # Correct the data in one go:
-#' batch_corrected_matrix <- correct_batch_effects_df(example_proteome,
-#'     example_sample_annotation,
+#' # 5) One-call wrapper
+#' batch_corrected_matrix <- correct_batch_effects_df(
+#'     example_proteome, example_sample_annotation,
 #'     continuous_func = "loess_regression",
 #'     discrete_func = "MedianCentering",
 #'     batch_col = "MS_batch",
 #'     span = 0.7, min_measurements = 8
 #' )
 #'
-#' @seealso \code{\link{fit_nonlinear}}
+#' @seealso
+#' \code{\link{center_feature_batch}}, \code{\link{adjust_batch_trend_df}},
+#' \code{\link{adjust_batch_trend_dm}}, \code{\link{correct_with_ComBat_df}},
+#' \code{\link{correct_batch_effects_df}}
+#'
 #' @name correct_batch_effects
 NULL
 
+#' @title Center features per-batch by median/mean (unified)
+#' @description Centers each feature *within each batch* to the global
+#' location (median/mean) of that feature. Works for long-data frames and
+#' wide matrices.
+#'
+#' @inheritParams correct_batch_effects
+#' @param x Either a long data.frame or a numeric matrix (features in rows,
+#'   samples in columns), depending on `format`.
+#' @param format One of `"long"` or `"wide"`. `"long"` expects a data.frame
+#'   with columns `sample_id_col`, `feature_id_col`, `measure_col`. `"wide"`
+#'   expects a numeric matrix and uses `matrix_to_long()` / `long_to_matrix()`.
+#' @param stat One of `"medians"` or `"means"`. Aliases `"median"`/`"mean"`
+#'   are accepted.
+#' @param keep_all Passed to `subset_keep_cols()` for long format, ignored for wide.
+#' @param no_fit_imputed If `TRUE` and `qual_col` is provided, imputed values
+#'   are masked during location estimation (original values remain unchanged).
+#' @param qual_col,qual_value Column and value that flag imputed entries.
+#'
+#' @return If `format = "long"`, a data.frame; if `format = "wide"`, a matrix.
+#'
+#' @details
+#' For `"wide"`, conversion uses `matrix_to_long()` / `long_to_matrix()`.
+#' For `"long"`, the function adds `"preBatchCorr_[measure_col]"` and the
+#' diagnostic columns:
+#' - for medians: `median_batch`, `median_global`, `diff_medians`
+#' - for means:   `mean_batch`,   `mean_global`,   `diff_means`
+#'
+#' @examples
+#' # LONG
+#' # Load necessary datasets
+#' data(
+#'     list = c("example_sample_annotation", "example_proteome"),
+#'     package = "proBatch"
+#' )
+#' out_long <- center_feature_batch(
+#'     x = example_proteome, sample_annotation = example_sample_annotation,
+#'     format = "long", stat = "medians",
+#'     sample_id_col = "FullRunName", batch_col = "MS_batch",
+#'     feature_id_col = "peptide_group_label", measure_col = "Intensity"
+#' )
+#'
+#' # WIDE
+#' data(example_proteome_matrix, package = "proBatch")
+#' out_wide <- center_feature_batch(
+#'     x = example_proteome_matrix, sample_annotation = example_sample_annotation,
+#'     format = "wide", stat = "means",
+#'     sample_id_col = "FullRunName", batch_col = "MS_batch",
+#'     feature_id_col = "peptide_group_label", measure_col = "Intensity"
+#' )
 #'
 #' @export
-#' @rdname correct_batch_effects
-#'
-center_feature_batch_medians_dm <- function(data_matrix, sample_annotation,
-                                            sample_id_col = "FullRunName",
-                                            batch_col = "MS_batch",
-                                            feature_id_col = "peptide_group_label",
-                                            measure_col = "Intensity") {
-    .center_feature_batch_stat_dm(
-        data_matrix, sample_annotation,
-        sample_id_col, batch_col, feature_id_col, measure_col,
-        df_stat_fun = center_feature_batch_medians_df
+center_feature_batch <- function(
+    x,
+    sample_annotation = NULL,
+    format = c("long", "wide"),
+    stat = c("medians", "means"),
+    sample_id_col = "FullRunName",
+    batch_col = "MS_batch",
+    feature_id_col = "peptide_group_label",
+    measure_col = "Intensity",
+    keep_all = "default",
+    no_fit_imputed = TRUE,
+    qual_col = NULL,
+    qual_value = NULL) {
+    format <- match.arg(format)
+    stat_in <- tolower(stat[1])
+    stat_in <- switch(stat_in,
+        medians = "median",
+        median  = "median",
+        means   = "mean",
+        mean    = "mean",
+        stop("`stat` must be one of 'medians' or 'means'.")
+    )
+    stat_names <- if (identical(stat_in, "median")) {
+        c(batch = "median_batch", global = "median_global", diff = "diff_medians")
+    } else {
+        c(batch = "mean_batch", global = "mean_global", diff = "diff_means")
+    }
+
+    if (identical(format, "wide")) {
+        if (length(unique(sample_annotation[[sample_id_col]])) != ncol(x)) {
+            stop("format='wide' requires a numeric matrix with features in rows and samples in columns.")
+        }
+        # Convert wide -> long
+        df_long <- matrix_to_long(
+            data_matrix = x,
+            feature_id_col = feature_id_col,
+            measure_col = measure_col,
+            sample_id_col = sample_id_col
+        )
+    } else {
+        df_long <- x
+    }
+
+    # format == "long"
+    if (!is.data.frame(df_long) && identical(format, "long")) {
+        stop("format='long' requires a long data format")
+    }
+    corrected_long <- .center_feature_batch_df_core(
+        df_long           = x,
+        sample_annotation = sample_annotation,
+        sample_id_col     = sample_id_col,
+        batch_col         = batch_col,
+        feature_id_col    = feature_id_col,
+        measure_col       = measure_col,
+        keep_all          = keep_all,
+        no_fit_imputed    = no_fit_imputed,
+        qual_col          = qual_col,
+        qual_value        = qual_value,
+        stat              = stat_in,
+        stat_names        = stat_names
+    )
+
+    if (identical(format, "wide")) {
+        # Convert long -> wide
+        out_wide <- long_to_matrix(
+            corrected_long,
+            feature_id_col = feature_id_col,
+            measure_col    = measure_col,
+            sample_id_col  = sample_id_col
+        )
+        return(out_wide)
+    } # else  format == "long"
+    corrected_long
+}
+
+.center_feature_batch_df_core <- function(
+    df_long,
+    sample_annotation = NULL,
+    sample_id_col = "FullRunName",
+    batch_col = "MS_batch",
+    feature_id_col = "peptide_group_label",
+    measure_col = "Intensity",
+    keep_all = "default",
+    no_fit_imputed = TRUE,
+    qual_col = NULL,
+    qual_value = NULL,
+    stat = c("median", "mean"),
+    stat_names = c(batch = "median_batch", global = "median_global", diff = "diff_medians")) {
+    stat <- match.arg(stat)
+    original_cols <- names(df_long)
+
+    # Merge/check annotations; ensure batch present post-merge
+    df_long <- check_sample_consistency(
+        sample_annotation = sample_annotation,
+        sample_id_col     = sample_id_col,
+        df_long           = df_long,
+        batch_col         = batch_col,
+        order_col         = NULL,
+        facet_col         = NULL,
+        merge             = TRUE
+    )
+
+    if (no_fit_imputed && is.null(qual_col)) {
+        warning("`qual_col` is NULL, setting `no_fit_imputed = FALSE`; imputed flags will be ignored.")
+        no_fit_imputed <- FALSE
+    }
+
+    # Choose location function
+    summariser <- if (identical(stat, "median")) stats::median else base::mean
+
+    # Optionally mask imputed values during inference
+    tmp_col <- NULL
+    if (isTRUE(no_fit_imputed)) {
+        df_long <- .mask_imputed_measure(
+            df_long     = df_long,
+            measure_col = measure_col,
+            qual_col    = qual_col,
+            qual_value  = qual_value
+        )
+        tmp_col <- attr(df_long, "temp_measure_col")
+    }
+    measure_for_inference <- if (!is.null(tmp_col)) tmp_col else measure_col
+    old_measure_col <- .make_pre_col("preBatchCorr", measure_col)
+
+    # Compute per-(batch,feature) and per-feature locations, then apply shift
+    corrected_df <- df_long |>
+        group_by(across(any_of(c(batch_col, feature_id_col)))) |>
+        mutate(!!stat_names["batch"] := summariser(.data[[measure_for_inference]], na.rm = TRUE)) |>
+        ungroup() |>
+        group_by(across(any_of(feature_id_col))) |>
+        mutate(!!stat_names["global"] := summariser(.data[[measure_for_inference]], na.rm = TRUE)) |>
+        ungroup() |>
+        mutate(!!stat_names["diff"] := .data[[stat_names["global"]]] - .data[[stat_names["batch"]]]) |>
+        rename(!!old_measure_col := !!measure_col) |>
+        mutate(!!measure_col := .data[[old_measure_col]] + .data[[stat_names["diff"]]])
+
+    # Drop temporary masked column if present
+    if (!is.null(tmp_col) && tmp_col %in% names(corrected_df)) {
+        corrected_df <- select(corrected_df, -all_of(tmp_col))
+    }
+
+    # Column retention for long format
+    default_cols <- unique(c(
+        original_cols, batch_col, old_measure_col,
+        unname(stat_names["batch"]), unname(stat_names["global"]), unname(stat_names["diff"])
+    ))
+    minimal_cols <- unique(c(
+        sample_id_col, feature_id_col, measure_col, old_measure_col,
+        batch_col, unname(stat_names["batch"]), unname(stat_names["diff"])
+    ))
+    if (!is.null(qual_col) && qual_col %in% names(corrected_df)) {
+        default_cols <- c(default_cols, qual_col)
+        minimal_cols <- c(minimal_cols, qual_col)
+    }
+
+    subset_keep_cols(
+        df           = corrected_df,
+        keep_all     = keep_all,
+        default_cols = default_cols,
+        minimal_cols = minimal_cols
     )
 }
 
+#' @title Adjust batch trend with custom (continuous) fit
+#' @description Adjust batch signal trend with the custom (continuous) fit.
+#' Should be followed by discrete corrections,
+#' e.g. \code{center_feature_batch_medians_df()} or \code{correct_with_ComBat_df()}.
+#' Available for both long format data frame (\code{adjust_batch_trend_df()})
+#' and data matrix (\code{adjust_batch_trend_dm()}).
 #' @export
 #' @rdname correct_batch_effects
 #'
-center_feature_batch_means_dm <- function(data_matrix, sample_annotation,
-                                          sample_id_col = "FullRunName",
-                                          batch_col = "MS_batch",
-                                          feature_id_col = "peptide_group_label",
-                                          measure_col = "Intensity") {
-    .center_feature_batch_stat_dm(
-        data_matrix, sample_annotation,
-        sample_id_col, batch_col, feature_id_col, measure_col,
-        df_stat_fun = center_feature_batch_means_df
-    )
-}
-
-.center_feature_batch_stat_dm <- function(data_matrix, sample_annotation,
-                                          sample_id_col, batch_col,
-                                          feature_id_col, measure_col,
-                                          df_stat_fun) {
+#' @seealso \code{\link{fit_nonlinear}}, \code{\link{plot_with_fitting_curve}}
+adjust_batch_trend_dm <- function(data_matrix, sample_annotation,
+                                  batch_col = "MS_batch",
+                                  feature_id_col = "peptide_group_label",
+                                  sample_id_col = "FullRunName",
+                                  measure_col = "Intensity",
+                                  order_col = "order",
+                                  fit_func = "loess_regression",
+                                  return_fit_df = TRUE,
+                                  no_fit_imputed = TRUE,
+                                  qual_col = NULL,
+                                  qual_value = NULL,
+                                  min_measurements = 8, ...) {
     df_long <- matrix_to_long(
         data_matrix,
         feature_id_col = feature_id_col,
         measure_col = measure_col,
         sample_id_col = sample_id_col
     )
-    corrected_df <- df_stat_fun(
-        df_long, sample_annotation,
+
+    corrected_data <- adjust_batch_trend_df(
+        df_long,
+        sample_annotation,
         sample_id_col = sample_id_col,
         batch_col = batch_col,
         feature_id_col = feature_id_col,
-        measure_col = measure_col
+        measure_col = measure_col,
+        order_col = order_col,
+        fit_func = fit_func,
+        no_fit_imputed = no_fit_imputed,
+        qual_col = qual_col,
+        qual_value = qual_value,
+        min_measurements = min_measurements
     )
-    long_to_matrix(
+
+    corrected_df <- corrected_data
+    corrected_dm <- long_to_matrix(
         corrected_df,
-        sample_id_col = sample_id_col,
-        measure_col = measure_col,
-        feature_id_col = feature_id_col
-    )
-}
-
-#'
-#' @export
-#' @rdname correct_batch_effects
-#'
-center_feature_batch_means_df <- function(df_long, sample_annotation = NULL,
-                                          sample_id_col = "FullRunName",
-                                          batch_col = "MS_batch",
-                                          feature_id_col = "peptide_group_label",
-                                          measure_col = "Intensity",
-                                          keep_all = "default",
-                                          no_fit_imputed = TRUE,
-                                          qual_col = NULL,
-                                          qual_value = NULL) {
-    .center_feature_batch_stat_df(
-        df_long, sample_annotation,
-        sample_id_col = sample_id_col,
-        batch_col = batch_col,
         feature_id_col = feature_id_col,
         measure_col = measure_col,
-        keep_all = keep_all,
-        stat = "mean",
-        no_fit_imputed = no_fit_imputed,
-        qual_col = qual_col,
-        qual_value = qual_value,
-        stat_names = c(batch = "mean_batch", global = "mean_global", diff = "diff_means")
+        sample_id_col = sample_id_col
     )
-}
 
-#'
-#' @export
-#' @rdname correct_batch_effects
-#'
-center_feature_batch_medians_df <- function(df_long, sample_annotation = NULL,
-                                            sample_id_col = "FullRunName",
-                                            batch_col = "MS_batch",
-                                            feature_id_col = "peptide_group_label",
-                                            measure_col = "Intensity",
-                                            keep_all = "default",
-                                            no_fit_imputed = TRUE,
-                                            qual_col = NULL,
-                                            qual_value = NULL) {
-    .center_feature_batch_stat_df(
-        df_long, sample_annotation,
-        sample_id_col = sample_id_col,
-        batch_col = batch_col,
-        feature_id_col = feature_id_col,
-        measure_col = measure_col,
-        keep_all = keep_all,
-        stat = "median",
-        no_fit_imputed = no_fit_imputed,
-        qual_col = qual_col,
-        qual_value = qual_value,
-        stat_names = c(batch = "median_batch", global = "median_global", diff = "diff_medians")
-    )
+    if (return_fit_df) {
+        # extract only the columns relevant for inspecting the fit (only non-empty columns)
+        fit_columns <- c(sample_id_col, feature_id_col, batch_col, order_col, "fit")
+        # if any of the fit columns are not present in the corrected_df, remove them and warn
+        if (any(!fit_columns %in% names(corrected_df))) {
+            missing_cols <- fit_columns[!fit_columns %in% names(corrected_df)]
+            message(
+                "The following columns are not present in the corrected_df and will be removed from fit_df: ",
+                toString(missing_cols)
+            )
+            fit_columns <- fit_columns[fit_columns %in% names(corrected_df)]
+        }
+        fit_df <- corrected_df[, fit_columns, drop = FALSE]
+        return(list(
+            corrected_dm = corrected_dm,
+            fit_df = fit_df
+        ))
+    } else {
+        return(corrected_dm)
+    }
 }
 
 #'
@@ -265,9 +452,9 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
     # If no per-batch stratification; fit per-feature across all samples
     group_vars <- c(feature_id_col, if (!is.null(batch_col)) batch_col)
     corrected_df <- df_long %>%
-        tidyr::nest(data = -dplyr::all_of(group_vars)) %>%
-        dplyr::mutate(
-            fit = purrr::pmap(
+        nest(data = -all_of(group_vars)) %>%
+        mutate(
+            fit = pmap(
                 list(data = .data$data),
                 function(data) {
                     fit_nonlinear(
@@ -283,7 +470,6 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
                 }
             )
         )
-
     old_measure_col <- .make_pre_col("preTrendFit", measure_col)
 
     corrected_df <- corrected_df %>%
@@ -331,75 +517,8 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
 
     return(corrected_df)
 }
-
-#'
-#' @export
-#' @rdname correct_batch_effects
-#'
-#' @seealso \code{\link{fit_nonlinear}}, \code{\link{plot_with_fitting_curve}}
-adjust_batch_trend_dm <- function(data_matrix, sample_annotation,
-                                  batch_col = "MS_batch",
-                                  feature_id_col = "peptide_group_label",
-                                  sample_id_col = "FullRunName",
-                                  measure_col = "Intensity",
-                                  order_col = "order",
-                                  fit_func = "loess_regression",
-                                  return_fit_df = TRUE,
-                                  no_fit_imputed = TRUE,
-                                  qual_col = NULL,
-                                  qual_value = NULL,
-                                  min_measurements = 8, ...) {
-    df_long <- matrix_to_long(
-        data_matrix,
-        feature_id_col = feature_id_col,
-        measure_col = measure_col,
-        sample_id_col = sample_id_col
-    )
-
-    corrected_data <- adjust_batch_trend_df(
-        df_long,
-        sample_annotation,
-        sample_id_col = sample_id_col,
-        batch_col = batch_col,
-        feature_id_col = feature_id_col,
-        measure_col = measure_col,
-        order_col = order_col,
-        fit_func = fit_func,
-        no_fit_imputed = no_fit_imputed,
-        qual_col = qual_col,
-        qual_value = qual_value,
-        min_measurements = min_measurements
-    )
-
-    corrected_df <- corrected_data
-    corrected_dm <- long_to_matrix(
-        corrected_df,
-        feature_id_col = feature_id_col,
-        measure_col = measure_col,
-        sample_id_col = sample_id_col
-    )
-    if (return_fit_df) {
-        # extract only the columns relevant for inspecting the fit (only non-empty columns)
-        fit_columns <- c(sample_id_col, feature_id_col, batch_col, order_col, "fit")
-        # if any of the fit columns are not present in the corrected_df, remove them and warn
-        if (any(!fit_columns %in% names(corrected_df))) {
-            missing_cols <- fit_columns[!fit_columns %in% names(corrected_df)]
-            message(
-                "The following columns are not present in the corrected_df and will be removed from fit_df: ",
-                toString(missing_cols)
-            )
-            fit_columns <- fit_columns[fit_columns %in% names(corrected_df)]
-        }
-        fit_df <- corrected_df[, fit_columns, drop = FALSE]
-        return(list(
-            corrected_dm = corrected_dm,
-            fit_df = fit_df
-        ))
-    } else {
-        return(corrected_dm)
-    }
-}
-
+##############################################################################
+# ComBat-based batch correction
 #'
 #' @export
 #' @rdname correct_batch_effects

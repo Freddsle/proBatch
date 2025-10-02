@@ -100,6 +100,8 @@
 #' @import reshape2
 #' @import lazyeval
 #' @import QFeatures
+#' @importFrom dplyr group_by ungroup across mutate rename select
+#' @importFrom dplyr any_of all_of
 #' @importFrom corrplot corrplot.mixed
 #' @importFrom data.table setnames
 #' @importFrom grDevices colorRampPalette
