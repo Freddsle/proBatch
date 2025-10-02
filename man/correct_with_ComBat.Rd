@@ -22,28 +22,32 @@ correct_with_ComBat(
 )
 }
 \arguments{
-\item{x}{data in long (data.frame) or wide (matrix) form, controlled by \code{format}.}
+\item{x}{Data in long (\code{data.frame}) or wide (\code{matrix}) form, controlled by \code{format}.}
 
-\item{format}{one of \code{"long"} or \code{"wide"}.}
+\item{format}{One of \code{"long"} or \code{"wide"}.}
 
-\item{par.prior}{logical; ComBat parametric prior (vs non-parametric).}
+\item{par.prior}{Logical; ComBat parametric prior (vs non-parametric).}
 
-\item{covariates_cols}{optional character vector of sample_annotation columns
+\item{covariates_cols}{Optional character vector of \code{sample_annotation} columns
 included in \code{mod} for ComBat (biological or nuisance covariates).}
 
-\item{fill_the_missing}{numeric value for imputation; if \code{FALSE} drop rows;
-if \code{NULL} leave missing as-is (matrix path must be free of NA).}
+\item{fill_the_missing}{Missing-value policy prior to ComBat. If \code{NULL}, no action is taken
+and the call will \emph{fail if the matrix contains NA}. Set \code{FALSE} to drop rows with NA,
+or provide a numeric value to impute (use with caution).}
 
-\item{keep_all}{for long format, columns to retain (see \code{subset_keep_cols()}).}
+\item{keep_all}{For long format, columns to retain (see \code{subset_keep_cols()}).}
 
-\item{no_fit_imputed}{if TRUE and \code{qual_col} provided, masked values are
+\item{no_fit_imputed}{If \code{TRUE} and \code{qual_col} provided, masked values are
 excluded when building the matrix (original values still corrected).}
 }
 \value{
-matrix if \code{format="wide"}, data.frame if \code{format="long"}.
+Matrix if \code{format="wide"}, data.frame if \code{format="long"}.
 }
 \description{
-Adjusts for discrete batch effects using \code{sva::ComBat}.
+Adjusts for discrete batch effects using \code{ComBat}.
 Works for long-format data frames and wide matrices via \code{format}.
 Optionally accepts covariates through \code{covariates_cols} (passed as \code{mod}).
+}
+\references{
+Johnson WE et al. (2007) \emph{Biostatistics} 8(1):118–127; \emph{sva} vignette.
 }

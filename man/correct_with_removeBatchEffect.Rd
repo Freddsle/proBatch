@@ -2,7 +2,7 @@
 % Please edit documentation in R/correct_batch_effects.R
 \name{correct_with_removeBatchEffect}
 \alias{correct_with_removeBatchEffect}
-\title{Batch effect correction with removeBatchEffect from limma}
+\title{Batch effect correction with limma::removeBatchEffect (unified)}
 \usage{
 correct_with_removeBatchEffect(
   x,
@@ -19,39 +19,25 @@ correct_with_removeBatchEffect(
 )
 }
 \arguments{
-\item{x}{data in long (data.frame) or wide (matrix) form, controlled by \code{format}.}
+\item{x}{Data in long (\code{data.frame}) or wide (\code{matrix}) form, controlled by \code{format}.}
 
-\item{sample_annotation}{data frame with sample annotations}
+\item{format}{One of \code{"long"} or \code{"wide"}.}
 
-\item{feature_id_col}{column name in \code{data_matrix} with feature IDs}
+\item{covariates_cols}{Optional \code{sample_annotation} columns for the design matrix (biological or nuisance covariates).}
 
-\item{measure_col}{column name in \code{data_matrix} with measured values}
+\item{fill_the_missing}{Missing-value policy applied before modeling. If \code{NULL} (default),
+\emph{NA values in the data matrix are left as is} and handled by limma's linear modeling;
+the design matrix (\code{batch_col} and \code{covariates_cols}) must be NA-free.
+Set \code{FALSE} to drop rows with NA, or provide a numeric value to impute explicitly.}
 
-\item{sample_id_col}{column name in \code{sample_annotation} with sample IDs}
-
-\item{batch_col}{column name in \code{sample_annotation} with batch IDs}
-
-\item{format}{one of \code{"long"} or \code{"wide"}.}
-
-\item{covariates_cols}{optional sample_annotation columns for the design matrix.}
-
-\item{fill_the_missing}{numeric value used to impute missing measurements
-before correction. If \code{FALSE} rows with missing values are removed.}
-
-\item{keep_all}{for long format, columns to retain (see \code{subset_keep_cols()}).}
-
-\item{...}{other parameters to pass to \code{removeBatchEffect}}
-
-\item{data_matrix}{data matrix with features in rows and samples in columns}
+\item{keep_all}{For long format, columns to retain (see \code{subset_keep_cols()}).}
 }
 \value{
-data matrix with batch effects removed
+Matrix if \code{format="wide"}, data.frame if \code{format="long"} with batch effects removed
 }
 \description{
-Batch effect correction with removeBatchEffect.
-
-Removes batch-associated linear effects for plotting/unsupervised
-tasks. Works for long or wide via \code{format}. Use \code{covariates_cols}
+Removes batch-associated linear effects with removeBatchEffect from limma.
+Works for long or wide via \code{format}. Use \code{covariates_cols}
 to keep biological effects in the design (not removed).
 }
 \examples{

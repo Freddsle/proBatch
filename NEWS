@@ -14,6 +14,17 @@ Changes:
   - `plot_NA_density()`
   - `plot_NA_frequency()`
 
+## Deprecations
+- Added `center_feature_batch()`: unified API for per-batch centering by `stat` (`"medians"` or `"means"`) and `format` (`"long"` or `"wide"`).
+  - For `format = "wide"`, the function round-trips via `matrix_to_long()`/`long_to_matrix()` to reuse a single core implementation.
+  - For `format = "long"`, it adds `preBatchCorr_[measure_col]` and diagnostic columns:
+    - medians: `median_batch`, `median_global`, `diff_medians`
+    - means:   `mean_batch`,   `mean_global`,   `diff_means`
+- This result in deprecated `center_feature_batch_medians_df()`, `center_feature_batch_means_df()`,
+  `center_feature_batch_medians_dm()`, and `center_feature_batch_means_dm()` in favor of
+  `center_feature_batch()`. These wrappers now forward to the new API and emit `.Deprecated()` warnings.
+
+
 proBatch  v1.1.0
 ==============
 

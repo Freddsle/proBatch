@@ -11,36 +11,50 @@
 #'     \code{center_feature_batch_medians_df()}, \code{center_feature_batch_means_df()},
 #'     \code{center_feature_batch_medians_dm()}, \code{center_feature_batch_means_dm()}
 #'     now forward to \code{center_feature_batch()} and emit deprecation warnings.
+#'
 #'   \item \strong{Discrete batch correction with ComBat}:
-#'     \code{\link{correct_with_ComBat_df}()} adjusts for discrete batch effects
-#'     (Johnson et al., 2007) using parametric or non-parametric empirical Bayes.
-#'     Inputs are expected to be normalized and (ideally) free of missing values.
-#'     Since missingness is common in proteomics, per-feature centering may be
-#'     preferable in some cases.
+#'     \code{\link{correct_with_ComBat}()} adjusts for discrete batch effects
+#'     using parametric or non-parametric empirical Bayes (Johnson et al., 2007).
+#'     \strong{Missing data:} ComBat requires an \emph{NA-free} matrix. If your data
+#'     contain missing values, either set \code{fill_the_missing = FALSE} to drop
+#'     NA-containing features/columns or provide a numeric value to impute before
+#'     calling ComBat.
+#'
+#'   \item \strong{Linear batch correction with limma}:
+#'     \code{\link{correct_with_removeBatchEffect}()} removes linear batch effects
+#'     via \code{limma::removeBatchEffect}. \strong{Missing data:} NA values in the
+#'     \emph{expression/intensity matrix} are allowed; the \emph{design matrix}
+#'     (batch/covariates) must be free of missing values.
+#'
 #'   \item \strong{Continuous drift correction}:
 #'     \code{\link{adjust_batch_trend_df}()} fits and removes within-batch trends
-#'     (e.g., LOESS); typically followed by a discrete adjustment such as
-#'     \code{center_feature_batch()} or \code{correct_with_ComBat_df()}.
+#'     (e.g., LOESS) and is typically followed by a discrete adjustment such as
+#'     \code{center_feature_batch()}, \code{correct_with_ComBat()}, or
+#'     \code{correct_with_removeBatchEffect()}.
 #' }
 #'
-#' Alternatively, use the wrapper \code{\link{correct_batch_effects_df}()} to
+#' Alternatively, use the wrapper \code{\link{correct_batch_effects}()} to
 #' combine continuous and/or discrete corrections in one call.
 #'
 #' @inheritParams proBatch
-#' @param return_fit_df (logical) whether \code{\link{adjust_batch_trend_dm}()}
+#'
+#' @param return_fit_df Logical; whether \code{\link{adjust_batch_trend_dm}()}
 #'   returns the \code{fit_df} (for curve inspection) alongside the corrected matrix.
-#' @param fit_func function used for trend fitting (e.g., \code{"loess_regression"}).
-#' @param min_measurements minimum number of samples per batch required for fitting.
-#' @param par.prior logical; use parametric prior (ComBat) or non-parametric.
-#' @param continuous_func which function to use for the continuous fit (currently
+#' @param fit_func Function used for trend fitting (e.g., \code{"loess_regression"}).
+#' @param min_measurements Minimum number of samples per batch required for fitting.
+#' @param par.prior Logical; use parametric prior (ComBat) or non-parametric.
+#' @param continuous_func Which function to use for the continuous fit (currently
 #'   only \code{"loess_regression"}); set \code{NULL} if order-associated drift
 #'   correction is not required.
-#' @param discrete_func which function to use for discrete batch effects
-#'   (\code{"MedianCentering"} / \code{"ComBat"}), used by the wrapper.
-#' @param fill_the_missing numeric value for imputing missing measurements prior
-#'   to correction; if \code{NULL} (default), missing values are left as is; if
-#'   \code{FALSE}, rows containing missing values are removed before correction.
-#' @param ... additional parameters passed to \code{adjust_batch_trend_df()} and
+#' @param discrete_func Which function to use for discrete batch effects in the
+#'   wrapper: one of \code{"MedianCentering"}, \code{"MeanCentering"},
+#'   \code{"ComBat"}, or \code{"removeBatchEffect"}.
+#' @param fill_the_missing Missing-value policy applied \emph{before} discrete correction.
+#'   If \code{NULL} (default), missing values are left as is (no imputation/dropping).
+#'   For \code{ComBat}, the matrix must be NA-free — set \code{FALSE} to drop rows with NA
+#'   or provide a numeric value to impute. For \code{removeBatchEffect}, NA values in the data
+#'   matrix are permitted; however, the design (batch/covariates) must not contain NA.
+#' @param ... Additional parameters passed to \code{adjust_batch_trend_df()} and
 #'   the chosen \code{fit_func}.
 #'
 #' @return
@@ -82,9 +96,12 @@
 #'     feature_id_col = "peptide_group_label", measure_col = "Intensity"
 #' )
 #'
-#' # 3) ComBat (discrete)
-#' combat_corrected_df <- correct_with_ComBat_df(
-#'     example_proteome, example_sample_annotation
+#' # 3) ComBat (discrete) — drop NA features/samples first if needed
+#' combat_corrected_df <- correct_with_ComBat(
+#'     x = example_proteome,
+#'     sample_annotation = example_sample_annotation,
+#'     format = "long",
+#'     fill_the_missing = FALSE
 #' )
 #'
 #' # 4) Continuous drift correction (LOESS), then discrete centering if desired
@@ -101,9 +118,10 @@
 #'     fit_df = adjusted_df, sample_annotation = example_sample_annotation
 #' )
 #'
-#' # 5) One-call wrapper
-#' batch_corrected_matrix <- correct_batch_effects_df(
-#'     example_proteome, example_sample_annotation,
+#' # 5) One-call wrapper (continuous + discrete)
+#' batch_corrected_matrix <- correct_batch_effects(
+#'     x = example_proteome, sample_annotation = example_sample_annotation,
+#'     format = "long",
 #'     continuous_func = "loess_regression",
 #'     discrete_func = "MedianCentering",
 #'     batch_col = "MS_batch",
@@ -111,9 +129,18 @@
 #' )
 #'
 #' @seealso
-#' \code{\link{center_feature_batch}}, \code{\link{adjust_batch_trend_df}},
-#' \code{\link{adjust_batch_trend_dm}}, \code{\link{correct_with_ComBat_df}},
-#' \code{\link{correct_batch_effects_df}}
+#' \code{\link{center_feature_batch}},
+#' \code{\link{adjust_batch_trend_df}},
+#' \code{\link{adjust_batch_trend_dm}},
+#' \code{\link{correct_with_ComBat}},
+#' \code{\link{correct_with_removeBatchEffect}},
+#' \code{\link{correct_batch_effects}}
+#'
+#' @references
+#' Johnson WE, Li C, Rabinovic A (2007). Adjusting batch effects in microarray
+#' expression data using empirical Bayes methods. \emph{Biostatistics} 8(1):118–127.
+#' Smyth GK (2025). \emph{limma User's Guide}, Bioconductor (see removeBatchEffect / lmFit).
+#' Leek JT et al. (2024). \emph{sva} vignette, Bioconductor.
 #'
 #' @name correct_batch_effects
 NULL
@@ -252,23 +279,19 @@ center_feature_batch <- function(
     feature_id_col = "peptide_group_label",
     measure_col = "Intensity",
     keep_all = "default",
+    stat = c("median", "mean"),
     no_fit_imputed = TRUE,
     qual_col = NULL,
     qual_value = NULL,
-    stat = c("median", "mean"),
     stat_names = c(batch = "median_batch", global = "median_global", diff = "diff_medians")) {
     stat <- match.arg(stat)
     original_cols <- names(df_long)
 
     # Merge/check annotations; ensure batch present post-merge
     df_long <- check_sample_consistency(
-        sample_annotation = sample_annotation,
-        sample_id_col     = sample_id_col,
-        df_long           = df_long,
-        batch_col         = batch_col,
-        order_col         = NULL,
-        facet_col         = NULL,
-        merge             = TRUE
+        sample_annotation, sample_id_col, df_long,
+        batch_col,
+        order_col = NULL, facet_col = NULL, merge = TRUE
     )
 
     if (no_fit_imputed && is.null(qual_col)) {
@@ -277,7 +300,10 @@ center_feature_batch <- function(
     }
 
     # Choose location function
-    summariser <- if (identical(stat, "median")) median else mean
+    summariser <- switch(stat,
+        median = median,
+        mean = mean
+    )
 
     # Optionally mask imputed values during inference
     tmp_col <- NULL
@@ -527,18 +553,20 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
 #' Optionally accepts covariates through \code{covariates_cols} (passed as \code{mod}).
 #'
 #' @inheritParams correct_batch_effects
-#' @param x data in long (data.frame) or wide (matrix) form, controlled by \code{format}.
-#' @param format one of \code{"long"} or \code{"wide"}.
-#' @param par.prior logical; ComBat parametric prior (vs non-parametric).
-#' @param covariates_cols optional character vector of sample_annotation columns
+#' @param x Data in long (\code{data.frame}) or wide (\code{matrix}) form, controlled by \code{format}.
+#' @param format One of \code{"long"} or \code{"wide"}.
+#' @param par.prior Logical; ComBat parametric prior (vs non-parametric).
+#' @param covariates_cols Optional character vector of \code{sample_annotation} columns
 #'   included in \code{mod} for ComBat (biological or nuisance covariates).
-#' @param fill_the_missing numeric value for imputation; if \code{FALSE} drop rows;
-#'   if \code{NULL} leave missing as-is (matrix path must be free of NA).
-#' @param keep_all for long format, columns to retain (see \code{subset_keep_cols()}).
-#' @param no_fit_imputed if TRUE and \code{qual_col} provided, masked values are
+#' @param fill_the_missing Missing-value policy prior to ComBat. If \code{NULL}, no action is taken
+#'   and the call will \emph{fail if the matrix contains NA}. Set \code{FALSE} to drop rows with NA,
+#'   or provide a numeric value to impute (use with caution).
+#' @param keep_all For long format, columns to retain (see \code{subset_keep_cols()}).
+#' @param no_fit_imputed If \code{TRUE} and \code{qual_col} provided, masked values are
 #'   excluded when building the matrix (original values still corrected).
 #'
-#' @return matrix if \code{format="wide"}, data.frame if \code{format="long"}.
+#' @return Matrix if \code{format="wide"}, data.frame if \code{format="long"}.
+#' @references Johnson WE et al. (2007) \emph{Biostatistics} 8(1):118–127; \emph{sva} vignette.
 #' @export
 correct_with_ComBat <- function(
     x, sample_annotation = NULL,
@@ -581,20 +609,9 @@ correct_with_ComBat <- function(
         order_col = NULL, facet_col = NULL, merge = FALSE
     )
 
-    # Build matrix, optionally masking imputed values for inference
+    # Handle missingness first; trim df_long / sample_annotation consistently
     qual_for_matrix <- if (no_fit_imputed) qual_col else NULL
     qual_val_for_matrix <- if (no_fit_imputed) qual_value else NULL
-
-    data_matrix <- long_to_matrix(
-        df_long,
-        feature_id_col = feature_id_col,
-        measure_col    = measure_col,
-        sample_id_col  = sample_id_col,
-        qual_col       = qual_for_matrix,
-        qual_value     = qual_val_for_matrix
-    )
-
-    # Handle missingness if requested; also trims df_long + SA consistently
     handled <- .handle_missing_for_batch_df(
         df_long = df_long,
         sample_annotation = sample_annotation,
@@ -609,7 +626,17 @@ correct_with_ComBat <- function(
     df_long <- handled$df_long
     sample_annotation <- handled$sample_annotation
 
-    # ComBat on matrix
+    # Build matrix AFTER trimming/masking; ComBat on synchronized matrix
+    data_matrix <- long_to_matrix(
+        df_long,
+        feature_id_col = feature_id_col,
+        measure_col    = measure_col,
+        sample_id_col  = sample_id_col,
+        qual_col       = qual_for_matrix,
+        qual_value     = qual_val_for_matrix
+    )
+
+    # ComBat on matrix (method ensures numeric & SA alignment)
     corrected_matrix <- .combat_matrix_step(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
@@ -648,20 +675,18 @@ correct_with_ComBat <- function(
 
 # ---- removeBatchEffect unified ------------------------------------------------
 
-#' @title Batch effect correction with removeBatchEffect from limma
-#' @description Batch effect correction with removeBatchEffect.
-#' @param data_matrix data matrix with features in rows and samples in columns
-#' @param sample_annotation data frame with sample annotations
-#' @param feature_id_col column name in \code{data_matrix} with feature IDs
-#' @param measure_col column name in \code{data_matrix} with measured values
-#' @param sample_id_col column name in \code{sample_annotation} with sample IDs
-#' @param batch_col column name in \code{sample_annotation} with batch IDs
-#' @param covariates_cols vector of column names in \code{sample_annotation}
-#' with covariates to include in the model
-#' @param fill_the_missing numeric value used to impute missing measurements
-#' before correction. If \code{FALSE} rows with missing values are removed.
-#' @param ... other parameters to pass to \code{removeBatchEffect}
-#' @return data matrix with batch effects removed
+#' @title Batch effect correction with limma::removeBatchEffect (unified)
+#' @description Removes batch-associated linear effects with removeBatchEffect from limma.
+#' Works for long or wide via \code{format}. Use \code{covariates_cols}
+#' to keep biological effects in the design (not removed).
+#' @inheritParams correct_with_ComBat
+#' @param covariates_cols Optional \code{sample_annotation} columns for the design matrix (biological or nuisance covariates).
+#' @param fill_the_missing Missing-value policy applied before modeling. If \code{NULL} (default),
+#'   \emph{NA values in the data matrix are left as is} and handled by limma's linear modeling;
+#'   the design matrix (\code{batch_col} and \code{covariates_cols}) must be NA-free.
+#'   Set \code{FALSE} to drop rows with NA, or provide a numeric value to impute explicitly.
+#'
+#' @return Matrix if \code{format="wide"}, data.frame if \code{format="long"} with batch effects removed
 #' @examples
 #' data(
 #'     list = c("example_sample_annotation", "example_proteome_matrix"),
@@ -674,14 +699,6 @@ correct_with_ComBat <- function(
 #'     covariates_cols = c("Condition", "Type")
 #' )
 #' @seealso \code{\link{removeBatchEffect}}
-#' @export
-
-#' @title Batch effect correction with removeBatchEffect (unified)
-#' @description Removes batch-associated linear effects for plotting/unsupervised
-#' tasks. Works for long or wide via \code{format}. Use \code{covariates_cols}
-#' to keep biological effects in the design (not removed).
-#' @inheritParams correct_with_ComBat
-#' @param covariates_cols optional sample_annotation columns for the design matrix.
 #' @export
 correct_with_removeBatchEffect <- function(
     x, sample_annotation,
@@ -714,6 +731,26 @@ correct_with_removeBatchEffect <- function(
     if (!is.data.frame(x)) stop("format='long' requires a data.frame.")
     df_long <- x
     original_cols <- names(df_long)
+
+    # Pre-handle missingness the same way as ComBat
+    handled <- .handle_missing_for_batch_df(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        measure_col = measure_col,
+        fill_the_missing = fill_the_missing,
+        warning_message = if (is.null(fill_the_missing) || !fill_the_missing) {
+            "removeBatchEffect will leave NA as-is in the matrix; design matrix (batch/covariates) must be free of NA."
+        } else {
+            "removeBatchEffect can operate with missing values; applying requested NA handling before modeling."
+        },
+        qual_col = NULL,
+        qual_value = NULL
+    )
+
+    df_long <- handled$df_long
+    sample_annotation <- handled$sample_annotation
 
     data_matrix <- long_to_matrix(
         df_long,
@@ -1117,95 +1154,20 @@ run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
     df
 }
 
-.center_feature_batch_stat_df <- function(df_long, sample_annotation = NULL,
-                                          sample_id_col = "FullRunName",
-                                          batch_col = "MS_batch",
-                                          feature_id_col = "peptide_group_label",
-                                          measure_col = "Intensity",
-                                          keep_all = "default",
-                                          stat = c("median", "mean"),
-                                          no_fit_imputed = TRUE,
-                                          qual_col = NULL,
-                                          qual_value = NULL,
-                                          stat_names = c(
-                                              batch = "median_batch", global = "median_global",
-                                              diff = "diff_medians"
-                                          )) {
-    stat <- match.arg(stat)
-    original_cols <- names(df_long)
-
-    df_long <- check_sample_consistency(
-        sample_annotation, sample_id_col, df_long,
-        batch_col,
-        order_col = NULL, facet_col = NULL, merge = TRUE
-    )
-
-    if (no_fit_imputed && is.null(qual_col)) {
-        warning("`qual_col` is NULL, setting `no_fit_imputed = FALSE` so imputed flags are ignored.")
-        no_fit_imputed <- FALSE
-    }
-
-    # choose summariser
-    summariser <- switch(stat,
-        median = median,
-        mean = mean
-    )
-
-    # Optionally mask imputed values for inference
-    tmp_col <- NULL
-    if (no_fit_imputed) {
-        df_long <- .mask_imputed_measure(df_long, measure_col, qual_col, qual_value)
-        tmp_col <- attr(df_long, "temp_measure_col")
-    }
-
-    measure_for_inference <- if (!is.null(tmp_col)) tmp_col else measure_col
-    old_measure_col <- .make_pre_col("preBatchCorr", measure_col)
-
-    # infer per-batch, per-feature location; then per-feature global location
-    corrected_df <- df_long %>%
-        group_by(across(any_of(c(batch_col, feature_id_col)))) %>%
-        mutate(!!stat_names["batch"] := summariser(.data[[measure_for_inference]], na.rm = TRUE)) %>%
-        ungroup() %>%
-        group_by(across(any_of(feature_id_col))) %>%
-        mutate(!!stat_names["global"] := summariser(.data[[measure_for_inference]], na.rm = TRUE)) %>%
-        ungroup()
-
-    # compute shift and apply
-    corrected_df <- corrected_df %>%
-        mutate(!!stat_names["diff"] := .data[[stat_names["global"]]] - .data[[stat_names["batch"]]]) %>%
-        rename(!!old_measure_col := !!measure_col) %>%
-        mutate(!!measure_col := .data[[old_measure_col]] + .data[[stat_names["diff"]]])
-
-    # Drop internal temp column if it exists
-    if (!is.null(tmp_col) && tmp_col %in% names(corrected_df)) {
-        corrected_df <- select(corrected_df, -all_of(tmp_col))
-    }
-
-    # keep columns
-    default_cols <- unique(c(
-        original_cols, batch_col, old_measure_col,
-        unname(stat_names["batch"]), unname(stat_names["global"]), unname(stat_names["diff"])
-    ))
-    minimal_cols <- unique(c(
-        sample_id_col, feature_id_col, measure_col, old_measure_col,
-        batch_col, unname(stat_names["batch"]), unname(stat_names["diff"])
-    ))
-    if (!is.null(qual_col) && qual_col %in% names(corrected_df)) {
-        default_cols <- c(default_cols, qual_col)
-        minimal_cols <- c(minimal_cols, qual_col)
-    }
-
-    subset_keep_cols(corrected_df, keep_all,
-        default_cols = default_cols,
-        minimal_cols = minimal_cols
-    )
-}
-
 .run_matrix_method <- function(data_matrix, sample_annotation,
                                sample_id_col = NULL,
                                fill_the_missing = NULL,
                                missing_warning = "This method cannot operate with missing values in the matrix",
                                method_fun) {
+    # ensure numeric matrix input for downstream modeling (sva/limma)
+    if (!is.matrix(data_matrix)) {
+        data_matrix <- as.matrix(data_matrix)
+    }
+    storage.mode(data_matrix) <- "double"
+    if (!is.numeric(data_matrix)) {
+        stop("Input must be coercible to a numeric matrix for batch correction.")
+    }
+
     # optional NA handling
     handle_flag <- !is.null(fill_the_missing) || identical(fill_the_missing, FALSE)
     if (handle_flag && anyNA(data_matrix)) {

@@ -379,32 +379,34 @@ order. It is used for in initial assessment plots
    order definition/inference, see \link{define_sample_order} and
    \link{date_to_sample_order}}
 
-\item{fit_func}{function used for trend fitting (e.g., \code{"loess_regression"}).}
+\item{fit_func}{Function used for trend fitting (e.g., \code{"loess_regression"}).}
 
-\item{min_measurements}{minimum number of samples per batch required for fitting.}
+\item{min_measurements}{Minimum number of samples per batch required for fitting.}
 
-\item{...}{additional parameters passed to \code{adjust_batch_trend_df()} and
+\item{...}{Additional parameters passed to \code{adjust_batch_trend_df()} and
 the chosen \code{fit_func}.}
 
-\item{return_fit_df}{(logical) whether \code{\link{adjust_batch_trend_dm}()}
+\item{return_fit_df}{Logical; whether \code{\link{adjust_batch_trend_dm}()}
 returns the \code{fit_df} (for curve inspection) alongside the corrected matrix.}
 
-\item{par.prior}{logical; use parametric prior (ComBat) or non-parametric.}
+\item{par.prior}{Logical; use parametric prior (ComBat) or non-parametric.}
 
-\item{fill_the_missing}{numeric value for imputing missing measurements prior
-to correction; if \code{NULL} (default), missing values are left as is; if
-\code{FALSE}, rows containing missing values are removed before correction.}
+\item{fill_the_missing}{Missing-value policy applied \emph{before} discrete correction.
+If \code{NULL} (default), missing values are left as is (no imputation/dropping).
+For \code{ComBat}, the matrix must be NA-free — set \code{FALSE} to drop rows with NA
+or provide a numeric value to impute. For \code{removeBatchEffect}, NA values in the data
+matrix are permitted; however, the design (batch/covariates) must not contain NA.}
 
-\item{covariates_cols}{optional character vector of sample_annotation columns
+\item{covariates_cols}{Optional character vector of \code{sample_annotation} columns
 included in \code{mod} for ComBat (biological or nuisance covariates).}
 
 \item{continuous_func}{e.g. \code{"loess_regression"} or \code{NULL}.}
 
 \item{discrete_func}{batch method name.}
 
-\item{x}{data in long (data.frame) or wide (matrix) form, controlled by \code{format}.}
+\item{x}{Data in long (\code{data.frame}) or wide (\code{matrix}) form, controlled by \code{format}.}
 
-\item{format}{one of \code{"long"} or \code{"wide"}.}
+\item{format}{One of \code{"long"} or \code{"wide"}.}
 }
 \value{
 the data in the same format as input (\code{data_matrix} or
@@ -472,19 +474,29 @@ to a comparable scale. The following methods are available:
     \code{center_feature_batch_medians_df()}, \code{center_feature_batch_means_df()},
     \code{center_feature_batch_medians_dm()}, \code{center_feature_batch_means_dm()}
     now forward to \code{center_feature_batch()} and emit deprecation warnings.
+
   \item \strong{Discrete batch correction with ComBat}:
-    \code{\link{correct_with_ComBat_df}()} adjusts for discrete batch effects
-    (Johnson et al., 2007) using parametric or non-parametric empirical Bayes.
-    Inputs are expected to be normalized and (ideally) free of missing values.
-    Since missingness is common in proteomics, per-feature centering may be
-    preferable in some cases.
+    \code{\link{correct_with_ComBat}()} adjusts for discrete batch effects
+    using parametric or non-parametric empirical Bayes (Johnson et al., 2007).
+    \strong{Missing data:} ComBat requires an \emph{NA-free} matrix. If your data
+    contain missing values, either set \code{fill_the_missing = FALSE} to drop
+    NA-containing features/columns or provide a numeric value to impute before
+    calling ComBat.
+
+  \item \strong{Linear batch correction with limma}:
+    \code{\link{correct_with_removeBatchEffect}()} removes linear batch effects
+    via \code{limma::removeBatchEffect}. \strong{Missing data:} NA values in the
+    \emph{expression/intensity matrix} are allowed; the \emph{design matrix}
+    (batch/covariates) must be free of missing values.
+
   \item \strong{Continuous drift correction}:
     \code{\link{adjust_batch_trend_df}()} fits and removes within-batch trends
-    (e.g., LOESS); typically followed by a discrete adjustment such as
-    \code{center_feature_batch()} or \code{correct_with_ComBat_df()}.
+    (e.g., LOESS) and is typically followed by a discrete adjustment such as
+    \code{center_feature_batch()}, \code{correct_with_ComBat()}, or
+    \code{correct_with_removeBatchEffect()}.
 }
 
-Alternatively, use the wrapper \code{\link{correct_batch_effects_df}()} to
+Alternatively, use the wrapper \code{\link{correct_batch_effects}()} to
 combine continuous and/or discrete corrections in one call.
 
 Adjust batch signal trend with the custom (continuous) fit.
@@ -563,9 +575,12 @@ mean_centered_mat <- center_feature_batch(
     feature_id_col = "peptide_group_label", measure_col = "Intensity"
 )
 
-# 3) ComBat (discrete)
-combat_corrected_df <- correct_with_ComBat_df(
-    example_proteome, example_sample_annotation
+# 3) ComBat (discrete) — drop NA features/samples first if needed
+combat_corrected_df <- correct_with_ComBat(
+    x = example_proteome,
+    sample_annotation = example_sample_annotation,
+    format = "long",
+    fill_the_missing = FALSE
 )
 
 # 4) Continuous drift correction (LOESS), then discrete centering if desired
@@ -582,15 +597,22 @@ plot_fit <- plot_with_fitting_curve(
     fit_df = adjusted_df, sample_annotation = example_sample_annotation
 )
 
-# 5) One-call wrapper
-batch_corrected_matrix <- correct_batch_effects_df(
-    example_proteome, example_sample_annotation,
+# 5) One-call wrapper (continuous + discrete)
+batch_corrected_matrix <- correct_batch_effects(
+    x = example_proteome, sample_annotation = example_sample_annotation,
+    format = "long",
     continuous_func = "loess_regression",
     discrete_func = "MedianCentering",
     batch_col = "MS_batch",
     span = 0.7, min_measurements = 8
 )
 
+}
+\references{
+Johnson WE, Li C, Rabinovic A (2007). Adjusting batch effects in microarray
+expression data using empirical Bayes methods. \emph{Biostatistics} 8(1):118–127.
+Smyth GK (2025). \emph{limma User's Guide}, Bioconductor (see removeBatchEffect / lmFit).
+Leek JT et al. (2024). \emph{sva} vignette, Bioconductor.
 }
 \seealso{
 \code{\link{fit_nonlinear}}
@@ -599,9 +621,12 @@ batch_corrected_matrix <- correct_batch_effects_df(
 
 \code{\link{fit_nonlinear}}, \code{\link{plot_with_fitting_curve}}
 
-\code{\link{center_feature_batch}}, \code{\link{adjust_batch_trend_df}},
-\code{\link{adjust_batch_trend_dm}}, \code{\link{correct_with_ComBat_df}},
-\code{\link{correct_batch_effects_df}}
+\code{\link{center_feature_batch}},
+\code{\link{adjust_batch_trend_df}},
+\code{\link{adjust_batch_trend_dm}},
+\code{\link{correct_with_ComBat}},
+\code{\link{correct_with_removeBatchEffect}},
+\code{\link{correct_batch_effects}}
 
 \code{\link{fit_nonlinear}}, \code{\link{plot_with_fitting_curve}}
 

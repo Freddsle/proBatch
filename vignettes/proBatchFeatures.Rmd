@@ -225,7 +225,7 @@ Function `pb_nNA()` summarises missingness per assay:
 na_counts <- pb_nNA(pbf)
 
 # na_counts contains info about total number of NAs and % in the data:
-na_counts[["nNA"]] %>% as.tibble()
+na_counts[["nNA"]] %>% as_tibble()
 ```
 
 Here nNA - number of missing values in the assay and pNA is its
@@ -234,7 +234,7 @@ breakdown for each assay:
 
 ```{r nNA_individual}
 # check NAs per sample:
-head(na_counts[["peptide::raw"]]$nNAcols) %>% as.tibble()
+head(na_counts[["peptide::raw"]]$nNAcols) %>% as_tibble()
 ```
 
 For each assay the next tables availabe:
