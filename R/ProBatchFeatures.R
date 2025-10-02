@@ -1126,3 +1126,63 @@ setMethod("show", "ProBatchFeatures", function(object) {
         cat("  Steps logged: ", nrow(log), " (see get_operation_log())\n", sep = "")
     }
 })
+
+
+# ---------------------------
+# List available steps
+# ---------------------------
+#' List available pb_transform steps
+#'
+#' Returns the names currently registered in the internal step registry used by
+#' \code{pb_transform()} and \code{pb_eval()} (e.g., "log2", "medianNorm",
+#' "combat", "limmaRBE", and "BERT" if the BERT package is installed).
+#'
+#' @param pattern optional regular expression to filter step names.
+#' @param details logical(1); if TRUE, return a S4Vectors::DataFrame with
+#'   columns: step, pkg (best-effort), env, n_formals.
+#' @return character vector of step names (default) or a DataFrame if
+#'   \code{details=TRUE}.
+#' @examples
+#' pb_list_steps()
+#' pb_list_steps(details = TRUE)
+#' pb_list_steps("^B") # list steps starting with 'B'
+#' @export
+pb_list_steps <- function(pattern = NULL, details = FALSE) {
+    nm <- sort(ls(envir = .pb_step_registry, all.names = FALSE))
+    if (!is.null(pattern)) nm <- nm[grepl(pattern, nm)]
+    if (!isTRUE(details)) {
+        return(nm)
+    }
+
+    # Build a lightweight info table about each registered function
+    get_pkg <- function(f) {
+        en <- environment(f)
+        nm <- environmentName(en)
+        if (is.null(nm)) {
+            return(NA_character_)
+        }
+        sub("^namespace:", "", nm)
+    }
+    funs <- mget(nm, envir = .pb_step_registry, inherits = FALSE)
+    pkgs <- vapply(funs, get_pkg, character(1))
+    envs <- vapply(funs, function(f) environmentName(environment(f)), character(1))
+    DataFrame(
+        step = nm,
+        pkg = pkgs,
+        env = envs,
+        n_formals = vapply(funs, function(f) length(formals(f)), integer(1)),
+        row.names = NULL
+    )
+}
+
+#' Is a step available in the registry?
+#' @param name character(1) step name (e.g., "combat", "BERT")
+#' @return logical(1)
+#' @examples
+#' pb_has_step("medianNorm")
+#' pb_has_step("BERT")
+#' @export
+pb_has_step <- function(name) {
+    is.character(name) && length(name) == 1L &&
+        exists(name, envir = .pb_step_registry, inherits = FALSE)
+}

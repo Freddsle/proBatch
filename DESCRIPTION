@@ -68,7 +68,8 @@ Suggests:
     roxygen2,
     testthat (>= 3.0.0),
     spelling,
-    HDF5Array
+    HDF5Array,
+    BERT
 VignetteBuilder: knitr
 RoxygenNote: 7.3.3
 Language: en-US

@@ -24,6 +24,27 @@ correct_with_ComBat(
 \arguments{
 \item{x}{Data in long (\code{data.frame}) or wide (\code{matrix}) form, controlled by \code{format}.}
 
+\item{sample_annotation}{data frame with:
+\enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
+  \item biological covariates
+  \item technical covariates (batches etc) }.
+  See \code{help("example_sample_annotation")}}
+
+\item{feature_id_col}{name of the column with feature/gene/peptide/protein
+ID used in the long format representation \code{df_long}. In the wide
+formatted representation \code{data_matrix} this corresponds to the row
+names.}
+
+\item{measure_col}{if \code{df_long} is among the parameters, it is the
+column with expression/abundance/intensity; otherwise, it is used
+internally for consistency.}
+
+\item{sample_id_col}{name of the column in \code{sample_annotation} table,
+where the filenames (colnames of the \code{data_matrix} are found).}
+
+\item{batch_col}{column in \code{sample_annotation} that should be used for
+batch comparison (or other, non-batch factor to be mapped to color in plots).}
+
 \item{format}{One of \code{"long"} or \code{"wide"}.}
 
 \item{par.prior}{Logical; ComBat parametric prior (vs non-parametric).}
@@ -39,6 +60,15 @@ or provide a numeric value to impute (use with caution).}
 
 \item{no_fit_imputed}{If \code{TRUE} and \code{qual_col} provided, masked values are
 excluded when building the matrix (original values still corrected).}
+
+\item{qual_col}{column to color point by certain value denoted
+by \code{qual_value}. Design with inferred/requant values in
+OpenSWATH output data,
+which means argument value has to be set to \code{m_score}.}
+
+\item{qual_value}{value in \code{qual_col} to color. For OpenSWATH data,
+this argument value has to be set to \code{2} (this is an \code{m_score}
+value for imputed values (requant values).}
 }
 \value{
 Matrix if \code{format="wide"}, data.frame if \code{format="long"}.

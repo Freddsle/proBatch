@@ -31,6 +31,13 @@
 #'     (e.g., LOESS) and is typically followed by a discrete adjustment such as
 #'     \code{center_feature_batch()}, \code{correct_with_ComBat()}, or
 #'     \code{correct_with_removeBatchEffect()}.
+#'
+#'   \item \strong{Tree-based batch correction with BERT}:
+#'     \code{\link{correct_with_BERT}()} performs batch-effect correction
+#'     that \emph{tolerates missing values} (no pre-imputation
+#'     required) and can parallelize sub-trees. Internally calls
+#'     limmaRBE or ComBat BERT-versions.
+#'     (Available only if \pkg{BERT} is installed.)
 #' }
 #'
 #' Alternatively, use the wrapper \code{\link{correct_batch_effects}()} to
