@@ -5,7 +5,11 @@ test_that("center_feature_batch_medians", {
     rows <- which(example_proteome$peptide_group_label == "10062_NVGVSFYADKPEVTQEQK_3")
 
     proteome <- example_proteome[rows, ]
-    median_proteome <- center_feature_batch_medians_df(proteome, example_sample_annotation, no_fit_imputed = FALSE)
+    median_proteome <- center_feature_batch(
+        proteome, example_sample_annotation,
+        no_fit_imputed = FALSE,
+        stat = "median", format = "long"
+    )
 
     n_batch <- length(unique(median_proteome$MS_batch))
     expect_equal(length(unique(median_proteome$diff_medians)), n_batch)
@@ -40,7 +44,7 @@ test_that("correct_with_ComBat_df", {
 
     short_df <- example_proteome[example_proteome[["peptide_group_label"]]
     %in% c("10062_NVGVSFYADKPEVTQEQK_3", "10063_NVGVSFYADKPEVTQEQKK_3"), ]
-    combat_df <- correct_with_ComBat_df(short_df, example_sample_annotation)
+    combat_df <- correct_with_ComBat(short_df, example_sample_annotation, format = "long")
 
     expect_equal(combat_df[["peptide_group_label"]][1], "10062_NVGVSFYADKPEVTQEQK_3")
     expect_equal(combat_df[["Intensity"]][1], 768661.4, tolerance = 1)
@@ -81,12 +85,13 @@ test_that("correct_batch_effects_df wrapper", {
     short_df <- example_proteome[example_proteome[["peptide_group_label"]] %in%
         c("10062_NVGVSFYADKPEVTQEQK_3", "101233_QGFNVVVESGAGEASK_2"), ]
 
-    corrected <- correct_batch_effects_df(short_df, example_sample_annotation,
+    corrected <- correct_batch_effects(short_df, example_sample_annotation,
         continuous_func = "loess_regression",
         discrete_func = "MedianCentering",
         span = 0.7,
         min_measurements = 8,
-        no_fit_imputed = FALSE
+        no_fit_imputed = FALSE,
+        format = "long"
     )
 
     expect_true("fit" %in% names(corrected))
@@ -97,8 +102,9 @@ test_that("correct_batch_effects_dm returns matrix", {
     data(example_proteome_matrix, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
 
-    corrected <- correct_batch_effects_dm(example_proteome_matrix, example_sample_annotation,
-        discrete_func = "MedianCentering", no_fit_imputed = FALSE
+    corrected <- correct_batch_effects(example_proteome_matrix, example_sample_annotation,
+        discrete_func = "MedianCentering", no_fit_imputed = FALSE,
+        format = "wide"
     )
 
     expect_true(is.matrix(corrected))
