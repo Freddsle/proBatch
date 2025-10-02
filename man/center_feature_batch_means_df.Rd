@@ -62,4 +62,3 @@ value for imputed values (requant values).}
 \description{
 Use [center_feature_batch()] with `format="long", stat="means"`.
 }
-\keyword{internal}

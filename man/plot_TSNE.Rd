@@ -22,7 +22,6 @@
   plot_title = NULL,
   point_size = 8,
   point_alpha = 0.85,
-  random_seed = NULL,
   theme_name = "classic",
   plotly_param = list(width = 800, height = 600),
   ...
@@ -88,9 +87,6 @@ vector doesn't need to be named.}
 
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
-
-\item{random_seed}{optional integer passed to `set.seed()` for reproducible
-t-SNE initialisation.}
 
 \item{...}{additional arguments forwarded to `Rtsne::Rtsne()` (for the default
 method) or to the respective default method when called on

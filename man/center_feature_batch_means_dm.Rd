@@ -43,4 +43,3 @@ internally for consistency.}
 \description{
 Use [center_feature_batch()] with `format="wide", stat="means"`.
 }
-\keyword{internal}

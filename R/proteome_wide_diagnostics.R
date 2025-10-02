@@ -161,7 +161,9 @@ plot_hierarchical_clustering.default <- function(data_matrix, sample_annotation,
         gg <- ggplotify::as.ggplot(plot_fun)
 
         if (isTRUE(device$opened)) {
-            print(gg)
+            # draw ggplot without using print() to satisfy linting/tools expecting show methods
+            grid::grid.newpage()
+            grid::grid.draw(ggplot2::ggplotGrob(gg))
         }
 
         return(gg)
@@ -1468,8 +1470,6 @@ plot_PCA <- function(x, ...) UseMethod("plot_PCA")
 #' @param max_iter maximum number of optimisation iterations performed by t-SNE.
 #' @param tsne_dims integer embedding dimensionality (first two dimensions are
 #'   visualised).
-#' @param random_seed optional integer passed to `set.seed()` for reproducible
-#'   t-SNE initialisation.
 #' @param return_gridExtra logical; when `TRUE` and plotting multiple assays,
 #'   return a list containing the arranged grob along with the individual
 #'   ggplot objects.
@@ -1513,7 +1513,6 @@ plot_TSNE.default <- function(data_matrix, sample_annotation,
                               plot_title = NULL,
                               point_size = 8,
                               point_alpha = 0.85,
-                              random_seed = NULL,
                               theme_name = "classic",
                               plotly_param = list(width = 800, height = 600),
                               ...) {
@@ -1569,10 +1568,6 @@ plot_TSNE.default <- function(data_matrix, sample_annotation,
             perplexity, max_perplexity, n_samples, max_perplexity
         ))
         perplexity <- max_perplexity
-    }
-
-    if (!is.null(random_seed)) {
-        set.seed(random_seed)
     }
 
     tsne_input <- t(as.matrix(data_matrix))

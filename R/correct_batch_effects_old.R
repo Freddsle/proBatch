@@ -2,7 +2,6 @@
 #' @description Use [center_feature_batch()] with `format="wide", stat="medians"`.
 #' @inheritParams correct_batch_effects
 #' @export
-#' @keywords internal
 center_feature_batch_medians_dm <- function(data_matrix, sample_annotation,
                                             sample_id_col = "FullRunName",
                                             batch_col = "MS_batch",
@@ -21,7 +20,6 @@ center_feature_batch_medians_dm <- function(data_matrix, sample_annotation,
 #' @description Use [center_feature_batch()] with `format="wide", stat="means"`.
 #' @inheritParams correct_batch_effects
 #' @export
-#' @keywords internal
 center_feature_batch_means_dm <- function(data_matrix, sample_annotation,
                                           sample_id_col = "FullRunName",
                                           batch_col = "MS_batch",
@@ -40,7 +38,6 @@ center_feature_batch_means_dm <- function(data_matrix, sample_annotation,
 #' @description Use [center_feature_batch()] with `format="long", stat="medians"`.
 #' @inheritParams correct_batch_effects
 #' @export
-#' @keywords internal
 center_feature_batch_medians_df <- function(df_long, sample_annotation = NULL,
                                             sample_id_col = "FullRunName",
                                             batch_col = "MS_batch",
@@ -65,7 +62,6 @@ center_feature_batch_medians_df <- function(df_long, sample_annotation = NULL,
 #' @description Use [center_feature_batch()] with `format="long", stat="means"`.
 #' @inheritParams correct_batch_effects
 #' @export
-#' @keywords internal
 center_feature_batch_means_df <- function(df_long, sample_annotation = NULL,
                                           sample_id_col = "FullRunName",
                                           batch_col = "MS_batch",
@@ -87,8 +83,10 @@ center_feature_batch_means_df <- function(df_long, sample_annotation = NULL,
 }
 
 
+#' @title DEPRECATED: correct_with_ComBat_df
+#' @description Use [correct_with_ComBat()] with `format="long"`.
+#' @inheritParams correct_batch_effects
 #' @export
-#' @rdname correct_batch_effects
 correct_with_ComBat_df <- function(df_long, sample_annotation = NULL,
                                    feature_id_col = "peptide_group_label",
                                    measure_col = "Intensity",
@@ -114,8 +112,10 @@ correct_with_ComBat_df <- function(df_long, sample_annotation = NULL,
     )
 }
 
+#' @title DEPRECATED: correct_with_ComBat_dm
+#' @description Use [correct_with_ComBat()] with `format="wide"`.
+#' @inheritParams correct_batch_effects
 #' @export
-#' @rdname correct_batch_effects
 correct_with_ComBat_dm <- function(data_matrix, sample_annotation = NULL,
                                    feature_id_col = "peptide_group_label",
                                    measure_col = "Intensity",
@@ -135,8 +135,10 @@ correct_with_ComBat_dm <- function(data_matrix, sample_annotation = NULL,
     )
 }
 
+#' @title DEPRECATED: correct_batch_effects_df
+#' @description Use [correct_batch_effects()] with `format="long"`.
+#' @inheritParams correct_batch_effects
 #' @export
-#' @rdname correct_batch_effects
 correct_batch_effects_df <- function(df_long, sample_annotation,
                                      continuous_func = NULL,
                                      discrete_func = c(
@@ -170,8 +172,10 @@ correct_batch_effects_df <- function(df_long, sample_annotation,
     )
 }
 
+#' @title DEPRECATED: correct_batch_effects_dm
+#' @description Use [correct_batch_effects()] with `format="wide"`.
+#' @inheritParams correct_batch_effects
 #' @export
-#' @rdname correct_batch_effects
 correct_batch_effects_dm <- function(data_matrix, sample_annotation,
                                      continuous_func = NULL,
                                      discrete_func = c("MedianCentering", "MeanCentering", "ComBat"),
@@ -198,8 +202,10 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
     )
 }
 
+#' @title DEPRECATED: correct_with_removeBatchEffect_df
+#' @description Use [correct_with_removeBatchEffect()] with `format="long"`.
+#' @inheritParams correct_batch_effects
 #' @export
-#' @rdname correct_batch_effects
 correct_with_removeBatchEffect_df <- function(df_long, sample_annotation = NULL,
                                               feature_id_col = "peptide_group_label",
                                               measure_col = "Intensity",
@@ -218,8 +224,10 @@ correct_with_removeBatchEffect_df <- function(df_long, sample_annotation = NULL,
     )
 }
 
+#' title DEPRECATED: correct_with_removeBatchEffect_dm
+#' @description Use [correct_with_removeBatchEffect()] with `format="wide"`.
+#' @inheritParams correct_batch_effects
 #' @export
-#' @rdname correct_batch_effects
 correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
                                               feature_id_col = "peptide_group_label",
                                               measure_col = "Intensity",
