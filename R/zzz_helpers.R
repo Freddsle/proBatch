@@ -6,8 +6,10 @@
     # existing
     safe_register("combat", .combat_matrix_step)
     safe_register("limmaRBE", .removeBatchEffect_matrix_step)
+    # mComBat uses the same func, but with use_mComBat = TRUE
+    safe_register("mComBat", .mComBat_matrix_step)
 
-    # NEW: only expose if the package is available
+    # Only expose if the package is available
     if (.pb_requireNamespace("BERT", only_info = TRUE)) {
         safe_register("BERT", .bert_matrix_step) # canonical name
         safe_register("bert", .bert_matrix_step) # convenience alias (lowercase)

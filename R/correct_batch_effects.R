@@ -571,6 +571,9 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
 #' @param keep_all For long format, columns to retain (see \code{subset_keep_cols()}).
 #' @param no_fit_imputed If \code{TRUE} and \code{qual_col} provided, masked values are
 #'   excluded when building the matrix (original values still corrected).
+#' @param mComBat_center If using \code{use_mComBat=TRUE}, the center which should be used
+#'  to center the data (https://doi.org/10.1186/s12859-015-0478-3).
+#' @param use_mComBat Logical; whether to use the modified ComBat (mComBat) version.
 #'
 #' @return Matrix if \code{format="wide"}, data.frame if \code{format="long"}.
 #' @references Johnson WE et al. (2007) \emph{Biostatistics} 8(1):118–127; \emph{sva} vignette.
@@ -588,7 +591,9 @@ correct_with_ComBat <- function(
     keep_all = "default",
     no_fit_imputed = TRUE,
     qual_col = NULL,
-    qual_value = NULL) {
+    qual_value = NULL,
+    mComBat_center = NULL,
+    use_mComBat = FALSE) {
     format <- match.arg(format)
 
     if (identical(format, "wide")) {
@@ -600,7 +605,9 @@ correct_with_ComBat <- function(
             sample_id_col = sample_id_col,
             par.prior = par.prior,
             fill_the_missing = fill_the_missing,
-            covariates_cols = covariates_cols
+            covariates_cols = covariates_cols,
+            mComBat_center = mComBat_center,
+            use_mComBat = use_mComBat
         )
         return(corrected_matrix)
     }
@@ -651,7 +658,9 @@ correct_with_ComBat <- function(
         sample_id_col = sample_id_col,
         par.prior = par.prior,
         fill_the_missing = fill_the_missing,
-        covariates_cols = covariates_cols
+        covariates_cols = covariates_cols,
+        mComBat_center = mComBat_center,
+        use_mComBat = use_mComBat
     )
 
     corrected_df <- matrix_to_long(
@@ -1058,7 +1067,8 @@ correct_batch_effects <- function(
 
 # Core ComBat matrix call with optional covariates (mod)
 run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
-                            par.prior, covariates_cols = NULL, ...) {
+                            par.prior, covariates_cols = NULL,
+                            mComBat_center = NULL, use_mComBat = FALSE, ...) {
     if (is.null(sample_annotation)) {
         stop("sample_annotation is required for ComBat correction")
     }
@@ -1070,6 +1080,11 @@ run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
 
     # ONE batch factor only (ComBat constraint).
     batches <- as.factor(sample_annotation[[batch_col]])
+    if (use_mComBat) {
+        # tranform mComBat_center to corresponding factor level
+        levels(batches) <- seq_along(levels(batches))
+        mComBat_center <- as.character(which(levels(batches) == mComBat_center))
+    }
 
     if (!is.null(covariates_cols) && length(covariates_cols)) {
         missing_cov <- setdiff(covariates_cols, names(sample_annotation))
@@ -1082,9 +1097,44 @@ run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
         mod <- model.matrix(~1, data = sample_annotation)
     }
 
-    ComBat(
-        dat = data_matrix, batch = batches, mod = mod,
-        par.prior = par.prior, ...
+    if (use_mComBat) {
+        # Check if mComBat_center is valid and present among batches
+        if (is.null(mComBat_center) || !(mComBat_center %in% levels(batches))) {
+            stop("mComBat_center must be specified and present in the batch levels when use_mComBat is TRUE.")
+        }
+        message(
+            "Correction using M-ComBat with center batch: ", mComBat_center,
+            ". \n\t\tSee https://doi.org/10.1186/s12859-015-0478-3 for details."
+        )
+        .m_COMBAT(
+            dat = data_matrix, batch = batches, center = mComBat_center, mod = mod
+        )
+    } else {
+        ComBat(
+            dat = data_matrix, batch = batches, mod = mod,
+            par.prior = par.prior, ...
+        )
+    }
+}
+
+.mComBat_matrix_step <- function(data_matrix, sample_annotation,
+                                batch_col = "MS_batch",
+                                sample_id_col = NULL,
+                                fill_the_missing = NULL,
+                                covariates_cols = NULL,
+                                mComBat_center = NULL,
+                                use_mComBat = TRUE,
+                                ...) {
+    .combat_matrix_step(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        batch_col = batch_col,
+        sample_id_col = sample_id_col,
+        fill_the_missing = fill_the_missing,
+        covariates_cols = covariates_cols,
+        mComBat_center = mComBat_center,
+        use_mComBat = use_mComBat,
+        ...
     )
 }
 
@@ -1093,7 +1143,10 @@ run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
                                 sample_id_col = NULL,
                                 par.prior = TRUE,
                                 fill_the_missing = NULL,
-                                covariates_cols = NULL, ...) {
+                                covariates_cols = NULL,
+                                mComBat_center = NULL,
+                                use_mComBat = FALSE,
+                                ...) {
     .run_matrix_method(
         data_matrix, sample_annotation,
         sample_id_col = sample_id_col,
@@ -1105,7 +1158,9 @@ run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
                 batch_col = batch_col,
                 data_matrix = data_matrix,
                 par.prior = par.prior,
-                covariates_cols = covariates_cols, ...
+                covariates_cols = covariates_cols,
+                mComBat_center = mComBat_center,
+                use_mComBat = use_mComBat
             )
         }
     )
