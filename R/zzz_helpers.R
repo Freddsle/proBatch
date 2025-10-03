@@ -4,19 +4,28 @@
     }
 
     # existing
-    safe_register("combat",   .combat_matrix_step)
+    safe_register("combat", .combat_matrix_step)
     safe_register("limmaRBE", .removeBatchEffect_matrix_step)
 
     # NEW: only expose if the package is available
-    if (.pb_requireNamespace("BERT")) {
-        safe_register("BERT", .bert_matrix_step)  # canonical name
-        safe_register("bert", .bert_matrix_step)  # convenience alias (lowercase)
+    if (.pb_requireNamespace("BERT", only_info = TRUE)) {
+        safe_register("BERT", .bert_matrix_step) # canonical name
+        safe_register("bert", .bert_matrix_step) # convenience alias (lowercase)
     }
 }
 
 # internal helper to assert package availability without attaching it
-.pb_requireNamespace <- function(pkg) {
+.pb_requireNamespace <- function(pkg, only_info = FALSE) {
     if (!requireNamespace(pkg, quietly = TRUE)) {
+        if (only_info) {
+            packageStartupMessage(
+                sprintf(
+                    "Package '%s' is not installed. If this functionality is required, please install via BiocManager::install('%s').",
+                    pkg, pkg
+                )
+            )
+            return(invisible(FALSE))
+        }
         stop(sprintf(
             "Package '%s' is required for this operation. Install via BiocManager::install('%s').",
             pkg, pkg

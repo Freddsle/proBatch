@@ -153,6 +153,26 @@ correct_with_BERT <- function(
         stop("Batch column is not present in sample_annotation")
     }
 
+    # Tranform covariates_cols to design format (BERT requires numeric values in covariates)
+    if (!is.null(covariates_cols) && length(covariates_cols)) {
+        missing_cov <- setdiff(covariates_cols, names(sample_annotation))
+        if (length(missing_cov)) {
+            stop("Covariates missing in sample_annotation: ", paste(missing_cov, collapse = ", "))
+        }
+        covariates <- as.data.frame(sample_annotation[, covariates_cols, drop = FALSE])
+        mod <- model.matrix(~., data = covariates)
+        # replace original covariates with design matrix columns (excluding intercept)
+        orig_covariates <- covariates_cols
+        if (ncol(mod) > 1) {
+            new_covariates <- colnames(mod)[-1]
+            sample_annotation <- cbind(
+                sample_annotation[, setdiff(names(sample_annotation), orig_covariates), drop = FALSE],
+                as.data.frame(mod[, -1, drop = FALSE])
+            )
+            covariates_cols <- new_covariates
+        }
+    }
+
     # Minimal BERT metadata columns; rely on 'batchname', 'samplename', 'covariatename' args
     meta_cols <- c(
         sample_id_col, batch_col,
@@ -163,6 +183,9 @@ correct_with_BERT <- function(
     # Preserve row order (samples) and make a clean data.frame for BERT
     stopifnot(nrow(meta_df) == nrow(df_t))
     df_bert <- cbind(meta_df, as.data.frame(df_t, check.names = TRUE))
+    rownames(df_bert) <- df_bert[[sample_id_col]]
+    rownames_order <- rownames(df_bert)
+    df_bert[[sample_id_col]] <- NULL
 
     # Call BERT; allow user to pass parallel settings & extra args
     res <- BERT::BERT(
@@ -170,13 +193,18 @@ correct_with_BERT <- function(
         method = bert_method,
         combatmode = combatmode,
         batchname = batch_col,
-        samplename = sample_id_col,
+        samplename = "Sample", # sample IDs were removed
         covariatename = covariates_cols,
         cores = cores,
         BPPARAM = BPPARAM,
         verify = TRUE,
         ...
     )
+    # Return the sample_id_col if it was removed
+    if (!is.null(sample_id_col) && !(sample_id_col %in% names(res))) {
+        res[[sample_id_col]] <- rownames(res)
+        res <- res[rownames_order, , drop = FALSE]
+    }
 
     # Result mirrors input: samples×features (+ meta); select only the original feature columns
     res_df <- as.data.frame(res, check.names = FALSE)
@@ -200,15 +228,16 @@ correct_with_BERT <- function(
     BPPARAM = NULL,
     ...) {
     # Coerce to numeric matrix (do NOT impute; BERT tolerates NA)
+    # But check that after NA removal it's still numeric and has >=2 features
     if (!is.matrix(data_matrix)) {
         data_matrix <- as.matrix(data_matrix)
     }
-    storage.mode(data_matrix) <- "double"
     if (!is.numeric(data_matrix)) {
         stop("Input must be coercible to a numeric matrix for BERT correction.")
     }
-    if (nrow(data_matrix) < 2L) {
-        stop("BERT requires at least two features.")
+    storage.mode(data_matrix) <- "double"
+    if (sum(rowSums(!is.na(data_matrix)) > 0L) < 2L) {
+        stop("BERT requires at least two not-NA features.")
     }
 
     .run_BERT_core(
