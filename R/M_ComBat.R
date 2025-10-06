@@ -52,6 +52,7 @@ correct_with_mComBat <- function(
     if (is.null(mComBat_center)) {
         stop("mComBat_center must be specified when using correct_with_mComBat.")
     }
+
     # stop if mComBat_center is not present among batches
     if (!is.null(sample_annotation) && !(mComBat_center %in% unique(sample_annotation[[batch_col]]))) {
         stop("mComBat_center must be present in the batch levels of the provided sample_annotation.")
@@ -91,9 +92,12 @@ correct_with_mComBat <- function(
 ##     'mod' = model matrix of potential covariates
 ## From: https://github.com/SteinCK/M-ComBat
 .m_COMBAT <- function(dat, batch, center, mod) {
+    if (anyNA(dat)) stop("m-ComBat currently requires no NAs in 'dat'. Impute or filter first.")
     batch <- as.factor(batch)
+    num_center <- match(center, levels(batch))
     batchmod <- model.matrix(~ -1 + batch)
-    cat("Found", nlevels(batch), "batches\n")
+    if (is.na(num_center)) stop("Reference 'center' not found in 'batch'.")
+    message("Found ", nlevels(batch), " batches")
     n.batch <- nlevels(batch)
     batches <- list()
     for (i in 1:n.batch) {
@@ -108,34 +112,50 @@ correct_with_mComBat <- function(
     n.array <- sum(n.batches)
     NAs <- any(is.na(dat))
     if (NAs) {
-        cat(c("Found", sum(is.na(dat)), "Missing Data Values\n"),
-            sep = " "
-        )
+        message("Found ", sum(is.na(dat)), " Missing Data Values")
         stop()
     }
-    cat("Standardizing Data across genes\n")
+    message("Standardizing Data across genes")
 
     B.hat <- solve(t(design) %*% design) %*% t(design) %*% t(as.matrix(dat))
 
-    # variance of batch of interest
-    var.batch <- apply(dat[, batch == center], 1, var)
-    var.pooled <- ((dat - t(design %*% B.hat))^2) %*% rep(1 / n.array, n.array)
-
-    grand.mean <- t(n.batches / n.array) %*% B.hat[1:n.batch, ]
-    stand.mean <- t(grand.mean) %*% t(rep(1, n.array))
-
-    # accounts for covariates here
-    if (!is.null(design)) {
-        tmp <- design
-        tmp[, c(1:n.batch)] <- 0
-        stand.mean <- stand.mean + t(tmp %*% B.hat)
-    }
-
+    # # OLD / original:
+    # # variance of batch of interest
+    # var.batch <- apply(dat[, batch == center], 1, var)
+    # var.pooled <- ((dat - t(design %*% B.hat))^2) %*% rep(1 / n.array, n.array)
+    # grand.mean <- t(n.batches / n.array) %*% B.hat[1:n.batch, ]
+    # stand.mean <- t(grand.mean) %*% t(rep(1, n.array))
+    # # accounts for covariates here
+    # if (!is.null(design)) {
+    #     tmp <- design
+    #     tmp[, c(1:n.batch)] <- 0
+    #     stand.mean <- stand.mean + t(tmp %*% B.hat)
+    # }
     # standardized data
-    s.data <- (dat - stand.mean) / (sqrt(var.pooled) %*% t(rep(1, n.array)))
+    # s.data <- (dat - stand.mean) / (sqrt(var.pooled) %*% t(rep(1, n.array)))
 
-    cat("Fitting L/S model and finding priors\n")
-    batch.design <- design[, 1:n.batch]
+
+    # --- (a) Per-batch standardization means: alpha_{ig} + X_j beta_g
+    #     Use predicted values from the full design for each sample, gene
+    #     stand.mean has dimension p x n
+    stand.mean <- t(design %*% B.hat) # <<< CHANGED
+    # --- (b) Residuals and batch-wise variances sigma_{ig}^2
+    resid <- dat - stand.mean # <<< CHANGED
+    # variance of reference batch (for back-transform), computed from residuals
+    var.batch <- apply(resid[, batch == center, drop = FALSE], 1, var) # <<< CHANGED
+    # Build a p x n SD matrix: for each batch i, same per-gene SD across its columns
+    sd.mat <- matrix(NA_real_, nrow = nrow(dat), ncol = ncol(dat)) # <<< CHANGED
+    for (i in 1:n.batch) { # <<< CHANGED
+        idx <- batches[[i]] # <<< CHANGED
+        sd.i <- sqrt(apply(resid[, idx, drop = FALSE], 1, var)) # <<< CHANGED
+        sd.mat[, idx] <- sd.i %*% t(rep(1, length(idx))) # <<< CHANGED
+    } # <<< CHANGED
+    # standardized data: Z_{ijg} = (Y - alpha_{ig} - X beta_g) / sigma_{ig}
+    s.data <- resid / sd.mat # <<< CHANGED
+
+
+    message("Fitting L/S model and finding priors")
+    batch.design <- design[, 1:n.batch, drop = FALSE]
 
     gamma.hat <- solve(t(batch.design) %*% batch.design) %*% t(batch.design) %*% t(as.matrix(s.data))
 
@@ -151,7 +171,7 @@ correct_with_mComBat <- function(
 
     gamma.star <- delta.star <- NULL
 
-    cat("Finding parametric adjustments\n")
+    message("Finding parametric adjustments")
     for (i in 1:n.batch) {
         temp <- sva:::it.sol(s.data[, batches[[i]]], gamma.hat[i, ], delta.hat[i, ], gamma.bar[i], t2[i], a.prior[i], b.prior[i])
 
@@ -159,15 +179,25 @@ correct_with_mComBat <- function(
         delta.star <- rbind(delta.star, temp[2, ])
     }
 
-    cat("Adjusting the Data\n")
+    message("Adjusting the Data")
     bayesdata <- s.data
     j <- 1
     for (i in batches) {
         bayesdata[, i] <- (bayesdata[, i] - t(batch.design[i, ] %*% gamma.star)) / (sqrt(delta.star[j, ]) %*% t(rep(1, n.batches[j])))
         j <- j + 1
     }
+    # # OLD:
+    # bayesdata <- (bayesdata * (sqrt(var.batch) %*% t(rep(1, n.array)))) + matrix(B.hat[num_center, ], nrow(dat), ncol(dat))
 
-    bayesdata <- (bayesdata * (sqrt(var.batch) %*% t(rep(1, n.array)))) + matrix(B.hat[center, ], nrow(dat), ncol(dat))
+    # --- (c) Back-transform to reference batch: multiply by sigma_{rg} and add alpha_{rg} + X beta_g
+    # covariate term X beta_g (zero out batch columns)
+    tmp <- design
+    tmp[, c(1:n.batch)] <- 0 # <<< CHANGED
+    cov_term <- t(tmp %*% B.hat) # <<< CHANGED
+
+    bayesdata <- (bayesdata * (sqrt(var.batch) %*% t(rep(1, n.array)))) + # <<< CHANGED
+        matrix(B.hat[num_center, ], nrow(dat), ncol(dat)) + # <<< CHANGED
+        cov_term # <<< CHANGED
 
     return(bayesdata)
 }

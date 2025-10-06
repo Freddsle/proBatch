@@ -1079,11 +1079,12 @@ run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
     }
 
     # ONE batch factor only (ComBat constraint).
-    batches <- as.factor(sample_annotation[[batch_col]])
+    batches <- factor(sample_annotation[[batch_col]])
     if (use_mComBat) {
-        # tranform mComBat_center to corresponding factor level
-        levels(batches) <- seq_along(levels(batches))
-        mComBat_center <- as.character(which(levels(batches) == mComBat_center))
+        # Check if mComBat_center is valid and present among batches
+        if (is.null(mComBat_center) || !(mComBat_center %in% levels(batches))) {
+            stop("mComBat_center must be specified and present in the batch levels when use_mComBat is TRUE.")
+        }
     }
 
     if (!is.null(covariates_cols) && length(covariates_cols)) {
@@ -1098,10 +1099,6 @@ run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
     }
 
     if (use_mComBat) {
-        # Check if mComBat_center is valid and present among batches
-        if (is.null(mComBat_center) || !(mComBat_center %in% levels(batches))) {
-            stop("mComBat_center must be specified and present in the batch levels when use_mComBat is TRUE.")
-        }
         message(
             "Correction using M-ComBat with center batch: ", mComBat_center,
             ". \n\t\tSee https://doi.org/10.1186/s12859-015-0478-3 for details."
@@ -1118,13 +1115,13 @@ run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
 }
 
 .mComBat_matrix_step <- function(data_matrix, sample_annotation,
-                                batch_col = "MS_batch",
-                                sample_id_col = NULL,
-                                fill_the_missing = NULL,
-                                covariates_cols = NULL,
-                                mComBat_center = NULL,
-                                use_mComBat = TRUE,
-                                ...) {
+                                 batch_col = "MS_batch",
+                                 sample_id_col = NULL,
+                                 fill_the_missing = NULL,
+                                 covariates_cols = NULL,
+                                 mComBat_center = NULL,
+                                 use_mComBat = TRUE,
+                                 ...) {
     .combat_matrix_step(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
