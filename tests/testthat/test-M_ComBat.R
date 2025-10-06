@@ -245,4 +245,9 @@ test_that("correct_with_mComBat(wide): covariates are preserved when supplied", 
     err_no_cov <- mean(abs(diff_no_cov - group_diff_orig))
     err_cov <- mean(abs(diff_cov - group_diff_orig))
     expect_lte(err_cov, err_no_cov + 1e-8)
+
+    # Stronger regression guard: per-feature slope for Group is preserved (lm)
+    coef_before <- apply(m, 1, function(y) coef(lm(y ~ Group))[["GroupB"]])
+    coef_after <- apply(res_cov, 1, function(y) coef(lm(y ~ Group))[["GroupB"]])
+    expect_equal(coef_after, coef_before, tolerance = 1e-6)
 })

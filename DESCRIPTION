@@ -69,7 +69,8 @@ Suggests:
     testthat (>= 3.0.0),
     spelling,
     HDF5Array,
-    BERT
+    BERT,
+    PLSDAbatch
 VignetteBuilder: knitr
 RoxygenNote: 7.3.3
 Language: en-US

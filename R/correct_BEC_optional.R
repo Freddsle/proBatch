@@ -94,30 +94,10 @@ correct_with_BERT <- function(
         ...
     )
 
-    corrected_df <- matrix_to_long(
-        corrected_matrix,
-        feature_id_col = feature_id_col,
-        measure_col    = measure_col,
-        sample_id_col  = sample_id_col
-    )
-
-    # preserve original values in preBatchCorr_*
-    old_measure_col <- .make_pre_col("preBatchCorr", measure_col)
-    df_long <- rename(df_long, !!old_measure_col := !!measure_col)
-
-    corrected_df <- left_join(
-        corrected_df,
-        df_long,
-        by = setNames(c(feature_id_col, sample_id_col), c(feature_id_col, sample_id_col))
-    )
-
-    default_cols <- c(original_cols, old_measure_col)
-    minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
-
-    subset_keep_cols(
-        corrected_df, keep_all,
-        default_cols = default_cols,
-        minimal_cols = minimal_cols
+    .post_correction_to_long(
+        corrected_matrix, df_long,
+        feature_id_col, measure_col, sample_id_col,
+        original_cols, keep_all
     )
 }
 
@@ -252,4 +232,403 @@ correct_with_BERT <- function(
         BPPARAM           = BPPARAM,
         ...
     )
+}
+
+#' @title Batch correction via (s)PLSDA-batch (optional; requires PLSDAbatch)
+#' @description Wrapper around \code{PLSDAbatch::PLSDA_batch()} to remove batch variation
+#'   while preserving treatment/biological variation. Uses PLSDA-batch by default;
+#'   switches to sPLSDA-batch when \code{keepX_trt} is supplied.
+#'   Internally works on matrices; long/PBF are converted to/from matrices.
+#' @inheritParams correct_with_ComBat
+#' @param effect_col Column in \code{sample_annotation} with biological group (treatment).
+#'   If \code{NULL}, \code{Y.trt} is omitted (PLSDA-batch cannot preserve treatment in that case).
+#' @param ncomp_trt,ncomp_bat Integers: # of treatment/batch components.
+#' @param keepX_trt Optional numeric vector of length \code{ncomp_trt};
+#'   triggers sPLSDA-batch (variables kept per treatment component).
+#' @param keepX_bat Optional numeric vector of length \code{ncomp_bat} (usually leave default = all).
+#' @param balance \code{"auto"}, \code{TRUE} or \code{FALSE}. If "auto" (default), we set
+#'   \code{FALSE} when any \code{table(batch, treatment)} cell is zero (unbalanced design),
+#'   else \code{TRUE} (as recommended by PLSDAbatch).
+#' @param near_zero_var Passed to PLSDAbatch; keep \code{TRUE} for many zeros.
+#' @param format Either \code{"wide"} (matrix, features x samples) or \code{"long"} (data.frame).
+#' @param max.iter,tol Passed to PLSDAbatch; max iterations and tolerance for convergence.
+#' @param run_splsda Logical; if \code{TRUE} runs sPLSDA correction.
+#' @return A batch-corrected matrix (features x samples) for \code{format="wide"};
+#'   for \code{format="long"} returns a long data.frame with \code{measure_col} corrected.
+#' @seealso \link[PLSDAbatch]{PLSDA_batch} for details.
+#' @references Yiwen Wang, Kim-Anh Lê Cao, PLSDA-batch: a multivariate framework to correct for batch
+#' effects in microbiome data, Briefings in Bioinformatics, Volume 24, Issue 2, March 2023, bbac622,
+#' https://doi.org/10.1093/bib/bbac622
+#' @export
+correct_with_PLSDA_batch <- function(x,
+                                     sample_annotation = NULL,
+                                     sample_id_col = "FullRunName",
+                                     feature_id_col = "peptide_group_label",
+                                     measure_col = "Intensity",
+                                     batch_col = "MS_batch",
+                                     effect_col = NULL,
+                                     ncomp_trt = NULL,
+                                     ncomp_bat = NULL,
+                                     keepX_trt = NULL,
+                                     keepX_bat = NULL,
+                                     balance = c("auto", "TRUE", "FALSE"),
+                                     near_zero_var = TRUE,
+                                     max.iter = 500,
+                                     tol = 1e-06,
+                                     format = c("wide", "long"),
+                                     keep_all = "default",
+                                     run_splsda = FALSE,
+                                     ...) {
+    .pb_requireNamespace("PLSDAbatch")
+    format <- match.arg(format)
+    balance <- match.arg(balance)
+
+    if (identical(format, "wide")) {
+        if (!is.matrix(x)) stop("format='wide' requires a numeric matrix.")
+        corrected_matrix <- .plsda_matrix_step(
+            data_matrix       = x,
+            sample_annotation = sample_annotation,
+            sample_id_col     = sample_id_col,
+            batch_col         = batch_col,
+            effect_col        = effect_col,
+            ncomp_trt         = ncomp_trt,
+            ncomp_bat         = ncomp_bat,
+            keepX_trt         = keepX_trt,
+            keepX_bat         = keepX_bat,
+            balance           = balance,
+            near_zero_var     = near_zero_var,
+            max.iter          = max.iter,
+            tol               = tol,
+            run_splsda        = run_splsda,
+            ...
+        )
+        return(corrected_matrix)
+    }
+
+    # LONG -> matrix
+    if (!is.data.frame(x)) stop("format='long' requires a data.frame.")
+    df_long <- x
+    original_cols <- names(df_long)
+
+    df_long <- check_sample_consistency(
+        sample_annotation, sample_id_col, df_long,
+        batch_col,
+        order_col = NULL, facet_col = NULL, merge = FALSE
+    )
+
+    data_matrix <- long_to_matrix(
+        df_long,
+        feature_id_col = feature_id_col,
+        measure_col    = measure_col,
+        sample_id_col  = sample_id_col
+    )
+
+    corrected_matrix <- .plsda_matrix_step(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        batch_col = batch_col,
+        effect_col = effect_col,
+        ncomp_trt = ncomp_trt,
+        ncomp_bat = ncomp_bat,
+        keepX_trt = keepX_trt,
+        keepX_bat = keepX_bat,
+        balance = balance,
+        near_zero_var = near_zero_var,
+        max.iter = max.iter,
+        tol = tol,
+        run_splsda = run_splsda,
+        ...
+    )
+
+    .post_correction_to_long(
+        corrected_matrix, df_long,
+        feature_id_col, measure_col, sample_id_col,
+        original_cols, keep_all
+    )
+}
+
+.post_correction_to_long <- function(corrected_matrix, df_long,
+                                     feature_id_col, measure_col, sample_id_col,
+                                     original_cols, keep_all) {
+    corrected_df <- matrix_to_long(
+        corrected_matrix,
+        feature_id_col = feature_id_col,
+        measure_col    = measure_col,
+        sample_id_col  = sample_id_col
+    )
+
+    # preserve original values in preBatchCorr_*
+    old_measure_col <- .make_pre_col("preBatchCorr", measure_col)
+    df_long <- rename(df_long, !!old_measure_col := !!measure_col)
+
+    corrected_df <- left_join(
+        corrected_df,
+        df_long,
+        by = setNames(c(feature_id_col, sample_id_col), c(feature_id_col, sample_id_col))
+    )
+
+    default_cols <- c(original_cols, old_measure_col)
+    minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
+
+    subset_keep_cols(
+        corrected_df, keep_all,
+        default_cols = default_cols,
+        minimal_cols = minimal_cols
+    )
+}
+
+.splsda_matrix_step <- function(run_splsda = TRUE, ...) {
+    .plsda_matrix_step(run_splsda = run_splsda, ...)
+}
+
+
+.plsda_matrix_step <- function(
+    data_matrix, sample_annotation = NULL,
+    sample_id_col = "FullRunName",
+    feature_id_col = "peptide_group_label",
+    measure_col = "Intensity",
+    batch_col = "MS_batch",
+    effect_col = NULL,
+    ncomp_trt = NULL,
+    ncomp_bat = NULL,
+    keepX_trt = NULL,
+    keepX_bat = NULL,
+    balance = c("auto", "TRUE", "FALSE"),
+    near_zero_var = TRUE,
+    max.iter = 500,
+    tol = 1e-06,
+    format = c("wide", "long"),
+    keep_all = "default",
+    run_splsda = FALSE,
+    ...) {
+    # Coerce to numeric matrix
+    if (!is.matrix(data_matrix)) {
+        data_matrix <- as.matrix(data_matrix)
+    }
+    if (!is.numeric(data_matrix)) {
+        stop("Input must be coercible to a numeric matrix for PLSDA correction.")
+    }
+    storage.mode(data_matrix) <- "double"
+    if (sum(rowSums(!is.na(data_matrix)) > 0L) < 2L) {
+        stop("PLSDA requires at least two not-NA features.")
+    }
+
+    .run_PLSDA_core(
+        data_matrix, # features × samples (numeric)
+        sample_annotation, # data.frame
+        sample_id_col,
+        batch_col,
+        effect_col = effect_col,
+        ncomp_trt = ncomp_trt,
+        ncomp_bat = ncomp_bat,
+        keepX_trt = keepX_trt,
+        keepX_bat = keepX_bat,
+        balance = match.arg(balance),
+        near_zero_var = near_zero_var,
+        max.iter = max.iter,
+        tol = tol,
+        run_splsda = run_splsda,
+        ...
+    )
+}
+
+# ---- internal core (matrix -> matrix), features x samples in/out ----
+.run_PLSDA_core <- function(
+    data_matrix, # features × samples (numeric)
+    sample_annotation, # data.frame
+    sample_id_col,
+    batch_col,
+    effect_col = NULL,
+    ncomp_trt = NULL,
+    ncomp_bat = NULL,
+    keepX_trt = NULL,
+    keepX_bat = NULL,
+    balance = c("auto", "TRUE", "FALSE"),
+    near_zero_var = TRUE,
+    max.iter = 500,
+    tol = 1e-06,
+    run_splsda = FALSE,
+    ...) {
+    stopifnot(is.matrix(data_matrix))
+    if (is.null(sample_annotation)) stop("sample_annotation is required.")
+    if (run_splsda) {
+        message("Running sPLSDA-batch ...")
+    }
+
+    # Align SA to matrix columns (samples)
+    sample_annotation <- .align_sample_annotation(
+        sample_annotation,
+        sample_ids    = colnames(data_matrix),
+        sample_id_col = sample_id_col
+    )
+
+    # Build samples×features matrix for PLSDAbatch
+    # Keep a strict list of feature columns to extract back.
+    feature_cols <- rownames(data_matrix) # features (rows of input matrix)
+    stopifnot(!is.null(feature_cols))
+    X <- t(data_matrix) # samples × features
+    if (anyNA(X)) stop("PLSDA-batch requires no NAs; impute/filter before calling.")
+    storage.mode(X) <- "double"
+
+    # Ensure SA contains required columns
+    if (!(batch_col %in% names(sample_annotation))) {
+        stop("Batch column is not present in sample_annotation")
+    }
+
+    Y.bat <- factor(sample_annotation[[batch_col]])
+    Y.trt <- if (!is.null(effect_col)) factor(sample_annotation[[effect_col]]) else NULL
+
+    if (is.null(ncomp_trt)) {
+        message("ncomp_trt not supplied; Running `plsda` to choose...")
+        ncomp_trt <- .select_ncomp_trt(X, Y.trt)
+    } else {
+        message("Using user-supplied ncomp_trt = ", ncomp_trt, ". If unsure, leave NULL to run pre-selection.")
+    }
+    ncomp_trt <- as.integer(ncomp_trt)
+    if (ncomp_trt < 1L) stop("ncomp_trt must be a positive integer.")
+
+    # if sPLSDA-batch requested, estimate keepX_trt if missing
+    if (!is.null(keepX_trt) && length(keepX_trt) != ncomp_trt) {
+        stop("keepX_trt must be NULL or a numeric vector of length ncomp_trt.")
+    }
+    if (is.null(keepX_trt) && run_splsda) {
+        dots <- list(...)
+        message("keepX_trt not supplied; estimating ...")
+        seed <- if (!is.null(dots[["tune.seed"]])) dots[["tune.seed"]] else 777L
+        folds <- if (!is.null(dots[["tune.folds"]])) dots[["tune.folds"]] else 4L
+        nrepeat <- if (!is.null(dots[["tune.nrepeat"]])) dots[["tune.nrepeat"]] else 50L
+        grid <- dots[["test.keepX"]]
+        keepX_trt <- .select_keepX_trt(
+            X = X, Y.trt = Y.trt, ncomp_trt = ncomp_trt,
+            folds = folds, nrepeat = nrepeat, test.keepX = grid
+        )
+        # Strip tuning-only args; pass the rest through
+        tune_keys <- c("tune.seed", "tune.folds", "tune.nrepeat", "test.keepX")
+        plsb_dots <- if (length(dots)) dots[setdiff(names(dots), tune_keys)] else list()
+    } else {
+        plsb_dots <- list(...)
+    }
+
+    if (identical(balance, "auto")) {
+        if (is.null(Y.trt)) {
+            bal <- TRUE
+        } else {
+            tab <- table(Y.bat, Y.trt)
+            bal <- all(tab > 0) # balanced (complete) design if no zero cells
+        }
+    } else {
+        bal <- as.logical(balance)
+    }
+
+    if (is.null(ncomp_bat)) {
+        message("ncomp_bat not supplied; Running `PLSDA_batch` to choose...")
+        ncomp_bat <- .select_ncomp_bat(X, Y.trt, Y.bat, ncomp_trt)
+    } else {
+        message("Using user-supplied ncomp_bat = ", ncomp_bat, ". If unsure, leave NULL to run pre-selection.")
+    }
+    ncomp_bat <- as.integer(ncomp_bat)
+    if (ncomp_bat < 1L) stop("ncomp_bat must be a positive integer.")
+
+    fit <- do.call(
+        PLSDAbatch::PLSDA_batch,
+        c(list(
+            X = X,
+            Y.trt = Y.trt,
+            Y.bat = Y.bat,
+            ncomp.trt = ncomp_trt,
+            ncomp.bat = ncomp_bat,
+            keepX.trt = if (is.null(keepX_trt)) rep(ncol(X), ncomp_trt) else keepX_trt,
+            keepX.bat = if (is.null(keepX_bat)) rep(ncol(X), ncomp_bat) else keepX_bat,
+            near.zero.var = near_zero_var,
+            balance = bal
+        ), plsb_dots)
+    )
+
+    corrected <- fit$X.nobatch # samples x features
+    out <- t(corrected) # back to features x samples
+    dimnames(out) <- dimnames(data_matrix)
+    storage.mode(out) <- "double"
+    out
+}
+
+
+.select_ncomp_bat <- function(x, Y.trt, Y.bat, ncomp_trt) {
+    ncomp_bat <- ncol(x) - 1
+    ad.trt.tune <- PLSDAbatch::PLSDA_batch(
+        X = x, Y.trt = Y.trt,
+        Y.bat = Y.bat,
+        ncomp.trt = ncomp_trt,
+        ncomp.bat = ncomp_bat
+    )
+
+    pe <- ad.trt.tune$explained_variance.bat
+    peY <- unname(pe$Y)
+    ycum <- cumsum(peY)
+    tab_pct <- round(100 * rbind(X = unname(pe$X), Y = peY, Y_cumsum = pmin(1, ycum)), 1)
+    colnames(tab_pct) <- paste0("comp", seq_len(ncol(tab_pct)))
+
+    message("It is recommended (by PLSDA-batch) to select ncomp_bat that explains close to 100% of variance in $Y.")
+    message(
+        "Proportion of variance explained (%) for \n",
+        paste(capture.output(print(tab_pct, quote = FALSE, right = TRUE)), collapse = "\n")
+    )
+
+    idx <- which(ycum >= 0.99)[1]
+    value <- if (length(idx)) idx else ncomp_bat
+    message("Suggesting ncomp_bat = ", value, " (of maximum ", ncomp_bat, "). Rerun with user-supplied ncomp_bat if needed.")
+    as.integer(value)
+}
+
+.select_ncomp_trt <- function(x, Y.trt) {
+    if (is.null(Y.trt)) stop("Cannot select ncomp_trt when effect_col is NULL.")
+    Y.trt <- droplevels(as.factor(Y.trt))
+    n_levels <- nlevels(Y.trt)
+    if (n_levels < 2L) stop("effect_col must have at least two levels to select ncomp_trt.")
+    if (any(table(Y.trt) < 3L)) warning("Some treatment levels have fewer than 3 samples; mixOmics::plsda() may fail or be unstable.")
+
+    max_ncomp <- max(1L, n_levels) - 1L
+    ad.trt.tune <- mixOmics::plsda(X = x, Y = Y.trt, ncomp = max_ncomp)
+
+    pe <- ad.trt.tune$prop_expl_var
+    peY <- unname(pe$Y)
+    ycum <- cumsum(peY)
+    tab_pct <- round(100 * rbind(X = unname(pe$X), Y = peY, Y_cumsum = pmin(1, ycum)), 1)
+    colnames(tab_pct) <- paste0("comp", seq_len(ncol(tab_pct)))
+
+    message("It is recommended (by PLSDA-batch) to select ncomp_trt that explains close to 100% of variance in $Y.")
+    message(
+        "Proportion of variance explained (%)\n",
+        paste(capture.output(print(tab_pct, quote = FALSE, right = TRUE)), collapse = "\n")
+    )
+
+    idx <- which(ycum >= 0.99)[1]
+    value <- if (length(idx)) idx else max_ncomp
+    message("Suggesting ncomp_trt = ", value, " (of maximum ", max_ncomp, "). Rerun with user-supplied ncomp_trt if needed.")
+    as.integer(value)
+}
+
+
+# ---- helpers (reused by sPLSDA tuning only) ----------------------------------
+
+.default_keepX_grid <- function(p) {
+    unique(sort(pmin(c(1:10, seq(20, 100, 10), seq(150, 500, 50), p), p)))
+}
+
+# X: samples×features; accepts optional tuning args via function params
+.select_keepX_trt <- function(X, Y.trt, ncomp_trt,
+                              folds = 4L, nrepeat = 50L,
+                              test.keepX = NULL) {
+    p <- ncol(X)
+    if (is.null(test.keepX)) test.keepX <- .default_keepX_grid(p)
+    tun <- mixOmics::tune.splsda(
+        X = X, Y = Y.trt,
+        ncomp = as.integer(ncomp_trt),
+        test.keepX = as.integer(test.keepX),
+        validation = "Mfold",
+        folds = as.integer(folds),
+        nrepeat = as.integer(nrepeat),
+        progressBar = FALSE
+    )
+    as.integer(tun$choice.keepX)
 }

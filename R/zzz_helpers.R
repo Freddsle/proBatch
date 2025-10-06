@@ -14,6 +14,12 @@
         safe_register("BERT", .bert_matrix_step) # canonical name
         safe_register("bert", .bert_matrix_step) # convenience alias (lowercase)
     }
+    if (.pb_requireNamespace("PLSDAbatch", only_info = TRUE)) {
+        safe_register("PLSDAbatch", .plsda_matrix_step) # canonical name
+        safe_register("plsdabatch", .plsda_matrix_step) # convenience alias (lowercase)
+        safe_register("sPLSDAbatch", .splsda_matrix_step) # alias with special char
+        safe_register("splsdabatch", .splsda_matrix_step) # convenience alias (lowercase)
+    }
 }
 
 # internal helper to assert package availability without attaching it
