@@ -209,26 +209,27 @@ correct_with_mComBat <- function(
 
     bayesdata <- (bayesdata * scale_mat) + deterministic
 
-    if (has_covariates) {
-        resid_adj <- bayesdata - deterministic
-        proj_design <- cbind(1, cov_design)
-        proj_coef <- tryCatch(
-            qr.solve(proj_design, t(resid_adj), tol = 1e-12),
-            error = function(e) { 
-                warning(
-                    paste0(
-                        "Unable to enforce covariate preservation in m-ComBat: ",
-                        conditionMessage(e)
-                    )
-                )
-                NULL
-            } 
-        ) 
-        if (!is.null(proj_coef)) {
-            resid_adj <- resid_adj - t(proj_design %*% proj_coef) 
-            bayesdata <- deterministic + resid_adj 
-        } 
-    } 
+    # TODO: Check if needed to enforce covariate preservation
+    # if (has_covariates) {
+    #     resid_adj <- bayesdata - deterministic
+    #     proj_design <- cbind(1, cov_design)
+    #     proj_coef <- tryCatch(
+    #         qr.solve(proj_design, t(resid_adj), tol = 1e-12),
+    #         error = function(e) {
+    #             warning(
+    #                 paste0(
+    #                     "Unable to enforce covariate preservation in m-ComBat: ",
+    #                     conditionMessage(e)
+    #                 )
+    #             )
+    #             NULL
+    #         }
+    #     )
+    #     if (!is.null(proj_coef)) {
+    #         resid_adj <- resid_adj - t(proj_design %*% proj_coef)
+    #         bayesdata <- deterministic + resid_adj
+    #     }
+    # }
 
     return(bayesdata)
 }

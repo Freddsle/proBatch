@@ -16,7 +16,7 @@ correct_with_PLSDA_batch(
   ncomp_bat = NULL,
   keepX_trt = NULL,
   keepX_bat = NULL,
-  balance = c("auto", "TRUE", "FALSE"),
+  balance = "auto",
   near_zero_var = TRUE,
   max.iter = 500,
   tol = 1e-06,
@@ -60,7 +60,7 @@ triggers sPLSDA-batch (variables kept per treatment component).}
 
 \item{keepX_bat}{Optional numeric vector of length \code{ncomp_bat} (usually leave default = all).}
 
-\item{balance}{\code{"auto"}, \code{TRUE} or \code{FALSE}. If "auto" (default), we set
+\item{balance}{logical or "auto". If "auto" (default), we set
 \code{FALSE} when any \code{table(batch, treatment)} cell is zero (unbalanced design),
 else \code{TRUE} (as recommended by PLSDAbatch).}
 
@@ -81,7 +81,8 @@ A batch-corrected matrix (features x samples) for \code{format="wide"};
 \description{
 Wrapper around \code{PLSDAbatch::PLSDA_batch()} to remove batch variation
   while preserving treatment/biological variation. Uses PLSDA-batch by default;
-  switches to sPLSDA-batch when \code{keepX_trt} is supplied.
+  switches to sPLSDA-batch when \code{keepX_trt} is supplied or when
+  \code{run_splsda=TRUE} and \code{keepX_trt} is tuned internally.
   Internally works on matrices; long/PBF are converted to/from matrices.
 }
 \references{
