@@ -197,36 +197,38 @@ correct_with_mComBat <- function(
     # # OLD:
     # bayesdata <- (bayesdata * (sqrt(var.batch) %*% t(rep(1, n.array)))) + matrix(B.hat[num_center, ], nrow(dat), ncol(dat))
 
+    # CHANGED:
     # --- (c) Back-transform to reference batch: multiply by sigma_{rg} and add alpha_{rg} + X beta_g
-    scale_mat <- sqrt(var.batch) %*% t(rep(1, n.array)) # <<< CHANGED
-    deterministic <- matrix(B.hat[num_center, ], nrow(dat), ncol(dat)) # <<< CHANGED
-    if (has_covariates) { # <<< CHANGED
-        cov_betas <- B.hat[cov_cols_idx, , drop = FALSE] # <<< CHANGED
-        cov_fit <- t(cov_design %*% cov_betas) # <<< CHANGED
-        deterministic <- deterministic + cov_fit # <<< CHANGED
-    } # <<< CHANGED
+    scale_mat <- sqrt(var.batch) %*% t(rep(1, n.array))
+    deterministic <- matrix(B.hat[num_center, ], nrow(dat), ncol(dat))
+    if (has_covariates) {
+        cov_betas <- B.hat[cov_cols_idx, , drop = FALSE]
+        cov_fit <- t(cov_design %*% cov_betas)
+        deterministic <- deterministic + cov_fit
+    }
 
-    bayesdata <- (bayesdata * scale_mat) + deterministic # <<< CHANGED
+    bayesdata <- (bayesdata * scale_mat) + deterministic
 
-    if (has_covariates) { # <<< CHANGED
-        resid_adj <- bayesdata - deterministic # <<< CHANGED
-        proj_coef <- tryCatch( # <<< CHANGED
-            qr.solve(cov_design, t(resid_adj), tol = 1e-12), # <<< CHANGED
-            error = function(e) { # <<< CHANGED
-                warning( # <<< CHANGED
-                    paste0( # <<< CHANGED
-                        "Unable to enforce covariate preservation in m-ComBat: ", # <<< CHANGED
-                        conditionMessage(e) # <<< CHANGED
-                    ) # <<< CHANGED
-                ) # <<< CHANGED
-                NULL # <<< CHANGED
-            } # <<< CHANGED
-        ) # <<< CHANGED
-        if (!is.null(proj_coef)) { # <<< CHANGED
-            resid_adj <- resid_adj - t(cov_design %*% proj_coef) # <<< CHANGED
-            bayesdata <- deterministic + resid_adj # <<< CHANGED
-        } # <<< CHANGED
-    } # <<< CHANGED
+    if (has_covariates) {
+        resid_adj <- bayesdata - deterministic
+        proj_design <- cbind(1, cov_design)
+        proj_coef <- tryCatch(
+            qr.solve(proj_design, t(resid_adj), tol = 1e-12),
+            error = function(e) { 
+                warning(
+                    paste0(
+                        "Unable to enforce covariate preservation in m-ComBat: ",
+                        conditionMessage(e)
+                    )
+                )
+                NULL
+            } 
+        ) 
+        if (!is.null(proj_coef)) {
+            resid_adj <- resid_adj - t(proj_design %*% proj_coef) 
+            bayesdata <- deterministic + resid_adj 
+        } 
+    } 
 
     return(bayesdata)
 }
