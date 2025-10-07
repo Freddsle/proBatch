@@ -1,20 +1,39 @@
 # -------------------------
 # Optional integration test (only if BERT is available)
 # -------------------------
+
+expect_matrix_like <- function(actual, template, storage_mode = "double") {
+    expect_true(is.matrix(actual))
+    expect_identical(dim(actual), dim(template))
+    expect_identical(dimnames(actual), dimnames(template))
+    if (!is.null(storage_mode)) {
+        expect_identical(storage.mode(actual), storage_mode)
+    }
+}
+
+local_fake_bert_core <- function(fake_core) {
+    caller_env <- parent.frame()
+    testthat::local_mocked_bindings(
+        .pb_requireNamespace = function(pkg) invisible(TRUE),
+        .bert_matrix_step    = fake_core,
+        .package             = "proBatch",
+        .env                 = caller_env
+    )
+}
 test_that("correct_with_BERT(wide): preserves dimnames and returns numeric matrix (mocked)", {
     testthat::skip_if_not_installed("BERT")
     m <- matrix(
         c(
-            1, NA, 3,
-            4, 5, 6
+            1, NA, 3, 7,
+            4, 5, 6, 8
         ),
         nrow = 2, byrow = TRUE,
-        dimnames = list(c("f1", "f2"), c("s1", "s2", "s3"))
+        dimnames = list(c("f1", "f2"), c("s1", "s2", "s3", "s4"))
     )
 
     sa <- data.frame(
-        FullRunName = c("s2", "s1", "s3"), # shuffled to test alignment
-        MS_batch = c("B1", "B1", "B2"),
+        FullRunName = c("s2", "s1", "s3", "s4"), # shuffled to test alignment
+        MS_batch = c("B1", "B1", "B2", "B2"),
         stringsAsFactors = FALSE
     )
 
@@ -24,11 +43,7 @@ test_that("correct_with_BERT(wide): preserves dimnames and returns numeric matri
         data_matrix + 10
     }
 
-    local_mocked_bindings(
-        .pb_requireNamespace = function(pkg) invisible(TRUE),
-        .bert_matrix_step    = fake_core,
-        .package             = "proBatch"
-    )
+    local_fake_bert_core(fake_core)
 
     out <- proBatch::correct_with_BERT(
         x = m, sample_annotation = sa,
@@ -37,10 +52,7 @@ test_that("correct_with_BERT(wide): preserves dimnames and returns numeric matri
         format = "wide"
     )
 
-    expect_true(is.matrix(out))
-    expect_identical(dim(out), dim(m))
-    expect_identical(dimnames(out), dimnames(m))
-    expect_identical(storage.mode(out), "double")
+    expect_matrix_like(out, m)
     expect_equal(out, m + 10, tolerance = 1e-12)
 })
 
@@ -48,15 +60,15 @@ test_that("correct_with_BERT(long): adds preBatchCorr_* and respects keep_all = 
     testthat::skip_if_not_installed("BERT")
     # Toy long with two features × three samples (complete)
     df <- data.frame(
-        peptide_group_label = rep(c("p1", "p2"), each = 3),
-        FullRunName         = rep(c("s1", "s2", "s3"), times = 2),
-        Intensity           = as.numeric(1:6),
+        peptide_group_label = rep(c("p1", "p2"), each = 4),
+        FullRunName         = rep(c("s1", "s2", "s3", "s4"), times = 2),
+        Intensity           = as.numeric(1:8),
         stringsAsFactors    = FALSE
     )
 
     sa <- data.frame(
-        FullRunName = c("s1", "s2", "s3"),
-        MS_batch = c("B1", "B1", "B2"),
+        FullRunName = c("s1", "s2", "s3", "s4"),
+        MS_batch = c("B1", "B1", "B2", "B2"),
         stringsAsFactors = FALSE
     )
 
@@ -66,11 +78,7 @@ test_that("correct_with_BERT(long): adds preBatchCorr_* and respects keep_all = 
         data_matrix + 1
     }
 
-    local_mocked_bindings(
-        .pb_requireNamespace = function(pkg) invisible(TRUE),
-        .bert_matrix_step    = fake_core,
-        .package             = "proBatch"
-    )
+    local_fake_bert_core(fake_core)
 
     out <- correct_with_BERT(
         x = df, sample_annotation = sa,
@@ -163,9 +171,7 @@ test_that(".run_BERT_core: fails if batch column missing; aligns SA to matrix co
         sample_id_col = "FullRunName", batch_col = "MS_batch",
         bert_method = "limma"
     )
-    expect_true(is.matrix(out))
-    expect_identical(rownames(out), rownames(m))
-    expect_identical(colnames(out), colnames(m))
+    expect_matrix_like(out, m)
 })
 
 test_that("correct_with_BERT(long/wide): format argument checking and plumbing (mocked)", {
@@ -221,10 +227,325 @@ test_that("Integration: .bert_matrix_step runs with BERT on tiny data (method='l
         combatmode        = 1
     )
 
-    expect_true(is.matrix(out))
-    expect_identical(dim(out), dim(m))
-    expect_identical(dimnames(out), dimnames(m))
-    expect_equal(storage.mode(out), "double")
+    expect_matrix_like(out, m)
+})
+
+
+# -------------------------
+# Optional integration test (only if PLSDAbatch is available)
+# -------------------------
+test_that("correct_with_PLSDAbatch(wide)", {
+    testthat::skip_if_not_installed("PLSDAbatch")
+    m <- matrix(
+        c(
+            1, 2, 3, 4, 1,
+            4, 5, 6, 7, 4
+        ),
+        nrow = 2, byrow = TRUE,
+        dimnames = list(
+            c("f1", "f2"),
+            c("s1", "s2", "s3", "s4", "s5")
+        )
+    )
+
+    sa <- data.frame(
+        FullRunName = c("s1", "s2", "s3", "s4", "s5"),
+        MS_batch = c("B1", "B1", "B2", "B2", "B1"),
+        Condition = c("A", "A", "B", "B", "A"),
+        stringsAsFactors = FALSE
+    )
+
+    expect_warning(
+        out <- correct_with_PLSDA_batch(
+            x = m, sample_annotation = sa,
+            sample_id_col = "FullRunName",
+            batch_col = "MS_batch",
+            format = "wide",
+            effect_col = "Condition",
+        ),
+        "Some treatment levels have fewer than 3 samples"
+    )
+
+    expect_matrix_like(out, m)
+})
+
+test_that("correct_with_PLSDA_batch(wide, mocked): returns double matrix and preserves dimnames", {
+    testthat::skip_if_not_installed("PLSDAbatch")
+
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+    # drop NA rows to avoid triggering validation errors
+    m <- example_proteome_matrix
+    m <- m[!apply(is.na(m), 1, any), ]
+
+    sa <- example_sample_annotation
+
+    # Capture arguments reaching PLSDAbatch::PLSDA_batch
+    capt <- new.env(parent = emptyenv())
+
+    fake_plsda_batch <- function(...) {
+        args <- list(...)
+        X <- args$X # samples x features
+        # record what the wrapper passed
+        capt$last_balance <- isTRUE(args$balance)
+        capt$last_keepX_trt <- args$keepX.trt
+        capt$last_Y_trt_is_null <- is.null(args$Y.trt)
+
+        nbat <- if (!is.null(args$ncomp.bat)) args$ncomp.bat else 2L
+        # minimal structure used by .select_ncomp_bat()
+        list(
+            X.nobatch = X, # no-op correction; we only test shape/invariants
+            explained_variance.bat = list(
+                X = rep(0, nbat),
+                Y = rep(1 / nbat, nbat)
+            )
+        )
+    }
+
+    fake_plsda <- function(X, Y, ncomp) {
+        list(prop_expl_var = list(
+            X = rep(0, ncomp),
+            Y = rep(1 / ncomp, ncomp)
+        ))
+    }
+
+    fake_tune <- function(X, Y, ncomp, test.keepX, ...) {
+        list(choice.keepX = rep(11L, ncomp))
+    }
+
+    library(PLSDAbatch)
+
+    # 1) basic wide run (auto-select ncomp_trt/bat; unbalanced=FALSE expected)
+    out <- correct_with_PLSDA_batch(
+        x = m, sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        batch_col = "MS_batch",
+        effect_col = "Sex",
+        format = "wide"
+    )
+
+    expect_matrix_like(out, m)
+
+    # 2) effect_col = NULL (should pass Y.trt = NULL into PLSDAbatch)
+    expect_warning(
+        out2 <- correct_with_PLSDA_batch(
+            x = m, sample_annotation = sa,
+            sample_id_col = "FullRunName",
+            batch_col = "MS_batch",
+            effect_col = NULL,
+            format = "wide"
+        ), "Use ncomp_trt=2"
+    )
+    expect_matrix_like(out2, m)
+
+    # 3) sPLSDA path with tuning (keepX_trt inferred via tune.splsda)
+    out3 <- correct_with_PLSDA_batch(
+        x = m, sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        batch_col = "MS_batch",
+        effect_col = "Sex",
+        ncomp_trt = 2L,
+        run_splsda = TRUE,
+        format = "wide"
+    )
+    expect_matrix_like(out3, m)
+})
+
+test_that("correct_with_PLSDA_batch(wide): basic validation errors are informative", {
+    testthat::skip_if_not_installed("PLSDAbatch")
+    library(PLSDAbatch)
+    m <- matrix(c(1, 2, NA, 4),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2"))
+    )
+    sa <- data.frame(
+        FullRunName = colnames(m),
+        MS_batch = c("B1", "B2"),
+        stringsAsFactors = FALSE
+    )
+
+    expect_error(
+        correct_with_PLSDA_batch(
+            x = m, sample_annotation = sa,
+            sample_id_col = "FullRunName",
+            batch_col = "MS_batch",
+            effect_col = "Condition",
+            format = "wide"
+        ),
+        "requires no NAs",
+        ignore.case = TRUE
+    )
+
+    expect_error(
+        correct_with_PLSDA_batch(
+            x = as.data.frame(m), sample_annotation = sa,
+            sample_id_col = "FullRunName",
+            batch_col = "MS_batch",
+            effect_col = "Condition",
+            format = "wide"
+        ),
+        "requires a numeric matrix",
+        ignore.case = TRUE
+    )
+
+    expect_error(
+        correct_with_PLSDA_batch(
+            x = matrix(c(1, 2, 3, 4), 2,
+                dimnames = list(c("f1", "f2"), c("s1", "s2"))
+            ),
+            sample_annotation = sa[, "FullRunName", drop = FALSE], # drop batch col
+            sample_id_col = "FullRunName",
+            batch_col = "MS_batch",
+            format = "wide"
+        ),
+        "Batch column is not present",
+        fixed = TRUE
+    )
+})
+
+test_that("correct_with_PLSDA_batch(long): round-trip keeps rows and adds preBatchCorr_*", {
+    testthat::skip_if_not_installed("PLSDAbatch")
+    data(example_proteome, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    # drop NA rows to avoid triggering validation errors
+    m <- example_proteome
+    m <- m[!apply(is.na(m), 1, any), ]
+    df_long <- m
+    sa <- example_sample_annotation
+
+    library(PLSDAbatch)
+
+    out <- correct_with_PLSDA_batch(
+        x = df_long,
+        sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        feature_id_col = "peptide_group_label",
+        measure_col = "Intensity",
+        batch_col = "MS_batch",
+        effect_col = "Sex",
+        format = "long"
+    )
+
+    expect_true(is.data.frame(out))
+    expect_true(all(c("peptide_group_label", "FullRunName", "Intensity") %in% names(out)))
+    precol <- "preBatchCorr_Intensity"
+    expect_true(precol %in% names(out))
+    # row count is preserved (features * samples that were present)
+    expect_equal(nrow(out), nrow(df_long))
+
+    # minimal columns request
+    out_min <- correct_with_PLSDA_batch(
+        x = df_long,
+        sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        feature_id_col = "peptide_group_label",
+        measure_col = "Intensity",
+        batch_col = "MS_batch",
+        effect_col = "Sex",
+        format = "long",
+        keep_all = "minimal"
+    )
+    expect_true(setequal(
+        names(out_min),
+        c("FullRunName", "peptide_group_label", "Intensity", precol)
+    ))
+})
+
+
+test_that("correct_with_PLSDA_batch(wide, integration) runs with PLSDAbatch installed", {
+    testthat::skip_if_not_installed("PLSDAbatch")
+
+    m <- matrix(
+        c(
+            1, 2, 3, 4, 1,
+            4, 5, 6, 7, 4
+        ),
+        nrow = 2, byrow = TRUE,
+        dimnames = list(c("f1", "f2"), paste0("s", 1:5))
+    )
+    sa <- data.frame(
+        FullRunName = colnames(m),
+        MS_batch = c("B1", "B1", "B2", "B2", "B1"),
+        Condition = c("A", "A", "B", "B", "A"),
+        stringsAsFactors = FALSE
+    )
+
+    expect_warning(
+        out <- correct_with_PLSDA_batch(
+            x = m, sample_annotation = sa,
+            sample_id_col = "FullRunName",
+            batch_col = "MS_batch",
+            effect_col = "Condition",
+            format = "wide"
+        ),
+        "fewer than 3 samples",
+        ignore.case = TRUE
+    )
+    expect_matrix_like(out, m)
+})
+
+test_that("correct_with_PLSDA_batch(long, integration) runs with PLSDAbatch installed", {
+    testthat::skip_if_not_installed("PLSDAbatch")
+
+    data(example_proteome, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    # drop NA rows to avoid triggering validation errors
+    m <- example_proteome
+    m <- m[!apply(is.na(m), 1, any), ]
+    df_long <- m
+    sa <- example_sample_annotation
+
+    out <- correct_with_PLSDA_batch(
+        x = df_long, sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        feature_id_col = "peptide_group_label",
+        measure_col = "Intensity",
+        batch_col = "MS_batch",
+        effect_col = "Sex",
+        format = "long"
+    )
+    expect_true(is.data.frame(out))
+    expect_true(all(c("peptide_group_label", "FullRunName", "Intensity", "preBatchCorr_Intensity") %in% names(out)))
+})
+
+test_that("ProBatchFeatures smoke-test (skipped if class/methods unavailable)", {
+    testthat::skip_if_not_installed("PLSDAbatch")
+
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+    # drop NA rows to avoid triggering validation errors
+    m <- example_proteome_matrix
+    m <- m[!apply(is.na(m), 1, any), ]
+
+    pbf <- suppressMessages(
+        ProBatchFeatures(
+            data_matrix = m,
+            sample_annotation = example_sample_annotation,
+            sample_id_col = "FullRunName",
+            name = "protein::raw"
+        )
+    )
+
+    params <- list(
+        batch_col = "MS_batch",
+        sample_id_col = "FullRunName",
+        effect_col = "Sex"
+    )
+
+    pb_corrected <- suppressMessages(pb_transform(
+        pbf,
+        from = "protein::raw",
+        steps = "PLSDAbatch",
+        params_list = list(params)
+    ))
+
+    expect_true(inherits(pb_corrected, "ProBatchFeatures"))
+    expect_true("protein::PLSDAbatch_on_raw" %in% names(pb_corrected))
+
+    corrected <- suppressMessages(pb_assay_matrix(pb_corrected, "protein::PLSDAbatch_on_raw"))
+    expect_matrix_like(corrected, m)
 })
 
 

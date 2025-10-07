@@ -108,6 +108,14 @@ correct_with_mComBat <- function(
     design <- cbind(batchmod, mod)
     check <- apply(design, 2, function(x) all(x == 1))
     design <- as.matrix(design[, !check])
+    has_covariates <- ncol(design) > n.batch
+    if (has_covariates) {
+        cov_cols_idx <- seq.int(n.batch + 1L, ncol(design))
+        cov_design <- design[, cov_cols_idx, drop = FALSE]
+    } else {
+        cov_cols_idx <- integer(0L)
+        cov_design <- NULL
+    }
     n.batches <- sapply(batches, length)
     n.array <- sum(n.batches)
     NAs <- any(is.na(dat))
@@ -190,14 +198,35 @@ correct_with_mComBat <- function(
     # bayesdata <- (bayesdata * (sqrt(var.batch) %*% t(rep(1, n.array)))) + matrix(B.hat[num_center, ], nrow(dat), ncol(dat))
 
     # --- (c) Back-transform to reference batch: multiply by sigma_{rg} and add alpha_{rg} + X beta_g
-    # covariate term X beta_g (zero out batch columns)
-    tmp <- design
-    tmp[, c(1:n.batch)] <- 0 # <<< CHANGED
-    cov_term <- t(tmp %*% B.hat) # <<< CHANGED
+    scale_mat <- sqrt(var.batch) %*% t(rep(1, n.array)) # <<< CHANGED
+    deterministic <- matrix(B.hat[num_center, ], nrow(dat), ncol(dat)) # <<< CHANGED
+    if (has_covariates) { # <<< CHANGED
+        cov_betas <- B.hat[cov_cols_idx, , drop = FALSE] # <<< CHANGED
+        cov_fit <- t(cov_design %*% cov_betas) # <<< CHANGED
+        deterministic <- deterministic + cov_fit # <<< CHANGED
+    } # <<< CHANGED
 
-    bayesdata <- (bayesdata * (sqrt(var.batch) %*% t(rep(1, n.array)))) + # <<< CHANGED
-        matrix(B.hat[num_center, ], nrow(dat), ncol(dat)) + # <<< CHANGED
-        cov_term # <<< CHANGED
+    bayesdata <- (bayesdata * scale_mat) + deterministic # <<< CHANGED
+
+    if (has_covariates) { # <<< CHANGED
+        resid_adj <- bayesdata - deterministic # <<< CHANGED
+        proj_coef <- tryCatch( # <<< CHANGED
+            qr.solve(cov_design, t(resid_adj), tol = 1e-12), # <<< CHANGED
+            error = function(e) { # <<< CHANGED
+                warning( # <<< CHANGED
+                    paste0( # <<< CHANGED
+                        "Unable to enforce covariate preservation in m-ComBat: ", # <<< CHANGED
+                        conditionMessage(e) # <<< CHANGED
+                    ) # <<< CHANGED
+                ) # <<< CHANGED
+                NULL # <<< CHANGED
+            } # <<< CHANGED
+        ) # <<< CHANGED
+        if (!is.null(proj_coef)) { # <<< CHANGED
+            resid_adj <- resid_adj - t(cov_design %*% proj_coef) # <<< CHANGED
+            bayesdata <- deterministic + resid_adj # <<< CHANGED
+        } # <<< CHANGED
+    } # <<< CHANGED
 
     return(bayesdata)
 }
