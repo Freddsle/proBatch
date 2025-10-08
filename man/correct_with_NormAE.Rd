@@ -2,7 +2,7 @@
 % Please edit documentation in R/correct_batch_NormAE.R
 \name{correct_with_NormAE}
 \alias{correct_with_NormAE}
-\title{Batch correction via NormAE (optional; Python via reticulate)}
+\title{Batch correction via NormAE (using Python via reticulate)}
 \usage{
 correct_with_NormAE(
   x,
@@ -16,6 +16,7 @@ correct_with_NormAE(
   qc_col = NULL,
   keep_all = "default",
   python_env = NULL,
+  conda_env = NULL,
   normae_args = list()
 )
 }
@@ -49,15 +50,16 @@ internally for consistency.}
 If \code{NULL}, the order of \code{sample_annotation[[sample_id_col]]} is used.}
 
 \item{qc_col}{Optional column in \code{sample_annotation} marking QC samples
-(logical or factor; if factor, level "QC" is treated as QC).}
+(logical or factor; if factor, level "QC" is treated as QC, and "Subject" as non-QC).}
 
 \item{keep_all}{For long format, columns to retain (see \code{subset_keep_cols()}).}
 
 \item{python_env}{Optional path/name of Python/Conda env to use with \pkg{reticulate}.}
 
 \item{normae_args}{Named list of keyword args forwarded to \code{normae$NormAE(...)}.
-Examples: \code{epochs}, \code{hidden_dims}, \code{lr}, \code{lambda_class},
-\code{lambda_rank}, \code{batch_size}, \code{device}. See upstream README.}
+ Examples: \code{epochs}, \code{hidden_dims}, \code{lr}, \code{lambda_class},
+ \code{lambda_rank}, \code{batch_size}, \code{device}. See NormAE for details.
+Default: empty list (all defaults).}
 }
 \value{
 Same type as input: numeric \code{matrix} for \code{format="wide"},
@@ -75,5 +77,7 @@ Requires Python (>=3.10) with package \pkg{normae} installed.
   \code{from normae import NormAE; norm = NormAE(...); norm.fit(X, y, z, X_qc, y_qc, z_qc); X2 = norm.transform(X)}.
 }
 \references{
-NormAE README (install & API). :contentReference[oaicite:2]{index=2}
+Rong, Zhiwei, et al. "NormAE: deep adversarial learning model to remove batch effects in
+liquid chromatography mass spectrometry-based metabolomics data." Analytical chemistry 92.7 (2020): 5082-5090.
+GitHub: https://github.com/luyiyun/NormAE/tree/release
 }

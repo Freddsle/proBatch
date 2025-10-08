@@ -402,8 +402,6 @@ correct_with_PLSDA_batch <- function(x,
 .plsda_matrix_step <- function(
     data_matrix, sample_annotation = NULL,
     sample_id_col = "FullRunName",
-    feature_id_col = "peptide_group_label",
-    measure_col = "Intensity",
     batch_col = "MS_batch",
     effect_col = NULL,
     ncomp_trt = NULL,
@@ -414,8 +412,6 @@ correct_with_PLSDA_batch <- function(x,
     near_zero_var = TRUE,
     max.iter = 500,
     tol = 1e-06,
-    format = c("wide", "long"),
-    keep_all = "default",
     run_splsda = FALSE,
     ...) {
     # Coerce to numeric matrix

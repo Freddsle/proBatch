@@ -34,6 +34,9 @@
             )
             return(invisible(FALSE))
         }
+        if (pkg %in% c("reticulate")) {
+            stop("Functionality requires the 'reticulate' package. Please install it via install.packages('reticulate').", call. = FALSE)
+        }
         stop(sprintf(
             "Package '%s' is required for this operation. Install via BiocManager::install('%s').",
             pkg, pkg
