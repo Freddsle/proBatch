@@ -120,7 +120,7 @@
 #' @importFrom limma removeBatchEffect
 #' @importFrom sva ComBat
 #' @importFrom tidyr complete nest unnest pivot_longer pivot_wider
-#' @importFrom utils combn tail head
+#' @importFrom utils combn tail head read.csv write.csv
 #' @importFrom scales brewer_pal zero_range
 #' @importFrom stats as.formula complete.cases cor dist hclust sd
 #' @importFrom stats ksmooth loess median

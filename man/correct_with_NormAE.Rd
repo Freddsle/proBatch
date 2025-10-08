@@ -2,7 +2,7 @@
 % Please edit documentation in R/correct_batch_NormAE.R
 \name{correct_with_NormAE}
 \alias{correct_with_NormAE}
-\title{Batch correction via NormAE (using Python via reticulate)}
+\title{Batch correction via NormAE (Python CLI)}
 \usage{
 correct_with_NormAE(
   x,
@@ -13,7 +13,7 @@ correct_with_NormAE(
   measure_col = "Intensity",
   format = c("wide", "long"),
   inj_order_col = NULL,
-  qc_col = NULL,
+  qc_col_name = NULL,
   keep_all = "default",
   python_env = NULL,
   conda_env = NULL,
@@ -46,20 +46,25 @@ internally for consistency.}
 
 \item{format}{One of \code{"wide"} or \code{"long"}.}
 
-\item{inj_order_col}{Column in \code{sample_annotation} with injection order (integer).
+\item{inj_order_col}{Column in \code{sample_annotation} with injection order.
 If \code{NULL}, the order of \code{sample_annotation[[sample_id_col]]} is used.}
 
-\item{qc_col}{Optional column in \code{sample_annotation} marking QC samples
-(logical or factor; if factor, level "QC" is treated as QC, and "Subject" as non-QC).}
+\item{qc_col_name}{Optional column in \code{sample_annotation} marking QC samples.
+Logical, factor (level "QC"), or character ("QC") values are treated as QC.}
 
 \item{keep_all}{For long format, columns to retain (see \code{subset_keep_cols()}).}
 
-\item{python_env}{Optional path/name of Python/Conda env to use with \pkg{reticulate}.}
+\item{python_env}{Optional path to a Python binary.}
 
-\item{normae_args}{Named list of keyword args forwarded to \code{normae$NormAE(...)}.
- Examples: \code{epochs}, \code{hidden_dims}, \code{lr}, \code{lambda_class},
- \code{lambda_rank}, \code{batch_size}, \code{device}. See NormAE for details.
-Default: empty list (all defaults).}
+\item{conda_env}{Optional conda environment name. Ignored when \code{python_env}
+is supplied. If neither is provided, a \code{"normae"} conda env is created.}
+
+\item{normae_args}{Named list of CLI parameters forwarded to \code{normae}.
+Entries are translated to \code{--name value} pairs. Default: empty list.
+Some defaults are set internally if not provided:
+  --mz_row set to "".
+  --rt_row set to "".
+  --early_stop set to False.}
 }
 \value{
 Same type as input: numeric \code{matrix} for \code{format="wide"},
@@ -67,14 +72,13 @@ Same type as input: numeric \code{matrix} for \code{format="wide"},
 }
 \description{
 Wrapper around the Python package \code{normae} (Normalization Autoencoder)
-to remove batch effects using a deep autoencoder with adversarial regularization.
-Works on wide matrices and long data.frames by converting to/from matrices.
+to remove batch effects using the official CLI. Works on wide matrices and
+long data.frames by converting to/from matrices.
 }
 \details{
-Requires Python (>=3.10) with package \pkg{normae} installed.
-  Install via \code{reticulate::py_install("git+https://github.com/luyiyun/NormAE.git", pip=TRUE)}.
-  Upstream usage:\cr
-  \code{from normae import NormAE; norm = NormAE(...); norm.fit(X, y, z, X_qc, y_qc, z_qc); X2 = norm.transform(X)}.
+Requires Python (>=3.10) with the \pkg{normae} package installed.
+  The first call without \code{python_env}/\code{conda_env} creates a conda
+  environment named \code{"normae"} and installs the package from GitHub.
 }
 \references{
 Rong, Zhiwei, et al. "NormAE: deep adversarial learning model to remove batch effects in
