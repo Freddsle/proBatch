@@ -31,11 +31,12 @@ long_to_matrix <- function(df_long,
                 !!sym(qual_col) == qual_value, NA, !!sym(measure_col)
             ))
     }
-    proteome_wide <- dcast(
-        df_long,
-        formula = casting_formula,
-        value.var = measure_col
-    ) %>%
+    proteome_wide <- df_long %>%
+        pivot_wider(
+            id_cols = !!sym(feature_id_col),
+            names_from = !!sym(sample_id_col),
+            values_from = !!sym(measure_col)
+        ) %>%
         column_to_rownames(feature_id_col) %>%
         as.matrix()
     return(proteome_wide)
@@ -78,9 +79,11 @@ matrix_to_long <- function(data_matrix, sample_annotation = NULL,
     df_long <- data_matrix %>%
         as.data.frame() %>%
         rownames_to_column(var = feature_id_col) %>%
-        melt(
-            id.var = feature_id_col, value.name = measure_col,
-            variable.name = sample_id_col, factorsAsStrings = FALSE
+        pivot_longer(
+            cols = -all_of(feature_id_col),
+            names_to = sample_id_col,
+            values_to = measure_col,
+            values_drop_na = FALSE
         )
     if (!is.null(step)) {
         df_long <- df_long %>%

@@ -274,10 +274,18 @@ get_sample_corr_df <- function(cor_proteome, sample_annotation,
         ))
     }
 
-    corr_distribution <- melt(cor_proteome,
-        varnames = paste(sample_id_col, seq_len(2), sep = "_"),
-        value.name = "correlation"
-    ) %>%
+    first_sample_col <- paste(sample_id_col, "1", sep = "_")
+    second_sample_col <- paste(sample_id_col, "2", sep = "_")
+
+    corr_distribution <- cor_proteome %>%
+        as.data.frame() %>%
+        rownames_to_column(var = first_sample_col) %>%
+        pivot_longer(
+            cols = -all_of(first_sample_col),
+            names_to = second_sample_col,
+            values_to = "correlation",
+            values_drop_na = FALSE
+        ) %>%
         merge(comb_to_keep) %>%
         merge(sample_annotation %>% select(all_of(c(sample_id_col, spec_cols))),
             by.x = paste(sample_id_col, "1", sep = "_"),
@@ -559,10 +567,18 @@ get_peptide_corr_df <- function(peptide_cor, peptide_annotation,
     comb_to_keep <- data.frame(t(combn(colnames(peptide_cor), 2)))
     names(comb_to_keep) <- paste(feature_id_col, seq_len(2), sep = "_")
 
-    corr_distribution <- melt(peptide_cor,
-        varnames = paste(feature_id_col, seq_len(2), sep = "_"),
-        value.name = "correlation"
-    ) %>%
+    first_feature_col <- paste(feature_id_col, "1", sep = "_")
+    second_feature_col <- paste(feature_id_col, "2", sep = "_")
+
+    corr_distribution <- peptide_cor %>%
+        as.data.frame() %>%
+        rownames_to_column(var = first_feature_col) %>%
+        pivot_longer(
+            cols = -all_of(first_feature_col),
+            names_to = second_feature_col,
+            values_to = "correlation",
+            values_drop_na = FALSE
+        ) %>%
         filter(!is.na(correlation)) %>%
         merge(comb_to_keep) %>%
         merge(

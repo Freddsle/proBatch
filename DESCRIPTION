@@ -44,7 +44,6 @@ Imports:
     purrr,
     pvca,
     RColorBrewer,
-    reshape2, 
     rlang,
     scales,
     stats,
@@ -70,7 +69,9 @@ Suggests:
     spelling,
     HDF5Array,
     BERT,
-    PLSDAbatch
+    PLSDAbatch,
+    reticulate
+SystemRequirements: Optional: Python (>= 3.10) for functions using the 'normae' Python package via 'reticulate'.
 VignetteBuilder: knitr
 RoxygenNote: 7.3.3
 Language: en-US
