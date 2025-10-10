@@ -52,7 +52,7 @@ test_that("correct_with_ComBat_df", {
     combat_example <- ComBat(dat = as.matrix(example_matrix), batch = as.factor(example_sample_annotation$MS_batch))
 
     expect_equal(combat_df[["peptide_group_label"]][1], "10062_NVGVSFYADKPEVTQEQK_3")
-    expect_equal(combat_df[1,][["Intensity"]], combat_example[combat_df[1,][["peptide_group_label"]], combat_df[1,][["FullRunName"]]], tolerance = 1)
+    expect_equal(combat_df[1, ][["Intensity"]], combat_example[combat_df[1, ][["peptide_group_label"]], combat_df[1, ][["FullRunName"]]], tolerance = 1)
 
     batch_1 <- example_sample_annotation$FullRunName[example_sample_annotation$MS_batch == "Batch_1"]
     batch_2 <- example_sample_annotation$FullRunName[example_sample_annotation$MS_batch == "Batch_2"]

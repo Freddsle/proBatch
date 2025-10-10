@@ -331,3 +331,104 @@ test_that(".normae_qc_mask handles logical, factor, and character inputs", {
         c(TRUE, TRUE, FALSE)
     )
 })
+
+test_that("correct_with_NormAE runs the NormAE CLI when available (integration)", {
+    skip_on_cran()
+    skip_if(nzchar(Sys.getenv("BBS_HOME")), "Skipping on Bioconductor build system")
+    skip_if(
+        tolower(Sys.getenv("BIOCONDUCTOR_DOCKER", "")) %in% c("true", "1"),
+        "Skipping on Bioconductor docker checks"
+    )
+    skip_if_not_installed("reticulate")
+
+    python_override <- NULL
+    preconfigured_python <- Sys.getenv("RETICULATE_PYTHON", "")
+    if (nzchar(preconfigured_python)) {
+        python_bin <- preconfigured_python
+    } else {
+        python_bin <- Sys.which("python")
+    }
+    if (nzchar(python_bin)) {
+        cli_probe <- tryCatch(
+            system2(
+                python_bin,
+                c("-c", "import normae.cli"),
+                stdout = TRUE,
+                stderr = TRUE
+            ),
+            error = identity
+        )
+        if (!inherits(cli_probe, "error") && is.null(attr(cli_probe, "status"))) {
+            python_override <- python_bin
+        }
+    }
+
+    old_conda <- NULL
+    if (is.null(python_override)) {
+        conda_bin <- Sys.which("mamba")
+        if (!nzchar(conda_bin)) {
+            conda_bin <- Sys.which("conda")
+        }
+        skip_if(!nzchar(conda_bin), "No mamba/conda binary available for NormAE env creation")
+        old_conda <- getOption("reticulate.conda_binary", NULL)
+        options(reticulate.conda_binary = conda_bin)
+        on.exit(options(reticulate.conda_binary = old_conda), add = TRUE)
+    }
+
+    set.seed(123)
+    m <- matrix(
+        runif(12, min = 100, max = 1000),
+        nrow = 3,
+        dimnames = list(
+            paste0("feat", 1:3),
+            paste0("sample", 1:4)
+        )
+    )
+
+    sa <- data.frame(
+        FullRunName = paste0("sample", 1:4),
+        MS_batch = rep(c("B1", "B2"), each = 2),
+        InjectionOrder = 1:4,
+        stringsAsFactors = FALSE
+    )
+
+    env_error_patterns <- paste(
+        c(
+            "Python module 'normae'",
+            "Python module 'normae.cli'",
+            "No module named 'normae'",
+            "conda binary",
+            "CondaEnvException",
+            "Miniconda",
+            "conda environment 'normae' not found"
+        ),
+        collapse = "|"
+    )
+
+    result <- tryCatch(
+        correct_with_NormAE(
+            x = m,
+            sample_annotation = sa,
+            sample_id_col = "FullRunName",
+            batch_col = "MS_batch",
+            inj_order_col = "InjectionOrder",
+            format = "wide",
+            python_env = python_override,
+            normae_args = list()
+        ),
+        error = function(e) {
+            msg <- conditionMessage(e)
+            if (grepl(env_error_patterns, msg, ignore.case = TRUE)) {
+                if (!is.null(python_override)) {
+                    skip(paste("NormAE CLI unavailable in system python:", msg))
+                }
+                skip(paste("NormAE environment not ready:", msg))
+            }
+            stop(msg, call. = FALSE)
+        }
+    )
+
+    expect_matrix_like(result, m)
+    expect_false(isTRUE(all.equal(result, m)))
+    expect_true(all(is.finite(result)))
+})
