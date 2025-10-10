@@ -1,7 +1,6 @@
 #######################################
 ##  Functions to run (train) NormAE  ##
 #######################################
-
 #' @title Batch correction via NormAE (Python CLI)
 #' @description
 #' Wrapper around the Python package \code{normae} (Normalization Autoencoder)
@@ -143,9 +142,8 @@ correct_with_NormAE <- function(
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
         batch_col = batch_col,
-        inj_col_name = inj_col_name,
+        inj_order_col = inj_order_col,
         qc_col_name = qc_col_name,
-        qc_indicator_value = qc_indicator_value,
         python_env = python_env,
         conda_env = conda_env,
         normae_args = normae_args
@@ -157,9 +155,8 @@ correct_with_NormAE <- function(
     sample_annotation,
     sample_id_col,
     batch_col,
-    inj_col_name = NULL,
+    inj_order_col = NULL,
     qc_col_name = NULL,
-    qc_indicator_value = NULL,
     python_env = NULL,
     conda_env = NULL,
     normae_args = list()) {
@@ -173,24 +170,33 @@ correct_with_NormAE <- function(
     # Align SA to matrix columns (samples)
     sample_annotation <- .align_sample_annotation(
         sample_annotation,
-        sample_ids    = colnames(data_matrix),
+        sample_ids    = sample_ids,
         sample_id_col = sample_id_col
     )
+    if (!identical(as.character(sample_annotation[[sample_id_col]]), sample_ids)) {
+        stop("Aligned sample_annotation does not match sample IDs in data_matrix.")
+    }
     # Ensure SA contains required columns
     if (!(batch_col %in% names(sample_annotation))) {
         stop("Batch column '", batch_col, "' is not present in sample_annotation.")
     }
-    if (!is.null(inj_col_name)) {
-        if (!(inj_col_name %in% names(sample_annotation))) {
-            stop("Injection order column '", inj_col_name, "' not found in sample_annotation.")
-        }
-    }
 
-    sample_annotation <- .preprocess_qc_column(
-        sample_annotation,
+    inj_info <- .normae_prepare_injection_order(
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        inj_order_col = inj_order_col
+    )
+    sample_annotation <- inj_info$sample_annotation
+    inj_col_name <- inj_info$inj_col_name
+
+    qc_info <- .preprocess_qc_column(
+        sample_annotation = sample_annotation,
         qc_col_name = qc_col_name,
         sample_id_col = sample_id_col
     )
+    sample_annotation <- qc_info$sample_annotation
+    qc_col_name <- qc_info$qc_col_name
+    qc_indicator_value <- qc_info$qc_indicator_value
 
     # Starting with python env for NormAE
     python_bin <- .normae_prepare_python(python_env, conda_env)
@@ -208,14 +214,29 @@ correct_with_NormAE <- function(
     on.exit(unlink(output_dir, recursive = TRUE, force = TRUE), add = TRUE)
 
     write.csv(meta_df, meta_path, quote = TRUE)
-    write.csv(sa_subset, sample_path, quote = TRUE)
+    cols_needed <- c(sample_id_col, batch_col)
+    if (!is.null(inj_col_name)) {
+        cols_needed <- c(cols_needed, inj_col_name)
+    }
+    if (!is.null(qc_col_name)) {
+        cols_needed <- c(cols_needed, qc_col_name)
+    }
+    cols_needed <- unique(cols_needed)
+    sa_subset <- sample_annotation[, cols_needed, drop = FALSE]
+    for (nm in names(sa_subset)) {
+        if (is.factor(sa_subset[[nm]])) {
+            sa_subset[[nm]] <- as.character(sa_subset[[nm]])
+        }
+    }
+    sa_subset[[sample_id_col]] <- as.character(sa_subset[[sample_id_col]])
+    write.csv(sa_subset, sample_path, quote = TRUE, row.names = FALSE)
 
     cli_args <- c(
         "--meta_csv", normalizePath(meta_path, winslash = "/", mustWork = TRUE),
         "--sample_csv", normalizePath(sample_path, winslash = "/", mustWork = TRUE),
         "--output_dir", normalizePath(output_dir, winslash = "/", mustWork = TRUE),
         "--batch_indicator_col", batch_col,
-        "--order_indicator_col", inj_col_name
+        "--order_indicator_col", if (is.null(inj_col_name)) "" else inj_col_name
     )
 
     if (!is.null(qc_col_name)) {
@@ -266,12 +287,20 @@ correct_with_NormAE <- function(
     result_mat <- as.matrix(result_df)
     storage.mode(result_mat) <- "double"
 
-    if (identical(rownames(result_mat), original_rownames) && identical(colnames(result_mat), sample_ids)) {
+    same_shape <- identical(dim(result_mat), dim(data_matrix)) &&
+        identical(colnames(result_mat), sample_ids) &&
+        (is.null(original_rownames) || identical(rownames(result_mat), original_rownames))
+
+    if (same_shape) {
         aligned <- result_mat
-    } else if (identical(rownames(result_mat), sample_ids) && identical(colnames(result_mat), original_rownames)) {
+    } else if (
+        identical(dim(result_mat), c(length(sample_ids), nrow(data_matrix))) &&
+            identical(rownames(result_mat), sample_ids) &&
+            (is.null(original_rownames) || identical(colnames(result_mat), original_rownames))
+    ) {
         aligned <- t(result_mat)
     } else {
-        missing_rows <- setdiff(original_rownames, rownames(result_mat))
+        missing_rows <- if (is.null(original_rownames)) character(0) else setdiff(original_rownames, rownames(result_mat))
         missing_cols <- setdiff(sample_ids, colnames(result_mat))
         stop(
             "NormAE output does not match expected dimensions. ",
@@ -279,14 +308,28 @@ correct_with_NormAE <- function(
             "; missing samples: ", paste(missing_cols, collapse = ", ")
         )
     }
-    out <- aligned[original_rownames, sample_ids, drop = FALSE]
-    if (!identical(dim(out), dim(meta_df))) {
+
+    if (!is.null(original_rownames) && is.null(rownames(aligned))) {
+        rownames(aligned) <- original_rownames
+    }
+    if (is.null(colnames(aligned))) {
+        colnames(aligned) <- sample_ids
+    }
+
+    if (!is.null(original_rownames)) {
+        aligned <- aligned[original_rownames, , drop = FALSE]
+    } else {
+        aligned <- aligned[seq_len(nrow(data_matrix)), , drop = FALSE]
+    }
+    aligned <- aligned[, sample_ids, drop = FALSE]
+
+    if (!identical(dim(aligned), dim(data_matrix))) {
         stop("NormAE returned unexpected dimensions.")
     }
-    our <- as.matrix(out)
-    dimnames(out) <- dimnames(data_matrix)
-    storage.mode(out) <- "double"
-    out
+
+    dimnames(aligned) <- dimnames(data_matrix)
+    storage.mode(aligned) <- "double"
+    aligned
 }
 
 .normae_prepare_python <- function(python_env = NULL, conda_env = NULL) {
@@ -380,11 +423,13 @@ correct_with_NormAE <- function(
 
     # ---- validation & normalization of input --------------------------------
     if (is.null(normae_args) || !length(normae_args)) {
+        message("No normae_args provided; using defaults where applicable.")
         normae_args <- list()
     }
     arg_names <- names(normae_args)
-    if (is.null(arg_names) || any(arg_names == "")) {
-        stop("All entries in normae_args must be named.")
+    # Only validate names when there are entries; treat empty or NA names as invalid
+    if (length(normae_args) && (is.null(arg_names) || any(is.na(arg_names) | arg_names == ""))) {
+        stop("All entries in normae_args must be named. Arguments: ", paste(arg_names, collapse = ", "))
     }
 
     # Inject defaults when unspecified
@@ -405,22 +450,72 @@ correct_with_NormAE <- function(
     res
 }
 
+.normae_prepare_injection_order <- function(sample_annotation, sample_id_col, inj_order_col) {
+    if (!(sample_id_col %in% names(sample_annotation))) {
+        stop("Sample ID column '", sample_id_col, "' not found in sample_annotation.")
+    }
+
+    if (is.null(inj_order_col) || identical(inj_order_col, "")) {
+        inj_col_name <- "..normae_order"
+        sample_annotation[[inj_col_name]] <- seq_len(nrow(sample_annotation))
+        return(list(
+            sample_annotation = sample_annotation,
+            inj_col_name = inj_col_name
+        ))
+    }
+
+    if (!(inj_order_col %in% names(sample_annotation))) {
+        stop("Injection order column '", inj_order_col, "' not found in sample_annotation.")
+    }
+
+    inj_vals <- sample_annotation[[inj_order_col]]
+    if (anyNA(inj_vals)) {
+        stop("Injection order column '", inj_order_col, "' contains missing values.")
+    }
+    if (!is.numeric(inj_vals)) {
+        suppressWarnings(num_vals <- as.numeric(as.character(inj_vals)))
+        if (anyNA(num_vals)) {
+            stop("Injection order column '", inj_order_col, "' must be numeric or coercible to numeric.")
+        }
+        inj_vals <- num_vals
+    }
+    if (all(inj_vals == round(inj_vals))) {
+        inj_vals <- as.integer(round(inj_vals))
+    }
+
+    sample_annotation[[inj_order_col]] <- inj_vals
+    list(
+        sample_annotation = sample_annotation,
+        inj_col_name = inj_order_col
+    )
+}
+
 
 .preprocess_qc_column <- function(sample_annotation, qc_col_name, sample_id_col) {
+    qc_indicator_value <- NULL
+    if (!(sample_id_col %in% names(sample_annotation))) {
+        stop("Sample ID column '", sample_id_col, "' not found in sample_annotation.")
+    }
     if (!is.null(qc_col_name)) {
         if (!(qc_col_name %in% names(sample_annotation))) {
             stop("QC column '", qc_col_name, "' not found in sample_annotation.")
         }
         qc_mask <- .normae_qc_mask(sample_annotation[[qc_col_name]])
         if (any(qc_mask)) {
-            qc_col_name <- "..normae_qc"
-            sample_annotation[[qc_col_name]] <- ifelse(qc_mask, "QC", "Sample")
+            new_col <- "..normae_qc"
+            sample_annotation[[new_col]] <- ifelse(qc_mask, "QC", "Subject")
+            qc_col_name <- new_col
             qc_indicator_value <- "QC"
         } else {
             message("QC column supplied but no QC samples detected; QC information will be ignored.")
+            qc_col_name <- NULL
         }
     }
-    sample_annotation
+    list(
+        sample_annotation = sample_annotation,
+        qc_col_name = qc_col_name,
+        qc_indicator_value = qc_indicator_value
+    )
 }
 
 .normae_qc_mask <- function(values) {

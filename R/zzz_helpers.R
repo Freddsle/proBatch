@@ -9,6 +9,12 @@
     # mComBat uses the same func, but with use_mComBat = TRUE
     safe_register("mComBat", .mComBat_matrix_step)
 
+    # NormAE depends on Python via reticulate; only expose when infrastructure is present
+    if (.pb_requireNamespace("reticulate", only_info = TRUE)) {
+        safe_register("NormAE", .normae_matrix_step)
+        safe_register("normae", .normae_matrix_step)
+    }
+
     # Only expose if the package is available
     if (.pb_requireNamespace("BERT", only_info = TRUE)) {
         safe_register("BERT", .bert_matrix_step) # canonical name

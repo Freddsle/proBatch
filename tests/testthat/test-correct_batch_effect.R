@@ -42,12 +42,17 @@ test_that("correct_with_ComBat_df", {
     data(example_proteome, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
 
-    short_df <- example_proteome[example_proteome[["peptide_group_label"]]
-    %in% c("10062_NVGVSFYADKPEVTQEQK_3", "10063_NVGVSFYADKPEVTQEQKK_3"), ]
+    short_df <- example_proteome[example_proteome[["peptide_group_label"]] %in% c("10062_NVGVSFYADKPEVTQEQK_3", "10063_NVGVSFYADKPEVTQEQKK_3"), ]
     combat_df <- correct_with_ComBat(short_df, example_sample_annotation, format = "long")
 
+    # Example: using ComBat directly
+    example_matrix <- reshape2::dcast(short_df, peptide_group_label ~ FullRunName, value.var = "Intensity")
+    rownames(example_matrix) <- example_matrix$peptide_group_label
+    example_matrix$peptide_group_label <- NULL
+    combat_example <- ComBat(dat = as.matrix(example_matrix), batch = as.factor(example_sample_annotation$MS_batch))
+
     expect_equal(combat_df[["peptide_group_label"]][1], "10062_NVGVSFYADKPEVTQEQK_3")
-    expect_equal(combat_df[["Intensity"]][1], 768661.4, tolerance = 1)
+    expect_equal(combat_df[1,][["Intensity"]], combat_example[combat_df[1,][["peptide_group_label"]], combat_df[1,][["FullRunName"]]], tolerance = 1)
 
     batch_1 <- example_sample_annotation$FullRunName[example_sample_annotation$MS_batch == "Batch_1"]
     batch_2 <- example_sample_annotation$FullRunName[example_sample_annotation$MS_batch == "Batch_2"]
