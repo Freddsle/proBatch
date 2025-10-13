@@ -26,6 +26,12 @@
         safe_register("sPLSDAbatch", .splsda_matrix_step) # alias with special char
         safe_register("splsdabatch", .splsda_matrix_step) # convenience alias (lowercase)
     }
+
+    if (.pb_requireNamespace("RUVIIIC", only_info = TRUE)) {
+        safe_register("RUVIIIC", .ruviiic_matrix_step)
+        safe_register("ruviiic", .ruviiic_matrix_step)
+        safe_register("RUVIII_C", .ruviiic_matrix_step)
+    }
 }
 
 # internal helper to assert package availability without attaching it

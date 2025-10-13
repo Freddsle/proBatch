@@ -44,7 +44,7 @@ names.}
 column with expression/abundance/intensity; otherwise, it is used
 internally for consistency.}
 
-\item{format}{One of \code{"wide"} or \code{"long"}.}
+\item{format}{One of `"long"` or `"wide"`.}
 
 \item{inj_order_col}{Column in \code{sample_annotation} with injection order.
 If \code{NULL}, the order of \code{sample_annotation[[sample_id_col]]} is used.}

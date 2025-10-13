@@ -17,15 +17,19 @@
 #' @param cores Integer; number of workers for BERT. If \code{NULL} (default) BERT uses \code{BiocParallel::bpparam()}.
 #' @param BPPARAM Optional \code{BiocParallelParam} object for BERT.
 #' @param keep_all For long output, columns retained (as in other correct_* functions).
+#'
 #' @details
 #' BERT itself requires a \emph{samples × features} table; proBatch's wrapper builds it from the input
 #' \emph{features × samples} matrix. Missing values (NAs) are allowed.
+#'
 #' @return If \code{format="wide"}, a corrected numeric matrix (features×samples).
 #'   If \code{format="long"}, the original long data with corrected \code{measure_col} and
 #'   a \code{preBatchCorr_[measure_col]} column preserved.
+#'
 #' @references
 #'   BERT Bioconductor page & manual. Schumann Y. & Schlumbohm S., 2025.
 #'   \doi{10.1038/s41467-025-62237-4}. Nature Communications (2025)
+#'
 #' @seealso \code{\link{correct_batch_effects}}, \code{\link{BERT::BERT}}
 #' @export
 correct_with_BERT <- function(

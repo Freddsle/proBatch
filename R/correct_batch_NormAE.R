@@ -8,7 +8,7 @@
 #' long data.frames by converting to/from matrices.
 #'
 #' @inheritParams correct_with_ComBat
-#' @param format One of \code{"wide"} or \code{"long"}.
+#' @param format One of `"long"` or `"wide"`.
 #' @param inj_order_col Column in \code{sample_annotation} with injection order.
 #'   If \code{NULL}, the order of \code{sample_annotation[[sample_id_col]]} is used.
 #' @param qc_col_name Optional column in \code{sample_annotation} marking QC samples.
@@ -22,14 +22,18 @@
 #' @param python_env Optional path to a Python binary.
 #' @param conda_env Optional conda environment name. Ignored when \code{python_env}
 #'   is supplied. If neither is provided, a \code{"normae"} conda env is created.
+#'
 #' @return Same type as input: numeric \code{matrix} for \code{format="wide"},
 #'   or a long \code{data.frame} for \code{format="long"}.
+#'
 #' @details Requires Python (>=3.10) with the \pkg{normae} package installed.
 #'   The first call without \code{python_env}/\code{conda_env} creates a conda
 #'   environment named \code{"normae"} and installs the package from GitHub.
+#'
 #' @references Rong, Zhiwei, et al. "NormAE: deep adversarial learning model to remove batch effects in
 #' liquid chromatography mass spectrometry-based metabolomics data." Analytical chemistry 92.7 (2020): 5082-5090.
 #' GitHub: https://github.com/luyiyun/NormAE/tree/release
+#'
 #' @export
 correct_with_NormAE <- function(
     x,
@@ -486,7 +490,6 @@ correct_with_NormAE <- function(
         inj_col_name = inj_order_col
     )
 }
-
 
 .preprocess_qc_column <- function(sample_annotation, qc_col_name, sample_id_col) {
     qc_indicator_value <- NULL

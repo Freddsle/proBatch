@@ -70,7 +70,10 @@ Suggests:
     HDF5Array,
     BERT,
     PLSDAbatch,
-    reticulate
+    reticulate,
+    RUVIIIC
+Remotes:
+    CMRI-ProCan/RUV-III-C
 SystemRequirements: Optional: Python (>= 3.10) for functions using the 'normae' Python package via 'reticulate'.
 VignetteBuilder: knitr
 RoxygenNote: 7.3.3
