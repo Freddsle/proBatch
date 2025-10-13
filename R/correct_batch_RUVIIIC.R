@@ -186,7 +186,7 @@ correct_with_RUVIII_C <- function(
     if (!is.matrix(data_matrix)) {
         data_matrix <- as.matrix(data_matrix)
     }
-    # storage.mode(data_matrix) <- "double"
+    storage.mode(data_matrix) <- "double"
 
     feature_ids <- rownames(data_matrix)
     sample_ids <- colnames(data_matrix)
@@ -212,8 +212,17 @@ correct_with_RUVIII_C <- function(
     }
 
     replicate_ids <- as.character(replicate_ids)
-    design_matrix <- stats::model.matrix(~ 0 + replicate_ids)
-    rownames(design_matrix) <- sample_ids
+    replicate_levels <- unique(replicate_ids)
+    design_matrix <- matrix(
+        0,
+        nrow = length(replicate_ids),
+        ncol = length(replicate_levels),
+        dimnames = list(sample_ids, replicate_levels)
+    )
+    design_matrix[
+        cbind(seq_along(replicate_ids), match(replicate_ids, replicate_levels))
+    ] <- 1
+    storage.mode(design_matrix) <- "double"
 
     if (is.null(to_correct)) {
         to_correct <- feature_ids
@@ -258,7 +267,7 @@ correct_with_RUVIII_C <- function(
         return(result)
     }
     corrected <- as.matrix(result)
-    # storage.mode(corrected) <- "double"
+    storage.mode(corrected) <- "double"
     t(corrected)
 }
 

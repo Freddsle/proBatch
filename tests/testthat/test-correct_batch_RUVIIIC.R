@@ -9,6 +9,7 @@ expect_matrix_like <- function(actual, template, storage_mode = "double") {
         expect_identical(storage.mode(actual), storage_mode)
     }
 }
+
 local_fake_ruviiic_matrix_step <- function(fake_core) {
     caller_env <- parent.frame()
     testthat::local_mocked_bindings(
@@ -18,6 +19,7 @@ local_fake_ruviiic_matrix_step <- function(fake_core) {
         .env = caller_env
     )
 }
+
 test_that("correct_with_RUVIII_C(wide) preserves dimnames and returns numeric matrix (mocked)", {
     m <- matrix(
         c(
@@ -51,6 +53,7 @@ test_that("correct_with_RUVIII_C(wide) preserves dimnames and returns numeric ma
     expect_matrix_like(out, m)
     expect_equal(out, m + 5)
 })
+
 test_that("correct_with_RUVIII_C(long) returns corrected data.frame when with_extra = FALSE (mocked)", {
     df <- data.frame(
         peptide_group_label = rep(c("p1", "p2"), each = 2),
@@ -89,6 +92,7 @@ test_that("correct_with_RUVIII_C(long) returns corrected data.frame when with_ex
     expect_equal(res$Intensity[expected_idx], df$Intensity + 3)
     expect_equal(res$preBatchCorr_Intensity[expected_idx], df$Intensity)
 })
+
 test_that("correct_with_RUVIII_C(long) adds preBatchCorr_* and returns list when with_extra = TRUE (mocked)", {
     df <- data.frame(
         peptide_group_label = rep(c("p1", "p2"), each = 4),
@@ -135,6 +139,7 @@ test_that("correct_with_RUVIII_C(long) adds preBatchCorr_* and returns list when
     expect_equal(res$corrected_long$Intensity[idx], df$Intensity + 2)
     expect_equal(res$corrected_long$preBatchCorr_Intensity[idx], df$Intensity)
 })
+
 test_that(".ruviiic_matrix_step builds design matrix and transposes output (mocked core)", {
     captured <- new.env(parent = emptyenv())
     fake_core <- function(...) {
@@ -171,6 +176,7 @@ test_that(".ruviiic_matrix_step builds design matrix and transposes output (mock
         k = 1,
         version = "CPP"
     )
+
     expect_matrix_like(out, m)
     expect_equal(rownames(captured$args$Y), c("s1", "s2"))
     expect_equal(colnames(captured$args$Y), c("f1", "f2"))
@@ -179,6 +185,7 @@ test_that(".ruviiic_matrix_step builds design matrix and transposes output (mock
     expect_equal(captured$args$controls, "f1")
     expect_equal(captured$args$to_correct, rownames(m))
 })
+
 test_that(".ruviiic_matrix_step rejects missing replicate column", {
     m <- matrix(
         1:4,
@@ -199,6 +206,7 @@ test_that(".ruviiic_matrix_step rejects missing replicate column", {
         fixed = TRUE
     )
 })
+
 test_that(".ruviiic_matrix_step rejects replicate identifiers with missing values", {
     m <- matrix(
         1:4,
@@ -223,6 +231,7 @@ test_that(".ruviiic_matrix_step rejects replicate identifiers with missing value
         fixed = TRUE
     )
 })
+
 test_that(".ruviiic_matrix_step validates to_correct and controls against available features", {
     m <- matrix(
         1:4,
@@ -260,6 +269,7 @@ test_that(".ruviiic_matrix_step validates to_correct and controls against availa
         fixed = TRUE
     )
 })
+
 test_that(".check_ruviiic_inputs validates required arguments", {
     expect_error(
         proBatch:::`.check_ruviiic_inputs`(
