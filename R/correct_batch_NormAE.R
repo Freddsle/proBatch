@@ -163,291 +163,288 @@ correct_with_NormAE <- function(
     stopifnot(is.matrix(data_matrix))
     if (is.null(sample_annotation)) stop("sample_annotation is required.")
 
-    # save original rownames and colnames, set temporary if missing
-    original_rownames <- rownames(data_matrix)
+    # --- SA coverage + ordering (minimal, deterministic) ---------------------
     sample_ids <- colnames(data_matrix)
-
-    # Align SA to matrix columns (samples)
-    sample_annotation <- .align_sample_annotation(
-        sample_annotation,
-        sample_ids    = sample_ids,
-        sample_id_col = sample_id_col
-    )
-    if (!identical(as.character(sample_annotation[[sample_id_col]]), sample_ids)) {
-        stop("Aligned sample_annotation does not match sample IDs in data_matrix.")
+    if (is.null(sample_ids) || !length(sample_ids)) {
+        stop("data_matrix must have column names (sample IDs).")
     }
-    # Ensure SA contains required columns
+    if (!(sample_id_col %in% names(sample_annotation))) {
+        stop("Column '", sample_id_col, "' not in sample_annotation.")
+    }
     if (!(batch_col %in% names(sample_annotation))) {
-        stop("Batch column '", batch_col, "' is not present in sample_annotation.")
+        stop("Column '", batch_col, "' not in sample_annotation.")
     }
 
-    inj_info <- .normae_prepare_injection_order(
-        sample_annotation = sample_annotation,
-        sample_id_col = sample_id_col,
-        inj_order_col = inj_order_col
-    )
-    sample_annotation <- inj_info$sample_annotation
-    inj_col_name <- inj_info$inj_col_name
+    # Keep only rows for present samples and order to match data_matrix
+    sa <- sample_annotation[sample_annotation[[sample_id_col]] %in% sample_ids, , drop = FALSE]
+    sa[[sample_id_col]] <- as.character(sa[[sample_id_col]])
+    sa <- sa[match(sample_ids, sa[[sample_id_col]]), , drop = FALSE]
+    if (anyNA(sa[[sample_id_col]])) stop("Some matrix samples are absent in sample_annotation.")
 
-    qc_info <- .preprocess_qc_column(
-        sample_annotation = sample_annotation,
-        qc_col_name = qc_col_name,
-        sample_id_col = sample_id_col
-    )
-    sample_annotation <- qc_info$sample_annotation
-    qc_col_name <- qc_info$qc_col_name
-    qc_indicator_value <- qc_info$qc_indicator_value
-
-    # Starting with python env for NormAE
-    python_bin <- .normae_prepare_python(python_env, conda_env)
-
-    # Transpose to samples × features
-    meta_df <- as.data.frame(t(data_matrix), check.names = FALSE)
-    rownames(meta_df) <- sample_ids
-
-    # Create temporary files for meta and sample info
-    meta_path <- tempfile("normae_meta_", fileext = ".csv")
-    sample_path <- tempfile("normae_samples_", fileext = ".csv")
-    output_dir <- tempfile("normae_output_")
-    dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
-    on.exit(unlink(c(meta_path, sample_path), force = TRUE), add = TRUE)
-    on.exit(unlink(output_dir, recursive = TRUE, force = TRUE), add = TRUE)
-
-    write.csv(meta_df, meta_path, quote = TRUE)
-    cols_needed <- c(sample_id_col, batch_col)
-    if (!is.null(inj_col_name)) {
-        cols_needed <- c(cols_needed, inj_col_name)
+    # --- Injection order (if missing, synthesize 1..n) -----------------------
+    if (is.null(inj_order_col) || !nzchar(inj_order_col)) {
+        inj_col_name <- "..normae_order"
+        sa[[inj_col_name]] <- seq_len(nrow(sa))
+    } else {
+        if (!(inj_order_col %in% names(sa))) stop("Injection order column '", inj_order_col, "' not found.")
+        vals <- sa[[inj_order_col]]
+        if (!is.numeric(vals)) {
+            suppressWarnings(vals <- as.numeric(as.character(vals)))
+            if (anyNA(vals)) stop("Injection order must be numeric or coercible to numeric.")
+        }
+        inj_col_name <- inj_order_col
+        sa[[inj_col_name]] <- vals
     }
+
+    # --- QC (optional, tolerant) ---------------------------------------------
+    qc_indicator_value <- NULL
     if (!is.null(qc_col_name)) {
-        cols_needed <- c(cols_needed, qc_col_name)
-    }
-    cols_needed <- unique(cols_needed)
-    sa_subset <- sample_annotation[, cols_needed, drop = FALSE]
-    for (nm in names(sa_subset)) {
-        if (is.factor(sa_subset[[nm]])) {
-            sa_subset[[nm]] <- as.character(sa_subset[[nm]])
+        if (!(qc_col_name %in% names(sa))) stop("QC column '", qc_col_name, "' not found.")
+        qc_mask <- .normae_qc_mask(sa[[qc_col_name]])
+        if (any(qc_mask, na.rm = TRUE)) {
+            qc_col_name <- "..normae_qc"
+            sa[[qc_col_name]] <- ifelse(qc_mask, "QC", "Subject")
+            qc_indicator_value <- "QC"
+        } else {
+            qc_col_name <- NULL
         }
     }
-    sa_subset[[sample_id_col]] <- as.character(sa_subset[[sample_id_col]])
-    write.csv(sa_subset, sample_path, quote = TRUE, row.names = FALSE)
 
+    # --- Python resolver (mamba→conda→pyenv) ---------------------------------
+    python_bin <- .normae_prepare_python(python_env, conda_env)
+
+    # --- I/O in the *working directory* --------------------------------------
+    # meta is samples × features; NormAE docs show CSV inputs (README)
+    meta_df <- as.data.frame(t(data_matrix), check.names = FALSE)
+    rownames(meta_df) <- sample_ids
+    run_tag <- paste0("normae_", format(Sys.time(), "%Y%m%d_%H%M%S"), "_", as.integer(runif(1, 1, 1e9)))
+    run_dir <- file.path(getwd(), run_tag)
+    dir.create(run_dir, recursive = TRUE, showWarnings = FALSE)
+
+    meta_path <- file.path(run_dir, "meta.csv")
+    sample_path <- file.path(run_dir, "samples.csv")
+    out_dir <- file.path(run_dir, "output")
+    dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+
+    write.csv(meta_df, meta_path, quote = TRUE)
+    cols_needed <- unique(c(
+        sample_id_col, batch_col,
+        if (!is.null(inj_col_name)) inj_col_name,
+        if (!is.null(qc_col_name)) qc_col_name
+    ))
+    sa_write <- sa[, cols_needed, drop = FALSE]
+    for (nm in names(sa_write)) if (is.factor(sa_write[[nm]])) sa_write[[nm]] <- as.character(sa_write[[nm]])
+    write.csv(sa_write, sample_path, quote = TRUE, row.names = FALSE)
+
+    # --- CLI args -------------------------------------------------------------
     cli_args <- c(
-        "--meta_csv", normalizePath(meta_path, winslash = "/", mustWork = TRUE),
+        "--meta_csv",   normalizePath(meta_path, winslash = "/", mustWork = TRUE),
         "--sample_csv", normalizePath(sample_path, winslash = "/", mustWork = TRUE),
-        "--output_dir", normalizePath(output_dir, winslash = "/", mustWork = TRUE),
-        "--batch_indicator_col", batch_col,
-        "--order_indicator_col", if (is.null(inj_col_name)) "" else inj_col_name
+        "--output_dir", normalizePath(out_dir, winslash = "/", mustWork = TRUE),
+        "--batch_indicator_col", batch_col
     )
-
-    if (!is.null(qc_col_name)) {
-        qc_value <- if (is.null(qc_indicator_value)) "QC" else as.character(qc_indicator_value)
+    if (!is.null(inj_col_name) && nzchar(inj_col_name)) {
+        cli_args <- c(cli_args, "--order_indicator_col", inj_col_name)
+    }
+    if (!is.null(qc_col_name) && nzchar(qc_col_name)) {
         cli_args <- c(
-            cli_args,
-            "--qc_indicator_col", qc_col_name,
-            "--qc_indicator_value", qc_value
+            cli_args, "--qc_indicator_col", qc_col_name,
+            "--qc_indicator_value", if (is.null(qc_indicator_value)) "QC" else qc_indicator_value
         )
-    } else {
-        cli_args <- c(cli_args, "--qc_indicator_col", "")
     }
 
-    extra_args <- .normae_format_cli_args(normae_args)
-    if (length(extra_args)) {
-        cli_args <- c(cli_args, extra_args)
-    }
+    cli_args <- unname(c(cli_args, .normae_format_cli_args(normae_args)))
 
-    cli_output <- system2(
-        command = python_bin,
-        args = c("-m", "normae.cli", cli_args),
-        stdout = TRUE,
-        stderr = TRUE
-    )
-    status <- attr(cli_output, "status")
-    if (is.null(status)) {
-        status <- 0L
-    }
+    # --- Run CLI --------------------------------------------------------------
+    out <- system2(python_bin, c("-m", "normae.cli", cli_args), stdout = TRUE, stderr = TRUE)
+    status <- attr(out, "status")
+    if (is.null(status)) status <- 0L
     if (!identical(status, 0L)) {
-        stop(
-            paste(
-                c(
-                    "NormAE CLI execution failed.",
-                    "Command output:",
-                    cli_output
-                ),
-                collapse = "\n"
-            )
-        )
+        stop("NormAE CLI failed.\n", paste(out, collapse = "\n"), call. = FALSE)
     }
 
-    result_path <- file.path(output_dir, "X_clean.csv")
-    if (!file.exists(result_path)) {
-        stop("NormAE CLI did not produce 'X_clean.csv' in the output directory.")
-    }
+    # --- Read result, reconcile dims -----------------------------------------
+    res_csv <- file.path(out_dir, "X_clean.csv")
+    if (!file.exists(res_csv)) stop("NormAE did not produce 'X_clean.csv' in: ", out_dir, call. = FALSE)
+    res_df <- read.csv(res_csv, check.names = FALSE, row.names = 1)
+    res_mat <- as.matrix(res_df)
+    storage.mode(res_mat) <- "double"
 
-    result_df <- read.csv(result_path, check.names = FALSE, row.names = 1)
-    result_mat <- as.matrix(result_df)
-    storage.mode(result_mat) <- "double"
-
-    same_shape <- identical(dim(result_mat), dim(data_matrix)) &&
-        identical(colnames(result_mat), sample_ids) &&
-        (is.null(original_rownames) || identical(rownames(result_mat), original_rownames))
-
-    if (same_shape) {
-        aligned <- result_mat
-    } else if (
-        identical(dim(result_mat), c(length(sample_ids), nrow(data_matrix))) &&
-            identical(rownames(result_mat), sample_ids) &&
-            (is.null(original_rownames) || identical(colnames(result_mat), original_rownames))
-    ) {
-        aligned <- t(result_mat)
+    # Expect either features×samples or samples×features; transpose if needed
+    aligned <- if (identical(dim(res_mat), dim(data_matrix)) &&
+        identical(colnames(res_mat), colnames(data_matrix))) {
+        res_mat
+    } else if (identical(rownames(res_mat), colnames(data_matrix))) {
+        t(res_mat)
     } else {
-        missing_rows <- if (is.null(original_rownames)) character(0) else setdiff(original_rownames, rownames(result_mat))
-        missing_cols <- setdiff(sample_ids, colnames(result_mat))
-        stop(
-            "NormAE output does not match expected dimensions. ",
-            "Missing features: ", paste(missing_rows, collapse = ", "),
-            "; missing samples: ", paste(missing_cols, collapse = ", ")
-        )
-    }
-
-    if (!is.null(original_rownames) && is.null(rownames(aligned))) {
-        rownames(aligned) <- original_rownames
-    }
-    if (is.null(colnames(aligned))) {
-        colnames(aligned) <- sample_ids
-    }
-
-    if (!is.null(original_rownames)) {
-        aligned <- aligned[original_rownames, , drop = FALSE]
-    } else {
-        aligned <- aligned[seq_len(nrow(data_matrix)), , drop = FALSE]
-    }
-    aligned <- aligned[, sample_ids, drop = FALSE]
-
-    if (!identical(dim(aligned), dim(data_matrix))) {
-        stop("NormAE returned unexpected dimensions.")
+        stop("Unexpected NormAE output shape; cannot align to input.")
     }
 
     dimnames(aligned) <- dimnames(data_matrix)
-    storage.mode(aligned) <- "double"
     aligned
+}
+
+
+.normae_find_conda_binary <- function() {
+    b <- Sys.which("mamba")
+    if (!nzchar(b)) b <- Sys.which("conda")
+    if (!nzchar(b)) NULL else b
 }
 
 .normae_prepare_python <- function(python_env = NULL, conda_env = NULL) {
     .pb_requireNamespace("reticulate")
 
-    active_env <- NULL
-    if (!is.null(python_env)) {
-        reticulate::use_python(python_env, required = TRUE)
-    } else if (!is.null(conda_env)) {
-        reticulate::use_condaenv(conda_env, required = TRUE)
-        active_env <- conda_env
-    } else {
-        active_env <- "normae"
-        if (!reticulate::condaenv_exists(active_env)) {
-            message("Creating conda environment '", active_env, "' (Python 3.10) for NormAE...")
-            reticulate::conda_create(active_env, python_version = "3.10")
+    has_cli <- function(py) {
+        if (!nzchar(py) || !file.exists(py) || dir.exists(py)) {
+            return(FALSE)
         }
-        reticulate::use_condaenv(active_env, required = TRUE)
-        if (!reticulate::py_module_available("normae")) {
-            message("Installing NormAE into conda environment '", active_env, "'...")
-            reticulate::conda_install(active_env, "git+https://github.com/luyiyun/NormAE.git", pip = TRUE)
-        }
-    }
-
-    config <- reticulate::py_config(required = TRUE)
-
-    if (!reticulate::py_module_available("normae")) {
-        if (is.null(active_env)) {
-            stop("Python module 'normae' is not available in the selected Python environment.")
-        }
-        stop(
-            "Python module 'normae' is not available in the environment '",
-            active_env,
-            "'. Install it manually or allow automatic installation by omitting python_env/conda_env."
+        out <- tryCatch(
+            system2(py, c("-c", "import importlib.util as u; print('OK' if u.find_spec('normae.cli') else 'NO')"),
+                stdout = TRUE, stderr = TRUE
+            ),
+            error = function(e) character()
         )
+        any(grepl("^OK$", out))
     }
 
-    if (!reticulate::py_module_available("normae.cli")) {
-        stop("Python module 'normae.cli' is required but not available.")
+    ensure_normae <- function(py) {
+        if (has_cli(py)) {
+            return(py)
+        }
+        # Install NormAE into this interpreter via pip, without binding reticulate
+        system2(py, c("-m", "pip", "install", "--upgrade", "pip"), stdout = TRUE, stderr = TRUE)
+        cmd <- c("-m", "pip", "install", "git+https://github.com/luyiyun/NormAE.git")
+        out <- system2(py, cmd, stdout = TRUE, stderr = TRUE)
+        if (!has_cli(py)) {
+            stop("Failed to install 'normae' into Python at: ", py, "\nOutput:\n", paste(out, collapse = "\n"),
+                call. = FALSE
+            )
+        }
+        py
     }
 
-    normalizePath(config$python, winslash = "/", mustWork = TRUE)
+    # 1) Explicit python path wins
+    if (!is.null(python_env)) {
+        py <- normalizePath(python_env, winslash = "/", mustWork = FALSE)
+        if (!file.exists(py)) stop("Provided python_env does not exist: ", python_env, call. = FALSE)
+        return(ensure_normae(py))
+    }
+
+    # 2) Named conda env
+    if (!is.null(conda_env)) {
+        # Use reticulate conda APIs with conda="auto" (prefers micromamba/mamba/conda)
+        py <- tryCatch(reticulate::conda_python(conda_env, conda = "auto"), error = function(e) NULL)
+        if (is.null(py)) {
+            # Create env if missing
+            py <- reticulate::conda_create(envname = conda_env, python_version = "3.10", conda = "auto")
+        }
+        return(ensure_normae(py))
+    }
+
+    # 3) If PATH python already has NormAE, use it
+    path_py <- Sys.which("python")
+    if (nzchar(path_py) && has_cli(path_py)) {
+        return(normalizePath(path_py, winslash = "/", mustWork = FALSE))
+    }
+
+    # 4) Preferred: create/use 'normae' conda env (auto resolves micromamba/mamba/conda)
+    #     If conda isn't present, install Miniconda first.
+    have_conda <- !is.na(reticulate::conda_binary(conda = "auto"))
+    if (!have_conda) {
+        # Install Miniconda (cross-platform) then conda_create below
+        reticulate::install_miniconda()
+    }
+    py <- reticulate::conda_create(envname = "normae", python_version = "3.10", conda = "auto")
+    py <- ensure_normae(py)
+    if (has_cli(py)) {
+        return(py)
+    }
+
+    # 5) Last resort (no usable conda): build Python + virtualenv (Linux/macOS)
+    #    Note: reticulate::install_python builds from source; see docs.
+    #    On Windows this branch should rarely trigger because Miniconda is available.
+    reticulate::install_python(version = "3.10")
+    if (!"normae" %in% reticulate::virtualenv_list()) {
+        reticulate::virtualenv_create("normae") # will pick the freshly built Python
+    }
+    vpy <- reticulate::virtualenv_python("normae")
+    ensure_normae(vpy)
+}
+
+.normae_python_has_cli <- function(python_bin) {
+    # Must be an executable file (avoid invoking /bin/sh)
+    if (!nzchar(python_bin) || !file.exists(python_bin) ||
+        dir.exists(python_bin) || file.access(python_bin, 1) != 0L) {
+        return(FALSE)
+    }
+    python_bin <- normalizePath(python_bin, winslash = "/", mustWork = FALSE)
+
+    # Write a tiny probe script to avoid any quoting/parentheses pitfalls
+    probe_py <- tempfile("probe_normae_", fileext = ".py")
+    on.exit(unlink(probe_py, force = TRUE), add = TRUE)
+    writeLines(
+        c(
+            "import importlib.util, sys",
+            "spec = importlib.util.find_spec('normae.cli')",
+            "sys.stdout.write('OK' if spec is not None else 'NO')"
+        ),
+        probe_py,
+        useBytes = TRUE
+    )
+
+    out <- tryCatch(
+        system2(python_bin, c(probe_py), stdout = TRUE, stderr = TRUE),
+        error = function(e) character()
+    )
+    any(grepl("^OK$", out))
+}
+
+
+.normae_conda_env_python <- function(conda_env) {
+    .pb_requireNamespace("reticulate")
+    cl <- tryCatch(reticulate::conda_list(), error = function(e) NULL)
+    if (is.null(cl) || !nrow(cl)) {
+        return(NULL)
+    }
+    row <- cl[cl$name == conda_env | cl$prefix == conda_env, , drop = FALSE]
+    if (!nrow(row)) {
+        return(NULL)
+    }
+    py <- as.character(row$python[1])
+    if (nzchar(py) && file.exists(py)) {
+        normalizePath(py, winslash = "/", mustWork = FALSE)
+    } else {
+        NULL
+    }
 }
 
 .normae_format_cli_args <- function(normae_args) {
-    # ---- constants -----------------------------------------------------------
-    # Args handled elsewhere and therefore NOT emitted here
+    if (is.null(normae_args)) normae_args <- list()
+    # Force defaults if absent
+    if (!("mz_row" %in% names(normae_args))) normae_args$mz_row <- ""
+    if (!("rt_row" %in% names(normae_args))) normae_args$rt_row <- ""
+    if (!("early_stop" %in% names(normae_args))) normae_args$early_stop <- FALSE
+
     reserved <- c(
         "meta_csv", "sample_csv", "output_dir",
         "batch_indicator_col", "order_indicator_col",
-        "qc_indicator_value", "qc_indicator_col"
+        "qc_indicator_col", "qc_indicator_value"
     )
 
-    # Defaults to force-emit when "unspecified"
-    default_if_unspecified <- list(
-        mz_row          = "",
-        rt_row          = "",
-        early_stop      = FALSE
-    )
-
-    # ---- helpers -------------------------------------------------------------
-    is_unspecified <- function(x) {
-        is.null(x) || length(x) == 0L || all(is.na(x))
+    out <- character(0)
+    for (nm in setdiff(names(normae_args), reserved)) {
+        val <- normae_args[[nm]]
+        if (is.null(val)) next
+        # Flatten simple lists
+        if (is.list(val)) val <- unlist(val, recursive = TRUE, use.names = FALSE)
+        if (!length(val)) next
+        # Convert logicals to Python-style literals
+        val <- vapply(val, function(v) {
+            if (isTRUE(v)) "True" else if (identical(v, FALSE)) "False" else as.character(v)
+        }, character(1))
+        out <- c(out, paste0("--", nm), val)
     }
-
-    norm_val <- function(x) {
-        if (is.null(x)) {
-            return(NULL)
-        }
-        if (is.list(x)) x <- unlist(x, recursive = TRUE, use.names = FALSE)
-        if (!length(x)) {
-            return(NULL)
-        }
-        x <- x[!is.na(x)]
-        if (!length(x)) {
-            return(NULL)
-        }
-        if (is.logical(x)) {
-            return(ifelse(x, "True", "False"))
-        } else if (is.numeric(x)) {
-            return(format(x, scientific = FALSE, trim = TRUE))
-        } else {
-            return(as.character(x))
-        }
-    }
-
-    append_arg <- function(acc, name, value_vec) {
-        # Append flag + its values (vector allowed)
-        c(acc, paste0("--", name), value_vec)
-    }
-
-    # ---- validation & normalization of input --------------------------------
-    if (is.null(normae_args) || !length(normae_args)) {
-        message("No normae_args provided; using defaults where applicable.")
-        normae_args <- list()
-    }
-    arg_names <- names(normae_args)
-    # Only validate names when there are entries; treat empty or NA names as invalid
-    if (length(normae_args) && (is.null(arg_names) || any(is.na(arg_names) | arg_names == ""))) {
-        stop("All entries in normae_args must be named. Arguments: ", paste(arg_names, collapse = ", "))
-    }
-
-    # Inject defaults when unspecified
-    for (k in names(default_if_unspecified)) {
-        if (!k %in% names(normae_args) || is_unspecified(normae_args[[k]])) {
-            normae_args[[k]] <- default_if_unspecified[[k]]
-        }
-    }
-
-    # ---- build CLI args ------------------------------------------------------
-    res <- character(0)
-    for (nm in names(normae_args)) {
-        if (nm %in% reserved) next
-        val <- norm_val(normae_args[[nm]])
-        if (is.null(val)) next # skip only truly empty after normalization
-        res <- append_arg(res, nm, val)
-    }
-    res
+    unname(out)
 }
 
 .normae_prepare_injection_order <- function(sample_annotation, sample_id_col, inj_order_col) {
@@ -522,9 +519,7 @@ correct_with_NormAE <- function(
     if (is.logical(values)) {
         return(!is.na(values) & values)
     }
-    if (is.factor(values)) {
-        values <- as.character(values)
-    }
+    if (is.factor(values)) values <- as.character(values)
     if (is.character(values)) {
         lower <- tolower(values)
         return(!is.na(lower) & lower %in% c("qc", "quality_control", "qualitycontrol"))
