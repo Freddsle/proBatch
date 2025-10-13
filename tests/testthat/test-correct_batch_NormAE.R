@@ -351,6 +351,7 @@ test_that(".normae_qc_mask handles logical, factor, and character inputs", {
     )
 })
 
+# TODO: Check why these tests do not work - either they are broken or they need to be removed:
 # test_that("correct_with_NormAE runs the NormAE CLI when available (integration)", {
 #     skip_on_cran()
 #     skip_if(nzchar(Sys.getenv("BBS_HOME")), "Skipping on Bioconductor build system")
