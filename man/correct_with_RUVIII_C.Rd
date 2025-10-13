@@ -21,6 +21,9 @@ correct_with_RUVIII_C(
   with_alpha = FALSE,
   with_w = FALSE,
   progress = TRUE,
+  use_pseudorep = FALSE,
+  prps_group_cols = NULL,
+  rep_force = FALSE,
   ...
 )
 }
@@ -71,6 +74,19 @@ correct. Defaults to all features present in the matrix.}
 \item{with_extra, with_alpha, with_w, progress}{Optional flags forwarded to
 [RUVIIIC::RUVIII_C()].}
 
+\item{use_pseudorep}{Logical; if `TRUE` and **no** technical replicates are provided
+(all replicate groups are size 1), construct **PRPS** pseudo-replicate pairs and
+use them as `M`. If `FALSE` (default) and no technical replicates exist, stop with
+an informative error (unless `rep_force = TRUE`).}
+
+\item{prps_group_cols}{Optional character vector of column names in `sample_annotation`
+defining *biological* groups within which to build pseudo-replicates (e.g. `"condition"`).
+If `NULL`, the function will use `"condition"` when present; otherwise, if `rep_force = TRUE`,
+it falls back to a single `"ALL"` group.}
+
+\item{rep_force}{Logical; if `TRUE`, proceed even when no technical replicates are detected
+and `use_pseudorep = FALSE` by automatically forming PRPS-like pairs. **Not recommended**.}
+
 \item{...}{Additional arguments forwarded to [RUVIIIC::RUVIII_C()].}
 }
 \value{
@@ -95,7 +111,6 @@ samples where that peptide and all controls are observed. Input - log2-transform
 Poulos, R.C., Hains, P.G., Shah, R. et al. Strategies to enable
   large-scale proteomics for reproducible research. Nat Commun 11, 3793 (2020).
   https://doi.org/10.1038/s41467-020-17641-3
-
   GitHub: https://github.com/CMRI-ProCan/RUV-III-C
 }
 \seealso{

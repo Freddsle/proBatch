@@ -158,13 +158,16 @@ test_that(".ruviiic_matrix_step builds design matrix and transposes output (mock
         .package = "proBatch"
     )
     m <- matrix(
-        c(1, 2, 3, 4),
+        c(
+            1, 2, 3, 4,
+            5, 6, 7, 8
+        ),
         nrow = 2,
-        dimnames = list(c("f1", "f2"), c("s1", "s2"))
+        dimnames = list(c("f1", "f2"), c("s1", "s2", "s3", "s4"))
     )
     sa <- data.frame(
-        FullRunName = c("s2", "s1"),
-        replicate_id = c("rB", "rA"),
+        FullRunName = c("s2", "s1", "s3", "s4"),
+        replicate_id = c("rB", "rA", "rA", "rB"),
         stringsAsFactors = FALSE
     )
     out <- proBatch:::`.ruviiic_matrix_step`(
@@ -178,9 +181,9 @@ test_that(".ruviiic_matrix_step builds design matrix and transposes output (mock
     )
 
     expect_matrix_like(out, m)
-    expect_equal(rownames(captured$args$Y), c("s1", "s2"))
+    expect_equal(rownames(captured$args$Y), c("s1", "s2", "s3", "s4"))
     expect_equal(colnames(captured$args$Y), c("f1", "f2"))
-    expect_equal(rownames(captured$args$M), c("s1", "s2"))
+    expect_equal(rownames(captured$args$M), c("s1", "s2", "s3", "s4"))
     expect_true(all(levels(factor(sa$replicate_id)) %in% colnames(captured$args$M)))
     expect_equal(captured$args$controls, "f1")
     expect_equal(captured$args$to_correct, rownames(m))
@@ -296,4 +299,136 @@ test_that(".check_ruviiic_inputs validates required arguments", {
         "k must be >= 1 for RUV-III-C correction.",
         fixed = TRUE
     )
+})
+
+test_that("rep_force=FALSE with no tech replicates triggers stop()", {
+    m <- matrix(1:9,
+        nrow = 3,
+        dimnames = list(paste0("f", 1:3), paste0("s", 1:3))
+    )
+    sa <- data.frame(
+        FullRunName = paste0("s", 1:3),
+        replicate_id = paste0("u", 1:3), # all singletons
+        stringsAsFactors = FALSE
+    )
+    expect_error(
+        proBatch::correct_with_RUVIII_C(
+            x = m, sample_annotation = sa,
+            replicate_col = "replicate_id",
+            negative_control_features = "f1",
+            k = 1L, format = "wide",
+            use_pseudorep = FALSE,
+            rep_force = FALSE
+        ),
+        "No technical replicates detected",
+        fixed = FALSE
+    )
+})
+
+test_that("rep_force=TRUE proceeds without use_pseudorep and pairs automatically (mocked)", {
+    captured <- new.env(parent = emptyenv())
+    fake_core <- function(...) {
+        args <- list(...)
+        captured$args <- args
+        return(args$Y) # identity
+    }
+    testthat::local_mocked_bindings(
+        .run_RUVIIIC_core = fake_core,
+        .package = "proBatch"
+    )
+
+    m <- matrix(1:16,
+        nrow = 4,
+        dimnames = list(paste0("f", 1:4), paste0("s", 1:4))
+    )
+    sa <- data.frame(
+        FullRunName = paste0("s", 1:4),
+        replicate_id = paste0("u", 1:4), # all singletons
+        stringsAsFactors = FALSE
+    )
+    expect_warning(
+        out <- proBatch::correct_with_RUVIII_C(
+            x = m, sample_annotation = sa,
+            replicate_col = "replicate_id",
+            negative_control_features = c("f1", "f2"),
+            k = 1L, format = "wide",
+            use_pseudorep = FALSE,
+            prps_group_cols = NULL, # not provided on purpose
+            rep_force = TRUE
+        ), "PRPS-like"
+    )
+    expect_true(is.matrix(out))
+    expect_identical(dimnames(out), dimnames(m))
+
+    M <- captured$args$M
+    # Expect disjoint pairs => each column has two ones
+    expect_true(all(colSums(M) == 2L))
+})
+
+test_that("rep_force ignored when technical replicates exist (mocked)", {
+    captured <- new.env(parent = emptyenv())
+    fake_core <- function(...) {
+        args <- list(...)
+        captured$args <- args
+        return(args$Y)
+    }
+    testthat::local_mocked_bindings(
+        .run_RUVIIIC_core = fake_core,
+        .package = "proBatch"
+    )
+
+    m <- matrix(1:8,
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2", "s3", "s4"))
+    )
+    sa <- data.frame(
+        FullRunName = c("s1", "s2", "s3", "s4"),
+        replicate_id = c("r1", "r1", "r2", "r2"), # has real tech reps
+        stringsAsFactors = FALSE
+    )
+    out <- proBatch::correct_with_RUVIII_C(
+        x = m, sample_annotation = sa,
+        replicate_col = "replicate_id",
+        negative_control_features = "f1",
+        k = 1L, format = "wide",
+        use_pseudorep = FALSE,
+        rep_force = TRUE # should be ignored
+    )
+    M <- captured$args$M
+    expect_identical(colSums(M), c(r1 = 2, r2 = 2))
+    expect_true(is.matrix(out))
+    expect_identical(dimnames(out), dimnames(m))
+})
+
+test_that("rep_force path with odd count leaves at least one sample unchanged (mocked +1 on kept)", {
+    fake_core <- function(Y, ...) Y + 1 # samples x features
+    testthat::local_mocked_bindings(
+        .run_RUVIIIC_core = fake_core,
+        .package = "proBatch"
+    )
+    m <- matrix(1:15,
+        nrow = 3,
+        dimnames = list(paste0("f", 1:3), paste0("s", 1:5))
+    )
+    sa <- data.frame(
+        FullRunName = paste0("s", 1:5),
+        replicate_id = paste0("u", 1:5), # all singletons -> PRPS-like
+        stringsAsFactors = FALSE
+    )
+    expect_warning(expect_warning(
+        out <- proBatch::correct_with_RUVIII_C(
+            x = m, sample_annotation = sa,
+            replicate_col = "replicate_id",
+            negative_control_features = "f1",
+            k = 1L, format = "wide",
+            use_pseudorep = FALSE,
+            rep_force = TRUE
+        ),
+        "PRPS-like"
+    ), "could not be paired and will be passed through unchanged")
+    # Some columns changed (+1*rows), at least one unchanged (leftover)
+    changed <- which(colSums(out - m) == nrow(m))
+    unchanged <- which(colSums(out - m) == 0)
+    expect_true(length(changed) >= 2L)
+    expect_true(length(unchanged) >= 1L)
 })
