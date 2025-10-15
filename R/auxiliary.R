@@ -31,20 +31,12 @@ long_to_matrix <- function(df_long,
                 !!sym(qual_col) == qual_value, NA, !!sym(measure_col)
             ))
     }
-<<<<<<< HEAD
     proteome_wide <- df_long %>%
         pivot_wider(
             id_cols = !!sym(feature_id_col),
             names_from = !!sym(sample_id_col),
             values_from = !!sym(measure_col)
         ) %>%
-=======
-    proteome_wide <- dcast(
-        df_long,
-        formula = casting_formula,
-        value.var = measure_col
-    ) %>%
->>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
         column_to_rownames(feature_id_col) %>%
         as.matrix()
     return(proteome_wide)
@@ -87,17 +79,11 @@ matrix_to_long <- function(data_matrix, sample_annotation = NULL,
     df_long <- data_matrix %>%
         as.data.frame() %>%
         rownames_to_column(var = feature_id_col) %>%
-<<<<<<< HEAD
         pivot_longer(
             cols = -all_of(feature_id_col),
             names_to = sample_id_col,
             values_to = measure_col,
             values_drop_na = FALSE
-=======
-        melt(
-            id.var = feature_id_col, value.name = measure_col,
-            variable.name = sample_id_col, factorsAsStrings = FALSE
->>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
         )
     if (!is.null(step)) {
         df_long <- df_long %>%
@@ -105,20 +91,13 @@ matrix_to_long <- function(data_matrix, sample_annotation = NULL,
     }
 
     if (!is.null(sample_annotation)) {
-<<<<<<< HEAD
         message("Checking sample consistency and merging with sample annotation")
-=======
->>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
         df_long <- check_sample_consistency(
             sample_annotation = sample_annotation,
             sample_id_col = sample_id_col,
             df_long = df_long,
             batch_col = NULL, order_col = NULL,
-<<<<<<< HEAD
             facet_col = NULL, merge = TRUE
-=======
-            facet_col = NULL, merge = FALSE
->>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
         )
     }
 
@@ -151,7 +130,6 @@ create_peptide_annotation <- function(df_long,
                                       protein_col = c("ProteinName", "Gene")) {
     if (!all(protein_col %in% names(df_long))) {
         stop(
-<<<<<<< HEAD
             sprintf(
                 "The following columns are missing from the data: %s",
                 paste(setdiff(protein_col, names(df_long)), collapse = ", ")
@@ -162,12 +140,6 @@ create_peptide_annotation <- function(df_long,
         stop(sprintf("Column %s is not in the data", feature_id_col))
     }
 
-=======
-            sprintf("Column %s is not in the data"),
-            setdiff(names(df_long), protein_col)
-        )
-    }
->>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
     peptide_annotation <- df_long %>%
         select(all_of(c(feature_id_col, protein_col))) %>%
         distinct()

@@ -22,6 +22,7 @@
   height = 25,
   units = c("cm", "in", "mm"),
   plot_title = NULL,
+  return_ggplot = FALSE,
   ...
 )
 
@@ -31,6 +32,8 @@
   sample_annotation = NULL,
   sample_id_col = "FullRunName",
   plot_title = NULL,
+  return_gridExtra = FALSE,
+  plot_ncol = NULL,
   ...
 )
 }
@@ -85,11 +88,28 @@ pdf and png format is supported}
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
+\item{return_ggplot}{logical; when \code{TRUE}, the dendrogram is returned
+as a `ggplot` object. Used internally to capture plots for multi-assay
+workflows. Defaults to \code{FALSE} for the default method.}
+
 \item{...}{other parameters of \code{plotDendroAndColors} from
 \code{WGCNA} package}
+
+\item{return_gridExtra}{logical; when plotting multiple assays from a
+`ProBatchFeatures` object, returning \code{TRUE} provides a list with the
+arranged grob and individual plots (see `gridExtra::arrangeGrob`). Ignored
+by the default method.}
+
+\item{plot_ncol}{optional integer controlling the number of columns when
+arranging multiple assays. Ignored by the default method.}
 }
 \value{
-No return
+For the default method, either `NULL` (when relying on base
+  graphics) or a `ggplot` object when `return_ggplot = TRUE`. The
+  `ProBatchFeatures` method returns a single `ggplot` (for one assay) or an
+  arranged grob/`ggplot` collection when multiple assays are plotted; if
+  `ggplotify` is unavailable, a list of per-assay results is returned
+  invisibly.
 }
 \description{
 cluster the data matrix to visually inspect which confounder dominates

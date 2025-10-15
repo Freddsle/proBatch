@@ -39,24 +39,27 @@ Imports:
     limma,
     magrittr,
     pheatmap,
+    plotly,
     preprocessCore,
     purrr,
     pvca,
     RColorBrewer,
-    reshape2, 
     rlang,
     scales,
     stats,
     sva,
+    Rtsne,
     tidyr,
     tibble,
     tools,
     utils,
+    umap,
     viridis,
     wesanderson,
     WGCNA
 Suggests: 
     ggplotify,
+    plotly,
     knitr,
     rmarkdown,
     devtools,
@@ -64,7 +67,14 @@ Suggests:
     roxygen2,
     testthat (>= 3.0.0),
     spelling,
-    HDF5Array
+    HDF5Array,
+    BERT,
+    PLSDAbatch,
+    reticulate,
+    RUVIIIC
+Remotes:
+    CMRI-ProCan/RUV-III-C
+SystemRequirements: Optional: Python (>= 3.10) for functions using the 'normae' Python package via 'reticulate'.
 VignetteBuilder: knitr
 RoxygenNote: 7.3.3
 Language: en-US

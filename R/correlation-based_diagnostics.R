@@ -45,18 +45,13 @@ plot_corr_matrix <- function(corr_matrix,
                              units = c("cm", "in", "mm"),
                              plot_title = NULL, ...) {
     # infer the color scheme for annotation (cols & rows)
-    if (is.null(color_list) && !is.null(annotation)) {
-        warning("color_list for annotation (cols & rows) not defined, inferring automatically.
-            Numeric/factor columns are guessed, for more controlled color mapping use
-            sample_annotation_to_colors()")
-        color_list <- sample_annotation_to_colors(
-            sample_annotation = annotation,
-            sample_id_col = annotation_id_col,
-            factor_columns = factors_to_plot,
-            numeric_columns = NULL,
-            guess_factors = TRUE
-        )
-    }
+    color_list <- .pb_resolve_color_list(
+        color_list = color_list,
+        annotation_df = annotation,
+        id_col = annotation_id_col,
+        columns = factors_to_plot,
+        warn_message = "color_list for annotation (cols & rows) not defined, inferring automatically. Numeric/factor columns are guessed, for more controlled color mapping use sample_annotation_to_colors()"
+    )
 
     if (cluster_rows != cluster_cols) {
         warning("different arguments for clustering of rows and columns, this will make
@@ -279,10 +274,18 @@ get_sample_corr_df <- function(cor_proteome, sample_annotation,
         ))
     }
 
-    corr_distribution <- melt(cor_proteome,
-        varnames = paste(sample_id_col, seq_len(2), sep = "_"),
-        value.name = "correlation"
-    ) %>%
+    first_sample_col <- paste(sample_id_col, "1", sep = "_")
+    second_sample_col <- paste(sample_id_col, "2", sep = "_")
+
+    corr_distribution <- cor_proteome %>%
+        as.data.frame() %>%
+        rownames_to_column(var = first_sample_col) %>%
+        pivot_longer(
+            cols = -all_of(first_sample_col),
+            names_to = second_sample_col,
+            values_to = "correlation",
+            values_drop_na = FALSE
+        ) %>%
         merge(comb_to_keep) %>%
         merge(sample_annotation %>% select(all_of(c(sample_id_col, spec_cols))),
             by.x = paste(sample_id_col, "1", sep = "_"),
@@ -564,10 +567,18 @@ get_peptide_corr_df <- function(peptide_cor, peptide_annotation,
     comb_to_keep <- data.frame(t(combn(colnames(peptide_cor), 2)))
     names(comb_to_keep) <- paste(feature_id_col, seq_len(2), sep = "_")
 
-    corr_distribution <- melt(peptide_cor,
-        varnames = paste(feature_id_col, seq_len(2), sep = "_"),
-        value.name = "correlation"
-    ) %>%
+    first_feature_col <- paste(feature_id_col, "1", sep = "_")
+    second_feature_col <- paste(feature_id_col, "2", sep = "_")
+
+    corr_distribution <- peptide_cor %>%
+        as.data.frame() %>%
+        rownames_to_column(var = first_feature_col) %>%
+        pivot_longer(
+            cols = -all_of(first_feature_col),
+            names_to = second_feature_col,
+            values_to = "correlation",
+            values_drop_na = FALSE
+        ) %>%
         filter(!is.na(correlation)) %>%
         merge(comb_to_keep) %>%
         merge(

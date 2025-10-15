@@ -144,8 +144,8 @@ plot_NA_heatmap.default <- function(
         plot_params
     ))
     if (draw && isTRUE(res$silent)) {
-        grid.newpage()
-        grid.draw(res$gtable)
+        grid::grid.newpage()
+        grid::grid.draw(res$gtable)
     }
 
     res
@@ -254,12 +254,12 @@ plot_NA_heatmap.ProBatchFeatures <- function(
     layout <- .pb_missing_layout(length(heatmaps), nrow = nrow, ncol = ncol)
     grob_list <- lapply(heatmaps, function(ht) ht$gtable)
     arranged <- do.call(
-        arrangeGrob,
+        gridExtra::arrangeGrob,
         c(list(grobs = grob_list, nrow = layout$nrow, ncol = layout$ncol), list())
     )
     if (draw) {
-        grid.newpage()
-        grid.draw(arranged)
+        grid::grid.newpage()
+        grid::grid.draw(arranged)
     }
 
     invisible(list(grob = arranged, heatmaps = heatmaps))

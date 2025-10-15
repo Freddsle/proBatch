@@ -97,9 +97,10 @@
 #' @import dplyr
 #' @import ggfortify
 #' @import ggplot2
-#' @import reshape2
 #' @import lazyeval
 #' @import QFeatures
+#' @importFrom dplyr group_by ungroup across mutate rename select
+#' @importFrom dplyr any_of all_of
 #' @importFrom corrplot corrplot.mixed
 #' @importFrom data.table setnames
 #' @importFrom grDevices colorRampPalette
@@ -118,8 +119,8 @@
 #' @importFrom rlang .data as_label get_expr
 #' @importFrom limma removeBatchEffect
 #' @importFrom sva ComBat
-#' @importFrom tidyr complete nest unnest
-#' @importFrom utils combn tail head
+#' @importFrom tidyr complete nest unnest pivot_longer pivot_wider
+#' @importFrom utils combn tail head read.csv write.csv
 #' @importFrom scales brewer_pal zero_range
 #' @importFrom stats as.formula complete.cases cor dist hclust sd
 #' @importFrom stats ksmooth loess median
@@ -134,6 +135,8 @@
 #' @importFrom gridExtra grid.arrange arrangeGrob
 #' @importFrom grid grid.newpage grid.draw grobTree
 #' @importFrom ggplotify as.ggplot
+#' @importFrom umap umap umap.defaults
+#' @importFrom Rtsne Rtsne
 #' @importFrom SummarizedExperiment SummarizedExperiment colData rowData assay
 #' @importFrom S4Vectors DataFrame rbind metadata
 #' @importFrom matrixStats rowMedians colMedians

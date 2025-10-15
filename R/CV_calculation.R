@@ -33,7 +33,6 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
                                  sample_id_col = "FullRunName",
                                  measure_col = "Intensity", batch_col = NULL,
                                  biospecimen_id_col = NULL,
-<<<<<<< HEAD
                                  unlog = TRUE, log_base = 2, offset = 0) {
     # Handle sample_annotation and check for sample_id_col
     if (!is.null(sample_annotation) && is.null(sample_id_col)) {
@@ -48,21 +47,11 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
         warning("considering all samples as replicates!")
         biospecimen_id_col <- "biospecimen_id"
         df_long[[biospecimen_id_col]] <- "replication"
-=======
-                                 unlog = TRUE, log_base = 2, offset = 1) {
-    df_long <- check_sample_consistency(sample_annotation, sample_id_col, df_long)
-
-    if (is.null(biospecimen_id_col)) {
-        warning("considering all samples as replicates!")
-        df_long$biospecimen_id_col <- "replication"
-        biospecimen_id_col <- "biospecimen_id_col"
->>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
     } else {
         if (!(biospecimen_id_col %in% names(df_long))) {
             stop("biospecimen ID, indicating replicates, is not in the data (df_long or sample_annotation)")
         }
     }
-<<<<<<< HEAD
 
     # Optional unlog
     if (unlog) {
@@ -121,79 +110,6 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
         select(all_of(select_cols)) %>%
         distinct()
 
-=======
-
-    if (unlog) {
-        warning("reversing log-transformation for CV calculation!")
-        df_long <- unlog_df(df_long, log_base = log_base, offset = offset, measure_col = measure_col)
-    }
-
-    if (!is.null(batch_col)) {
-        df_long <- df_long %>%
-            group_by(!!!syms(c(feature_id_col, batch_col, biospecimen_id_col))) %>%
-            mutate(n = sum(!is.na(!!sym(measure_col))))
-    } else {
-        df_long <- df_long %>%
-            group_by(!!!syms(c(feature_id_col, biospecimen_id_col))) %>%
-            mutate(n = sum(!is.na(!!sym(measure_col))))
-    }
-    if (any(df_long$n <= 2)) {
-        # how many features have 2 or less measurements?
-        n_peptides <- sum(df_long$n <= 2)
-        warning(paste0("Cannot calculate CV for ", n_peptides, " peptides with 2 or less measurements, removing those peptides"))
-        df_long <- df_long %>%
-            filter(n > 2)
-    }
-
-    if ("Step" %in% names(df_long)) {
-        if (!is.null(batch_col)) {
-            df_long <- df_long %>%
-                group_by(!!!syms(c(feature_id_col, batch_col, "Step"))) %>%
-                mutate(CV_perBatch = 100 * sd(!!sym(measure_col), na.rm = TRUE) /
-                    mean(!!sym(measure_col), na.rm = TRUE)) %>%
-                ungroup()
-        } else {
-            warning("batch_col not specified, calculating the total CV only")
-        }
-        CV_df <- df_long %>%
-            group_by(!!!syms(c(feature_id_col, "Step"))) %>%
-            mutate(CV_total = 100 * sd(!!sym(measure_col), na.rm = TRUE) /
-                mean(!!sym(measure_col), na.rm = TRUE))
-        if (!is.null(batch_col)) {
-            CV_df <- CV_df %>%
-                select(c(!!sym(feature_id_col), CV_total, CV_perBatch)) %>%
-                distinct()
-        } else {
-            CV_df <- CV_df %>%
-                select(c(!!sym(feature_id_col), CV_total)) %>%
-                distinct()
-        }
-    } else {
-        if (!is.null(batch_col)) {
-            df_long <- df_long %>%
-                group_by(!!!syms(c(feature_id_col, batch_col))) %>%
-                mutate(CV_perBatch = sd(!!sym(measure_col), na.rm = TRUE) /
-                    mean(!!sym(measure_col), na.rm = TRUE)) %>%
-                ungroup()
-        } else {
-            warning("batch_col not found, calculating the total CV only")
-        }
-        CV_df <- df_long %>%
-            group_by(!!sym(feature_id_col)) %>%
-            mutate(CV_total = sd(!!sym(measure_col), na.rm = TRUE) /
-                mean(!!sym(measure_col), na.rm = TRUE))
-        if (!is.null(batch_col)) {
-            CV_df <- CV_df %>%
-                select(c(!!sym(feature_id_col), CV_total, CV_perBatch)) %>%
-                distinct()
-        } else {
-            CV_df <- CV_df %>%
-                select(c(!!sym(feature_id_col), CV_total)) %>%
-                distinct()
-        }
-    }
-
->>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
     return(CV_df)
 }
 
@@ -216,11 +132,7 @@ plot_CV_distr.df <- function(CV_df,
                              plot_title = NULL,
                              filename = NULL, theme = "classic", log_y_scale = TRUE) {
     if ("Step" %in% names(CV_df)) {
-<<<<<<< HEAD
         gg <- ggplot(CV_df, aes(x = !!sym("Step"), y = !!sym("CV_total"))) +
-=======
-        gg <- ggplot(CV_df, aes(x = Step, y = CV_total)) +
->>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
             geom_boxplot()
     } else {
         gg <- ggplot(CV_df, aes(y = CV_total)) +
@@ -232,23 +144,12 @@ plot_CV_distr.df <- function(CV_df,
     if (theme == "classic") {
         gg <- gg + theme_classic()
     }
-<<<<<<< HEAD
     if (log_y_scale) {
         gg <- gg + scale_y_log10()
     }
     if (!is.null(filename)) {
         ggsave(filename = filename, plot = gg)
     }
-=======
-    if (!is.null(filename)) {
-        ggsave(gg, filename = filename)
-    }
-
-    if (log_y_scale) {
-        gg <- gg + scale_y_log10()
-    }
-
->>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
     return(gg)
 }
 
@@ -300,7 +201,6 @@ plot_CV_distr <- function(df_long, sample_annotation = NULL,
         log_base = log_base,
         offset = offset
     )
-<<<<<<< HEAD
     # keep only finite CV values - check, message, and filter
     if (any(!is.finite(CV_df$CV_total))) {
         message(
@@ -315,8 +215,6 @@ plot_CV_distr <- function(df_long, sample_annotation = NULL,
         stop("No features with sufficient measurements to calculate CV.")
     }
 
-=======
->>>>>>> 7f231190 (4 spaces (BioCheck), added test for  transform log funcs, fixed seed in colors to hex sorting)
     gg <- plot_CV_distr.df(
         CV_df,
         plot_title = plot_title, filename = filename,
