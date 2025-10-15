@@ -366,10 +366,10 @@ filter_metadata_columns.default <- function(
     }
 
     if (length(dropped_duplicates)) {
-        message(sprintf("Dropping %s duplicated columns.", length(dropped_duplicates)))
+        message(sprintf("Dropping %s duplicated columns:\n    ", length(dropped_duplicates)), paste(head(dropped_duplicates, 5), collapse = ", "), ", ...")
     }
     if (length(dropped_missing)) {
-        message(sprintf("Dropping %s columns based on missingness thresholds.", length(dropped_missing)))
+        message(sprintf("Dropping %s columns based on missingness thresholds:\n    ", length(dropped_missing)), paste(head(dropped_missing, 5), collapse = ", "), ", ...")
     }
 
     drop_candidates <- union(dropped_duplicates, dropped_missing)

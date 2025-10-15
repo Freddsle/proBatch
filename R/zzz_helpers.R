@@ -37,21 +37,26 @@
 # internal helper to assert package availability without attaching it
 .pb_requireNamespace <- function(pkg, only_info = FALSE) {
     if (!requireNamespace(pkg, quietly = TRUE)) {
+        if (pkg %in% c("reticulate")) {
+            how_to_install <- "install.packages('reticulate')"
+        } else if (pkg %in% c("RUVIIIC")) {
+            how_to_install <- "devtools::install_github('CMRI-ProCan/RUV-III-C').\nSee https://github.com/CMRI-ProCan/RUV-III-C for more information"
+        } else {
+            how_to_install <- sprintf("BiocManager::install('%s')", pkg)
+        }
+
         if (only_info) {
             packageStartupMessage(
                 sprintf(
-                    "Package '%s' is not installed. If this functionality is required, please install via BiocManager::install('%s').",
-                    pkg, pkg
+                    "Package '%s' is not installed. If this functionality is required, please install via %s.",
+                    pkg, how_to_install
                 )
             )
             return(invisible(FALSE))
         }
-        if (pkg %in% c("reticulate")) {
-            stop("Functionality requires the 'reticulate' package. Please install it via install.packages('reticulate').", call. = FALSE)
-        }
         stop(sprintf(
-            "Package '%s' is required for this operation. Install via BiocManager::install('%s').",
-            pkg, pkg
+            "Package '%s' is required for this operation. Install via %s and try again.",
+            pkg, how_to_install
         ), call. = FALSE)
     }
     invisible(TRUE)
