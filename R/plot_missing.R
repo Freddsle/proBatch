@@ -17,9 +17,9 @@
 #' @param sample_id_col Optional column in `sample_annotation` providing unique
 #'   sample identifiers. Use this when the data frame lacks row names matching
 #'   the assay column names.
-#' @param color_by Optional column name in `sample_annotation` used to annotate
-#'   heatmap columns. Use `NULL` (default) or the string "No" to omit the
-#'   annotation bar.
+#' @param color_by Optional column name or character vector of column names in
+#'   `sample_annotation` used to annotate heatmap columns. Use `NULL` (default)
+#'   or the string "No" to omit the annotation bar.
 #' @param label_by Optional column name (or character vector) used for column
 #'   labels. Use `NULL` for default assay column names or the string "No" to
 #'   suppress column labels entirely.
@@ -554,15 +554,25 @@ plot_NA_frequency.ProBatchFeatures <- function(
     labels_col <- NULL
     show_column_names <- TRUE
 
-    if (!is.null(color_by) && !(identical(tolower(color_by), "no") && length(color_by) == 1L)) {
-        if (!color_by %in% colnames(sample_annotation)) {
-            stop("Column '", color_by, "' not found in `sample_annotation`.")
+    if (!is.null(color_by)) {
+        disable_annotation <- length(color_by) == 1L && (
+            isFALSE(color_by) ||
+                (is.character(color_by) && identical(tolower(color_by), "no"))
+        )
+        if (!disable_annotation) {
+            if (!is.character(color_by)) {
+                stop("`color_by` must be a character vector of column names.")
+            }
+            missing_cols <- setdiff(color_by, colnames(sample_annotation))
+            if (length(missing_cols)) {
+                stop("Columns ", paste(sprintf("'%s'", missing_cols), collapse = ", "), " not found in `sample_annotation`.")
+            }
+            annotation_col <- sample_annotation[, color_by, drop = FALSE]
+            annotation_colors <- setNames(vector("list", length(color_by)), color_by)
+            for (col_nm in color_by) {
+                annotation_colors[[col_nm]] <- .pb_build_annotation_colors(annotation_col[[col_nm]], col_vector)
+            }
         }
-        annotation_col <- data.frame(sample_annotation[[color_by]], row.names = sample_order, stringsAsFactors = FALSE)
-        colnames(annotation_col) <- color_by
-        levels_values <- unique(annotation_col[[color_by]])
-        annotation_colors <- list()
-        annotation_colors[[color_by]] <- .pb_build_annotation_colors(levels_values, col_vector)
     }
 
     if (!is.null(label_by)) {

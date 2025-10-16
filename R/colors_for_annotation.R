@@ -171,7 +171,7 @@ map_factors_to_colors <- function(annotation_df_factors) {
             "Too many colors, consider merging some covariate values for better visualisation\n"
         )
     } else if (any(nlev_covariate > 20)) {
-        warning("Some colors will be hard to distinguish\n")
+        warning("Some colors will be hard to distinguish...")
     }
 
     number_colors_for_factors <- sum(nlev_covariate)
@@ -354,7 +354,8 @@ warn_unmapped_columns <- function(sample_annotation, columns_for_color_mapping, 
         warning(
             "The following columns will not be mapped to colors: ",
             toString(undefined_cols),
-            "; if these have to be mapped, please assign them to factor, date or numeric and add to factor_columns or numeric_columns parameters"
+            "; \n\tif these have to be mapped, please add them to columns_for_color_mapping list",
+            ", \n\tor assign them to factor, date or numeric and add to factor_columns or numeric_columns parameters"
         )
     }
 }

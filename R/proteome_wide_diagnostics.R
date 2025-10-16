@@ -1964,7 +1964,22 @@ plot_UMAP <- function(x, ...) UseMethod("plot_UMAP")
         stringsAsFactors = FALSE
     )
 
-    plot_df <- cbind(plot_df, sample_annotation)
+    if (!is.null(sample_annotation) && ncol(sample_annotation)) {
+        annotation_cols <- colnames(sample_annotation)
+        duplicated_cols <- intersect(annotation_cols, colnames(plot_df))
+        if (length(duplicated_cols)) {
+            keep_cols <- setdiff(annotation_cols, duplicated_cols)
+            if (length(keep_cols)) {
+                sample_annotation <- sample_annotation[, keep_cols, drop = FALSE]
+            } else {
+                sample_annotation <- NULL
+            }
+        }
+    }
+
+    if (!is.null(sample_annotation) && ncol(sample_annotation)) {
+        plot_df <- cbind(plot_df, sample_annotation)
+    }
 
     if (!is.null(shape_by)) {
         shape_column <- plot_df[[shape_by]]

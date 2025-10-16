@@ -64,9 +64,9 @@ sample annotation defaults to `as.data.frame(colData(x))`.}
 sample identifiers. Use this when the data frame lacks row names matching
 the assay column names.}
 
-\item{color_by}{Optional column name in `sample_annotation` used to annotate
-heatmap columns. Use `NULL` (default) or the string "No" to omit the
-annotation bar.}
+\item{color_by}{Optional column name or character vector of column names in
+`sample_annotation` used to annotate heatmap columns. Use `NULL` (default)
+or the string "No" to omit the annotation bar.}
 
 \item{label_by}{Optional column name (or character vector) used for column
 labels. Use `NULL` for default assay column names or the string "No" to

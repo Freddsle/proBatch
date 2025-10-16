@@ -72,6 +72,25 @@ test_that("plot_NA_heatmap.default returns pheatmap", {
 })
 
 
+test_that("plot_NA_heatmap.default supports multiple color_by columns", {
+    skip_if_not_installed("pheatmap")
+
+    res <- plot_NA_heatmap(
+        toy_matrix,
+        sample_annotation = toy_sa,
+        color_by = c("Condition", "Label"),
+        cluster_samples = FALSE,
+        cluster_features = FALSE,
+        show_row_dend = FALSE,
+        show_column_dend = FALSE,
+        drop_complete = FALSE,
+        draw = FALSE
+    )
+
+    expect_s3_class(res, "pheatmap")
+})
+
+
 test_that("plot_NA_heatmap.ProBatchFeatures arranges multiple assays", {
     skip_if_not_installed("pheatmap")
     skip_if_not_installed("gridExtra")
