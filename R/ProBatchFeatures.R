@@ -226,13 +226,13 @@ pb_register_step <- function(name, fun) {
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 ProBatchFeatures <- function(
-    data_matrix,
-    sample_annotation = NULL,
-    sample_id_col = "FullRunName",
-    name = NULL,
-    level = "feature"
-    # TODO: add feature chain_sep - currently always "on" - and support it everywhere
-    ) {
+  data_matrix,
+  sample_annotation = NULL,
+  sample_id_col = "FullRunName",
+  name = NULL,
+  level = "feature"
+  # TODO: add feature chain_sep - currently always "on" - and support it everywhere
+) {
     stopifnot(is.matrix(data_matrix) || is.data.frame(data_matrix))
     data_matrix <- as.matrix(data_matrix)
     if (is.null(colnames(data_matrix))) {
@@ -312,13 +312,14 @@ ProBatchFeatures <- function(
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 ProBatchFeatures_from_long <- function(
-    df_long,
-    sample_annotation = NULL,
-    feature_id_col = "peptide_group_label",
-    sample_id_col = "FullRunName",
-    measure_col = "Intensity",
-    level = "feature",
-    name = NULL) {
+  df_long,
+  sample_annotation = NULL,
+  feature_id_col = "peptide_group_label",
+  sample_id_col = "FullRunName",
+  measure_col = "Intensity",
+  level = "feature",
+  name = NULL
+) {
     stopifnot(is.data.frame(df_long))
     # 1) long -> wide using existing proBatch utility
     data_matrix <- long_to_matrix(
@@ -546,11 +547,12 @@ pb_assay_matrix <- function(object, assay = NULL, name = "intensity") {
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_as_long <- function(
-    object,
-    feature_id_col = "feature_label",
-    sample_id_col = "FullRunName",
-    measure_col = "Intensity",
-    pbf_name = pb_current_assay(object)) {
+  object,
+  feature_id_col = "feature_label",
+  sample_id_col = "FullRunName",
+  measure_col = "Intensity",
+  pbf_name = pb_current_assay(object)
+) {
     if (pbf_name %in% names(object)) {
         se <- object[[pbf_name]]
         m <- assay(se, i = "intensity")
@@ -678,10 +680,11 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 #' Note: This is an internal function; users should typically use pb_transform() or pb_eval(). Do not export.
 #' @noRd
 .pb_apply_step <- function(
-    object, from, step, fun, params = list(),
-    store = TRUE, new_level = NULL,
-    backend = c("auto", "memory", "hdf5"),
-    hdf5_path = NULL, .base_m = NULL) {
+  object, from, step, fun, params = list(),
+  store = TRUE, new_level = NULL,
+  backend = c("auto", "memory", "hdf5"),
+  hdf5_path = NULL, .base_m = NULL
+) {
     backend <- match.arg(backend)
     stopifnot(is(object, "ProBatchFeatures"))
 
@@ -757,17 +760,18 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 #'
 #' @export
 pb_transform <- function(
-    object, from,
-    steps,
-    funs = NULL,
-    params_list = NULL,
-    level = NULL,
-    store_fast_steps = FALSE,
-    fast_steps = c("log", "log2", "medianNorm"),
-    store_intermediate = FALSE,
-    final_name = NULL,
-    backend = c("auto", "memory", "hdf5"),
-    hdf5_path = NULL) {
+  object, from,
+  steps,
+  funs = NULL,
+  params_list = NULL,
+  level = NULL,
+  store_fast_steps = FALSE,
+  fast_steps = c("log", "log2", "medianNorm"),
+  store_intermediate = FALSE,
+  final_name = NULL,
+  backend = c("auto", "memory", "hdf5"),
+  hdf5_path = NULL
+) {
     backend <- match.arg(backend)
     stopifnot(is(object, "ProBatchFeatures"))
     if (is.null(funs)) funs <- steps
@@ -818,10 +822,11 @@ pb_transform <- function(
 #'
 #' @export
 pb_eval <- function(
-    object, from,
-    steps,
-    funs = NULL,
-    params_list = NULL) {
+  object, from,
+  steps,
+  funs = NULL,
+  params_list = NULL
+) {
     stopifnot(is(object, "ProBatchFeatures"))
     if (is.null(funs)) funs <- steps
     if (is.null(params_list)) params_list <- replicate(length(steps), list(), simplify = FALSE)
@@ -851,11 +856,12 @@ pb_eval <- function(
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_aggregate_level <- function(
-    object, from,
-    feature_var,
-    fun = colMedians,
-    new_level = "protein",
-    new_pipeline = NULL) {
+  object, from,
+  feature_var,
+  fun = colMedians,
+  new_level = "protein",
+  new_pipeline = NULL
+) {
     stopifnot(is(object, "ProBatchFeatures"))
     # Let QFeatures handle both aggregation and linkage book-keeping
     from_parts <- strsplit(from, "::", fixed = TRUE)[[1]]
@@ -898,19 +904,20 @@ pb_aggregate_level <- function(
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_add_level <- function(
-    object,
-    from, # e.g. "peptide::raw"
-    new_matrix, # numeric matrix (features x samples)
-    to_level, # e.g. "protein"
-    to_pipeline = NULL, # default = carry pipeline from 'from'
-    name = NULL, # override final assay name if desired
-    mapping_df = NULL, # data.frame with mapping
-    from_id = NULL, # column in mapping_df for 'from' IDs (e.g., "Precursor.Id")
-    to_id = NULL, # column in mapping_df for 'to' IDs   (e.g., "Protein.Ids")
-    map_strategy = c("as_is", "first", "longest"), # how to resolve multiple to-ids per from-id
-    link_var = "ProteinID", # rowData variable name to use for linking
-    backend = c("auto", "memory", "hdf5"),
-    hdf5_path = NULL) {
+  object,
+  from, # e.g. "peptide::raw"
+  new_matrix, # numeric matrix (features x samples)
+  to_level, # e.g. "protein"
+  to_pipeline = NULL, # default = carry pipeline from 'from'
+  name = NULL, # override final assay name if desired
+  mapping_df = NULL, # data.frame with mapping
+  from_id = NULL, # column in mapping_df for 'from' IDs (e.g., "Precursor.Id")
+  to_id = NULL, # column in mapping_df for 'to' IDs   (e.g., "Protein.Ids")
+  map_strategy = c("as_is", "first", "longest"), # how to resolve multiple to-ids per from-id
+  link_var = "ProteinID", # rowData variable name to use for linking
+  backend = c("auto", "memory", "hdf5"),
+  hdf5_path = NULL
+) {
     stopifnot(is(object, "ProBatchFeatures"))
     backend <- match.arg(backend)
     map_strategy <- match.arg(map_strategy)

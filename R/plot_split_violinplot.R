@@ -54,10 +54,11 @@ GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin,
 )
 
 geom_split_violin <- function(
-    mapping = NULL, data = NULL,
-    stat = "ydensity", position = "identity", ..., draw_quantiles = NULL,
-    trim = TRUE, scale = "area", na.rm = FALSE, show.legend = NA,
-    inherit.aes = TRUE) {
+  mapping = NULL, data = NULL,
+  stat = "ydensity", position = "identity", ..., draw_quantiles = NULL,
+  trim = TRUE, scale = "area", na.rm = FALSE, show.legend = NA,
+  inherit.aes = TRUE
+) {
     layer(
         data = data, mapping = mapping, stat = stat, geom = GeomSplitViolin,
         position = position, show.legend = show.legend,
@@ -89,9 +90,10 @@ geom_split_violin <- function(
 #' plot_split_violin_with_boxplot(df, y_col = "y", col_for_color = "m", col_for_box = "x")
 #'
 plot_split_violin_with_boxplot <- function(
-    df, y_col = "y", col_for_color = "m",
-    col_for_box = "x", colors_for_plot = c("#8f1811", "#F8C333"),
-    hlineintercept = NULL, plot_title = NULL, theme = "classic") {
+  df, y_col = "y", col_for_color = "m",
+  col_for_box = "x", colors_for_plot = c("#8f1811", "#F8C333"),
+  hlineintercept = NULL, plot_title = NULL, theme = "classic"
+) {
     p <- ggplot(df, aes(
         x = !!sym(col_for_box), y = !!sym(y_col),
         fill = !!sym(col_for_color)

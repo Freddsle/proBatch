@@ -7,7 +7,7 @@
 \title{Plot variance distribution by variable}
 \usage{
 \method{plot_PVCA}{default}(
-  data_matrix,
+  x,
   sample_annotation,
   feature_id_col = "peptide_group_label",
   sample_id_col = "FullRunName",
@@ -23,7 +23,8 @@
   units = c("cm", "in", "mm"),
   plot_title = NULL,
   theme = "classic",
-  base_size = 15
+  base_size = 15,
+  ...
 )
 
 \method{plot_PVCA}{ProBatchFeatures}(
@@ -39,10 +40,7 @@
 )
 }
 \arguments{
-\item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+\item{x}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -96,6 +94,14 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 \item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
 
 \item{base_size}{base size of the text in the plot}
+
+\item{...}{Additional arguments passed to lower-level methods.}
+
+\item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
+
+\item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
+
+\item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 }
 \value{
 \code{ggplot} object with the plot

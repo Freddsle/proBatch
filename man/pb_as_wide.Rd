@@ -6,6 +6,13 @@
 \usage{
 pb_as_wide(object, assay = pb_current_assay(object), name = "intensity")
 }
+\arguments{
+\item{object}{A `ProBatchFeatures` object.}
+
+\item{assay}{Assay identifier to extract; defaults to the current assay.}
+
+\item{name}{Assay entry name inside the `SummarizedExperiment` to return.}
+}
 \value{
 numeric matrix (wide) corresponding to the requested assay
 }

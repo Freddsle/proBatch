@@ -11,7 +11,7 @@
 \title{Plot per-sample mean or boxplots for initial assessment}
 \usage{
 \method{plot_sample_mean}{default}(
-  data_matrix,
+  x,
   sample_annotation,
   sample_id_col = "FullRunName",
   batch_col = "MS_batch",
@@ -28,11 +28,12 @@
   theme_name = c("classic", "minimal", "bw", "light", "dark"),
   base_size = 20,
   ylimits = NULL,
-  pbf_name = NULL
+  pbf_name = NULL,
+  ...
 )
 
 \method{plot_boxplot}{default}(
-  df_long,
+  x,
   sample_annotation,
   sample_id_col = "FullRunName",
   measure_col = "Intensity",
@@ -50,7 +51,8 @@
   base_size = 20,
   ylimits = NULL,
   outliers = TRUE,
-  pbf_name = NULL
+  pbf_name = NULL,
+  ...
 )
 
 \method{plot_sample_mean}{ProBatchFeatures}(x, pbf_name = NULL, plot_title = NULL, ...)
@@ -70,10 +72,7 @@ plot_sample_mean(x, ...)
 plot_boxplot(x, ...)
 }
 \arguments{
-\item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+\item{x}{Input object supplied to the generics (matrix, long data frame, or `ProBatchFeatures`).}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -126,20 +125,25 @@ pdf and png format is supported}
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
+\item{theme_name}{Name of the ggplot theme to apply to the resulting plot.}
+
 \item{base_size}{base font size}
 
 \item{ylimits}{range of y-axis to compare two plots side by side, if required.}
 
-\item{df_long}{data frame where each row is a single feature in a single
-sample. It minimally has a \code{sample_id_col}, a \code{feature_id_col}
-and a \code{measure_col}, but usually also an \code{m_score} (in OpenSWATH
-output result file). See \code{help("example_proteome")} for more details.}
+\item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
+
+\item{...}{Additional arguments forwarded between methods.}
 
 \item{measure_col}{if \code{df_long} is among the parameters, it is the
 column with expression/abundance/intensity; otherwise, it is used
 internally for consistency.}
 
 \item{outliers}{keep (default) or remove the boxplot outliers}
+
+\item{plot_ncol}{Number of columns when arranging multiple assay plots.}
+
+\item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
 }
 \value{
 ggplot2 class object. Thus, all aesthetics can be overridden

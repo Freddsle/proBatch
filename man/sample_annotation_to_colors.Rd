@@ -7,13 +7,14 @@
 \title{Generate colors for sample annotation}
 \usage{
 \method{sample_annotation_to_colors}{default}(
-  sample_annotation,
+  x,
   sample_id_col = "FullRunName",
   factor_columns = NULL,
   numeric_columns = NULL,
   rare_categories_to_other = TRUE,
   guess_factors = FALSE,
-  numeric_palette_type = "brewer"
+  numeric_palette_type = "brewer",
+  ...
 )
 
 \method{sample_annotation_to_colors}{ProBatchFeatures}(x, ...)
@@ -21,11 +22,7 @@
 sample_annotation_to_colors(x, ...)
 }
 \arguments{
-\item{sample_annotation}{data frame with:
-\enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
-  \item biological covariates
-  \item technical covariates (batches etc) }.
-  See \code{help("example_sample_annotation")}}
+\item{x}{Input object supplied to the generic (data frame or `ProBatchFeatures`).}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
@@ -46,6 +43,8 @@ are actually numeric}
 
 \item{numeric_palette_type}{palette to be used for
 numeric values coloring (can be \code{'brewer' and 'viridis'})}
+
+\item{...}{Additional arguments forwarded to method implementations.}
 }
 \value{
 list of colors for the selected annotation columns. Use

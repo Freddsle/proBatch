@@ -7,14 +7,15 @@
 \title{Calculate variance distribution by variable}
 \usage{
 \method{calculate_PVCA}{default}(
-  data_matrix,
+  x,
   sample_annotation,
   feature_id_col = "peptide_group_label",
   sample_id_col = "FullRunName",
   factors_for_PVCA = c("MS_batch", "digestion_batch", "Diet", "Sex", "Strain"),
   pca_threshold = 0.6,
   variance_threshold = 0.01,
-  fill_the_missing = -1
+  fill_the_missing = -1,
+  ...
 )
 
 \method{calculate_PVCA}{ProBatchFeatures}(
@@ -27,10 +28,7 @@
 )
 }
 \arguments{
-\item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+\item{x}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -58,6 +56,10 @@ needs to explain (the rest will be lumped together)}
 \item{fill_the_missing}{numeric value determining how  missing values
 should be substituted. If \code{NULL}, features with missing values are
 excluded.}
+
+\item{...}{Additional arguments forwarded between methods.}
+
+\item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
 }
 \value{
 data frame of weights of Principal Variance Components

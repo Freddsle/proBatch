@@ -6,6 +6,9 @@
 \usage{
 pb_current_assay(object)
 }
+\arguments{
+\item{object}{A `ProBatchFeatures` object.}
+}
 \value{
 character(1) assay identifier for the most recently stored assay
 }

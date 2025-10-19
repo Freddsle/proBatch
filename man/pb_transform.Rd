@@ -20,11 +20,17 @@ pb_transform(
 )
 }
 \arguments{
+\item{object}{A `ProBatchFeatures` object.}
+
+\item{from}{Assay name to start the pipeline from.}
+
 \item{steps}{character vector, e.g. c("log2","medianNorm","combat")}
 
 \item{funs}{optional same-length vector/list of functions/names (default: steps)}
 
 \item{params_list}{list of parameter lists (same length as steps)}
+
+\item{level}{Optional level label to assign to the generated assay(s).}
 
 \item{store_fast_steps}{logical; if FALSE, fast steps are computed but not stored}
 
@@ -35,6 +41,8 @@ pb_transform(
 \item{final_name}{optional final assay name override}
 
 \item{backend}{"memory","hdf5","auto"}
+
+\item{hdf5_path}{Optional file path used when `backend = "hdf5"`.}
 }
 \value{
 ProBatchFeatures with the requested pipeline added (as log and/or assay)

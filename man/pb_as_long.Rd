@@ -12,6 +12,17 @@ pb_as_long(
   pbf_name = pb_current_assay(object)
 )
 }
+\arguments{
+\item{object}{A `ProBatchFeatures` object.}
+
+\item{feature_id_col}{Column name used for feature identifiers in the long table.}
+
+\item{sample_id_col}{Column name used for sample identifiers in the long table.}
+
+\item{measure_col}{Column name containing measured values in the long table.}
+
+\item{pbf_name}{Assay name whose intensities should be returned in long form.}
+}
 \value{
 tibble/data.frame containing one row per feature-sample combination
 }

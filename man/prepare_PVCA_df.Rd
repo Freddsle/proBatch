@@ -7,7 +7,7 @@
 \title{prepare the weights of Principal Variance Components}
 \usage{
 \method{prepare_PVCA_df}{default}(
-  data_matrix,
+  x,
   sample_annotation,
   feature_id_col = "peptide_group_label",
   sample_id_col = "FullRunName",
@@ -15,7 +15,8 @@
   biological_factors = c("cell_line", "drug_dose"),
   fill_the_missing = -1,
   pca_threshold = 0.6,
-  variance_threshold = 0.01
+  variance_threshold = 0.01,
+  ...
 )
 
 \method{prepare_PVCA_df}{ProBatchFeatures}(
@@ -28,10 +29,7 @@
 )
 }
 \arguments{
-\item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+\item{x}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -63,6 +61,10 @@ variabilities that the selected principal components need to explain}
 
 \item{variance_threshold}{the percentile value of weight each of the
 covariates needs to explain (the rest will be lumped together)}
+
+\item{...}{Additional arguments forwarded between methods.}
+
+\item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
 }
 \value{
 data frame with weights and factors, combined in a way ready for plotting

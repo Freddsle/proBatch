@@ -57,22 +57,23 @@ plot_NA_heatmap <- function(x, ...) UseMethod("plot_NA_heatmap")
 #' @method plot_NA_heatmap default
 #' @export
 plot_NA_heatmap.default <- function(
-    x,
-    sample_annotation = NULL,
-    sample_id_col = NULL,
-    color_by = NULL,
-    label_by = NULL,
-    cluster_samples = TRUE,
-    cluster_features = TRUE,
-    show_row_dend = TRUE,
-    show_column_dend = FALSE,
-    missing_color = "black",
-    valid_color = "grey90",
-    col_vector = NULL,
-    drop_complete = TRUE,
-    draw = TRUE,
-    main = NULL,
-    ...) {
+  x,
+  sample_annotation = NULL,
+  sample_id_col = NULL,
+  color_by = NULL,
+  label_by = NULL,
+  cluster_samples = TRUE,
+  cluster_features = TRUE,
+  show_row_dend = TRUE,
+  show_column_dend = FALSE,
+  missing_color = "black",
+  valid_color = "grey90",
+  col_vector = NULL,
+  drop_complete = TRUE,
+  draw = TRUE,
+  main = NULL,
+  ...
+) {
     data_matrix <- x
     plot_params <- list(...)
 
@@ -158,24 +159,25 @@ plot_NA_heatmap.default <- function(
 #' @method plot_NA_heatmap ProBatchFeatures
 #' @export
 plot_NA_heatmap.ProBatchFeatures <- function(
-    x,
-    pbf_name = NULL,
-    color_by = NULL,
-    label_by = NULL,
-    sample_id_col = NULL,
-    cluster_samples = TRUE,
-    cluster_features = TRUE,
-    show_row_dend = TRUE,
-    show_column_dend = FALSE,
-    missing_color = "black",
-    valid_color = "grey90",
-    col_vector = NULL,
-    drop_complete = TRUE,
-    nrow = NULL,
-    ncol = NULL,
-    draw = TRUE,
-    use_subset = TRUE,
-    ...) {
+  x,
+  pbf_name = NULL,
+  color_by = NULL,
+  label_by = NULL,
+  sample_id_col = NULL,
+  cluster_samples = TRUE,
+  cluster_features = TRUE,
+  show_row_dend = TRUE,
+  show_column_dend = FALSE,
+  missing_color = "black",
+  valid_color = "grey90",
+  col_vector = NULL,
+  drop_complete = TRUE,
+  nrow = NULL,
+  ncol = NULL,
+  draw = TRUE,
+  use_subset = TRUE,
+  ...
+) {
     object <- x
     assays <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
 
@@ -289,11 +291,12 @@ plot_NA_density <- function(x, ...) UseMethod("plot_NA_density")
 #' @method plot_NA_density default
 #' @export
 plot_NA_density.default <- function(
-    x,
-    missing_label = "Missing Value",
-    valid_label = "Valid Value",
-    palette = c(`Missing Value` = "#A92C23", `Valid Value` = "#345995"),
-    ...) {
+  x,
+  missing_label = "Missing Value",
+  valid_label = "Valid Value",
+  palette = c(`Missing Value` = "#A92C23", `Valid Value` = "#345995"),
+  ...
+) {
     data_matrix <- x
     if (is(data_matrix, "SummarizedExperiment")) {
         data_matrix <- assay(data_matrix)
@@ -337,15 +340,16 @@ plot_NA_density.default <- function(
 #' @method plot_NA_density ProBatchFeatures
 #' @export
 plot_NA_density.ProBatchFeatures <- function(
-    x,
-    pbf_name = NULL,
-    missing_label = "Missing Value",
-    valid_label = "Valid Value",
-    palette = c(`Missing Value` = "#A92C23", `Valid Value` = "#345995"),
-    nrow = NULL,
-    ncol = NULL,
-    facet_scales = "free_y",
-    ...) {
+  x,
+  pbf_name = NULL,
+  missing_label = "Missing Value",
+  valid_label = "Valid Value",
+  palette = c(`Missing Value` = "#A92C23", `Valid Value` = "#345995"),
+  nrow = NULL,
+  ncol = NULL,
+  facet_scales = "free_y",
+  ...
+) {
     object <- x
     assays <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
     if (!length(assays)) {
@@ -397,10 +401,11 @@ plot_NA_frequency <- function(x, ...) UseMethod("plot_NA_frequency")
 #' @method plot_NA_frequency default
 #' @export
 plot_NA_frequency.default <- function(
-    x,
-    show_percent = FALSE,
-    fill = "#345995",
-    ...) {
+  x,
+  show_percent = FALSE,
+  fill = "#345995",
+  ...
+) {
     data_matrix <- x
     if (is(data_matrix, "SummarizedExperiment")) {
         data_matrix <- assay(data_matrix)
@@ -445,14 +450,15 @@ plot_NA_frequency.default <- function(
 #' @method plot_NA_frequency ProBatchFeatures
 #' @export
 plot_NA_frequency.ProBatchFeatures <- function(
-    x,
-    pbf_name = NULL,
-    fill = "#345995",
-    nrow = NULL,
-    ncol = NULL,
-    facet_scales = "free_y",
-    show_percent = FALSE,
-    ...) {
+  x,
+  pbf_name = NULL,
+  fill = "#345995",
+  nrow = NULL,
+  ncol = NULL,
+  facet_scales = "free_y",
+  show_percent = FALSE,
+  ...
+) {
     object <- x
     assays <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
     if (!length(assays)) {

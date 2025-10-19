@@ -1272,7 +1272,7 @@ plot_PVCA.df <- function(x, ...) UseMethod("plot_PVCA.df")
 #' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
 #' @param ... Additional arguments forwarded to lower-level plotting helpers.
-#' 
+#'
 #' @return ggplot scatterplot colored by factor levels of column specified in
 #'   \code{factor_to_color}
 #' @name plot_PCA

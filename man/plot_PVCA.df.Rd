@@ -7,7 +7,7 @@
 \title{plot PVCA, when the analysis is completed}
 \usage{
 \method{plot_PVCA}{df.default}(
-  pvca_res,
+  x,
   colors_for_bars = NULL,
   filename = NULL,
   width = NA,
@@ -15,7 +15,8 @@
   units = c("cm", "in", "mm"),
   plot_title = NULL,
   theme = "classic",
-  base_size = 15
+  base_size = 15,
+  ...
 )
 
 \method{plot_PVCA.df}{ProBatchFeatures}(
@@ -38,8 +39,7 @@
 )
 }
 \arguments{
-\item{pvca_res}{data frame of weights of Principal Variance Components, result
-of \code{calculate_PVCA}}
+\item{x}{Data frame of PVCA weights, typically the result of `calculate_PVCA()`.}
 
 \item{colors_for_bars}{four-item color vector, specifying colors for the
 following categories: c('residual', 'biological', 'biol:techn',
@@ -63,6 +63,10 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{base_size}{base size of the text in the plot}
 
+\item{...}{Additional arguments forwarded to `prepare_PVCA_df()`.}
+
+\item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
+
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
   \item biological covariates
@@ -76,6 +80,10 @@ names.}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
+
+\item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
+
+\item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 }
 \value{
 \code{ggplot} object with bars as weights, colored by bio/tech factors

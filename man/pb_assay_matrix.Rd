@@ -6,6 +6,13 @@
 \usage{
 pb_assay_matrix(object, assay = NULL, name = "intensity")
 }
+\arguments{
+\item{object}{A `ProBatchFeatures` object.}
+
+\item{assay}{Assay identifier to extract; defaults to the current assay.}
+
+\item{name}{Assay entry to read from the underlying `SummarizedExperiment`.}
+}
 \value{
 assay data matrix with features in rows and samples in columns
 }

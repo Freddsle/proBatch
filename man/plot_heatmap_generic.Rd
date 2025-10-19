@@ -7,7 +7,7 @@
 \title{Plot the heatmap}
 \usage{
 \method{plot_heatmap_generic}{default}(
-  data_matrix,
+  x,
   column_annotation_df = NULL,
   row_annotation_df = NULL,
   col_ann_id_col = NULL,
@@ -43,7 +43,7 @@
 )
 }
 \arguments{
-\item{data_matrix}{the matrix of data to be plotted}
+\item{x}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
 
 \item{column_annotation_df}{data frame annotating columns of
 \code{data_matrix}}
@@ -102,6 +102,14 @@ pdf and png format is supported}
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{...}{other parameters of \code{link[pheatmap]{pheatmap}}}
+
+\item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
+
+\item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
+
+\item{plot_ncol}{Number of columns when arranging multiple assay plots.}
+
+\item{data_matrix}{the matrix of data to be plotted}
 }
 \value{
 pheatmap-type object

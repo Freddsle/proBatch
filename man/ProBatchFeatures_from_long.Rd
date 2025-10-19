@@ -14,6 +14,21 @@ ProBatchFeatures_from_long(
   name = NULL
 )
 }
+\arguments{
+\item{df_long}{Data frame in long format with feature/sample/value columns.}
+
+\item{sample_annotation}{Optional sample metadata aligned to the samples.}
+
+\item{feature_id_col}{Column containing feature identifiers in `df_long`.}
+
+\item{sample_id_col}{Column containing sample identifiers in `df_long`.}
+
+\item{measure_col}{Column with the measured intensity values.}
+
+\item{level}{Character label describing the biological level of the assay.}
+
+\item{name}{Optional pipeline name; defaults to `<level>::raw` when missing.}
+}
 \value{
 A `ProBatchFeatures` object constructed from the long-format input.
 }

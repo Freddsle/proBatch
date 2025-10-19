@@ -169,7 +169,6 @@ plot_single_feature <- function(feature_name, df_long,
     )
 
 
-
     # Defining sample order for plotting
     sample_order <- define_sample_order(
         order_col, sample_annotation, facet_col,

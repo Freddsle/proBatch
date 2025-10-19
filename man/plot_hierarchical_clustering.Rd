@@ -7,7 +7,7 @@
 \title{cluster the data matrix to visually inspect which confounder dominates}
 \usage{
 \method{plot_hierarchical_clustering}{default}(
-  data_matrix,
+  x,
   sample_annotation,
   sample_id_col = "FullRunName",
   color_list = NULL,
@@ -35,10 +35,7 @@
 )
 }
 \arguments{
-\item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+\item{x}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -87,6 +84,8 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{...}{other parameters of \code{plotDendroAndColors} from
 \code{WGCNA} package}
+
+\item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
 }
 \value{
 No return
