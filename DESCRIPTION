@@ -38,6 +38,8 @@ Imports:
     lubridate,
     limma,
     magrittr,
+    matrixStats,
+    methods,
     pheatmap,
     preprocessCore,
     purrr,

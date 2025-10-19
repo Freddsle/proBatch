@@ -133,7 +133,6 @@
 #' @importFrom WGCNA plotDendroAndColors standardColors
 #' @importFrom gridExtra grid.arrange arrangeGrob
 #' @importFrom grid grid.newpage grid.draw grobTree
-#' @importFrom ggplotify as.ggplot
 #' @importFrom SummarizedExperiment SummarizedExperiment colData rowData assay
 #' @importFrom S4Vectors DataFrame rbind metadata
 #' @importFrom matrixStats rowMedians colMedians

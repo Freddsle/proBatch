@@ -138,8 +138,8 @@ if (interactive()) {
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/symbioticMe/proBatch}
-  \item Report bugs at \url{https://github.com/symbioticMe/proBatch/issues}
+  \item \url{https://github.com/Freddsle/proBatch}
+  \item Report bugs at \url{https://github.com/Freddsle/proBatch/issues}
 }
 
 }
