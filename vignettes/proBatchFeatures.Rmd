@@ -78,6 +78,7 @@ We rely on `dplyr`, `tibble`, and `ggplot2` (alongside `proBatch`) for
 data manipulation and plotting.
 
 ```{r load_packages, message=FALSE}
+library(proBatch)
 library(dplyr)
 library(tibble)
 library(ggplot2)

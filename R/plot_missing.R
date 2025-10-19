@@ -39,6 +39,9 @@
 #' @param draw Logical, draw the heatmap(s). Set to `FALSE` to obtain the grob(s)
 #'   without plotting. For multiple assays, the arranged grob is returned
 #'   invisibly when `draw = TRUE`.
+#' @param main Optional title passed to [pheatmap::pheatmap()] for single assays.
+#' @param use_subset Logical; randomly subset to 5000 rows/columns when assays
+#'   exceed that size (only used for `ProBatchFeatures` inputs).
 #' @param ... Additional parameters forwarded to [pheatmap::pheatmap()].
 #'
 #' @return For a single assay the returned value is the `pheatmap` object. When
@@ -324,7 +327,7 @@ plot_NA_density.default <- function(
 
     palette <- .pb_match_palette(palette, c(missing_label, valid_label))
 
-    ggplot(df, aes(x = mean, colour = Type)) +
+    ggplot(df, aes(x = .data$mean, colour = .data$Type)) +
         geom_density(na.rm = TRUE) +
         labs(x = "Intensity", y = "Density", colour = "Value Type") +
         scale_colour_manual(values = palette, breaks = c(missing_label, valid_label))
@@ -363,7 +366,7 @@ plot_NA_density.ProBatchFeatures <- function(
     combined$pbf_name <- factor(combined$pbf_name, levels = assays[keep])
 
     palette <- .pb_match_palette(palette, c(missing_label, valid_label))
-    p <- ggplot(combined, aes(x = mean, colour = Type)) +
+    p <- ggplot(combined, aes(x = .data$mean, colour = .data$Type)) +
         geom_density(na.rm = TRUE) +
         labs(x = "Intensity", y = "Density", colour = "Value Type") +
         scale_colour_manual(values = palette, breaks = c(missing_label, valid_label))
@@ -384,6 +387,7 @@ plot_NA_density.ProBatchFeatures <- function(
 #' @param fill Colour used for the columns in the frequency plot.
 #' @param facet_scales Scaling behaviour for facets when plotting multiple
 #'   assays.
+#' @param show_percent Logical; display percentages instead of raw counts.
 #'
 #' @return A `ggplot` object showing the frequency distribution.
 #' @export
@@ -488,9 +492,10 @@ plot_NA_frequency.ProBatchFeatures <- function(
     combined <- do.call(rbind, df_list[keep])
     combined$pbf_name <- factor(combined$pbf_name, levels = assays[keep])
 
+    y_col <- if (show_percent) "Percent" else "count"
     p <- ggplot(combined, aes(
-        x = valid_counts,
-        y = if (show_percent) Percent else count
+        x = .data$valid_counts,
+        y = .data[[y_col]]
     )) +
         geom_col(fill = fill) +
         labs(

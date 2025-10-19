@@ -400,6 +400,7 @@ pb_pipeline_name <- function(object, assay = pb_current_assay(object)) {
 }
 
 #' Current (latest) assay name
+#' @param object A `ProBatchFeatures` object.
 #' @return character(1) assay identifier for the most recently stored assay
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
@@ -508,6 +509,9 @@ pb_current_assay <- function(object) {
 
 
 #' Convenience accessor for assay matrix by name/index (returns the 'intensity' assay)
+#' @param object A `ProBatchFeatures` object.
+#' @param assay Assay identifier to extract; defaults to the current assay.
+#' @param name Assay entry to read from the underlying `SummarizedExperiment`.
 #' @return assay data matrix with features in rows and samples in columns
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
@@ -533,6 +537,11 @@ pb_assay_matrix <- function(object, assay = NULL, name = "intensity") {
 }
 
 #' Get current assay as LONG (via proBatch::matrix_to_long)
+#' @param object A `ProBatchFeatures` object.
+#' @param feature_id_col Column name used for feature identifiers in the long table.
+#' @param sample_id_col Column name used for sample identifiers in the long table.
+#' @param measure_col Column name containing measured values in the long table.
+#' @param pbf_name Assay name whose intensities should be returned in long form.
 #' @return tibble/data.frame containing one row per feature-sample combination
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
@@ -566,6 +575,9 @@ pb_as_long <- function(
 }
 
 #' Get an assay matrix (wide)
+#' @param object A `ProBatchFeatures` object.
+#' @param assay Assay identifier to extract; defaults to the current assay.
+#' @param name Assay entry name inside the `SummarizedExperiment` to return.
 #' @return numeric matrix (wide) corresponding to the requested assay
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
@@ -727,14 +739,18 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 # ---------------------------
 
 #' Compute a pipeline and optionally store only the final result
+#' @param object A `ProBatchFeatures` object.
+#' @param from Assay name to start the pipeline from.
 #' @param steps character vector, e.g. c("log2","medianNorm","combat")
 #' @param funs optional same-length vector/list of functions/names (default: steps)
 #' @param params_list list of parameter lists (same length as steps)
+#' @param level Optional level label to assign to the generated assay(s).
 #' @param store_fast_steps logical; if FALSE, fast steps are computed but not stored
 #' @param fast_steps which steps count as fast (default: c("log","log2","medianNorm"))
 #' @param store_intermediate logical; if TRUE store every step (overrides fast behavior)
 #' @param final_name optional final assay name override
 #' @param backend "memory","hdf5","auto"
+#' @param hdf5_path Optional file path used when `backend = "hdf5"`.
 #' @return ProBatchFeatures with the requested pipeline added (as log and/or assay)
 #'
 #' @example inst/examples/ProBatchFeatures-basic.R
@@ -1081,7 +1097,21 @@ pb_add_level <- function(
     new("ProBatchFeatures", out, chain = from@chain, oplog = from@oplog)
 }
 
-# Override '[' so subsetting doesn't drop subclass or logs
+#' Subset `ProBatchFeatures` objects without dropping metadata.
+#'
+#' Ensures the `[` method returns a `ProBatchFeatures` instance so the
+#' subclass-specific slots remain available after subsetting.
+#'
+#' @param x A `ProBatchFeatures` object.
+#' @param i Row indices passed to the underlying `QFeatures` subset.
+#' @param j Column indices passed to the underlying `QFeatures` subset.
+#' @param ... Additional arguments forwarded to the next method.
+#' @param drop Logical flag controlling dimension dropping; defaults to `TRUE`.
+#'
+#' @return A `ProBatchFeatures` object containing the requested subset.
+#' @rdname ProBatchFeatures-subset
+#' @aliases ProBatchFeatures-subset [,ProBatchFeatures,ANY,ANY,ANY-method
+#' @export
 setMethod(
     "[",
     signature(x = "ProBatchFeatures", i = "ANY", j = "ANY", drop = "ANY"),

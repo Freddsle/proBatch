@@ -12,6 +12,8 @@
 #' excluded.
 #' @param ... other parameters of \code{plotDendroAndColors} from
 #' \code{WGCNA} package
+#' @param x Input object: matrix-like data or a `ProBatchFeatures` instance.
+#' @param pbf_name Assay name(s) used when `x` is a `ProBatchFeatures`.
 #'
 #' @name plot_hierarchical_clustering
 #'
@@ -51,7 +53,7 @@
 #' @seealso \code{\link[stats]{hclust}},
 #'   \code{\link{sample_annotation_to_colors}},
 #'   \code{\link[WGCNA]{plotDendroAndColors}}
-plot_hierarchical_clustering.default <- function(data_matrix, sample_annotation,
+plot_hierarchical_clustering.default <- function(x, sample_annotation,
                                                  sample_id_col = "FullRunName",
                                                  color_list = NULL,
                                                  factors_to_plot = NULL,
@@ -64,6 +66,7 @@ plot_hierarchical_clustering.default <- function(data_matrix, sample_annotation,
                                                  units = c("cm", "in", "mm"),
                                                  plot_title = NULL,
                                                  ...) {
+    data_matrix <- x
     df_long <- matrix_to_long(data_matrix, sample_id_col = sample_id_col)
     df_long <- check_sample_consistency(sample_annotation, sample_id_col, df_long,
         merge = FALSE
@@ -178,7 +181,7 @@ plot_hierarchical_clustering.ProBatchFeatures <- function(x, pbf_name = NULL,
     plot_title <- if (is.null(plot_title)) assay_name else plot_title
 
     plot_hierarchical_clustering.default(
-        data_matrix = data_matrix,
+        x = data_matrix,
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
         plot_title = plot_title,
@@ -212,6 +215,10 @@ plot_hierarchical_clustering <- function(x, ...) UseMethod("plot_hierarchical_cl
 #' but mapping \code{peptide_annotation} where each item contains a color vector
 #' for each factor to be mapped to the color.
 #' @param ... other parameters of \code{link[pheatmap]{pheatmap}}
+#' @param x Input object: matrix-like data or a `ProBatchFeatures` instance.
+#' @param pbf_name Assay name(s) used when `x` is a `ProBatchFeatures`.
+#' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
+#' @param plot_ncol Number of columns when arranging multiple assay plots.
 #'
 #' @return object returned by \code{link[pheatmap]{pheatmap}}
 #' @export
@@ -249,7 +256,7 @@ plot_hierarchical_clustering <- function(x, ...) UseMethod("plot_hierarchical_cl
 #' \code{\link[pheatmap]{pheatmap}}
 #'
 #' @name plot_heatmap_diagnostic
-plot_heatmap_diagnostic.default <- function(data_matrix, sample_annotation = NULL,
+plot_heatmap_diagnostic.default <- function(x, sample_annotation = NULL,
                                             sample_id_col = "FullRunName",
                                             factors_to_plot = NULL,
                                             fill_the_missing = -1,
@@ -270,6 +277,7 @@ plot_heatmap_diagnostic.default <- function(data_matrix, sample_annotation = NUL
                                             units = c("cm", "in", "mm"),
                                             plot_title = NULL,
                                             ...) {
+    data_matrix <- x
     df_long <- matrix_to_long(data_matrix, sample_id_col = sample_id_col)
     df_long <- check_sample_consistency(
         sample_annotation, sample_id_col, df_long,
@@ -404,7 +412,7 @@ plot_heatmap_diagnostic.ProBatchFeatures <- function(x, pbf_name = NULL,
         }
 
         call_args <- c(list(
-            data_matrix = data_matrix,
+            x = data_matrix,
             sample_annotation = sample_ann,
             sample_id_col = sample_id_col,
             peptide_annotation = peptide_ann,
@@ -455,6 +463,10 @@ plot_heatmap_diagnostic <- function(x, ...) UseMethod("plot_heatmap_diagnostic")
 #' Usually black or white, depending on \code{heatmap_color}
 #' @param heatmap_color vector of colors used in heatmap (typicall a gradient)
 #' @param ... other parameters of \code{link[pheatmap]{pheatmap}}
+#' @param x Input object: matrix-like data or a `ProBatchFeatures` instance.
+#' @param pbf_name Assay name(s) used when `x` is a `ProBatchFeatures`.
+#' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
+#' @param plot_ncol Number of columns when arranging multiple assay plots.
 #'
 #' @name plot_heatmap_generic
 #'
@@ -470,7 +482,7 @@ plot_heatmap_diagnostic <- function(x, ...) UseMethod("plot_heatmap_diagnostic")
 #'     show_rownames = FALSE, show_colnames = FALSE
 #' )
 #'
-plot_heatmap_generic.default <- function(data_matrix,
+plot_heatmap_generic.default <- function(x,
                                          column_annotation_df = NULL,
                                          row_annotation_df = NULL,
                                          col_ann_id_col = NULL,
@@ -499,6 +511,7 @@ plot_heatmap_generic.default <- function(data_matrix,
                                          units = c("cm", "in", "mm"),
                                          plot_title = NULL,
                                          ...) {
+    data_matrix <- x
     # deal with the missing values
     warning_message <- "Heatmap cannot operate with missing values in the matrix"
     data_matrix <- handle_missing_values(
@@ -696,7 +709,7 @@ plot_heatmap_generic.ProBatchFeatures <- function(x, pbf_name = NULL,
         }
 
         call_args <- c(list(
-            data_matrix = data_matrix,
+            x = data_matrix,
             column_annotation_df = col_ann,
             row_annotation_df = row_ann,
             col_ann_id_col = col_ann_id_col,
@@ -724,6 +737,9 @@ plot_heatmap_generic <- function(x, ...) UseMethod("plot_heatmap_generic")
 #' @param fill_the_missing numeric value determining how  missing values
 #' should be substituted. If \code{NULL}, features with missing values are
 #' excluded.
+#' @param x Input object: matrix-like data or a `ProBatchFeatures` instance.
+#' @param pbf_name Assay name(s) used when `x` is a `ProBatchFeatures`.
+#' @param ... Additional arguments forwarded between methods.
 #'
 #' @name calculate_PVCA
 #' @return data frame of weights of Principal Variance Components
@@ -736,7 +752,7 @@ plot_heatmap_generic <- function(x, ...) UseMethod("plot_heatmap_generic")
 #'     factors_for_PVCA = c("MS_batch", "digestion_batch", "Diet", "Sex", "Strain"),
 #'     pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1
 #' )
-calculate_PVCA.default <- function(data_matrix, sample_annotation,
+calculate_PVCA.default <- function(x, sample_annotation,
                                    feature_id_col = "peptide_group_label",
                                    sample_id_col = "FullRunName",
                                    factors_for_PVCA = c(
@@ -744,7 +760,8 @@ calculate_PVCA.default <- function(data_matrix, sample_annotation,
                                        "Diet", "Sex", "Strain"
                                    ),
                                    pca_threshold = .6, variance_threshold = .01,
-                                   fill_the_missing = -1) {
+                                   fill_the_missing = -1, ...) {
+    data_matrix <- x
     df_long <- matrix_to_long(data_matrix, sample_id_col = sample_id_col)
     df_long <- check_sample_consistency(sample_annotation, sample_id_col, df_long,
         batch_col = NULL, order_col = NULL,
@@ -818,7 +835,7 @@ calculate_PVCA.ProBatchFeatures <- function(x, pbf_name = NULL,
     }
 
     calculate_PVCA.default(
-        data_matrix = data_matrix,
+        x = data_matrix,
         sample_annotation = sample_annotation,
         feature_id_col = feature_id_col,
         sample_id_col = sample_id_col,
@@ -847,6 +864,11 @@ calculate_PVCA <- function(x, ...) UseMethod("calculate_PVCA")
 #' should be substituted. If \code{NULL}, features with missing values are
 #' excluded.
 #' If \code{NULL}, features with missing values are excluded.
+#' @param x Input object: matrix-like data or a `ProBatchFeatures` instance.
+#' @param pbf_name Assay name(s) used when `x` is a `ProBatchFeatures`.
+#' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
+#' @param plot_ncol Number of columns when arranging multiple assay plots.
+#' @param ... Additional arguments passed to lower-level methods.
 #' @param base_size base size of the text in the plot
 #'
 #' @name plot_PVCA
@@ -871,7 +893,7 @@ calculate_PVCA <- function(x, ...) UseMethod("calculate_PVCA")
 #'
 #' @seealso \code{\link{sample_annotation_to_colors}},
 #' \code{\link[ggplot2]{ggplot}}
-plot_PVCA.default <- function(data_matrix, sample_annotation,
+plot_PVCA.default <- function(x, sample_annotation,
                               feature_id_col = "peptide_group_label",
                               sample_id_col = "FullRunName",
                               technical_factors = c("MS_batch", "instrument"),
@@ -883,9 +905,10 @@ plot_PVCA.default <- function(data_matrix, sample_annotation,
                               units = c("cm", "in", "mm"),
                               plot_title = NULL,
                               theme = "classic",
-                              base_size = 15) {
+                              base_size = 15, ...) {
+    data_matrix <- x
     pvca_res <- prepare_PVCA_df(
-        data_matrix = data_matrix,
+        x = data_matrix,
         sample_annotation = sample_annotation,
         feature_id_col = feature_id_col,
         sample_id_col = sample_id_col,
@@ -897,7 +920,7 @@ plot_PVCA.default <- function(data_matrix, sample_annotation,
     )
 
     gg <- plot_PVCA.df(
-        pvca_res = pvca_res, colors_for_bars = colors_for_bars,
+        x = pvca_res, colors_for_bars = colors_for_bars,
         filename = filename, width = width, height = height, units = units,
         plot_title = plot_title,
         theme = theme, base_size = base_size
@@ -954,7 +977,7 @@ plot_PVCA.ProBatchFeatures <- function(x, pbf_name = NULL,
         }
 
         call_args <- c(list(
-            data_matrix = data_matrix,
+            x = data_matrix,
             sample_annotation = sample_ann,
             feature_id_col = feature_id_col,
             sample_id_col = sample_id_col,
@@ -985,6 +1008,9 @@ plot_PVCA <- function(x, ...) UseMethod("plot_PVCA")
 #' should be substituted. If \code{NULL}, features with missing values are
 #' excluded.
 #' If \code{NULL}, features with missing values are excluded.
+#' @param x Input object: matrix-like data or a `ProBatchFeatures` instance.
+#' @param pbf_name Assay name(s) used when `x` is a `ProBatchFeatures`.
+#' @param ... Additional arguments forwarded between methods.
 #'
 #' @return data frame with weights and factors, combined in a way ready for plotting
 #' @export
@@ -998,13 +1024,15 @@ plot_PVCA <- function(x, ...) UseMethod("plot_PVCA")
 #'     pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1
 #' )
 #' @name prepare_PVCA_df
-prepare_PVCA_df.default <- function(data_matrix, sample_annotation,
+prepare_PVCA_df.default <- function(x, sample_annotation,
                                     feature_id_col = "peptide_group_label",
                                     sample_id_col = "FullRunName",
                                     technical_factors = c("MS_batch", "instrument"),
                                     biological_factors = c("cell_line", "drug_dose"),
                                     fill_the_missing = -1,
-                                    pca_threshold = .6, variance_threshold = .01) {
+                                    pca_threshold = .6, variance_threshold = .01,
+                                    ...) {
+    data_matrix <- x
     factors_for_PVCA <- c(technical_factors, biological_factors)
 
     pvca_res <- calculate_PVCA(
@@ -1061,7 +1089,7 @@ prepare_PVCA_df.ProBatchFeatures <- function(x, pbf_name = NULL,
     }
 
     prepare_PVCA_df.default(
-        data_matrix = data_matrix,
+        x = data_matrix,
         sample_annotation = sample_annotation,
         feature_id_col = feature_id_col,
         sample_id_col = sample_id_col,
@@ -1075,12 +1103,15 @@ prepare_PVCA_df <- function(x, ...) UseMethod("prepare_PVCA_df")
 #' plot PVCA, when the analysis is completed
 #'
 #' @inheritParams proBatch
-#' @param pvca_res data frame of weights of Principal Variance Components, result
-#' of \code{calculate_PVCA}
+#' @param x Data frame of PVCA weights, typically the result of `calculate_PVCA()`.
 #' @param colors_for_bars four-item color vector, specifying colors for the
 #'   following categories: c('residual', 'biological', 'biol:techn',
 #'   'technical')
 #' @param base_size base size of the text in the plot
+#' @param pbf_name Assay name(s) used when `x` is a `ProBatchFeatures`.
+#' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
+#' @param plot_ncol Number of columns when arranging multiple assay plots.
+#' @param ... Additional arguments forwarded to `prepare_PVCA_df()`.
 #'
 #' @return \code{ggplot} object with bars as weights, colored by bio/tech factors
 #' @export
@@ -1098,13 +1129,14 @@ prepare_PVCA_df <- function(x, ...) UseMethod("prepare_PVCA_df")
 #'
 #' pvca_plot <- plot_PVCA.df(pvca_df_res, colors_for_bars)
 #' @name plot_PVCA.df
-plot_PVCA.df.default <- function(pvca_res,
+plot_PVCA.df.default <- function(x,
                                  colors_for_bars = NULL,
                                  filename = NULL, width = NA, height = NA,
                                  units = c("cm", "in", "mm"),
                                  plot_title = NULL,
                                  theme = "classic",
-                                 base_size = 15) {
+                                 base_size = 15, ...) {
+    pvca_res <- x
     pvca_res <- pvca_res %>%
         mutate(label = factor(label, levels = label))
 
@@ -1194,7 +1226,7 @@ plot_PVCA.df.ProBatchFeatures <- function(x, pbf_name = NULL,
         }
 
         prepare_args <- c(list(
-            data_matrix = data_matrix,
+            x = data_matrix,
             sample_annotation = sample_ann,
             feature_id_col = feature_id_col,
             sample_id_col = sample_id_col
@@ -1202,7 +1234,7 @@ plot_PVCA.df.ProBatchFeatures <- function(x, pbf_name = NULL,
         pvca_res <- do.call(prepare_PVCA_df.default, prepare_args)
 
         plot_args <- list(
-            pvca_res = pvca_res,
+            x = pvca_res,
             colors_for_bars = colors_for_bars,
             filename = filename_list[[i]],
             width = width,
@@ -1232,7 +1264,15 @@ plot_PVCA.df <- function(x, ...) UseMethod("plot_PVCA.df")
 #' excluded.
 #' If \code{NULL}, features with missing values are excluded.
 #' @param base_size base size of the text in the plot
-#'
+#' @param shape_by Optional column used for point shapes in the PCA plot.
+#' @param point_size Point size supplied to `ggplot2::geom_point()`.
+#' @param point_alpha Alpha transparency for plotted points.
+#' @param x Input object: matrix-like data or a `ProBatchFeatures` instance.
+#' @param pbf_name Assay name(s) used when `x` is a `ProBatchFeatures`.
+#' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
+#' @param plot_ncol Number of columns when arranging multiple assay plots.
+#' @param ... Additional arguments forwarded to lower-level plotting helpers.
+#' 
 #' @return ggplot scatterplot colored by factor levels of column specified in
 #'   \code{factor_to_color}
 #' @name plot_PCA
@@ -1264,7 +1304,7 @@ plot_PVCA.df <- function(x, ...) UseMethod("plot_PVCA.df")
 #'
 #' @seealso \code{\link[ggfortify]{autoplot.pca_common}},
 #' \code{\link[ggplot2]{ggplot}}
-plot_PCA.default <- function(data_matrix, sample_annotation,
+plot_PCA.default <- function(x, sample_annotation,
                              feature_id_col = "peptide_group_label",
                              sample_id_col = "FullRunName",
                              color_by = "MS_batch",
@@ -1275,7 +1315,9 @@ plot_PCA.default <- function(data_matrix, sample_annotation,
                              units = c("cm", "in", "mm"),
                              plot_title = NULL,
                              theme = "classic",
-                             base_size = 10, point_size = 3, point_alpha = 0.8) {
+                             base_size = 10, point_size = 3, point_alpha = 0.8,
+                             ...) {
+    data_matrix <- x
     df_long <- matrix_to_long(data_matrix, sample_id_col = sample_id_col)
     df_long <- check_sample_consistency(sample_annotation, sample_id_col, df_long,
         batch_col = color_by, order_col = NULL,

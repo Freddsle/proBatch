@@ -11,6 +11,12 @@
 #'  different MS batches in ordered runs; should be \code{NULL} for experiments without intrinsic order
 #' @param ylimits range of y-axis to compare two plots side by side, if required.
 #' @param outliers keep (default) or remove the boxplot outliers
+#' @param theme_name Name of the ggplot theme to apply to the resulting plot.
+#' @param x Input object supplied to the generics (matrix, long data frame, or `ProBatchFeatures`).
+#' @param pbf_name Assay name(s) used when `x` is a `ProBatchFeatures`.
+#' @param plot_ncol Number of columns when arranging multiple assay plots.
+#' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
+#' @param ... Additional arguments forwarded between methods.
 #'
 #' @return ggplot2 class object. Thus, all aesthetics can be overridden
 #'
@@ -46,7 +52,7 @@
 #' )
 #' unlink(mean_file)
 #'
-plot_sample_mean.default <- function(data_matrix, sample_annotation,
+plot_sample_mean.default <- function(x, sample_annotation,
                                      sample_id_col = "FullRunName",
                                      batch_col = "MS_batch",
                                      color_by_batch = FALSE,
@@ -60,7 +66,9 @@ plot_sample_mean.default <- function(data_matrix, sample_annotation,
                                      theme_name = c("classic", "minimal", "bw", "light", "dark"),
                                      base_size = 20,
                                      ylimits = NULL,
-                                     pbf_name = NULL) {
+                                     pbf_name = NULL,
+                                     ...) {
+    data_matrix <- x
     # stop early if sample_annotation missing
     if (is.null(sample_annotation)) {
         stop("`sample_annotation` must be provided.")
@@ -255,7 +263,7 @@ plot_sample_mean.default <- function(data_matrix, sample_annotation,
 #' )
 #' unlink(boxplot_file)
 #'
-plot_boxplot.default <- function(df_long, sample_annotation,
+plot_boxplot.default <- function(x, sample_annotation,
                                  sample_id_col = "FullRunName",
                                  measure_col = "Intensity",
                                  batch_col = "MS_batch",
@@ -269,7 +277,9 @@ plot_boxplot.default <- function(df_long, sample_annotation,
                                  theme_name = c("classic", "minimal", "bw", "light", "dark"),
                                  base_size = 20,
                                  ylimits = NULL, outliers = TRUE,
-                                 pbf_name = NULL) {
+                                 pbf_name = NULL,
+                                 ...) {
+    df_long <- x
     # Validate inputs
     if (is.null(sample_annotation)) {
         stop("`sample_annotation` must be provided.")
@@ -449,7 +459,7 @@ plot_sample_mean.ProBatchFeatures <- function(x, pbf_name = NULL, plot_title = N
 
     # Call the default method with the extracted data
     plot_sample_mean.default(
-        data_matrix = data_matrix,
+        x = data_matrix,
         sample_annotation = sample_annotation,
         plot_title = plot_title,
         ...
@@ -507,7 +517,7 @@ plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = NU
         }
 
         call_args <- c(list(
-            df_long = df_long,
+            x = df_long,
             sample_annotation = sample_annotation,
             sample_id_col = sample_id_col,
             measure_col = "Intensity",

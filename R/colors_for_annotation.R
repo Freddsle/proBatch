@@ -16,6 +16,8 @@
 #'  are actually numeric
 #' @param numeric_palette_type palette to be used for
 #' numeric values coloring (can be \code{'brewer' and 'viridis'})
+#' @param x Input object supplied to the generic (data frame or `ProBatchFeatures`).
+#' @param ... Additional arguments forwarded to method implementations.
 #'
 #' @return list of colors for the selected annotation columns. Use
 #' \code{\link{color_list_to_df}} if a data frame representation is
@@ -34,14 +36,15 @@
 #' @export
 #'
 #' @name sample_annotation_to_colors
-sample_annotation_to_colors.default <- function(sample_annotation,
+sample_annotation_to_colors.default <- function(x,
                                                 sample_id_col = "FullRunName",
                                                 factor_columns = NULL,
                                                 numeric_columns = NULL,
                                                 rare_categories_to_other = TRUE,
                                                 guess_factors = FALSE,
-                                                numeric_palette_type = "brewer") {
-    sample_annotation <- as.data.frame(sample_annotation)
+                                                numeric_palette_type = "brewer",
+                                                ...) {
+    sample_annotation <- as.data.frame(x)
 
     # if factor_columns is NULL, add default columns
     if (is.null(factor_columns)) {
@@ -128,7 +131,7 @@ sample_annotation_to_colors.ProBatchFeatures <- function(x, ...) {
 
     sample_annotation <- as.data.frame(colData(object))
     color_list <- sample_annotation_to_colors.default(
-        sample_annotation = sample_annotation,
+        x = sample_annotation,
         ...
     )
     return(color_list)
