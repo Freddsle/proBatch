@@ -59,7 +59,7 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
         df_long <- unlog_df(df_long, log_base = log_base, offset = offset, measure_col = measure_col)
     }
 
-    # Filter out features with ≤ 2 total measurements
+    # Filter out features with <= 2 total measurements
     if (!is.null(batch_col)) {
         df_long <- df_long %>%
             group_by(!!sym(feature_id_col), !!sym(batch_col), !!sym(biospecimen_id_col)) %>%
@@ -74,7 +74,7 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
     if (any(df_long$n_total <= 2)) {
         # how many features have 2 or less measurements? unique peptides
         n_peptides <- df_long %>%
-            filter(n_total <= 2) %>%
+            filter(.data$n_total <= 2) %>%
             distinct(!!sym(feature_id_col)) %>%
             nrow()
         message(sprintf(
@@ -82,7 +82,7 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
             n_peptides
         ))
         df_long <- df_long %>%
-            filter(n_total > 2)
+            filter(.data$n_total > 2)
     }
     df_long$n_total <- NULL
 
@@ -95,11 +95,11 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
     perbatch_groups <- c(base_group, batch_col, step_group) %>% compact()
     total_groups <- c(base_group, step_group) %>% compact()
 
-    # Compute per‐batch CV (if batch_col given)
+    # Compute per-batch CV (if batch_col given)
     if (!is.null(batch_col)) {
         df_long <- compute_cv(df_long, measure_col, perbatch_groups, "CV_perBatch")
     } else {
-        warning("`batch_col` not specified – skipping per‐batch CV, only total CV will be calculated.")
+        warning("`batch_col` not specified - skipping per-batch CV, only total CV will be calculated.")
     }
     # Compute total CV
     df_long <- compute_cv(df_long, measure_col, total_groups, "CV_total")

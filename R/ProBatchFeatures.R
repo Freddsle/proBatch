@@ -193,7 +193,7 @@ pb_register_step <- function(name, fun) {
         stop(
             "Conflicting colData values in columns: ",
             paste(common_cols[bad], collapse = ", "),
-            " (assay ‘", from_assay, "’ vs incoming). ",
+            " (assay '", from_assay, "' vs incoming). ",
             "\nType in object: ", paste(type_in_object, collapse = ", "),
             "\nType in assay: ", paste(type_in_assay, collapse = ", "),
             "\nCommon colData columns overlap: ", paste(common_cols, collapse = ", "),
@@ -301,6 +301,13 @@ ProBatchFeatures <- function(
 }
 
 #' Construct from LONG df via proBatch::long_to_matrix
+#' @param df_long Data frame in long format with feature/sample/value columns.
+#' @param sample_annotation Optional sample metadata aligned to the samples.
+#' @param feature_id_col Column containing feature identifiers in `df_long`.
+#' @param sample_id_col Column containing sample identifiers in `df_long`.
+#' @param measure_col Column with the measured intensity values.
+#' @param level Character label describing the biological level of the assay.
+#' @param name Optional pipeline name; defaults to `<level>::raw` when missing.
 #' @return A `ProBatchFeatures` object constructed from the long-format input.
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
@@ -1094,7 +1101,7 @@ setMethod("show", "ProBatchFeatures", function(object) {
         cat("  Processing chain: unprocessed data (raw) \n")
     } else {
         cat("  Processing chain:\n")
-        ch_lines <- paste(capture.output(print(noquote(object@chain))), collapse = "; ")
+        ch_lines <- paste(utils::capture.output(print(noquote(object@chain))), collapse = "; ")
         cat("  ", ch_lines, "\n", sep = "")
     }
     if (nrow(log)) {
@@ -1109,7 +1116,7 @@ setMethod("show", "ProBatchFeatures", function(object) {
         }
         from_lp <- .split_level_pipe(log$from)
         to_lp <- .split_level_pipe(log$to)
-        levels <- unique(na.omit(c(from_lp$level, to_lp$level)))
+        levels <- unique(stats::na.omit(c(from_lp$level, to_lp$level)))
 
         n_tokens <- function(s) length(strsplit(s, "_on_", fixed = TRUE)[[1]])
 
