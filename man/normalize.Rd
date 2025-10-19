@@ -23,7 +23,13 @@ quantile_normalize_df(
   keep_all = "default"
 )
 
-normalize_sample_medians_dm(data_matrix)
+normalize_sample_medians_dm(
+  data_matrix,
+  sample_annotation = NULL,
+  sample_id_col = "FullRunName",
+  group_col = NULL,
+  inside_batch = FALSE
+)
 
 normalize_sample_medians_df(
   df_long,
@@ -33,7 +39,10 @@ normalize_sample_medians_df(
   no_fit_imputed = FALSE,
   qual_col = NULL,
   qual_value = 2,
-  keep_all = "default"
+  keep_all = "default",
+  sample_annotation = NULL,
+  group_col = NULL,
+  inside_batch = FALSE
 )
 
 normalize_data_dm(
@@ -94,6 +103,16 @@ value for imputed values (requant values).}
 
 \item{keep_all}{when transforming the data (normalize, correct) - acceptable
 values: all/default/minimal (which set of columns be kept).}
+
+\item{sample_annotation}{optional data frame with sample-level metadata
+used to support within-batch normalization for data frames or matrices.}
+
+\item{group_col}{character(1); column in `sample_annotation` (or `df_long`)
+identifying batches/centers for within-batch normalization.}
+
+\item{inside_batch}{logical; when `TRUE`, perform median centering within
+each level of `group_col` after excluding rows that are entirely `NA`
+within the corresponding subset.}
 
 \item{normalize_func}{global batch normalization method
 (`quantile` or `MedianCentering`)}

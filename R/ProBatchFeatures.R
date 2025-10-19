@@ -82,10 +82,18 @@ setValidity("ProBatchFeatures", function(object) {
     # sensible defaults; replace with proBatch functions if you prefer
     reg$log2 <- function(m, pseudo = 1) log2(m + pseudo)
     reg$log <- function(m, base = exp(1), pseudo = 1) log(m + pseudo, base = base)
-    reg$medianNorm <- function(m) {
-        # center each sample by its median
-        med <- apply(m, 2, median, na.rm = TRUE)
-        sweep(m, 2, med, FUN = "-")
+    reg$medianNorm <- function(m,
+                               sample_annotation = NULL,
+                               sample_id_col = "FullRunName",
+                               group_col = NULL,
+                               inside_batch = FALSE) {
+        normalize_sample_medians_dm(
+            data_matrix = m,
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
+            group_col = group_col,
+            inside_batch = inside_batch
+        )
     }
     reg
 })

@@ -19,6 +19,13 @@
 #' @param log_base whether to log transform data matrix
 #' before normalization (e.g. `NULL`, `2` or `10`)
 #' @param offset small positive number to prevent 0 conversion to \code{-Inf}
+#' @param sample_annotation optional data frame with sample-level metadata
+#'   used to support within-batch normalization for data frames or matrices.
+#' @param group_col character(1); column in `sample_annotation` (or `df_long`)
+#'   identifying batches/centers for within-batch normalization.
+#' @param inside_batch logical; when `TRUE`, perform median centering within
+#'   each level of `group_col` after excluding rows that are entirely `NA`
+#'   within the corresponding subset.
 #'
 #' @return the data in the same format as input (\code{data_matrix} or
 #' \code{df_long}).
@@ -143,20 +150,111 @@ quantile_normalize_df <- function(df_long,
 #' @export
 #' @rdname normalize
 #'
-normalize_sample_medians_dm <- function(data_matrix) {
-    df_long <- matrix_to_long(
-        data_matrix,
-        feature_id_col = "peptide_group_label",
-        measure_col = "Intensity",
-        sample_id_col = "FullRunName"
+normalize_sample_medians_dm <- function(data_matrix,
+                                        sample_annotation = NULL,
+                                        sample_id_col = "FullRunName",
+                                        group_col = NULL,
+                                        inside_batch = FALSE) {
+    norm_res <- .pb_median_center_matrix(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        group_col = group_col,
+        inside_batch = inside_batch
     )
-    normalized_df <- normalize_sample_medians_df(
-        df_long,
-        sample_id_col = "FullRunName",
-        measure_col = "Intensity"
+    norm_res$matrix
+}
+
+.pb_median_center_matrix <- function(data_matrix,
+                                     sample_annotation = NULL,
+                                     sample_id_col = "FullRunName",
+                                     group_col = NULL,
+                                     inside_batch = FALSE) {
+    if (!is.matrix(data_matrix)) {
+        data_matrix <- as.matrix(data_matrix)
+    }
+    if (!inside_batch) {
+        sample_medians <- apply(data_matrix, 2, median, na.rm = TRUE)
+        global_median <- median(data_matrix, na.rm = TRUE)
+        if (is.na(global_median)) {
+            return(list(
+                matrix = data_matrix,
+                sample_medians = sample_medians,
+                reference_medians = rep(NA_real_, length(sample_medians))
+            ))
+        }
+        adjustments <- global_median - sample_medians
+        adjustments[is.na(adjustments)] <- 0
+        centered <- sweep(data_matrix, 2, adjustments, FUN = "+")
+        reference_medians <- rep(global_median, length(sample_medians))
+        return(list(
+            matrix = centered,
+            sample_medians = sample_medians,
+            reference_medians = reference_medians
+        ))
+    }
+
+    if (is.null(group_col) || !nzchar(group_col)) {
+        stop("`group_col` must be provided when `inside_batch = TRUE`.")
+    }
+    if (is.null(sample_annotation)) {
+        stop("`sample_annotation` must be provided when `inside_batch = TRUE`.")
+    }
+    sample_annotation <- as.data.frame(sample_annotation)
+    if (!(sample_id_col %in% names(sample_annotation))) {
+        stop("`sample_id_col` not found in supplied `sample_annotation`.")
+    }
+    if (!(group_col %in% names(sample_annotation))) {
+        stop("`group_col` not found in supplied `sample_annotation`.")
+    }
+    sa_unique <- sample_annotation %>%
+        select(dplyr::all_of(c(sample_id_col, group_col))) %>%
+        distinct()
+    if (anyDuplicated(sa_unique[[sample_id_col]])) {
+        dup_ids <- unique(sa_unique[[sample_id_col]][duplicated(sa_unique[[sample_id_col]])])
+        stop("Duplicate entries for samples in `sample_annotation`: ", paste(dup_ids, collapse = ", "))
+    }
+    id_match <- match(colnames(data_matrix), sa_unique[[sample_id_col]])
+    if (any(is.na(id_match))) {
+        missing_ids <- colnames(data_matrix)[is.na(id_match)]
+        stop("Missing annotations for samples: ", paste(missing_ids, collapse = ", "))
+    }
+    groups <- sa_unique[[group_col]][id_match]
+    if (any(is.na(groups))) {
+        stop("`group_col` must not contain NA values when `inside_batch = TRUE`.")
+    }
+
+    centered <- data_matrix
+    sample_medians <- rep(NA_real_, ncol(data_matrix))
+    reference_medians <- rep(NA_real_, ncol(data_matrix))
+    split_indices <- split(seq_along(groups), groups, drop = FALSE)
+
+    for (idx in split_indices) {
+        if (!length(idx)) {
+            next
+        }
+        sub_matrix <- data_matrix[, idx, drop = FALSE]
+        valid_rows <- rowSums(!is.na(sub_matrix)) > 0
+        if (!any(valid_rows)) {
+            next
+        }
+        medians <- apply(sub_matrix[valid_rows, , drop = FALSE], 2, median, na.rm = TRUE)
+        global_median <- median(sub_matrix[valid_rows, , drop = FALSE], na.rm = TRUE)
+        if (is.na(global_median)) {
+            next
+        }
+        adjustments <- global_median - medians
+        adjustments[is.na(adjustments)] <- 0
+        centered[, idx] <- sweep(sub_matrix, 2, adjustments, FUN = "+")
+        sample_medians[idx] <- medians
+        reference_medians[idx] <- global_median
+    }
+
+    list(
+        matrix = centered,
+        sample_medians = sample_medians,
+        reference_medians = reference_medians
     )
-    normalized_matrix <- long_to_matrix(normalized_df)
-    return(normalized_matrix)
 }
 
 #'
@@ -169,42 +267,134 @@ normalize_sample_medians_df <- function(df_long,
                                         no_fit_imputed = FALSE,
                                         qual_col = NULL,
                                         qual_value = 2,
-                                        keep_all = "default") {
+                                        keep_all = "default",
+                                        sample_annotation = NULL,
+                                        group_col = NULL,
+                                        inside_batch = FALSE) {
+    df_processed <- df_long
     if (no_fit_imputed) {
-        if (!(qual_col %in% names(df_long))) {
+        if (!(qual_col %in% names(df_processed))) {
             stop("imputed value flag column (qual_col) is not in the data frame!")
         }
         message("removing imputed values (requants) from the matrix")
-        df_long <- df_long %>%
+        df_processed <- df_processed %>%
             mutate(!!sym(measure_col) := ifelse(!!sym(qual_col) == qual_value,
                 NA, !!sym(measure_col)
             ))
     } else {
-        if (!is.null(qual_col) && (qual_col %in% names(df_long))) {
+        if (!is.null(qual_col) && (qual_col %in% names(df_processed))) {
             warning("imputed value (requant) column is in the data, are you sure you
               want to use imputed (requant) values in sample median inference?")
         }
     }
 
-    normalized_df <- df_long %>%
-        group_by_at(vars(one_of(sample_id_col))) %>%
-        mutate(median_run = median(!!(sym(measure_col)), na.rm = TRUE)) %>%
-        ungroup()
-
     old_measure_col <- paste("preNorm", measure_col, sep = "_")
 
+    if (!inside_batch) {
+        normalized_df <- df_processed %>%
+            group_by_at(vars(one_of(sample_id_col))) %>%
+            mutate(median_run = median(!!sym(measure_col), na.rm = TRUE)) %>%
+            ungroup() %>%
+            mutate(
+                median_global = median(!!sym(measure_col), na.rm = TRUE),
+                !!(old_measure_col) := !!(sym(measure_col))
+            ) %>%
+            mutate(diff_norm = median_global - median_run) %>%
+            mutate(!!(sym(measure_col)) := !!(sym(measure_col)) + diff_norm)
+
+        default_cols <- names(normalized_df)
+        minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
+
+        if (!is.null(qual_col) && qual_col %in% names(normalized_df)) {
+            minimal_cols <- c(minimal_cols, qual_col)
+        }
+        normalized_df <- subset_keep_cols(
+            normalized_df,
+            keep_all,
+            default_cols = default_cols,
+            minimal_cols = minimal_cols
+        )
+
+        return(normalized_df)
+    }
+
+    if (is.null(group_col) || !nzchar(group_col)) {
+        stop("`group_col` must be provided when `inside_batch = TRUE`.")
+    }
+
+    grouping_annotation <- sample_annotation
+    if (!is.null(grouping_annotation)) {
+        grouping_annotation <- as.data.frame(grouping_annotation)
+        if (!(group_col %in% names(grouping_annotation))) {
+            stop("`group_col` not found in supplied `sample_annotation`.")
+        }
+        grouping_annotation <- grouping_annotation %>%
+            select(dplyr::all_of(c(sample_id_col, group_col))) %>%
+            distinct()
+    } else {
+        if (!(group_col %in% names(df_processed))) {
+            stop("Provide `sample_annotation` or include `group_col` in `df_long` when `inside_batch = TRUE`.")
+        }
+        grouping_annotation <- df_processed %>%
+            select(dplyr::all_of(c(sample_id_col, group_col))) %>%
+            distinct()
+    }
+
+    data_matrix <- long_to_matrix(
+        df_processed,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col,
+        sample_id_col = sample_id_col
+    )
+
+    norm_res <- .pb_median_center_matrix(
+        data_matrix = data_matrix,
+        sample_annotation = grouping_annotation,
+        sample_id_col = sample_id_col,
+        group_col = group_col,
+        inside_batch = inside_batch
+    )
+    normalized_matrix <- norm_res$matrix
+    sample_medians <- norm_res$sample_medians
+    reference_medians <- norm_res$reference_medians
+
+    normalized_df <- matrix_to_long(
+        normalized_matrix,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col,
+        sample_id_col = sample_id_col
+    )
+
+    df_processed <- df_processed %>%
+        rename(!!(old_measure_col) := !!(sym(measure_col)))
+
+    median_info <- data.frame(
+        sample_id_temp = colnames(normalized_matrix),
+        median_run = sample_medians,
+        median_global = reference_medians,
+        stringsAsFactors = FALSE
+    )
+    names(median_info)[1] <- sample_id_col
+
     normalized_df <- normalized_df %>%
-        mutate(
-            median_global = median(!!(sym(measure_col)), na.rm = TRUE),
-            !!(old_measure_col) := !!(sym(measure_col))
-        ) %>%
-        mutate(diff_norm = median_global - median_run) %>%
-        mutate(!!(sym(measure_col)) := !!(sym(measure_col)) + diff_norm)
+        left_join(median_info, by = sample_id_col) %>%
+        mutate(diff_norm = median_global - median_run)
+
+    extra_cols <- setdiff(names(df_processed), names(normalized_df))
+    if (length(extra_cols)) {
+        keep_cols <- unique(c(feature_id_col, sample_id_col, extra_cols))
+        normalized_df <- normalized_df %>%
+            left_join(
+                df_processed %>%
+                    select(dplyr::all_of(keep_cols)),
+                by = c(feature_id_col, sample_id_col)
+            )
+    }
 
     default_cols <- names(normalized_df)
     minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
 
-    if (!is.null(qual_col) && (qual_col %in% names(normalized_df))) {
+    if (!is.null(qual_col) && qual_col %in% names(normalized_df)) {
         minimal_cols <- c(minimal_cols, qual_col)
     }
     normalized_df <- subset_keep_cols(
