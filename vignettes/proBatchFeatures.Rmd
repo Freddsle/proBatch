@@ -68,8 +68,6 @@ if (!requireNamespace("BiocManager", quietly = TRUE)) {
     install.packages("BiocManager")
 }
 BiocManager::install("proBatch")
-
-library(proBatch)
 ```
 
 ## Load required packages
@@ -310,7 +308,7 @@ plot_NA_heatmap(
 The remaining missingness is still structured by lab, which justifies
 the normalisation and batch-effect correction steps applied next.
 
-## Step 2 - log2\~transformation
+## Step 2 - log2-transformation
 
 Proteomics data is typically log-transformed to stabilize variance and
 make the data distribution more symmetric, which benefits many
