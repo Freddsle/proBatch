@@ -28,7 +28,9 @@ Helper for data transformation functions to consistently keep a
 predefined set of columns.
 }
 \examples{
+\dontrun{
 df <- data.frame(a = 1:3, b = 4:6, c = 7:9)
 subset_keep_cols(df, keep_all = "minimal", minimal_cols = c("a", "c"))
+}
 }
 \keyword{internal}
