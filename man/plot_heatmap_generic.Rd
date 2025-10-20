@@ -7,7 +7,7 @@
 \title{Plot the heatmap}
 \usage{
 \method{plot_heatmap_generic}{default}(
-  x,
+  data_matrix,
   column_annotation_df = NULL,
   row_annotation_df = NULL,
   col_ann_id_col = NULL,
@@ -30,7 +30,7 @@
 )
 
 \method{plot_heatmap_generic}{ProBatchFeatures}(
-  x,
+  data_matrix,
   pbf_name = NULL,
   column_annotation_df = NULL,
   row_annotation_df = NULL,
@@ -43,7 +43,7 @@
 )
 }
 \arguments{
-\item{x}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
+\item{data_matrix}{the matrix of data to be plotted}
 
 \item{column_annotation_df}{data frame annotating columns of
 \code{data_matrix}}
@@ -109,7 +109,7 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 
-\item{data_matrix}{the matrix of data to be plotted}
+\item{x}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
 }
 \value{
 pheatmap-type object

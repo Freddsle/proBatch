@@ -16,8 +16,7 @@
 #'  are actually numeric
 #' @param numeric_palette_type palette to be used for
 #' numeric values coloring (can be \code{'brewer' and 'viridis'})
-#' @param x Input object supplied to the generic (data frame or `ProBatchFeatures`).
-#' @param sample_annotation Deprecated alias for `x`.
+#' @param sample_annotation Input object supplied to the generic (data frame or `ProBatchFeatures`).
 #' @param ... Additional arguments forwarded to method implementations.
 #'
 #' @return list of colors for the selected annotation columns. Use
@@ -37,8 +36,7 @@
 #' @export
 #'
 #' @name sample_annotation_to_colors
-sample_annotation_to_colors.default <- function(x,
-                                                sample_annotation = NULL,
+sample_annotation_to_colors.default <- function(sample_annotation,
                                                 sample_id_col = "FullRunName",
                                                 factor_columns = NULL,
                                                 numeric_columns = NULL,
@@ -46,19 +44,10 @@ sample_annotation_to_colors.default <- function(x,
                                                 guess_factors = FALSE,
                                                 numeric_palette_type = "brewer",
                                                 ...) {
-    if (missing(x)) {
-        if (!is.null(sample_annotation)) {
-            x <- sample_annotation
-        } else {
-            stop("argument \"x\" is missing, with no default", call. = FALSE)
-        }
-    } else if (!is.null(sample_annotation)) {
-        warning(
-            "`sample_annotation` argument is ignored because `x` was supplied.",
-            call. = FALSE
-        )
+    if (missing(sample_annotation)) {
+        stop("argument \"sample_annotation\" is missing, with no default", call. = FALSE)
     }
-    sample_annotation <- as.data.frame(x)
+    sample_annotation <- as.data.frame(sample_annotation)
 
     # if factor_columns is NULL, add default columns
     if (is.null(factor_columns)) {
@@ -141,11 +130,10 @@ sample_annotation_to_colors.default <- function(x,
 #' @method sample_annotation_to_colors ProBatchFeatures
 #' @export
 sample_annotation_to_colors.ProBatchFeatures <- function(x, ...) {
-    object <- x # Use 'x' as per convention
-
+    object <- x # for clarity
     sample_annotation <- as.data.frame(colData(object))
     color_list <- sample_annotation_to_colors.default(
-        x = sample_annotation,
+        sample_annotation = sample_annotation,
         ...
     )
     return(color_list)
@@ -153,7 +141,7 @@ sample_annotation_to_colors.ProBatchFeatures <- function(x, ...) {
 
 #' Generic function for sample annotation to colors
 #' @export
-sample_annotation_to_colors <- function(x, ...) UseMethod("sample_annotation_to_colors")
+sample_annotation_to_colors <- function(sample_annotation, ...) UseMethod("sample_annotation_to_colors")
 
 map_numeric_colors_to_intervals <- function(color_vector, col_values) {
     breaks <- pretty(col_values)

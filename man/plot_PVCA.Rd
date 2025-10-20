@@ -7,7 +7,7 @@
 \title{Plot variance distribution by variable}
 \usage{
 \method{plot_PVCA}{default}(
-  x,
+  data_matrix,
   sample_annotation,
   feature_id_col = "peptide_group_label",
   sample_id_col = "FullRunName",
@@ -28,7 +28,7 @@
 )
 
 \method{plot_PVCA}{ProBatchFeatures}(
-  x,
+  data_matrix,
   pbf_name = NULL,
   sample_annotation = NULL,
   feature_id_col = "peptide_group_label",
@@ -40,7 +40,10 @@
 )
 }
 \arguments{
-\item{x}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
+\item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
+feature IDs in rownames and file/sample names as colnames.
+See "example_proteome_matrix" for more details (to call the description,
+use \code{help("example_proteome_matrix")})}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -102,6 +105,8 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 \item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
+
+\item{x}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
 }
 \value{
 \code{ggplot} object with the plot

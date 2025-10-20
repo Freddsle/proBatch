@@ -7,9 +7,8 @@
 \title{plot PCA plot}
 \usage{
 \method{plot_PCA}{default}(
-  x,
+  data_matrix,
   sample_annotation,
-  data_matrix = NULL,
   feature_id_col = "peptide_group_label",
   sample_id_col = "FullRunName",
   color_by = "MS_batch",
@@ -30,7 +29,7 @@
 )
 
 \method{plot_PCA}{ProBatchFeatures}(
-  x,
+  data_matrix,
   pbf_name = NULL,
   sample_annotation = NULL,
   sample_id_col = "FullRunName",
@@ -41,18 +40,16 @@
 )
 }
 \arguments{
-\item{x}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
+\item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
+feature IDs in rownames and file/sample names as colnames.
+See "example_proteome_matrix" for more details (to call the description,
+use \code{help("example_proteome_matrix")})}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
   \item biological covariates
   \item technical covariates (batches etc) }.
   See \code{help("example_sample_annotation")}}
-
-\item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
@@ -106,6 +103,8 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 \item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
+
+\item{x}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
 }
 \value{
 ggplot scatterplot colored by factor levels of column specified in

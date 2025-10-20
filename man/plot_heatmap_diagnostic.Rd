@@ -7,7 +7,7 @@
 \title{Plot the heatmap of samples (cols) vs features (rows)}
 \usage{
 \method{plot_heatmap_diagnostic}{default}(
-  x,
+  data_matrix,
   sample_annotation = NULL,
   sample_id_col = "FullRunName",
   factors_to_plot = NULL,
@@ -30,7 +30,7 @@
 )
 
 \method{plot_heatmap_diagnostic}{ProBatchFeatures}(
-  x,
+  data_matrix,
   pbf_name = NULL,
   sample_annotation = NULL,
   sample_id_col = "FullRunName",
@@ -43,7 +43,7 @@
 )
 }
 \arguments{
-\item{x}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
+\item{data_matrix}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -110,7 +110,7 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{...}{other parameters of \code{link[pheatmap]{pheatmap}}}
 
-\item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
+\item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
 
 \item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
 

@@ -7,7 +7,7 @@
 \title{cluster the data matrix to visually inspect which confounder dominates}
 \usage{
 \method{plot_hierarchical_clustering}{default}(
-  x,
+  data_matrix,
   sample_annotation,
   sample_id_col = "FullRunName",
   color_list = NULL,
@@ -26,7 +26,7 @@
 )
 
 \method{plot_hierarchical_clustering}{ProBatchFeatures}(
-  x,
+  data_matrix,
   pbf_name = NULL,
   sample_annotation = NULL,
   sample_id_col = "FullRunName",
@@ -35,7 +35,7 @@
 )
 }
 \arguments{
-\item{x}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
+\item{data_matrix}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -86,8 +86,6 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 \code{WGCNA} package}
 
 \item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
-
-\item{data_matrix}{Deprecated alias for \code{x}.}
 }
 \value{
 No return

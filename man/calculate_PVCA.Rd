@@ -7,7 +7,7 @@
 \title{Calculate variance distribution by variable}
 \usage{
 \method{calculate_PVCA}{default}(
-  x,
+  data_matrix,
   sample_annotation,
   feature_id_col = "peptide_group_label",
   sample_id_col = "FullRunName",
@@ -19,7 +19,7 @@
 )
 
 \method{calculate_PVCA}{ProBatchFeatures}(
-  x,
+  data_matrix,
   pbf_name = NULL,
   sample_annotation = NULL,
   feature_id_col = "peptide_group_label",
@@ -28,7 +28,10 @@
 )
 }
 \arguments{
-\item{x}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
+\item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
+feature IDs in rownames and file/sample names as colnames.
+See "example_proteome_matrix" for more details (to call the description,
+use \code{help("example_proteome_matrix")})}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -60,6 +63,8 @@ excluded.}
 \item{...}{Additional arguments forwarded between methods.}
 
 \item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
+
+\item{x}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
 }
 \value{
 data frame of weights of Principal Variance Components

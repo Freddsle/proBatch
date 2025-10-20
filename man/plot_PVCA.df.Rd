@@ -7,7 +7,7 @@
 \title{plot PVCA, when the analysis is completed}
 \usage{
 \method{plot_PVCA}{df.default}(
-  x,
+  df,
   colors_for_bars = NULL,
   filename = NULL,
   width = NA,
@@ -20,7 +20,7 @@
 )
 
 \method{plot_PVCA.df}{ProBatchFeatures}(
-  x,
+  df,
   pbf_name = NULL,
   sample_annotation = NULL,
   feature_id_col = "peptide_group_label",
@@ -39,7 +39,7 @@
 )
 }
 \arguments{
-\item{x}{Data frame of PVCA weights, typically the result of `calculate_PVCA()`.}
+\item{df}{Data frame of PVCA weights, typically the result of `calculate_PVCA()`.}
 
 \item{colors_for_bars}{four-item color vector, specifying colors for the
 following categories: c('residual', 'biological', 'biol:techn',
@@ -65,7 +65,7 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{...}{Additional arguments forwarded to `prepare_PVCA_df()`.}
 
-\item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
+\item{pbf_name}{Assay name(s) used when `df` is a `ProBatchFeatures`.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
