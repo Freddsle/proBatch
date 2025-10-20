@@ -17,6 +17,7 @@
 #' @param numeric_palette_type palette to be used for
 #' numeric values coloring (can be \code{'brewer' and 'viridis'})
 #' @param x Input object supplied to the generic (data frame or `ProBatchFeatures`).
+#' @param sample_annotation Deprecated alias for `x`.
 #' @param ... Additional arguments forwarded to method implementations.
 #'
 #' @return list of colors for the selected annotation columns. Use
@@ -37,6 +38,7 @@
 #'
 #' @name sample_annotation_to_colors
 sample_annotation_to_colors.default <- function(x,
+                                                sample_annotation = NULL,
                                                 sample_id_col = "FullRunName",
                                                 factor_columns = NULL,
                                                 numeric_columns = NULL,
@@ -44,6 +46,18 @@ sample_annotation_to_colors.default <- function(x,
                                                 guess_factors = FALSE,
                                                 numeric_palette_type = "brewer",
                                                 ...) {
+    if (missing(x)) {
+        if (!is.null(sample_annotation)) {
+            x <- sample_annotation
+        } else {
+            stop("argument \"x\" is missing, with no default", call. = FALSE)
+        }
+    } else if (!is.null(sample_annotation)) {
+        warning(
+            "`sample_annotation` argument is ignored because `x` was supplied.",
+            call. = FALSE
+        )
+    }
     sample_annotation <- as.data.frame(x)
 
     # if factor_columns is NULL, add default columns

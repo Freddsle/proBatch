@@ -9,6 +9,7 @@
 \method{plot_PCA}{default}(
   x,
   sample_annotation,
+  data_matrix = NULL,
   feature_id_col = "peptide_group_label",
   sample_id_col = "FullRunName",
   color_by = "MS_batch",
@@ -47,6 +48,11 @@
   \item biological covariates
   \item technical covariates (batches etc) }.
   See \code{help("example_sample_annotation")}}
+
+\item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
+feature IDs in rownames and file/sample names as colnames.
+See "example_proteome_matrix" for more details (to call the description,
+use \code{help("example_proteome_matrix")})}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide

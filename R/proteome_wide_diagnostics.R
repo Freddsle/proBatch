@@ -13,6 +13,7 @@
 #' @param ... other parameters of \code{plotDendroAndColors} from
 #' \code{WGCNA} package
 #' @param x Input object: matrix-like data or a `ProBatchFeatures` instance.
+#' @param data_matrix Deprecated alias for \code{x}.
 #' @param pbf_name Assay name(s) used when `x` is a `ProBatchFeatures`.
 #'
 #' @name plot_hierarchical_clustering
@@ -1304,7 +1305,9 @@ plot_PVCA.df <- function(x, ...) UseMethod("plot_PVCA.df")
 #'
 #' @seealso \code{\link[ggfortify]{autoplot.pca_common}},
 #' \code{\link[ggplot2]{ggplot}}
-plot_PCA.default <- function(x, sample_annotation,
+plot_PCA.default <- function(x,
+                             sample_annotation,
+                             data_matrix = NULL,
                              feature_id_col = "peptide_group_label",
                              sample_id_col = "FullRunName",
                              color_by = "MS_batch",
@@ -1317,6 +1320,15 @@ plot_PCA.default <- function(x, sample_annotation,
                              theme = "classic",
                              base_size = 10, point_size = 3, point_alpha = 0.8,
                              ...) {
+    if (missing(x)) {
+        if (!is.null(data_matrix)) {
+            x <- data_matrix
+        } else {
+            stop("argument \"x\" is missing, with no default", call. = FALSE)
+        }
+    } else if (!is.null(data_matrix)) {
+        warning("`data_matrix` argument is ignored because `x` was supplied.", call. = FALSE)
+    }
     data_matrix <- x
     df_long <- matrix_to_long(data_matrix, sample_id_col = sample_id_col)
     df_long <- check_sample_consistency(sample_annotation, sample_id_col, df_long,

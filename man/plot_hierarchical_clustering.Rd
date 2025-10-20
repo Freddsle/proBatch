@@ -86,6 +86,8 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 \code{WGCNA} package}
 
 \item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
+
+\item{data_matrix}{Deprecated alias for \code{x}.}
 }
 \value{
 No return

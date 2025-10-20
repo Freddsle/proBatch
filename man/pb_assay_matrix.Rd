@@ -36,7 +36,7 @@ rm(example_ecoli_data)
 pbf <- ProBatchFeatures(
     data_matrix = all_precursors,
     sample_annotation = all_metadata,
-    sample_id_col = "FullRunName",
+    sample_id_col = "Run",
     level = "peptide"
 )
 

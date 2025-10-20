@@ -8,6 +8,7 @@
 \usage{
 \method{sample_annotation_to_colors}{default}(
   x,
+  sample_annotation = NULL,
   sample_id_col = "FullRunName",
   factor_columns = NULL,
   numeric_columns = NULL,
@@ -23,6 +24,8 @@ sample_annotation_to_colors(x, ...)
 }
 \arguments{
 \item{x}{Input object supplied to the generic (data frame or `ProBatchFeatures`).}
+
+\item{sample_annotation}{Deprecated alias for `x`.}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
