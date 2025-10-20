@@ -55,26 +55,27 @@
 #' @seealso [correct_batch_effects()], [RUVIIIC::RUVIII_C()]
 #' @export
 correct_with_RUVIII_C <- function(
-    x,
-    sample_annotation,
-    feature_id_col = "peptide_group_label",
-    measure_col = "Intensity",
-    sample_id_col = "FullRunName",
-    replicate_col,
-    negative_control_features,
-    k,
-    format = c("long", "wide"),
-    keep_all = "default",
-    version = c("CPP", "R"),
-    to_correct = NULL,
-    with_extra = FALSE,
-    with_alpha = FALSE,
-    with_w = FALSE,
-    progress = TRUE,
-    use_pseudorep = FALSE,
-    prps_group_cols = NULL,
-    rep_force = FALSE,
-    ...) {
+  x,
+  sample_annotation,
+  feature_id_col = "peptide_group_label",
+  measure_col = "Intensity",
+  sample_id_col = "FullRunName",
+  replicate_col,
+  negative_control_features,
+  k,
+  format = c("long", "wide"),
+  keep_all = "default",
+  version = c("CPP", "R"),
+  to_correct = NULL,
+  with_extra = FALSE,
+  with_alpha = FALSE,
+  with_w = FALSE,
+  progress = TRUE,
+  use_pseudorep = FALSE,
+  prps_group_cols = NULL,
+  rep_force = FALSE,
+  ...
+) {
     .pb_requireNamespace("RUVIIIC")
     format <- match.arg(format)
     version <- match.arg(version)
@@ -171,7 +172,8 @@ correct_with_RUVIII_C <- function(
 }
 
 .check_ruviiic_inputs <- function(
-    replicate_col, negative_control_features, k) {
+  replicate_col, negative_control_features, k
+) {
     if (missing(replicate_col) || is.null(replicate_col) || !nzchar(replicate_col)) {
         stop("replicate_col must be provided and non-empty.")
     }
@@ -188,22 +190,23 @@ correct_with_RUVIII_C <- function(
 }
 
 .ruviiic_matrix_step <- function(
-    data_matrix,
-    sample_annotation,
-    sample_id_col = "FullRunName",
-    replicate_col,
-    negative_control_features,
-    k,
-    version = c("CPP", "R"),
-    to_correct = NULL,
-    with_extra = FALSE,
-    with_alpha = FALSE,
-    with_w = FALSE,
-    progress = TRUE,
-    use_pseudorep = FALSE,
-    prps_group_cols = NULL,
-    rep_force = FALSE,
-    ...) {
+  data_matrix,
+  sample_annotation,
+  sample_id_col = "FullRunName",
+  replicate_col,
+  negative_control_features,
+  k,
+  version = c("CPP", "R"),
+  to_correct = NULL,
+  with_extra = FALSE,
+  with_alpha = FALSE,
+  with_w = FALSE,
+  progress = TRUE,
+  use_pseudorep = FALSE,
+  prps_group_cols = NULL,
+  rep_force = FALSE,
+  ...
+) {
     if (!is.matrix(data_matrix)) {
         data_matrix <- as.matrix(data_matrix)
     }
@@ -372,17 +375,18 @@ correct_with_RUVIII_C <- function(
 }
 
 .run_RUVIIIC_core <- function(
-    k,
-    Y,
-    M,
-    to_correct,
-    controls,
-    version = c("CPP", "R"),
-    with_extra = FALSE,
-    with_alpha = FALSE,
-    with_w = FALSE,
-    progress = TRUE,
-    ...) {
+  k,
+  Y,
+  M,
+  to_correct,
+  controls,
+  version = c("CPP", "R"),
+  with_extra = FALSE,
+  with_alpha = FALSE,
+  with_w = FALSE,
+  progress = TRUE,
+  ...
+) {
     version <- match.arg(version)
     RUVIIIC::RUVIII_C(
         k = k,
@@ -402,12 +406,12 @@ correct_with_RUVIII_C <- function(
 # --- internal helper: PRPS ids via greedy disjoint nearest-neighbor pairing ---
 # TODO: NOT TESTED YET! Use with caution.
 .prps_make_ids <- function(
-    data_matrix, # features x samples (double; with NAs)
-    sample_annotation, # data.frame aligned to samples
-    sample_id_col = "FullRunName",
-    group_cols = NULL, # biological grouping (e.g., "condition")
-    control_features = character(0) # features for similarity; fallback -> all
-    ) {
+  data_matrix, # features x samples (double; with NAs)
+  sample_annotation, # data.frame aligned to samples
+  sample_id_col = "FullRunName",
+  group_cols = NULL, # biological grouping (e.g., "condition")
+  control_features = character(0) # features for similarity; fallback -> all
+) {
     message(
         "PRPS: constructing pseudo-replicates based on within-group similarity",
         "This functionality is experimental; use with caution."

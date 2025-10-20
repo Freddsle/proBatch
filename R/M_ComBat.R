@@ -35,19 +35,20 @@
 #' head(corrected_wide)
 #' @export
 correct_with_mComBat <- function(
-    x, sample_annotation = NULL,
-    feature_id_col = "peptide_group_label",
-    measure_col = "Intensity",
-    sample_id_col = "FullRunName",
-    batch_col = "MS_batch",
-    format = c("long", "wide"),
-    covariates_cols = NULL,
-    fill_the_missing = NULL,
-    keep_all = "default",
-    no_fit_imputed = TRUE,
-    qual_col = NULL,
-    qual_value = NULL,
-    mComBat_center = NULL) {
+  x, sample_annotation = NULL,
+  feature_id_col = "peptide_group_label",
+  measure_col = "Intensity",
+  sample_id_col = "FullRunName",
+  batch_col = "MS_batch",
+  format = c("long", "wide"),
+  covariates_cols = NULL,
+  fill_the_missing = NULL,
+  keep_all = "default",
+  no_fit_imputed = TRUE,
+  qual_col = NULL,
+  qual_value = NULL,
+  mComBat_center = NULL
+) {
     # stop if mComBat_center is not provided when use_mComBat is TRUE
     if (is.null(mComBat_center)) {
         stop("mComBat_center must be specified when using correct_with_mComBat.")

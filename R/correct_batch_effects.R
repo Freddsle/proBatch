@@ -204,18 +204,19 @@ NULL
 #'
 #' @export
 center_feature_batch <- function(
-    x,
-    sample_annotation = NULL,
-    format = c("long", "wide"),
-    stat = c("medians", "means"),
-    sample_id_col = "FullRunName",
-    batch_col = "MS_batch",
-    feature_id_col = "peptide_group_label",
-    measure_col = "Intensity",
-    keep_all = "default",
-    no_fit_imputed = TRUE,
-    qual_col = NULL,
-    qual_value = NULL) {
+  x,
+  sample_annotation = NULL,
+  format = c("long", "wide"),
+  stat = c("medians", "means"),
+  sample_id_col = "FullRunName",
+  batch_col = "MS_batch",
+  feature_id_col = "peptide_group_label",
+  measure_col = "Intensity",
+  keep_all = "default",
+  no_fit_imputed = TRUE,
+  qual_col = NULL,
+  qual_value = NULL
+) {
     format <- match.arg(format)
     stat_in <- tolower(stat[1])
     stat_in <- switch(stat_in,
@@ -279,18 +280,19 @@ center_feature_batch <- function(
 }
 
 .center_feature_batch_df_core <- function(
-    df_long,
-    sample_annotation = NULL,
-    sample_id_col = "FullRunName",
-    batch_col = "MS_batch",
-    feature_id_col = "peptide_group_label",
-    measure_col = "Intensity",
-    keep_all = "default",
-    stat = c("median", "mean"),
-    no_fit_imputed = TRUE,
-    qual_col = NULL,
-    qual_value = NULL,
-    stat_names = c(batch = "median_batch", global = "median_global", diff = "diff_medians")) {
+  df_long,
+  sample_annotation = NULL,
+  sample_id_col = "FullRunName",
+  batch_col = "MS_batch",
+  feature_id_col = "peptide_group_label",
+  measure_col = "Intensity",
+  keep_all = "default",
+  stat = c("median", "mean"),
+  no_fit_imputed = TRUE,
+  qual_col = NULL,
+  qual_value = NULL,
+  stat_names = c(batch = "median_batch", global = "median_global", diff = "diff_medians")
+) {
     stat <- match.arg(stat)
     original_cols <- names(df_long)
 
@@ -579,21 +581,22 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
 #' @references Johnson WE et al. (2007) \emph{Biostatistics} 8(1):118–127; \emph{sva} vignette.
 #' @export
 correct_with_ComBat <- function(
-    x, sample_annotation = NULL,
-    feature_id_col = "peptide_group_label",
-    measure_col = "Intensity",
-    sample_id_col = "FullRunName",
-    batch_col = "MS_batch",
-    format = c("long", "wide"),
-    par.prior = TRUE,
-    covariates_cols = NULL,
-    fill_the_missing = NULL,
-    keep_all = "default",
-    no_fit_imputed = TRUE,
-    qual_col = NULL,
-    qual_value = NULL,
-    mComBat_center = NULL,
-    use_mComBat = FALSE) {
+  x, sample_annotation = NULL,
+  feature_id_col = "peptide_group_label",
+  measure_col = "Intensity",
+  sample_id_col = "FullRunName",
+  batch_col = "MS_batch",
+  format = c("long", "wide"),
+  par.prior = TRUE,
+  covariates_cols = NULL,
+  fill_the_missing = NULL,
+  keep_all = "default",
+  no_fit_imputed = TRUE,
+  qual_col = NULL,
+  qual_value = NULL,
+  mComBat_center = NULL,
+  use_mComBat = FALSE
+) {
     format <- match.arg(format)
 
     if (identical(format, "wide")) {
@@ -717,16 +720,17 @@ correct_with_ComBat <- function(
 #' @seealso \code{\link{removeBatchEffect}}
 #' @export
 correct_with_removeBatchEffect <- function(
-    x, sample_annotation,
-    feature_id_col = "peptide_group_label",
-    measure_col = "Intensity",
-    sample_id_col = "FullRunName",
-    batch_col = "MS_batch",
-    format = c("long", "wide"),
-    covariates_cols = NULL,
-    fill_the_missing = NULL,
-    keep_all = "default",
-    ...) {
+  x, sample_annotation,
+  feature_id_col = "peptide_group_label",
+  measure_col = "Intensity",
+  sample_id_col = "FullRunName",
+  batch_col = "MS_batch",
+  format = c("long", "wide"),
+  covariates_cols = NULL,
+  fill_the_missing = NULL,
+  keep_all = "default",
+  ...
+) {
     format <- match.arg(format)
 
     if (identical(format, "wide")) {
@@ -818,24 +822,25 @@ correct_with_removeBatchEffect <- function(
 #' @param discrete_func batch method name.
 #' @export
 correct_batch_effects <- function(
-    x, sample_annotation,
-    format = c("long", "wide"),
-    continuous_func = NULL,
-    discrete_func = c("MedianCentering", "MeanCentering", "ComBat", "removeBatchEffect"),
-    batch_col = "MS_batch",
-    feature_id_col = "peptide_group_label",
-    sample_id_col = "FullRunName",
-    measure_col = "Intensity",
-    order_col = "order",
-    keep_all = "default",
-    no_fit_imputed = TRUE,
-    qual_col = NULL,
-    qual_value = NULL,
-    fill_the_missing = NULL,
-    par.prior = TRUE,
-    covariates_cols = NULL,
-    min_measurements = 8,
-    ...) {
+  x, sample_annotation,
+  format = c("long", "wide"),
+  continuous_func = NULL,
+  discrete_func = c("MedianCentering", "MeanCentering", "ComBat", "removeBatchEffect"),
+  batch_col = "MS_batch",
+  feature_id_col = "peptide_group_label",
+  sample_id_col = "FullRunName",
+  measure_col = "Intensity",
+  order_col = "order",
+  keep_all = "default",
+  no_fit_imputed = TRUE,
+  qual_col = NULL,
+  qual_value = NULL,
+  fill_the_missing = NULL,
+  par.prior = TRUE,
+  covariates_cols = NULL,
+  min_measurements = 8,
+  ...
+) {
     format <- match.arg(format)
     discrete_func <- match.arg(discrete_func)
 

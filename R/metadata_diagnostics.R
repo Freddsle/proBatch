@@ -68,11 +68,12 @@ find_duplicated_columns.default <- function(x, ...) {
 #' @method find_duplicated_columns ProBatchFeatures
 #' @export
 find_duplicated_columns.ProBatchFeatures <- function(
-    x,
-    component = c("colData", "rowData"),
-    assay = NULL,
-    df = NULL,
-    ...) {
+  x,
+  component = c("colData", "rowData"),
+  assay = NULL,
+  df = NULL,
+  ...
+) {
     object <- x
 
     if (!is.null(df)) {
@@ -192,12 +193,13 @@ metadata_column_summary.default <- function(x, sort = TRUE, ...) {
 #' @method metadata_column_summary ProBatchFeatures
 #' @export
 metadata_column_summary.ProBatchFeatures <- function(
-    x,
-    component = c("colData", "rowData"),
-    assay = NULL,
-    df = NULL,
-    sort = TRUE,
-    ...) {
+  x,
+  component = c("colData", "rowData"),
+  assay = NULL,
+  df = NULL,
+  sort = TRUE,
+  ...
+) {
     object <- x
 
     if (!is.null(df)) {
@@ -288,15 +290,16 @@ filter_metadata_columns <- function(x, ...) {
 #' @method filter_metadata_columns default
 #' @export
 filter_metadata_columns.default <- function(
-    x,
-    duplicate_keep = c("first", "last", "pattern"),
-    duplicate_pattern = NULL,
-    pattern_ignore_case = TRUE,
-    pattern_fixed = FALSE,
-    min_non_na = NULL,
-    max_pct_na = NULL,
-    sort = FALSE,
-    ...) {
+  x,
+  duplicate_keep = c("first", "last", "pattern"),
+  duplicate_pattern = NULL,
+  pattern_ignore_case = TRUE,
+  pattern_fixed = FALSE,
+  min_non_na = NULL,
+  max_pct_na = NULL,
+  sort = FALSE,
+  ...
+) {
     if (!is.data.frame(x)) {
         x <- as.data.frame(x)
     }
@@ -414,12 +417,13 @@ filter_metadata_columns.default <- function(
 #' @method filter_metadata_columns ProBatchFeatures
 #' @export
 filter_metadata_columns.ProBatchFeatures <- function(
-    x,
-    component = c("colData", "rowData"),
-    assay = NULL,
-    df = NULL,
-    inplace = FALSE,
-    ...) {
+  x,
+  component = c("colData", "rowData"),
+  assay = NULL,
+  df = NULL,
+  inplace = FALSE,
+  ...
+) {
     object <- x
 
     if (!is.null(df)) {

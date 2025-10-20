@@ -36,19 +36,20 @@
 #'
 #' @export
 correct_with_NormAE <- function(
-    x,
-    sample_annotation,
-    sample_id_col = "FullRunName",
-    batch_col = "MS_batch",
-    feature_id_col = "peptide_group_label",
-    measure_col = "Intensity",
-    format = c("wide", "long"),
-    inj_order_col = NULL,
-    qc_col_name = NULL,
-    keep_all = "default",
-    python_env = NULL,
-    conda_env = NULL,
-    normae_args = list()) {
+  x,
+  sample_annotation,
+  sample_id_col = "FullRunName",
+  batch_col = "MS_batch",
+  feature_id_col = "peptide_group_label",
+  measure_col = "Intensity",
+  format = c("wide", "long"),
+  inj_order_col = NULL,
+  qc_col_name = NULL,
+  keep_all = "default",
+  python_env = NULL,
+  conda_env = NULL,
+  normae_args = list()
+) {
     format <- match.arg(format)
 
     if (!is.null(normae_args) && !is.list(normae_args)) {
@@ -114,14 +115,15 @@ correct_with_NormAE <- function(
 }
 
 .normae_matrix_step <- function(
-    data_matrix, sample_annotation,
-    sample_id_col = "FullRunName",
-    batch_col = "MS_batch",
-    inj_order_col = NULL,
-    qc_col_name = NULL,
-    python_env = NULL,
-    conda_env = NULL,
-    normae_args = list()) {
+  data_matrix, sample_annotation,
+  sample_id_col = "FullRunName",
+  batch_col = "MS_batch",
+  inj_order_col = NULL,
+  qc_col_name = NULL,
+  python_env = NULL,
+  conda_env = NULL,
+  normae_args = list()
+) {
     if (is.null(sample_annotation)) stop("sample_annotation must be provided for NormAE correction.")
     if (!is.matrix(data_matrix)) {
         data_matrix <- as.matrix(data_matrix)
@@ -155,15 +157,16 @@ correct_with_NormAE <- function(
 }
 
 .run_normae_core <- function(
-    data_matrix, # numeric matrix (features × samples)
-    sample_annotation,
-    sample_id_col,
-    batch_col,
-    inj_order_col = NULL,
-    qc_col_name = NULL,
-    python_env = NULL,
-    conda_env = NULL,
-    normae_args = list()) {
+  data_matrix, # numeric matrix (features × samples)
+  sample_annotation,
+  sample_id_col,
+  batch_col,
+  inj_order_col = NULL,
+  qc_col_name = NULL,
+  python_env = NULL,
+  conda_env = NULL,
+  normae_args = list()
+) {
     stopifnot(is.matrix(data_matrix))
     if (is.null(sample_annotation)) stop("sample_annotation is required.")
 
@@ -242,7 +245,7 @@ correct_with_NormAE <- function(
 
     # --- CLI args -------------------------------------------------------------
     cli_args <- c(
-        "--meta_csv",   normalizePath(meta_path, winslash = "/", mustWork = TRUE),
+        "--meta_csv", normalizePath(meta_path, winslash = "/", mustWork = TRUE),
         "--sample_csv", normalizePath(sample_path, winslash = "/", mustWork = TRUE),
         "--output_dir", normalizePath(out_dir, winslash = "/", mustWork = TRUE),
         "--batch_indicator_col", batch_col

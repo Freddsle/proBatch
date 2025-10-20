@@ -33,19 +33,20 @@
 #' @seealso \code{\link{correct_batch_effects}}, \code{\link{BERT::BERT}}
 #' @export
 correct_with_BERT <- function(
-    x, sample_annotation,
-    feature_id_col = "peptide_group_label",
-    measure_col = "Intensity",
-    sample_id_col = "FullRunName",
-    batch_col = "MS_batch",
-    format = c("long", "wide"),
-    bert_method = c("ComBat", "limma", "ref"),
-    combatmode = 1,
-    covariates_cols = NULL,
-    keep_all = "default",
-    cores = NULL,
-    BPPARAM = NULL,
-    ...) {
+  x, sample_annotation,
+  feature_id_col = "peptide_group_label",
+  measure_col = "Intensity",
+  sample_id_col = "FullRunName",
+  batch_col = "MS_batch",
+  format = c("long", "wide"),
+  bert_method = c("ComBat", "limma", "ref"),
+  combatmode = 1,
+  covariates_cols = NULL,
+  keep_all = "default",
+  cores = NULL,
+  BPPARAM = NULL,
+  ...
+) {
     .pb_requireNamespace("BERT")
     format <- match.arg(format)
     bert_method <- match.arg(bert_method)
@@ -106,16 +107,17 @@ correct_with_BERT <- function(
 }
 
 .run_BERT_core <- function(
-    data_matrix, # features × samples (numeric)
-    sample_annotation, # data.frame
-    sample_id_col,
-    batch_col,
-    covariates_cols = NULL,
-    bert_method = c("ComBat", "limma", "ref"),
-    combatmode = 1,
-    cores = NULL,
-    BPPARAM = NULL,
-    ...) {
+  data_matrix, # features × samples (numeric)
+  sample_annotation, # data.frame
+  sample_id_col,
+  batch_col,
+  covariates_cols = NULL,
+  bert_method = c("ComBat", "limma", "ref"),
+  combatmode = 1,
+  cores = NULL,
+  BPPARAM = NULL,
+  ...
+) {
     bert_method <- match.arg(bert_method)
 
     # Align SA to matrix columns (samples)
@@ -203,14 +205,15 @@ correct_with_BERT <- function(
 }
 
 .bert_matrix_step <- function(
-    data_matrix, sample_annotation,
-    sample_id_col, batch_col,
-    covariates_cols = NULL,
-    bert_method = c("ComBat", "limma", "ref"),
-    combatmode = 1,
-    cores = NULL,
-    BPPARAM = NULL,
-    ...) {
+  data_matrix, sample_annotation,
+  sample_id_col, batch_col,
+  covariates_cols = NULL,
+  bert_method = c("ComBat", "limma", "ref"),
+  combatmode = 1,
+  cores = NULL,
+  BPPARAM = NULL,
+  ...
+) {
     # Coerce to numeric matrix (do NOT impute; BERT tolerates NA)
     # But check that after NA removal it's still numeric and has >=2 features
     if (!is.matrix(data_matrix)) {
@@ -404,20 +407,21 @@ correct_with_PLSDA_batch <- function(x,
 
 
 .plsda_matrix_step <- function(
-    data_matrix, sample_annotation = NULL,
-    sample_id_col = "FullRunName",
-    batch_col = "MS_batch",
-    effect_col = NULL,
-    ncomp_trt = NULL,
-    ncomp_bat = NULL,
-    keepX_trt = NULL,
-    keepX_bat = NULL,
-    balance = "auto",
-    near_zero_var = TRUE,
-    max.iter = 500,
-    tol = 1e-06,
-    run_splsda = FALSE,
-    ...) {
+  data_matrix, sample_annotation = NULL,
+  sample_id_col = "FullRunName",
+  batch_col = "MS_batch",
+  effect_col = NULL,
+  ncomp_trt = NULL,
+  ncomp_bat = NULL,
+  keepX_trt = NULL,
+  keepX_bat = NULL,
+  balance = "auto",
+  near_zero_var = TRUE,
+  max.iter = 500,
+  tol = 1e-06,
+  run_splsda = FALSE,
+  ...
+) {
     # Coerce to numeric matrix
     if (!is.matrix(data_matrix)) {
         data_matrix <- as.matrix(data_matrix)
@@ -451,21 +455,22 @@ correct_with_PLSDA_batch <- function(x,
 
 # ---- internal core (matrix -> matrix), features x samples in/out ----
 .run_PLSDA_core <- function(
-    data_matrix, # features × samples (numeric)
-    sample_annotation, # data.frame
-    sample_id_col,
-    batch_col,
-    effect_col = NULL,
-    ncomp_trt = NULL,
-    ncomp_bat = NULL,
-    keepX_trt = NULL,
-    keepX_bat = NULL,
-    balance = "auto",
-    near_zero_var = TRUE,
-    max.iter = 500,
-    tol = 1e-06,
-    run_splsda = FALSE,
-    ...) {
+  data_matrix, # features × samples (numeric)
+  sample_annotation, # data.frame
+  sample_id_col,
+  batch_col,
+  effect_col = NULL,
+  ncomp_trt = NULL,
+  ncomp_bat = NULL,
+  keepX_trt = NULL,
+  keepX_bat = NULL,
+  balance = "auto",
+  near_zero_var = TRUE,
+  max.iter = 500,
+  tol = 1e-06,
+  run_splsda = FALSE,
+  ...
+) {
     stopifnot(is.matrix(data_matrix))
     if (is.null(sample_annotation)) stop("sample_annotation is required.")
     if (run_splsda) {

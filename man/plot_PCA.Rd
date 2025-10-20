@@ -24,8 +24,7 @@
   theme_name = "classic",
   base_size = 10,
   point_size = 3,
-  point_alpha = 0.8,
-  ...
+  point_alpha = 0.8
 )
 
 \method{plot_PCA}{ProBatchFeatures}(
@@ -94,13 +93,13 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{point_alpha}{Alpha transparency for plotted points.}
 
-\item{...}{Additional arguments forwarded to lower-level plotting helpers.}
-
 \item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
 
 \item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
+
+\item{...}{Additional arguments forwarded to lower-level plotting helpers.}
 }
 \value{
 ggplot scatterplot colored by factor levels of column specified in

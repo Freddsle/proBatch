@@ -171,7 +171,6 @@ importFrom(WGCNA,plotDendroAndColors)
 importFrom(WGCNA,standardColors)
 importFrom(corrplot,corrplot.mixed)
 importFrom(data.table,setnames)
-<<<<<<< HEAD
 importFrom(dplyr,across)
 importFrom(dplyr,all_of)
 importFrom(dplyr,any_of)
@@ -181,8 +180,6 @@ importFrom(dplyr,rename)
 importFrom(dplyr,select)
 importFrom(dplyr,ungroup)
 importFrom(ggplotify,as.ggplot)
-=======
->>>>>>> main
 importFrom(grDevices,colorRampPalette)
 importFrom(grDevices,dev.off)
 importFrom(grDevices,pdf)

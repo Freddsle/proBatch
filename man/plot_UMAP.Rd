@@ -68,6 +68,8 @@ where the filenames (colnames of the \code{data_matrix} are found).}
 
 \item{color_by}{column name (as in \code{sample_annotation}) to color by}
 
+\item{shape_by}{Optional column used for point shapes in the PCA plot.}
+
 \item{n_neighbors}{size of the local neighbourhood used by UMAP.}
 
 \item{min_dist}{minimum distance between embedded points.}
@@ -89,6 +91,10 @@ vector doesn't need to be named.}
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
+\item{point_size}{Point size supplied to `ggplot2::geom_point()`.}
+
+\item{point_alpha}{Alpha transparency for plotted points.}
+
 \item{random_state}{optional integer passed to `config$random_state` for
 reproducibility.}
 
@@ -100,6 +106,8 @@ embedding (forwarded to the UMAP configuration when supplied).}
 
 \item{...}{additional arguments forwarded to `umap::umap()` (default method)
 or the respective default method when called on `ProBatchFeatures`.}
+
+\item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
 
 \item{return_gridExtra}{logical; when `TRUE` and plotting multiple assays,
 return a list containing the arranged grob along with the individual

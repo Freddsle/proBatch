@@ -92,6 +92,8 @@ workflows. Defaults to \code{FALSE} for the default method.}
 \item{...}{other parameters of \code{plotDendroAndColors} from
 \code{WGCNA} package}
 
+\item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
+
 \item{return_gridExtra}{logical; when plotting multiple assays from a
 `ProBatchFeatures` object, returning \code{TRUE} provides a list with the
 arranged grob and individual plots (see `gridExtra::arrangeGrob`). Ignored
@@ -99,7 +101,6 @@ by the default method.}
 
 \item{plot_ncol}{optional integer controlling the number of columns when
 arranging multiple assays. Ignored by the default method.}
-\item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
 }
 \value{
 For the default method, either `NULL` (when relying on base

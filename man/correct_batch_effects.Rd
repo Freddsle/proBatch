@@ -4,6 +4,8 @@
 \alias{correct_batch_effects}
 \alias{adjust_batch_trend_dm}
 \alias{adjust_batch_trend_df}
+\alias{correct_batch_effects_df}
+\alias{correct_batch_effects_dm}
 \title{Batch correction methods for normalized data}
 \usage{
 adjust_batch_trend_dm(
@@ -59,6 +61,45 @@ correct_batch_effects(
   par.prior = TRUE,
   covariates_cols = NULL,
   min_measurements = 8,
+  ...
+)
+
+correct_batch_effects_df(
+  df_long,
+  sample_annotation,
+  continuous_func = NULL,
+  discrete_func = c("MedianCentering", "MeanCentering", "ComBat", "removeBatchEffect"),
+  batch_col = "MS_batch",
+  feature_id_col = "peptide_group_label",
+  sample_id_col = "FullRunName",
+  measure_col = "Intensity",
+  order_col = "order",
+  keep_all = "default",
+  no_fit_imputed = TRUE,
+  qual_col = NULL,
+  qual_value = NULL,
+  fill_the_missing = NULL,
+  par.prior = TRUE,
+  covariates_cols = NULL,
+  min_measurements = 8,
+  ...
+)
+
+correct_batch_effects_dm(
+  data_matrix,
+  sample_annotation,
+  continuous_func = NULL,
+  discrete_func = c("MedianCentering", "MeanCentering", "ComBat"),
+  batch_col = "MS_batch",
+  feature_id_col = "peptide_group_label",
+  sample_id_col = "FullRunName",
+  measure_col = "Intensity",
+  order_col = "order",
+  min_measurements = 8,
+  no_fit_imputed = TRUE,
+  fill_the_missing = NULL,
+  par.prior = TRUE,
+  covariates_cols = NULL,
   ...
 )
 }
