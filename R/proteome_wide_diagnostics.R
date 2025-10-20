@@ -180,7 +180,7 @@ plot_hierarchical_clustering.ProBatchFeatures <- function(data_matrix, pbf_name 
     plot_title <- if (is.null(plot_title)) assay_name else plot_title
 
     plot_hierarchical_clustering.default(
-        x = data_matrix,
+        data_matrix = data_matrix,
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
         plot_title = plot_title,
@@ -426,7 +426,7 @@ plot_heatmap_diagnostic.ProBatchFeatures <- function(data_matrix, pbf_name = NUL
 }
 
 #' @export
-plot_heatmap_diagnostic <- function(x, ...) UseMethod("plot_heatmap_diagnostic")
+plot_heatmap_diagnostic <- function(data_matrix, ...) UseMethod("plot_heatmap_diagnostic")
 
 #' Plot the heatmap
 #'
@@ -462,8 +462,8 @@ plot_heatmap_diagnostic <- function(x, ...) UseMethod("plot_heatmap_diagnostic")
 #' Usually black or white, depending on \code{heatmap_color}
 #' @param heatmap_color vector of colors used in heatmap (typicall a gradient)
 #' @param ... other parameters of \code{link[pheatmap]{pheatmap}}
-#' @param x Input object: matrix-like data or a `ProBatchFeatures` instance.
-#' @param pbf_name Assay name(s) used when `x` is a `ProBatchFeatures`.
+#' @param data_matrix Input object: matrix-like data or a `ProBatchFeatures` instance.
+#' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
 #' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
 #'
@@ -721,7 +721,7 @@ plot_heatmap_generic.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
 }
 
 #' @export
-plot_heatmap_generic <- function(x, ...) UseMethod("plot_heatmap_generic")
+plot_heatmap_generic <- function(data_matrix, ...) UseMethod("plot_heatmap_generic")
 
 #' Calculate variance distribution by variable
 #'
@@ -861,8 +861,8 @@ calculate_PVCA <- function(data_matrix, ...) UseMethod("calculate_PVCA")
 #' should be substituted. If \code{NULL}, features with missing values are
 #' excluded.
 #' If \code{NULL}, features with missing values are excluded.
-#' @param x Input object: matrix-like data or a `ProBatchFeatures` instance.
-#' @param pbf_name Assay name(s) used when `x` is a `ProBatchFeatures`.
+#' @param data_matrix Input object: matrix-like data or a `ProBatchFeatures` instance.
+#' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
 #' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
 #' @param ... Additional arguments passed to lower-level methods.
@@ -1004,8 +1004,8 @@ plot_PVCA <- function(data_matrix, ...) UseMethod("plot_PVCA")
 #' should be substituted. If \code{NULL}, features with missing values are
 #' excluded.
 #' If \code{NULL}, features with missing values are excluded.
-#' @param x Input object: matrix-like data or a `ProBatchFeatures` instance.
-#' @param pbf_name Assay name(s) used when `x` is a `ProBatchFeatures`.
+#' @param df Input object: matrix-like data or a `ProBatchFeatures` instance.
+#' @param pbf_name Assay name(s) used when `df` is a `ProBatchFeatures`.
 #' @param ... Additional arguments forwarded between methods.
 #'
 #' @return data frame with weights and factors, combined in a way ready for plotting
@@ -1093,7 +1093,7 @@ prepare_PVCA_df.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
 }
 
 #' @export
-prepare_PVCA_df <- function(df, ...) UseMethod("prepare_PVCA_df")
+prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
 
 #' plot PVCA, when the analysis is completed
 #'
@@ -1221,7 +1221,7 @@ plot_PVCA.df.ProBatchFeatures <- function(df, pbf_name = NULL,
         }
 
         prepare_args <- c(list(
-            x = data_matrix,
+            data_matrix = data_matrix,
             sample_annotation = sample_ann,
             feature_id_col = feature_id_col,
             sample_id_col = sample_id_col
@@ -1229,7 +1229,7 @@ plot_PVCA.df.ProBatchFeatures <- function(df, pbf_name = NULL,
         pvca_res <- do.call(prepare_PVCA_df.default, prepare_args)
 
         plot_args <- list(
-            x = pvca_res,
+            df = pvca_res,
             colors_for_bars = colors_for_bars,
             filename = filename_list[[i]],
             width = width,
@@ -1262,8 +1262,8 @@ plot_PVCA.df <- function(df, ...) UseMethod("plot_PVCA.df")
 #' @param shape_by Optional column used for point shapes in the PCA plot.
 #' @param point_size Point size supplied to `ggplot2::geom_point()`.
 #' @param point_alpha Alpha transparency for plotted points.
-#' @param x Input object: matrix-like data or a `ProBatchFeatures` instance.
-#' @param pbf_name Assay name(s) used when `x` is a `ProBatchFeatures`.
+#' @param df Input object: matrix-like data or a `ProBatchFeatures` instance.
+#' @param pbf_name Assay name(s) used when `df` is a `ProBatchFeatures`.
 #' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
 #' @param ... Additional arguments forwarded to lower-level plotting helpers.

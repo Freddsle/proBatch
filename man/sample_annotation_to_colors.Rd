@@ -17,7 +17,7 @@
   ...
 )
 
-\method{sample_annotation_to_colors}{ProBatchFeatures}(x, ...)
+\method{sample_annotation_to_colors}{ProBatchFeatures}(sample_annotation, ...)
 
 sample_annotation_to_colors(sample_annotation, ...)
 }

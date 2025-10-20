@@ -98,13 +98,13 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{...}{Additional arguments forwarded to lower-level plotting helpers.}
 
-\item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
+\item{pbf_name}{Assay name(s) used when `df` is a `ProBatchFeatures`.}
 
 \item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 
-\item{x}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
+\item{df}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
 }
 \value{
 ggplot scatterplot colored by factor levels of column specified in

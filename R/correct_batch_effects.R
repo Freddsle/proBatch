@@ -1008,7 +1008,7 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
 #'     example_proteome_matrix,
 #'     example_sample_annotation,
 #'     batch_col = "MS_batch",
-#'     covariates_cols = c("Condition", "Type")
+#'     covariates_cols = c("Diet", "Sex")
 #' )
 #' @seealso \code{\link{removeBatchEffect}}
 #' @export

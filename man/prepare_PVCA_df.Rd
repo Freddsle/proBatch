@@ -67,9 +67,9 @@ covariates needs to explain (the rest will be lumped together)}
 
 \item{...}{Additional arguments forwarded between methods.}
 
-\item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
+\item{pbf_name}{Assay name(s) used when `df` is a `ProBatchFeatures`.}
 
-\item{x}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
+\item{df}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
 }
 \value{
 data frame with weights and factors, combined in a way ready for plotting

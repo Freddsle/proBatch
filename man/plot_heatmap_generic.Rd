@@ -43,7 +43,7 @@
 )
 }
 \arguments{
-\item{data_matrix}{the matrix of data to be plotted}
+\item{data_matrix}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
 
 \item{column_annotation_df}{data frame annotating columns of
 \code{data_matrix}}
@@ -103,13 +103,11 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{...}{other parameters of \code{link[pheatmap]{pheatmap}}}
 
-\item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
+\item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
 
 \item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
-
-\item{x}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
 }
 \value{
 pheatmap-type object

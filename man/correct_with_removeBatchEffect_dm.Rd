@@ -52,7 +52,7 @@ batch_corrected_matrix <- correct_with_removeBatchEffect_dm(
     example_proteome_matrix,
     example_sample_annotation,
     batch_col = "MS_batch",
-    covariates_cols = c("Condition", "Type")
+    covariates_cols = c("Diet", "Sex")
 )
 }
 \seealso{
