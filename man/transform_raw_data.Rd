@@ -18,21 +18,22 @@ unlog_df(df_long, log_base = 2, offset = 1, measure_col = "Intensity")
 
 log_transform_dm(x, ...)
 
-\method{log_transform_dm}{default}(data_matrix, log_base = 2, offset = 1)
+\method{log_transform_dm}{default}(x, log_base = 2, offset = 1, ...)
 
 \method{log_transform_dm}{ProBatchFeatures}(
   x,
   log_base = 2,
   offset = 1,
   pbf_name = NULL,
-  final_name = NULL
+  final_name = NULL,
+  ...
 )
 
 unlog_dm(x, ...)
 
-\method{unlog_dm}{default}(data_matrix, log_base = 2, offset = 1)
+\method{unlog_dm}{default}(x, log_base = 2, offset = 1, ...)
 
-\method{unlog_dm}{ProBatchFeatures}(x, log_base = 2, offset = 1, pbf_name = NULL, final_name = NULL)
+\method{unlog_dm}{ProBatchFeatures}(x, log_base = 2, offset = 1, pbf_name = NULL, final_name = NULL, ...)
 }
 \arguments{
 \item{df_long}{data frame where each row is a single feature in a single
@@ -48,10 +49,13 @@ output result file). See \code{help("example_proteome")} for more details.}
 column with expression/abundance/intensity; otherwise, it is used
 internally for consistency.}
 
-\item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+\item{x}{Input object supplied to the generics (long data frame, matrix, or `ProBatchFeatures`).}
+
+\item{...}{Additional arguments forwarded between method implementations.}
+
+\item{pbf_name}{Assay name to transform when `x` is a `ProBatchFeatures`.}
+
+\item{final_name}{Optional name for the stored assay produced by the S3 methods.}
 }
 \value{
 `log_transform_df()` returns \code{df_long}-size data frame, with

@@ -57,4 +57,20 @@ the chosen \code{fit_func}.}
 }
 \description{
 Use [correct_with_removeBatchEffect()] with `format="wide"`.
+Batch effect correction with removeBatchEffect.
+}
+\examples{
+data(
+    list = c("example_sample_annotation", "example_proteome_matrix"),
+    package = "proBatch"
+)
+batch_corrected_matrix <- correct_with_removeBatchEffect_dm(
+    example_proteome_matrix,
+    example_sample_annotation,
+    batch_col = "MS_batch",
+    covariates_cols = c("Diet", "Sex")
+)
+}
+\seealso{
+\code{\link{removeBatchEffect}}
 }

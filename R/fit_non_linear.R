@@ -131,7 +131,8 @@ loess_regression <- function(x_to_fit, y, x_all, y_all,
 loess_regression_opt <- function(x_to_fit, y, x_all, y_all,
                                  feature_id = NULL, batch_id = NULL,
                                  kernel = "normal",
-                                 bws = c(0.01, 0.5, 1, 1.5, 2, 5, 10)) {
+                                 bws = c(0.01, 0.5, 1, 1.5, 2, 5, 10),
+                                 ...) {
     out <- tryCatch(
         {
             bw <- optimise_bw(x_to_fit, y, kernel = kernel, bws = bws)

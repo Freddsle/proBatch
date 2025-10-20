@@ -28,6 +28,8 @@ plot_NA_frequency(x, ...)
 
 \item{...}{Additional parameters forwarded to [pheatmap::pheatmap()].}
 
+\item{show_percent}{Logical; display percentages instead of raw counts.}
+
 \item{fill}{Colour used for the columns in the frequency plot.}
 
 \item{pbf_name}{Character scalar or vector with assay names to plot. When

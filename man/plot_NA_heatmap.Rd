@@ -91,6 +91,8 @@ plotting. Defaults to `TRUE` to focus on missingness patterns.}
 without plotting. For multiple assays, the arranged grob is returned
 invisibly when `draw = TRUE`.}
 
+\item{main}{Optional title passed to [pheatmap::pheatmap()] for single assays.}
+
 \item{pbf_name}{Character scalar or vector with assay names to plot. When
 `NULL`, the most recent assay returned by [pb_current_assay()] is used.
 Only used by the `ProBatchFeatures` method.}
@@ -98,6 +100,9 @@ Only used by the `ProBatchFeatures` method.}
 \item{nrow, ncol}{Integers controlling the layout when multiple assays are
 plotted. If both are `NULL`, a roughly square layout is chosen
 automatically.}
+
+\item{use_subset}{Logical; randomly subset to 5000 rows/columns when assays
+exceed that size (only used for `ProBatchFeatures` inputs).}
 }
 \value{
 For a single assay the returned value is the `pheatmap` object. When

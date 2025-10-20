@@ -39,6 +39,9 @@
 #' @param draw Logical, draw the heatmap(s). Set to `FALSE` to obtain the grob(s)
 #'   without plotting. For multiple assays, the arranged grob is returned
 #'   invisibly when `draw = TRUE`.
+#' @param main Optional title passed to [pheatmap::pheatmap()] for single assays.
+#' @param use_subset Logical; randomly subset to 5000 rows/columns when assays
+#'   exceed that size (only used for `ProBatchFeatures` inputs).
 #' @param ... Additional parameters forwarded to [pheatmap::pheatmap()].
 #'
 #' @return For a single assay the returned value is the `pheatmap` object. When
@@ -54,22 +57,23 @@ plot_NA_heatmap <- function(x, ...) UseMethod("plot_NA_heatmap")
 #' @method plot_NA_heatmap default
 #' @export
 plot_NA_heatmap.default <- function(
-    x,
-    sample_annotation = NULL,
-    sample_id_col = NULL,
-    color_by = NULL,
-    label_by = NULL,
-    cluster_samples = TRUE,
-    cluster_features = TRUE,
-    show_row_dend = TRUE,
-    show_column_dend = FALSE,
-    missing_color = "black",
-    valid_color = "grey90",
-    col_vector = NULL,
-    drop_complete = TRUE,
-    draw = TRUE,
-    main = NULL,
-    ...) {
+  x,
+  sample_annotation = NULL,
+  sample_id_col = NULL,
+  color_by = NULL,
+  label_by = NULL,
+  cluster_samples = TRUE,
+  cluster_features = TRUE,
+  show_row_dend = TRUE,
+  show_column_dend = FALSE,
+  missing_color = "black",
+  valid_color = "grey90",
+  col_vector = NULL,
+  drop_complete = TRUE,
+  draw = TRUE,
+  main = NULL,
+  ...
+) {
     data_matrix <- x
     plot_params <- list(...)
 
@@ -155,24 +159,25 @@ plot_NA_heatmap.default <- function(
 #' @method plot_NA_heatmap ProBatchFeatures
 #' @export
 plot_NA_heatmap.ProBatchFeatures <- function(
-    x,
-    pbf_name = NULL,
-    color_by = NULL,
-    label_by = NULL,
-    sample_id_col = NULL,
-    cluster_samples = TRUE,
-    cluster_features = TRUE,
-    show_row_dend = TRUE,
-    show_column_dend = FALSE,
-    missing_color = "black",
-    valid_color = "grey90",
-    col_vector = NULL,
-    drop_complete = TRUE,
-    nrow = NULL,
-    ncol = NULL,
-    draw = TRUE,
-    use_subset = TRUE,
-    ...) {
+  x,
+  pbf_name = NULL,
+  color_by = NULL,
+  label_by = NULL,
+  sample_id_col = NULL,
+  cluster_samples = TRUE,
+  cluster_features = TRUE,
+  show_row_dend = TRUE,
+  show_column_dend = FALSE,
+  missing_color = "black",
+  valid_color = "grey90",
+  col_vector = NULL,
+  drop_complete = TRUE,
+  nrow = NULL,
+  ncol = NULL,
+  draw = TRUE,
+  use_subset = TRUE,
+  ...
+) {
     object <- x
     assays <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
 
@@ -286,11 +291,12 @@ plot_NA_density <- function(x, ...) UseMethod("plot_NA_density")
 #' @method plot_NA_density default
 #' @export
 plot_NA_density.default <- function(
-    x,
-    missing_label = "Missing Value",
-    valid_label = "Valid Value",
-    palette = c(`Missing Value` = "#A92C23", `Valid Value` = "#345995"),
-    ...) {
+  x,
+  missing_label = "Missing Value",
+  valid_label = "Valid Value",
+  palette = c(`Missing Value` = "#A92C23", `Valid Value` = "#345995"),
+  ...
+) {
     data_matrix <- x
     if (is(data_matrix, "SummarizedExperiment")) {
         data_matrix <- assay(data_matrix)
@@ -324,7 +330,7 @@ plot_NA_density.default <- function(
 
     palette <- .pb_match_palette(palette, c(missing_label, valid_label))
 
-    ggplot(df, aes(x = mean, colour = Type)) +
+    ggplot(df, aes(x = .data$mean, colour = .data$Type)) +
         geom_density(na.rm = TRUE) +
         labs(x = "Intensity", y = "Density", colour = "Value Type") +
         scale_colour_manual(values = palette, breaks = c(missing_label, valid_label))
@@ -334,15 +340,16 @@ plot_NA_density.default <- function(
 #' @method plot_NA_density ProBatchFeatures
 #' @export
 plot_NA_density.ProBatchFeatures <- function(
-    x,
-    pbf_name = NULL,
-    missing_label = "Missing Value",
-    valid_label = "Valid Value",
-    palette = c(`Missing Value` = "#A92C23", `Valid Value` = "#345995"),
-    nrow = NULL,
-    ncol = NULL,
-    facet_scales = "free_y",
-    ...) {
+  x,
+  pbf_name = NULL,
+  missing_label = "Missing Value",
+  valid_label = "Valid Value",
+  palette = c(`Missing Value` = "#A92C23", `Valid Value` = "#345995"),
+  nrow = NULL,
+  ncol = NULL,
+  facet_scales = "free_y",
+  ...
+) {
     object <- x
     assays <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
     if (!length(assays)) {
@@ -363,7 +370,7 @@ plot_NA_density.ProBatchFeatures <- function(
     combined$pbf_name <- factor(combined$pbf_name, levels = assays[keep])
 
     palette <- .pb_match_palette(palette, c(missing_label, valid_label))
-    p <- ggplot(combined, aes(x = mean, colour = Type)) +
+    p <- ggplot(combined, aes(x = .data$mean, colour = .data$Type)) +
         geom_density(na.rm = TRUE) +
         labs(x = "Intensity", y = "Density", colour = "Value Type") +
         scale_colour_manual(values = palette, breaks = c(missing_label, valid_label))
@@ -384,6 +391,7 @@ plot_NA_density.ProBatchFeatures <- function(
 #' @param fill Colour used for the columns in the frequency plot.
 #' @param facet_scales Scaling behaviour for facets when plotting multiple
 #'   assays.
+#' @param show_percent Logical; display percentages instead of raw counts.
 #'
 #' @return A `ggplot` object showing the frequency distribution.
 #' @export
@@ -393,10 +401,11 @@ plot_NA_frequency <- function(x, ...) UseMethod("plot_NA_frequency")
 #' @method plot_NA_frequency default
 #' @export
 plot_NA_frequency.default <- function(
-    x,
-    show_percent = FALSE,
-    fill = "#345995",
-    ...) {
+  x,
+  show_percent = FALSE,
+  fill = "#345995",
+  ...
+) {
     data_matrix <- x
     if (is(data_matrix, "SummarizedExperiment")) {
         data_matrix <- assay(data_matrix)
@@ -441,14 +450,15 @@ plot_NA_frequency.default <- function(
 #' @method plot_NA_frequency ProBatchFeatures
 #' @export
 plot_NA_frequency.ProBatchFeatures <- function(
-    x,
-    pbf_name = NULL,
-    fill = "#345995",
-    nrow = NULL,
-    ncol = NULL,
-    facet_scales = "free_y",
-    show_percent = FALSE,
-    ...) {
+  x,
+  pbf_name = NULL,
+  fill = "#345995",
+  nrow = NULL,
+  ncol = NULL,
+  facet_scales = "free_y",
+  show_percent = FALSE,
+  ...
+) {
     object <- x
     assays <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
     if (!length(assays)) {
@@ -488,9 +498,10 @@ plot_NA_frequency.ProBatchFeatures <- function(
     combined <- do.call(rbind, df_list[keep])
     combined$pbf_name <- factor(combined$pbf_name, levels = assays[keep])
 
+    y_col <- if (show_percent) "Percent" else "count"
     p <- ggplot(combined, aes(
-        x = valid_counts,
-        y = if (show_percent) Percent else count
+        x = .data$valid_counts,
+        y = .data[[y_col]]
     )) +
         geom_col(fill = fill) +
         labs(

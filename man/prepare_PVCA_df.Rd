@@ -15,11 +15,12 @@
   biological_factors = c("cell_line", "drug_dose"),
   fill_the_missing = -1,
   pca_threshold = 0.6,
-  variance_threshold = 0.01
+  variance_threshold = 0.01,
+  ...
 )
 
 \method{prepare_PVCA_df}{ProBatchFeatures}(
-  x,
+  data_matrix,
   pbf_name = NULL,
   sample_annotation = NULL,
   feature_id_col = "peptide_group_label",
@@ -63,6 +64,10 @@ variabilities that the selected principal components need to explain}
 
 \item{variance_threshold}{the percentile value of weight each of the
 covariates needs to explain (the rest will be lumped together)}
+
+\item{...}{Additional arguments forwarded between methods.}
+
+\item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
 }
 \value{
 data frame with weights and factors, combined in a way ready for plotting

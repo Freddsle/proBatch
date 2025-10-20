@@ -40,6 +40,9 @@ Semantics:
 }
 \examples{
 mat <- matrix(c(1, NA, 3, 4), nrow = 2)
-suppressWarnings(handle_missing_values(mat, warning_message = "demo", fill_the_missing = 0))
+suppressWarnings(proBatch:::handle_missing_values(
+    mat,
+    warning_message = "demo",
+    fill_the_missing = 0
+))
 }
-\keyword{internal}

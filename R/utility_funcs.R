@@ -388,8 +388,10 @@ is_batch_factor <- function(batch_vector, color_scheme) {
 #'
 #' @return data frame with selected columns
 #' @examples
+#' \dontrun{
 #' df <- data.frame(a = 1:3, b = 4:6, c = 7:9)
 #' subset_keep_cols(df, keep_all = "minimal", minimal_cols = c("a", "c"))
+#' }
 #' @keywords internal
 #'
 subset_keep_cols <- function(df, keep_all = "default",

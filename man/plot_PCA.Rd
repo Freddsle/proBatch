@@ -24,11 +24,12 @@
   theme_name = "classic",
   base_size = 10,
   point_size = 3,
-  point_alpha = 0.8
+  point_alpha = 0.8,
+  ...
 )
 
 \method{plot_PCA}{ProBatchFeatures}(
-  x,
+  data_matrix,
   pbf_name = NULL,
   sample_annotation = NULL,
   sample_id_col = "FullRunName",
@@ -60,6 +61,8 @@ where the filenames (colnames of the \code{data_matrix} are found).}
 
 \item{color_by}{column name (as in \code{sample_annotation}) to color by}
 
+\item{shape_by}{Optional column used for point shapes in the PCA plot.}
+
 \item{PC_to_plot}{principal component numbers for x and y axis}
 
 \item{fill_the_missing}{numeric value determining how  missing values
@@ -86,6 +89,18 @@ pdf and png format is supported}
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{base_size}{base size of the text in the plot}
+
+\item{point_size}{Point size supplied to `ggplot2::geom_point()`.}
+
+\item{point_alpha}{Alpha transparency for plotted points.}
+
+\item{...}{Additional arguments forwarded to lower-level plotting helpers.}
+
+\item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
+
+\item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
+
+\item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 }
 \value{
 ggplot scatterplot colored by factor levels of column specified in

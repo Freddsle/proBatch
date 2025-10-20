@@ -94,11 +94,12 @@ pb_nNA <- function(object, pbf_name = names(object), ...) {
 #' @rdname pb_missing_helpers
 #' @export
 pb_filterNA <- function(
-    object,
-    pbf_name = NULL,
-    inplace = FALSE,
-    final_name = NULL,
-    ...) {
+  object,
+  pbf_name = NULL,
+  inplace = FALSE,
+  final_name = NULL,
+  ...
+) {
     stopifnot(is(object, "ProBatchFeatures"))
     stopifnot(is.logical(inplace), length(inplace) == 1L)
 

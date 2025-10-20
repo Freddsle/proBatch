@@ -3,6 +3,10 @@
 #' @inheritParams proBatch
 #' @param log_base base of the logarithm for transformation
 #' @param offset small positive number to prevent 0 conversion to \code{-Inf}
+#' @param x Input object supplied to the generics (long data frame, matrix, or `ProBatchFeatures`).
+#' @param pbf_name Assay name to transform when `x` is a `ProBatchFeatures`.
+#' @param final_name Optional name for the stored assay produced by the S3 methods.
+#' @param ... Additional arguments forwarded between method implementations.
 #'
 #' @return `log_transform_df()` returns \code{df_long}-size data frame, with
 #' \code{measure_col} log transformed; with old value in another column
@@ -67,7 +71,8 @@ log_transform_dm <- function(x, ...) UseMethod("log_transform_dm")
 #' @method log_transform_dm default
 #' @export
 #' @rdname transform_raw_data
-log_transform_dm.default <- function(data_matrix, log_base = 2, offset = 1) {
+log_transform_dm.default <- function(x, log_base = 2, offset = 1, ...) {
+    data_matrix <- x
     if (!is.null(log_base)) {
         # Validate numeric data_matrix
         if (!is.numeric(data_matrix)) {
@@ -85,7 +90,7 @@ log_transform_dm.default <- function(data_matrix, log_base = 2, offset = 1) {
 #' @method log_transform_dm ProBatchFeatures
 #' @export
 log_transform_dm.ProBatchFeatures <- function(x, log_base = 2, offset = 1,
-                                              pbf_name = NULL, final_name = NULL) {
+                                              pbf_name = NULL, final_name = NULL, ...) {
     object <- x
     if (is.null(pbf_name)) {
         pbf_name <- pb_current_assay(object)
@@ -111,7 +116,8 @@ unlog_dm <- function(x, ...) UseMethod("unlog_dm")
 #' @rdname transform_raw_data
 #' @method unlog_dm default
 #' @export
-unlog_dm.default <- function(data_matrix, log_base = 2, offset = 1) {
+unlog_dm.default <- function(x, log_base = 2, offset = 1, ...) {
+    data_matrix <- x
     if (!is.null(log_base)) {
         data_matrix_unlog <- log_base^(data_matrix) - offset
     } else {
@@ -125,7 +131,7 @@ unlog_dm.default <- function(data_matrix, log_base = 2, offset = 1) {
 #' @method unlog_dm ProBatchFeatures
 #' @export
 unlog_dm.ProBatchFeatures <- function(x, log_base = 2, offset = 1,
-                                      pbf_name = NULL, final_name = NULL) {
+                                      pbf_name = NULL, final_name = NULL, ...) {
     object <- x
     if (is.null(pbf_name)) {
         pbf_name <- pb_current_assay(object)
