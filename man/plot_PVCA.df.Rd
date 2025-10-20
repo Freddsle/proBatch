@@ -16,6 +16,7 @@
   plot_title = NULL,
   theme = "classic",
   base_size = 15,
+  add_values = FALSE,
   ...
 )
 
@@ -62,6 +63,8 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 \item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
 
 \item{base_size}{base size of the text in the plot}
+
+\item{add_values}{logical; when `TRUE`, annotates each bar with its rounded weight.}
 
 \item{...}{Additional arguments forwarded to `prepare_PVCA_df()`.}
 

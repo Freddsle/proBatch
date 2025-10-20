@@ -55,9 +55,13 @@ data matrix with batch effects removed
 }
 \description{
 Batch effect correction with removeBatchEffect.
-
-Use [correct_with_removeBatchEffect()] with `format="wide"`.
 }
+\section{Functions}{
+\itemize{
+\item \code{correct_with_removeBatchEffect_dm()}: Deprecated wrapper for
+`correct_with_removeBatchEffect(format = "wide")`.
+
+}}
 \examples{
 data(
     list = c("example_sample_annotation", "example_proteome_matrix"),

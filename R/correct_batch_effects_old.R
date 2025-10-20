@@ -224,9 +224,8 @@ correct_with_removeBatchEffect_df <- function(df_long, sample_annotation = NULL,
     )
 }
 
-#' title DEPRECATED: correct_with_removeBatchEffect_dm
-#' @description Use [correct_with_removeBatchEffect()] with `format="wide"`.
-#' @inheritParams correct_batch_effects
+#' @describeIn correct_with_removeBatchEffect_dm Deprecated wrapper for
+#'   `correct_with_removeBatchEffect(format = "wide")`.
 #' @export
 correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
                                               feature_id_col = "peptide_group_label",

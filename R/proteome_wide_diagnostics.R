@@ -860,6 +860,7 @@ calculate_PVCA <- function(data_matrix, ...) UseMethod("calculate_PVCA")
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
 #' @param ... Additional arguments passed to lower-level methods.
 #' @param base_size base size of the text in the plot
+#' @param add_values logical; when `TRUE`, annotates each bar with its rounded weight.
 #'
 #' @name plot_PVCA
 #' @return \code{ggplot} object with the plot
@@ -896,6 +897,13 @@ plot_PVCA.default <- function(data_matrix, sample_annotation,
                               plot_title = NULL,
                               theme = "classic",
                               base_size = 15, ...) {
+    dots <- list(...)
+    add_values <- FALSE
+    if ("add_values" %in% names(dots)) {
+        add_values <- isTRUE(dots$add_values)
+        dots$add_values <- NULL
+    }
+
     pvca_res <- prepare_PVCA_df(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
@@ -908,12 +916,20 @@ plot_PVCA.default <- function(data_matrix, sample_annotation,
         variance_threshold = variance_threshold
     )
 
-    gg <- plot_PVCA.df(
-        df = pvca_res, colors_for_bars = colors_for_bars,
-        filename = filename, width = width, height = height, units = units,
+    plot_args <- list(
+        df = pvca_res,
+        colors_for_bars = colors_for_bars,
+        filename = filename,
+        width = width,
+        height = height,
+        units = units,
         plot_title = plot_title,
-        theme = theme, base_size = base_size
+        theme = theme,
+        base_size = base_size,
+        add_values = add_values
     )
+
+    gg <- do.call(plot_PVCA.df, plot_args)
     return(gg)
 }
 
@@ -1123,6 +1139,7 @@ prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
 #' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
 #' @param ... Additional arguments forwarded to `prepare_PVCA_df()`.
+#' @param add_values logical; when `TRUE`, annotates each bar with its rounded weight.
 #'
 #' @return \code{ggplot} object with bars as weights, colored by bio/tech factors
 #' @export
@@ -1146,7 +1163,7 @@ plot_PVCA.df.default <- function(df,
                                  units = c("cm", "in", "mm"),
                                  plot_title = NULL,
                                  theme = "classic",
-                                 base_size = 15, ...) {
+                                 base_size = 15, add_values = FALSE, ...) {
     pvca_res <- df
     pvca_res <- pvca_res %>%
         mutate(label = factor(label, levels = label))
@@ -1193,6 +1210,14 @@ plot_PVCA.df.default <- function(df,
         xlab(NULL) +
         guides(fill = guide_legend(override.aes = list(color = NA), title = NULL))
 
+    if (isTRUE(add_values)) {
+        gg <- gg +
+            geom_text(aes(label = sprintf("%.2f", weights)),
+                vjust = -0.3,
+                size = base_size / 3
+            )
+    }
+
     save_ggplot(filename, units, width, height, gg)
 
     return(gg)
@@ -1232,6 +1257,12 @@ plot_PVCA.df.ProBatchFeatures <- function(df, pbf_name = NULL,
     filename_list <- prep$filename_list
     split_arg <- prep$split_arg
     titles <- prep$titles
+    add_values_arg <- NULL
+    if ("add_values" %in% names(prepare_dots)) {
+        add_values_arg <- prepare_dots$add_values
+        prepare_dots$add_values <- NULL
+    }
+    add_values_list <- split_arg(add_values_arg)
 
     default_sample_annotation <- as.data.frame(colData(object))
     rownames(default_sample_annotation) <- NULL
@@ -1282,6 +1313,10 @@ plot_PVCA.df.ProBatchFeatures <- function(df, pbf_name = NULL,
             theme = theme,
             base_size = base_size
         )
+        add_values_val <- add_values_list[[i]]
+        if (!is.null(add_values_val)) {
+            plot_args$add_values <- isTRUE(add_values_val)
+        }
 
         plot_list[[i]] <- do.call(plot_PVCA.df.default, plot_args)
     }

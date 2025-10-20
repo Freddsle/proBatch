@@ -102,6 +102,8 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 \item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
+
+\item{add_values}{logical; when `TRUE`, annotates each bar with its rounded weight.}
 }
 \value{
 \code{ggplot} object with the plot
