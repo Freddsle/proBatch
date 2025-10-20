@@ -62,9 +62,7 @@ excluded.}
 
 \item{...}{Additional arguments forwarded between methods.}
 
-\item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
-
-\item{x}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
+\item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
 }
 \value{
 data frame of weights of Principal Variance Components

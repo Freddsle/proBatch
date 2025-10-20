@@ -735,8 +735,7 @@ plot_heatmap_generic <- function(data_matrix, ...) UseMethod("plot_heatmap_gener
 #' @param fill_the_missing numeric value determining how  missing values
 #' should be substituted. If \code{NULL}, features with missing values are
 #' excluded.
-#' @param x Input object: matrix-like data or a `ProBatchFeatures` instance.
-#' @param pbf_name Assay name(s) used when `x` is a `ProBatchFeatures`.
+#' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
 #' @param ... Additional arguments forwarded between methods.
 #'
 #' @name calculate_PVCA
@@ -1004,8 +1003,7 @@ plot_PVCA <- function(data_matrix, ...) UseMethod("plot_PVCA")
 #' should be substituted. If \code{NULL}, features with missing values are
 #' excluded.
 #' If \code{NULL}, features with missing values are excluded.
-#' @param df Input object: matrix-like data or a `ProBatchFeatures` instance.
-#' @param pbf_name Assay name(s) used when `df` is a `ProBatchFeatures`.
+#' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
 #' @param ... Additional arguments forwarded between methods.
 #'
 #' @return data frame with weights and factors, combined in a way ready for plotting
@@ -1262,8 +1260,7 @@ plot_PVCA.df <- function(df, ...) UseMethod("plot_PVCA.df")
 #' @param shape_by Optional column used for point shapes in the PCA plot.
 #' @param point_size Point size supplied to `ggplot2::geom_point()`.
 #' @param point_alpha Alpha transparency for plotted points.
-#' @param df Input object: matrix-like data or a `ProBatchFeatures` instance.
-#' @param pbf_name Assay name(s) used when `df` is a `ProBatchFeatures`.
+#' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
 #' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
 #' @param ... Additional arguments forwarded to lower-level plotting helpers.

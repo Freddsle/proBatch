@@ -109,7 +109,7 @@ NULL
 #' Example multi-center DIA LFQ E. coli proteomics (DIA-NN)
 #'
 #' An example dataset illustrating a typical multi-center DIA (data-independent acquisition)
-#' proteomics study processed with DIA-NN. Subset of 400 proteins and 5000 precursors
+#' proteomics study processed with DIA-NN. Subset of 300 proteins and 1119 precursors
 #' from the PRIDE ID PXD053812.
 #' Study design summary:
 #' - Five independent centers.
@@ -123,12 +123,12 @@ NULL
 #' \describe{
 #'   \item{`all_metadata`}{`data.frame` (118 rows × 3 columns) with per-sample annotation.
 #'   Columns: `Run`, `Lab`, and `Condition`.}
-#'   \item{`all_precursors`}{`data.frame` (11131 rows × 118 columns) containing the
+#'   \item{`all_precursors`}{`data.frame` (1463 rows × 118 columns) containing the
 #'   combined precursor-level Precursor.Normalised intensities (rows = precursors,
 #'   columns = samples).}
 #'   \item{`all_protein_groups`}{`data.frame` (400 rows × 118 columns) containing the
 #'   combined protein group-level PG.MaxLFQ intensities.}
-#'   \item{`all_precursor_pg_match`}{`data.frame` (11169 rows × 2 columns) linking
+#'   \item{`all_precursor_pg_match`}{`data.frame` (1463 rows × 2 columns) linking
 #'   `Precursor.Id` to `Protein.Ids`.}
 #' }
 #'

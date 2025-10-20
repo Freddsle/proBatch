@@ -97,7 +97,7 @@ data("example_ecoli_data", package = "proBatch")
 The dataset contains data from 5 centers, which were analysed
 separately. Additionally, to simplify the example here, the data were
 merged from all centers into one dataset and a smaller part of this
-dataset is used (total 400 protein groups and corresponding peptides).
+dataset is used (400 protein groups with 1463 matched precursors).
 We need only this merged data here:
 
 ```{r extract-data}

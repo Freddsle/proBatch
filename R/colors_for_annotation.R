@@ -281,6 +281,7 @@ map_numbers_to_colors <- function(annotation_df_numbers,
 #'
 #' @return vector of colors
 #' @keywords internal
+#' @export
 #' @examples
 #' generate_colors_for_numeric("brewer", i = 1)
 #'
