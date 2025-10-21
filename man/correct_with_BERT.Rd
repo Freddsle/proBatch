@@ -58,9 +58,12 @@ included in \code{mod} for ComBat (biological or nuisance covariates).}
 
 \item{keep_all}{For long output, columns retained (as in other correct_* functions).}
 
-\item{cores}{Integer; number of workers for BERT. If \code{NULL} (default) BERT uses \code{BiocParallel::bpparam()}.}
+\item{cores}{Integer; number of workers for BERT. When both \code{cores} and \code{BPPARAM} are \code{NULL},
+the wrapper uses \code{1L} (sequential) by default. Set to a higher value (and provide a matching
+\code{BPPARAM}) to opt into parallel execution (see \code{?BiocParallel}).}
 
-\item{BPPARAM}{Optional \code{BiocParallelParam} object for BERT.}
+\item{BPPARAM}{Optional \code{BiocParallelParam} object for BERT. When \code{NULL}, defaults to
+\code{BiocParallel::SerialParam()} per Bioconductor guidelines (no implicit parallelism).}
 }
 \value{
 If \code{format="wide"}, a corrected numeric matrix (features×samples).
@@ -76,6 +79,10 @@ Works on long data.frames (\code{format="long"}) and wide matrices
 \details{
 BERT itself requires a \emph{samples × features} table; proBatch's wrapper builds it from the input
 \emph{features × samples} matrix. Missing values (NAs) are allowed.
+
+When invoked through \code{pb_transform()}, the resulting pipeline step is tagged with the chosen
+\code{bert_method}: \code{BERTc} (ComBat), \code{BERTl} (limma), or \code{BERTr} (ref). This keeps
+method-specific corrections distinct when multiple BERT variants are stored on the same object.
 }
 \references{
 BERT Bioconductor page & manual. Schumann Y. & Schlumbohm S., 2025.

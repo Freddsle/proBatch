@@ -14,13 +14,20 @@
 #'   Defaults to \code{"ComBat"}.
 #' @param combatmode Integer in \code{1:4} passed to BERT (parametric/non-parametric, mean.only). Default 1.
 #'   See \code{?BERT::BERT}. Ignored if \code{bert_method != "ComBat"}.
-#' @param cores Integer; number of workers for BERT. If \code{NULL} (default) BERT uses \code{BiocParallel::bpparam()}.
-#' @param BPPARAM Optional \code{BiocParallelParam} object for BERT.
+#' @param cores Integer; number of workers for BERT. When both \code{cores} and \code{BPPARAM} are \code{NULL},
+#'   the wrapper uses \code{1L} (sequential) by default. Set to a higher value (and provide a matching
+#'   \code{BPPARAM}) to opt into parallel execution (see \code{?BiocParallel}).
+#' @param BPPARAM Optional \code{BiocParallelParam} object for BERT. When \code{NULL}, defaults to
+#'   \code{BiocParallel::SerialParam()} per Bioconductor guidelines (no implicit parallelism).
 #' @param keep_all For long output, columns retained (as in other correct_* functions).
 #'
 #' @details
 #' BERT itself requires a \emph{samples × features} table; proBatch's wrapper builds it from the input
 #' \emph{features × samples} matrix. Missing values (NAs) are allowed.
+#'
+#' When invoked through \code{pb_transform()}, the resulting pipeline step is tagged with the chosen
+#' \code{bert_method}: \code{BERTc} (ComBat), \code{BERTl} (limma), or \code{BERTr} (ref). This keeps
+#' method-specific corrections distinct when multiple BERT variants are stored on the same object.
 #'
 #' @return If \code{format="wide"}, a corrected numeric matrix (features×samples).
 #'   If \code{format="long"}, the original long data with corrected \code{measure_col} and
@@ -172,6 +179,20 @@ correct_with_BERT <- function(
     rownames(df_bert) <- df_bert[[sample_id_col]]
     rownames_order <- rownames(df_bert)
     df_bert[[sample_id_col]] <- NULL
+
+    need_biocparallel <- is.null(BPPARAM) || is.null(cores)
+    if (need_biocparallel) {
+        .pb_requireNamespace("BiocParallel")
+    }
+    if (is.null(BPPARAM)) {
+        BPPARAM <- BiocParallel::SerialParam()
+    }
+    if (is.null(cores)) {
+        cores <- BiocParallel::bpworkers(BPPARAM)
+        if (is.null(cores) || is.na(cores) || cores < 1L) {
+            cores <- 1L
+        }
+    }
 
     # Call BERT; allow user to pass parallel settings & extra args
     res <- BERT::BERT(

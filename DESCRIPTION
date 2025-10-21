@@ -60,6 +60,7 @@ Imports:
     wesanderson,
     WGCNA
 Suggests: 
+    BiocParallel,
     cowplot,
     ggplotify,
     plotly,

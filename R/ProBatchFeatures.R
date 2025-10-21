@@ -66,6 +66,32 @@ setValidity("ProBatchFeatures", function(object) {
     paste(rev(steps), collapse = "_on_")
 }
 
+.pb_step_label <- function(step, params) {
+    if (!identical(step, "BERT")) {
+        return(step)
+    }
+    method <- NULL
+    if (!is.null(params)) {
+        if (is.list(params) && length(params)) {
+            method <- params[["bert_method"]] %||% params[["method"]]
+        }
+    }
+    method <- tolower(as.character(method %||% "combat"))
+    mapping <- c(
+        combat = "BERTc",
+        limma = "BERTl",
+        ref = "BERTr"
+    )
+    mapped <- mapping[[method]]
+    if (!is.null(mapped)) {
+        return(mapped)
+    }
+    if (!nzchar(method) || identical(method, "bert")) {
+        return("BERT")
+    }
+    paste0("BERT", method)
+}
+
 .pb_assay_name <- function(level, pipeline) {
     level <- if (is.null(level) || !nzchar(level)) "feature" else level
     pipeline <- if (is.null(pipeline) || !nzchar(pipeline)) "raw" else pipeline
@@ -795,12 +821,13 @@ pb_transform <- function(
         fun <- funs[[k]]
         par <- params_list[[k]]
 
-        is_fast <- .pb_is_fast_step(step, fast_steps)
+        step_label <- .pb_step_label(step, par)
+        is_fast <- .pb_is_fast_step(step_label, fast_steps)
         store_this <- if (store_intermediate) TRUE else if (is_fast) store_fast_steps else TRUE
 
         out <- .pb_apply_step(
             object = object, from = cur_from,
-            step = step, fun = fun, params = par,
+            step = step_label, fun = fun, params = par,
             store = store_this, new_level = if (k == length(steps)) level else level,
             backend = backend, hdf5_path = hdf5_path,
             .base_m = base_m

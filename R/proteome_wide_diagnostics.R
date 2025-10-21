@@ -1303,7 +1303,7 @@ plot_PVCA.df.ProBatchFeatures <- function(df, pbf_name = NULL,
         }
 
         plot_args <- list(
-            pvca_res = pvca_res,
+            df = pvca_res,
             colors_for_bars = colors_for_bars_list[[i]],
             filename = fn,
             width = width,
