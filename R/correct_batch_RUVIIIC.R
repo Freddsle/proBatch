@@ -11,6 +11,11 @@
 #'
 #' @inheritParams correct_with_ComBat
 #' @param format One of `"long"` or `"wide"`.
+#' @param fill_the_missing Missing-value policy applied before calling RUV-III-C.
+#'   Follows [handle_missing_values()] semantics: `NULL` leaves the matrix
+#'   unchanged, `"remove"` drops rows with any missing value, numeric imputes NAs,
+#'   and `FALSE` keeps them untouched. Note that removing missing values may
+#'   eliminate specified negative-control features.
 #' @param replicate_col Column in `sample_annotation` that identifies technical
 #'   replicate groups (used to build the design matrix `M`). Must be present and
 #'   non-missing for all samples involved in the correction.
@@ -64,6 +69,7 @@ correct_with_RUVIII_C <- function(
   negative_control_features,
   k,
   format = c("long", "wide"),
+  fill_the_missing = NULL,
   keep_all = "default",
   version = c("CPP", "R"),
   to_correct = NULL,
@@ -95,6 +101,7 @@ correct_with_RUVIII_C <- function(
             data_matrix = x,
             sample_annotation = sample_annotation,
             sample_id_col = sample_id_col,
+            fill_the_missing = fill_the_missing,
             replicate_col = replicate_col,
             negative_control_features = negative_control_features,
             k = k,
@@ -124,6 +131,21 @@ correct_with_RUVIII_C <- function(
         facet_col = NULL,
         merge = FALSE
     )
+
+    handled <- .handle_missing_for_batch_df(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        measure_col = measure_col,
+        fill_the_missing = fill_the_missing,
+        warning_message = "Applying requested missing-value handling (fill_the_missing) before RUV-III-C.",
+        qual_col = NULL,
+        qual_value = NULL
+    )
+    df_long <- handled$df_long
+    sample_annotation <- handled$sample_annotation
+
     data_matrix <- long_to_matrix(
         df_long,
         feature_id_col = feature_id_col,
@@ -134,6 +156,7 @@ correct_with_RUVIII_C <- function(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
+        fill_the_missing = fill_the_missing,
         replicate_col = replicate_col,
         negative_control_features = negative_control_features,
         k = k,
@@ -193,6 +216,7 @@ correct_with_RUVIII_C <- function(
   data_matrix,
   sample_annotation,
   sample_id_col = "FullRunName",
+  fill_the_missing = NULL,
   replicate_col,
   negative_control_features,
   k,
@@ -211,6 +235,18 @@ correct_with_RUVIII_C <- function(
         data_matrix <- as.matrix(data_matrix)
     }
     storage.mode(data_matrix) <- "double"
+
+    handle_flag <- !is.null(fill_the_missing) || identical(fill_the_missing, FALSE)
+    if (handle_flag && anyNA(data_matrix)) {
+        data_matrix <- handle_missing_values(
+            data_matrix,
+            warning_message = "Applying requested missing-value handling (fill_the_missing) before RUV-III-C.",
+            fill_the_missing = fill_the_missing
+        )
+        if (!nrow(data_matrix) || !ncol(data_matrix)) {
+            stop("No data remaining after handling missing values for RUV-III-C correction.")
+        }
+    }
 
     feature_ids <- rownames(data_matrix)
     sample_ids <- colnames(data_matrix)
@@ -329,7 +365,9 @@ correct_with_RUVIII_C <- function(
     missing_controls <- setdiff(negative_control_features, feature_ids)
     if (length(missing_controls)) {
         stop(
-            "negative_control_features missing from data_matrix: ",
+            "negative_control_features missing from data_matrix",
+            if (handle_flag) " after handling missing values" else "",
+            ": ",
             paste(missing_controls, collapse = ", ")
         )
     }

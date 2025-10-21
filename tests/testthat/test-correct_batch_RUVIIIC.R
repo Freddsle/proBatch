@@ -189,6 +189,50 @@ test_that(".ruviiic_matrix_step builds design matrix and transposes output (mock
     expect_equal(captured$args$to_correct, rownames(m))
 })
 
+test_that(".ruviiic_matrix_step applies fill_the_missing before calling core", {
+    captured <- new.env(parent = emptyenv())
+    fake_core <- function(...) {
+        args <- list(...)
+        captured$args <- args
+        Y <- args$Y
+        matrix(
+            1,
+            nrow = nrow(Y),
+            ncol = ncol(Y),
+            dimnames = dimnames(Y)
+        )
+    }
+    testthat::local_mocked_bindings(
+        .run_RUVIIIC_core = fake_core,
+        .package = "proBatch"
+    )
+    m <- matrix(
+        c(1, NA, 5, 6),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2"))
+    )
+    sa <- data.frame(
+        FullRunName = c("s1", "s2"),
+        replicate_id = c("r1", "r1"),
+        stringsAsFactors = FALSE
+    )
+    suppressWarnings(
+        out <- proBatch:::`.ruviiic_matrix_step`(
+            data_matrix = m,
+            sample_annotation = sa,
+            sample_id_col = "FullRunName",
+            fill_the_missing = "remove",
+            replicate_col = "replicate_id",
+            negative_control_features = "f1",
+            k = 1
+        )
+    )
+
+    expect_false(anyNA(captured$args$Y))
+    expect_equal(rownames(out), "f1")
+    expect_equal(colnames(out), c("s1", "s2"))
+})
+
 test_that(".ruviiic_matrix_step rejects missing replicate column", {
     m <- matrix(
         1:4,

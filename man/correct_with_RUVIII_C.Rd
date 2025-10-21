@@ -14,6 +14,7 @@ correct_with_RUVIII_C(
   negative_control_features,
   k,
   format = c("long", "wide"),
+  fill_the_missing = NULL,
   keep_all = "default",
   version = c("CPP", "R"),
   to_correct = NULL,
@@ -61,6 +62,12 @@ it must satisfy rows(M) − cols(M) ≥ k on the subset used for that peptide.
 If k is too high, some features will be dropped by necessity.}
 
 \item{format}{One of `"long"` or `"wide"`.}
+
+\item{fill_the_missing}{Missing-value policy applied before calling RUV-III-C.
+Follows [handle_missing_values()] semantics: `NULL` leaves the matrix
+unchanged, `"remove"` drops rows with any missing value, numeric imputes NAs,
+and `FALSE` keeps them untouched. Note that removing missing values may
+eliminate specified negative-control features.}
 
 \item{keep_all}{Columns retained in the long-format output; passed to
 [subset_keep_cols()]. Ignored for wide matrices.}

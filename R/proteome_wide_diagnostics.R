@@ -959,10 +959,12 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
     titles <- prep$titles
 
     if (is.null(sample_annotation)) {
-        sample_annotation <- as.data.frame(colData(object))
+        sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
         rownames(sample_annotation) <- NULL
     }
     sample_ann_list <- split_arg(sample_annotation)
+    default_sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
+    rownames(default_sample_annotation) <- NULL
 
     plot_list <- vector("list", length(assays))
     names(plot_list) <- assays
@@ -972,9 +974,9 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
         data_matrix <- pb_assay_matrix(object, assay_nm)
         sample_ann <- sample_ann_list[[i]]
         if (is.null(sample_ann)) {
-            sample_ann <- as.data.frame(colData(object))
-            rownames(sample_ann) <- NULL
+            sample_ann <- default_sample_annotation
         }
+        sample_ann <- as.data.frame(sample_ann, stringsAsFactors = FALSE)
 
         call_args <- .pb_per_assay_dots(dots, filename_list, i)
 
@@ -1093,7 +1095,7 @@ prepare_PVCA_df.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
     dots <- prep$dots
     split_arg <- prep$split_arg
 
-    default_sample_annotation <- as.data.frame(colData(object))
+    default_sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
     sample_ann_list <- split_arg(sample_annotation)
 
     pvca_df_list <- vector("list", length(assays))
@@ -1106,6 +1108,7 @@ prepare_PVCA_df.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
         if (is.null(sample_ann)) {
             sample_ann <- default_sample_annotation
         }
+        sample_ann <- as.data.frame(sample_ann, stringsAsFactors = FALSE)
 
         call_args <- c(list(
             data_matrix = data_matrix,
@@ -1264,7 +1267,7 @@ plot_PVCA.df.ProBatchFeatures <- function(df, pbf_name = NULL,
     }
     add_values_list <- split_arg(add_values_arg)
 
-    default_sample_annotation <- as.data.frame(colData(object))
+    default_sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
     rownames(default_sample_annotation) <- NULL
 
     if (is.null(sample_annotation)) {
@@ -1288,6 +1291,7 @@ plot_PVCA.df.ProBatchFeatures <- function(df, pbf_name = NULL,
         if (is.null(sample_ann)) {
             sample_ann <- default_sample_annotation
         }
+        sample_ann <- as.data.frame(sample_ann, stringsAsFactors = FALSE)
 
         prepare_args <- c(list(
             data_matrix = data_matrix,
