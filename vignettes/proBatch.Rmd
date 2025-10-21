@@ -14,11 +14,10 @@ vignette: >
   %\usepackage[utf8]{inputenc}
   %\VignetteEngine{knitr::rmarkdown}
 abstract: |
-  This vignette describes how to apply different functions from the `proBatch` package to diagnose and correct for batch effects. Most of the functions are applicable any 'omic' data, however, the package has a number of functions, designed specifically for mass spectrometry-based proteomics, and has been tested on SWATH data.
+  This vignette describes how to apply different functions from the `proBatch` package to diagnose and correct for batch effects. Most of the functions are applicable to any omics data; however, the package includes a number of functions designed specifically for mass spectrometry-based proteomics and has been tested on SWATH data.
   
-  The `proBatch` package was programmed and intended for use by researchers without
-  extensive programming skills, but with basic R knowledge. 
-  The `proBatch` package provides a complete functionality for batch correction workflow: to prepare the data for analysis, diagnose and correct batch effects and finally, to evaluate the correction with quality control metrics. 
+  The `proBatch` package is designed for researchers with basic R knowledge but without extensive programming experience. 
+  The `proBatch` provides a comprehensive workflow for batch effect correction, including data preprocessing, batch effect diagnosis and correction, and post-correction evaluation using quality control metrics.
 toc: yes
 toc_depth: 2
 numbersections: true
@@ -55,7 +54,7 @@ systematic technical variations known as batch effects.
 
 Batch effects can alter or obscure the biological signal in the data [2,
 3]. Thus, the presence and severity of batch effects should be assessed,
-and, if necessary, corrected .
+and, if necessary, corrected.
 
 The fundamental objective of the batch effects adjustment procedure is
 to make all measurements of samples comparable for a meaningful
