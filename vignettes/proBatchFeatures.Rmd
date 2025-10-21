@@ -561,7 +561,7 @@ The four new assays (`protein::limmaRBE_on_…` and `protein::combat_on_…`) ar
 
 ### Principal component analysis
 
-The progression from log₂-transformed to batch-corrected assays demonstrates the expected reduction in lab-specific variance and a clearer separation by biological condition in the final panel.
+The progression from log$_2$-transformed to batch-corrected assays demonstrates the expected reduction in lab-specific variance and a clearer separation by biological condition in the final panel.
 
 ```{r plot_pca_limma_series, fig.height=7, fig.show='hold', fig.width=8, message=FALSE, warning=FALSE}
 plot_PCA(

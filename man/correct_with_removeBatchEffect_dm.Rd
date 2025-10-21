@@ -48,8 +48,9 @@ data(
     list = c("example_sample_annotation", "example_proteome_matrix"),
     package = "proBatch"
 )
+example_proteome_small <- example_proteome_matrix[1:100, ]
 batch_corrected_matrix <- correct_with_removeBatchEffect_dm(
-    example_proteome_matrix,
+    example_proteome_small,
     example_sample_annotation,
     batch_col = "MS_batch",
     covariates_cols = c("Diet", "Sex")

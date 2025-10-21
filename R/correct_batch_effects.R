@@ -63,18 +63,14 @@
 
 #'
 #' @examples
-#' # Load necessary datasets
 #' data(
 #'     list = c("example_sample_annotation", "example_proteome"),
 #'     package = "proBatch"
 #' )
-#'
-#' # Median centering per feature per batch:
 #' median_centered_df <- center_feature_batch_medians_df(
 #'     example_proteome, example_sample_annotation
 #' )
 #'
-#' # Correct with ComBat:
 #' combat_corrected_df <- correct_with_ComBat_df(
 #'     example_proteome,
 #'     example_sample_annotation
@@ -89,9 +85,12 @@
 #'     span = 0.7,
 #'     min_measurements = 8
 #' )
-#' plot_fit <- plot_with_fitting_curve(unique(adjusted_df$peptide_group_label),
-#'     df_long = adjusted_df, measure_col = "preTrendFit_Intensity",
-#'     fit_df = adjusted_df, sample_annotation = example_sample_annotation
+#' plot_fit <- plot_with_fitting_curve(
+#'     unique(adjusted_df$peptide_group_label),
+#'     df_long = adjusted_df,
+#'     measure_col = "preTrendFit_Intensity",
+#'     fit_df = adjusted_df,
+#'     sample_annotation = example_sample_annotation
 #' )
 #'
 #' # Correct the data in one go:
@@ -1004,8 +1003,9 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
 #'     list = c("example_sample_annotation", "example_proteome_matrix"),
 #'     package = "proBatch"
 #' )
+#' example_proteome_small <- example_proteome_matrix[1:100, ]
 #' batch_corrected_matrix <- correct_with_removeBatchEffect_dm(
-#'     example_proteome_matrix,
+#'     example_proteome_small,
 #'     example_sample_annotation,
 #'     batch_col = "MS_batch",
 #'     covariates_cols = c("Diet", "Sex")

@@ -30,27 +30,28 @@
 #'     "example_proteome", "example_sample_annotation",
 #'     "example_proteome_matrix"
 #' ), package = "proBatch")
-#' mean_plot <- plot_sample_mean(example_proteome_matrix, example_sample_annotation,
-#'     order_col = "order", batch_col = "MS_batch"
+#'
+#' demo_ids <- colnames(example_proteome_matrix)[1:6]
+#' demo_matrix <- example_proteome_matrix[, demo_ids]
+#' demo_annotation <- example_sample_annotation[
+#'     example_sample_annotation$FullRunName %in% demo_ids,
+#' ]
+#'
+#' plot_sample_mean(
+#'     demo_matrix,
+#'     demo_annotation,
+#'     order_col = "order",
+#'     batch_col = "MS_batch"
 #' )
 #'
-#' color_list <- sample_annotation_to_colors(example_sample_annotation,
-#'     factor_columns = c("MS_batch"),
-#'     numeric_columns = c("DateTime", "order")
+#' demo_proteome <- example_proteome[
+#'     example_proteome$FullRunName %in% demo_ids,
+#' ]
+#' plot_boxplot(
+#'     demo_proteome,
+#'     sample_annotation = demo_annotation,
+#'     batch_col = "MS_batch"
 #' )
-#' plot_sample_mean(example_proteome_matrix, example_sample_annotation,
-#'     order_col = "order", batch_col = "MS_batch", color_by_batch = TRUE,
-#'     color_scheme = color_list[["MS_batch"]]
-#' )
-#'
-#' mean_file <- tempfile("meanplot", fileext = ".png")
-#' mean_plot <- plot_sample_mean(example_proteome_matrix,
-#'     example_sample_annotation,
-#'     order_col = "order", batch_col = "MS_batch",
-#'     filename = mean_file,
-#'     width = 28, height = 18, units = "cm"
-#' )
-#' unlink(mean_file)
 #'
 plot_sample_mean.default <- function(x, sample_annotation,
                                      sample_id_col = "FullRunName",
@@ -238,30 +239,6 @@ plot_sample_mean.default <- function(x, sample_annotation,
 #' @name plot_sample_mean_or_boxplot
 #'
 #' @export
-#'
-#' @examples
-#' data(list = c("example_proteome", "example_sample_annotation"), package = "proBatch")
-#' boxplot <- plot_boxplot(log_transform_df(example_proteome),
-#'     sample_annotation = example_sample_annotation,
-#'     batch_col = "MS_batch"
-#' )
-#'
-#' color_list <- sample_annotation_to_colors(example_sample_annotation,
-#'     factor_columns = c("MS_batch"),
-#'     numeric_columns = c("DateTime", "order")
-#' )
-#' plot_boxplot(log_transform_df(example_proteome),
-#'     sample_annotation = example_sample_annotation,
-#'     batch_col = "MS_batch", color_scheme = color_list[["MS_batch"]]
-#' )
-
-#' boxplot_file <- tempfile("boxplot", fileext = ".png")
-#' boxplot <- plot_boxplot(log_transform_df(example_proteome),
-#'     sample_annotation = example_sample_annotation,
-#'     batch_col = "MS_batch", filename = boxplot_file,
-#'     width = 14, height = 9, units = "in"
-#' )
-#' unlink(boxplot_file)
 #'
 plot_boxplot.default <- function(x, sample_annotation,
                                  sample_id_col = "FullRunName",

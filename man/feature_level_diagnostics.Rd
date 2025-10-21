@@ -269,100 +269,60 @@ another batch factor, e.g. an instrument.
  functions specific to each case below
 }
 \examples{
-# Load necessary datasets
 data(list = c(
     "example_sample_annotation", "example_proteome",
     "example_peptide_annotation"
 ), package = "proBatch")
 
-single_feature_plot <- plot_single_feature(
-    feature_name = c("46213_NVGVSFYADKPEVTQEQK_2", "10081_NVQGIIDILK_2"),
-    df_long = example_proteome, example_sample_annotation,
-    qual_col = NULL
-)
+sample_annotation <- example_sample_annotation
+peptide_annotation <- example_peptide_annotation
+proteome <- example_proteome
 
-# color measurements by factor, related to order (MS_batch)
-plot_single_feature(
-    feature_name = c("46213_NVGVSFYADKPEVTQEQK_2", "10081_NVQGIIDILK_2"),
-    df_long = example_proteome, example_sample_annotation,
-    qual_col = NULL, color_by_batch = TRUE, batch_col = "MS_batch"
-)
+feature_id <- "10231_QDVDVWLWQQEGSSK_2"
 
-# color measurements by factor, with order-unrelated factor
-single_feature_plot <- plot_single_feature(
-    feature_name = c("46213_NVGVSFYADKPEVTQEQK_2", "10081_NVQGIIDILK_2"),
-    df_long = example_proteome, example_sample_annotation,
-    qual_col = NULL, color_by_batch = TRUE, batch_col = "Diet", geom = "point",
-    vline_color = NULL
-)
-
-# saving the plot
-single_feature_file <- tempfile("single_feature", fileext = ".png")
-single_feature_plot <- plot_single_feature(
-    feature_name = c("46213_NVGVSFYADKPEVTQEQK_2", "10081_NVQGIIDILK_2"),
-    df_long = example_proteome, example_sample_annotation,
-    qual_col = NULL, filename = single_feature_file,
-    width = 28, height = 18, units = "cm"
-)
-unlink(single_feature_file)
-
-# to examine peptides of a single protein:
-peptides_of_one_protein_plot <- plot_peptides_of_one_protein(
-    protein_name = "Haao", peptide_annotation = example_peptide_annotation,
-    protein_col = "Gene", df_long = example_proteome,
-    sample_annotation = example_sample_annotation,
-    order_col = "order", sample_id_col = "FullRunName",
+feature_plot <- plot_single_feature(
+    feature_name = feature_id,
+    df_long = proteome,
+    sample_annotation = sample_annotation,
+    color_by_batch = TRUE,
     batch_col = "MS_batch"
 )
 
-# saving the peptides of one protein
-protein_plot_file <- tempfile("protein_plot", fileext = ".png")
-peptides_of_one_protein_plot <- plot_peptides_of_one_protein(
-    protein_name = "Haao", peptide_annotation = example_peptide_annotation,
-    protein_col = "Gene", df_long = example_proteome,
-    sample_annotation = example_sample_annotation,
-    order_col = "order", sample_id_col = "FullRunName",
-    batch_col = "MS_batch",
-    filename = protein_plot_file, width = 14, height = 9, units = "in"
-)
-unlink(protein_plot_file)
-
-# to illustrate spike-ins:
-spike_in_plot <- plot_spike_in(
-    spike_ins = "BOVINE_A1ag",
-    peptide_annotation = example_peptide_annotation, protein_col = "Gene",
-    df_long = example_proteome, sample_annotation = example_sample_annotation,
-    sample_id_col = "FullRunName",
-    plot_title = "Spike-in BOVINE protein peptides"
-)
-
-# to illustrate iRT peptides:
-irt_plot <- plot_iRT(
-    irt_pattern = "iRT",
-    peptide_annotation = example_peptide_annotation,
-    df_long = example_proteome, sample_annotation = example_sample_annotation,
+protein_plot <- plot_peptides_of_one_protein(
+    protein_name = "Haao",
+    peptide_annotation = peptide_annotation,
+    df_long = proteome,
+    sample_annotation = sample_annotation,
     protein_col = "Gene"
 )
 
-# illustrate the fitting curve:
-special_peptide <- example_proteome$peptide_group_label == "10231_QDVDVWLWQQEGSSK_2"
-loess_fit_70 <- adjust_batch_trend_df(example_proteome[special_peptide, ],
-    example_sample_annotation,
+spike_in_plot <- plot_spike_in(
+    spike_ins = "BOVINE_A1ag",
+    peptide_annotation = peptide_annotation,
+    df_long = proteome,
+    sample_annotation = sample_annotation,
+    protein_col = "Gene"
+)
+
+irt_plot <- plot_iRT(
+    irt_pattern = "iRT",
+    peptide_annotation = peptide_annotation,
+    df_long = proteome,
+    sample_annotation = sample_annotation,
+    protein_col = "Gene"
+)
+
+fit_input <- adjust_batch_trend_df(
+    proteome[proteome$peptide_group_label == feature_id, ],
+    sample_annotation,
     span = 0.7
 )
 
-fitting_curve_plot <- plot_with_fitting_curve(
-    feature_name = "10231_QDVDVWLWQQEGSSK_2",
-    df_long = example_proteome, sample_annotation = example_sample_annotation,
-    fit_df = loess_fit_70, plot_title = "Curve fitting with 70\% span"
-)
-
-# with curves colored by the corresponding batch:
-fitting_curve_plot <- plot_with_fitting_curve(
-    feature_name = "10231_QDVDVWLWQQEGSSK_2",
-    df_long = example_proteome, sample_annotation = example_sample_annotation,
-    fit_df = loess_fit_70, plot_title = "Curve fitting with 70\% span",
-    color_by_batch = TRUE, batch_col = "MS_batch"
+curve_plot <- plot_with_fitting_curve(
+    feature_name = feature_id,
+    df_long = proteome,
+    sample_annotation = sample_annotation,
+    fit_df = fit_input
 )
 
 }
