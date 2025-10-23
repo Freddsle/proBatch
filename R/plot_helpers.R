@@ -27,7 +27,21 @@
     }
 
     list_like <- is.list(arg) && !is.data.frame(arg)
-    values <- if (list_like) arg else as.list(arg)
+
+    if (!list_like && is.atomic(arg)) {
+        # Treat atomic vectors (e.g., character vectors of column names)
+        # as shared arguments unless explicitly named.
+        if (length(arg) > 1L && is.null(names(arg))) {
+            for (i in seq_len(n)) {
+                res[[i]] <- arg
+            }
+            return(res)
+        }
+        values <- as.list(arg)
+    } else {
+        values <- if (list_like) arg else as.list(arg)
+    }
+
     arg_len <- length(values)
     names_present <- !is.null(names(values))
 

@@ -13,6 +13,10 @@
 #'   If \code{NULL}, the order of \code{sample_annotation[[sample_id_col]]} is used.
 #' @param qc_col_name Optional column in \code{sample_annotation} marking QC samples.
 #'   Logical, factor (level "QC"), or character ("QC") values are treated as QC.
+#' @param fill_the_missing Missing-value policy before invoking NormAE. If \code{NULL},
+#'   missing values are left unchanged (and NormAE will fail if any remain). Set \code{FALSE}
+#'   to keep NA entries untouched, or provide a numeric value / removal token (e.g., \code{"remove"})
+#'   to impute or drop before correction.
 #' @param normae_args Named list of CLI parameters forwarded to \code{normae}.
 #'   Entries are translated to \code{--name value} pairs. Default: empty list.
 #'   Some defaults are set internally if not provided:
@@ -45,6 +49,7 @@ correct_with_NormAE <- function(
   format = c("wide", "long"),
   inj_order_col = NULL,
   qc_col_name = NULL,
+  fill_the_missing = NULL,
   keep_all = "default",
   python_env = NULL,
   conda_env = NULL,
@@ -70,6 +75,7 @@ correct_with_NormAE <- function(
             batch_col = batch_col,
             inj_order_col = inj_order_col,
             qc_col_name = qc_col_name,
+            fill_the_missing = fill_the_missing,
             python_env = python_env,
             conda_env = conda_env,
             normae_args = normae_args
@@ -88,6 +94,20 @@ correct_with_NormAE <- function(
         order_col = NULL, facet_col = NULL, merge = FALSE
     )
 
+    handled <- .handle_missing_for_batch_df(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        measure_col = measure_col,
+        fill_the_missing = fill_the_missing,
+        warning_message = "NormAE cannot operate with missing values in the matrix",
+        qual_col = NULL,
+        qual_value = NULL
+    )
+    df_long <- handled$df_long
+    sample_annotation <- handled$sample_annotation
+
     data_matrix <- long_to_matrix(
         df_long,
         feature_id_col = feature_id_col,
@@ -102,6 +122,7 @@ correct_with_NormAE <- function(
         batch_col = batch_col,
         inj_order_col = inj_order_col,
         qc_col_name = qc_col_name,
+        fill_the_missing = fill_the_missing,
         python_env = python_env,
         conda_env = conda_env,
         normae_args = normae_args
@@ -120,39 +141,44 @@ correct_with_NormAE <- function(
   batch_col = "MS_batch",
   inj_order_col = NULL,
   qc_col_name = NULL,
+  fill_the_missing = NULL,
   python_env = NULL,
   conda_env = NULL,
   normae_args = list()
 ) {
-    if (is.null(sample_annotation)) stop("sample_annotation must be provided for NormAE correction.")
-    if (!is.matrix(data_matrix)) {
-        data_matrix <- as.matrix(data_matrix)
-    }
-    if (anyNA(data_matrix)) stop("NormAE requires no NAs; impute/filter before calling.")
-    if (!is.numeric(data_matrix)) {
-        stop("Input must be coercible to a numeric matrix for NormAE correction.")
-    }
-    storage.mode(data_matrix) <- "double"
-    if (any(data_matrix < 0, na.rm = TRUE)) {
-        message("NormAE expects non-negative intensities; negative values were detected.")
+    if (is.null(sample_annotation)) {
+        stop("sample_annotation must be provided for NormAE correction.")
     }
 
-    sample_ids <- colnames(data_matrix)
-    if (is.null(sample_ids) || length(sample_ids) == 0 ||
-        any(!sample_ids %in% as.character(sample_annotation[[sample_id_col]]))) {
-        stop("data_matrix must have column names (sample IDs) present in sample_annotation.")
-    }
-
-    .run_normae_core(
+    .run_matrix_method(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
-        batch_col = batch_col,
-        inj_order_col = inj_order_col,
-        qc_col_name = qc_col_name,
-        python_env = python_env,
-        conda_env = conda_env,
-        normae_args = normae_args
+        fill_the_missing = fill_the_missing,
+        missing_warning = "NormAE cannot operate with missing values in the matrix",
+        method_fun = function(data_matrix, sample_annotation) {
+            if (anyNA(data_matrix)) {
+                stop("NormAE requires no NAs; impute/filter before calling.")
+            }
+            if (!is.numeric(data_matrix)) {
+                stop("Input must be coercible to a numeric matrix for NormAE correction.")
+            }
+            if (any(data_matrix < 0, na.rm = TRUE)) {
+                message("NormAE expects non-negative intensities; negative values were detected.")
+            }
+
+            .run_normae_core(
+                data_matrix = data_matrix,
+                sample_annotation = sample_annotation,
+                sample_id_col = sample_id_col,
+                batch_col = batch_col,
+                inj_order_col = inj_order_col,
+                qc_col_name = qc_col_name,
+                python_env = python_env,
+                conda_env = conda_env,
+                normae_args = normae_args
+            )
+        }
     )
 }
 
@@ -299,7 +325,11 @@ correct_with_NormAE <- function(
 }
 
 .normae_prepare_python <- function(python_env = NULL, conda_env = NULL) {
-    .pb_requireNamespace("reticulate")
+    if (!(.pb_requireNamespace("reticulate"))) {
+        if (!(.pb_requireNamespace("basilisk"))) {} else {
+            stop("NormAE correction requires either the 'reticulate' package or 'basilisk' package.")
+        }
+    }
 
     has_cli <- function(py) {
         if (!nzchar(py) || !file.exists(py) || dir.exists(py)) {

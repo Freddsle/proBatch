@@ -280,6 +280,9 @@ correct_with_BERT <- function(
 #'   else \code{TRUE} (as recommended by PLSDAbatch).
 #' @param near_zero_var Passed to PLSDAbatch; keep \code{TRUE} for many zeros.
 #' @param format Either \code{"wide"} (matrix, features x samples) or \code{"long"} (data.frame).
+#' @param fill_the_missing Missing-value policy before invoking PLSDA-batch. If \code{NULL},
+#'   missing values are left as-is (and the method will fail if NAs remain). Set \code{FALSE}
+#'   to keep NA entries untouched, or supply a numeric value to impute prior to correction.
 #' @param max.iter,tol Passed to PLSDAbatch; max iterations and tolerance for convergence.
 #' @param run_splsda Logical; if \code{TRUE} runs sPLSDA correction.
 #' @return A batch-corrected matrix (features x samples) for \code{format="wide"};
@@ -305,6 +308,7 @@ correct_with_PLSDA_batch <- function(x,
                                      max.iter = 500,
                                      tol = 1e-06,
                                      format = c("wide", "long"),
+                                     fill_the_missing = NULL,
                                      keep_all = "default",
                                      run_splsda = FALSE,
                                      ...) {
@@ -344,6 +348,7 @@ correct_with_PLSDA_batch <- function(x,
             max.iter          = max.iter,
             tol               = tol,
             run_splsda        = run_splsda,
+            fill_the_missing  = fill_the_missing,
             ...
         )
         return(corrected_matrix)
@@ -359,6 +364,20 @@ correct_with_PLSDA_batch <- function(x,
         batch_col,
         order_col = NULL, facet_col = NULL, merge = FALSE
     )
+
+    handled <- .handle_missing_for_batch_df(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        measure_col = measure_col,
+        fill_the_missing = fill_the_missing,
+        warning_message = "PLSDA-batch cannot operate with missing values in the matrix",
+        qual_col = NULL,
+        qual_value = NULL
+    )
+    df_long <- handled$df_long
+    sample_annotation <- handled$sample_annotation
 
     data_matrix <- long_to_matrix(
         df_long,
@@ -382,6 +401,7 @@ correct_with_PLSDA_batch <- function(x,
         max.iter = max.iter,
         tol = tol,
         run_splsda = run_splsda,
+        fill_the_missing = fill_the_missing,
         ...
     )
 
@@ -441,36 +461,38 @@ correct_with_PLSDA_batch <- function(x,
   max.iter = 500,
   tol = 1e-06,
   run_splsda = FALSE,
+  fill_the_missing = NULL,
   ...
 ) {
-    # Coerce to numeric matrix
-    if (!is.matrix(data_matrix)) {
-        data_matrix <- as.matrix(data_matrix)
-    }
-    if (!is.numeric(data_matrix)) {
-        stop("Input must be coercible to a numeric matrix for PLSDA correction.")
-    }
-    storage.mode(data_matrix) <- "double"
-    if (sum(rowSums(!is.na(data_matrix)) > 0L) < 2L) {
-        stop("PLSDA requires at least two not-NA features.")
-    }
+    .run_matrix_method(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        fill_the_missing = fill_the_missing,
+        missing_warning = "PLSDA-batch cannot operate with missing values in the matrix",
+        method_fun = function(data_matrix, sample_annotation) {
+            if (sum(rowSums(!is.na(data_matrix)) > 0L) < 2L) {
+                stop("PLSDA requires at least two not-NA features.")
+            }
 
-    .run_PLSDA_core(
-        data_matrix, # features × samples (numeric)
-        sample_annotation, # data.frame
-        sample_id_col,
-        batch_col,
-        effect_col = effect_col,
-        ncomp_trt = ncomp_trt,
-        ncomp_bat = ncomp_bat,
-        keepX_trt = keepX_trt,
-        keepX_bat = keepX_bat,
-        balance = balance,
-        near_zero_var = near_zero_var,
-        max.iter = max.iter,
-        tol = tol,
-        run_splsda = run_splsda,
-        ...
+            .run_PLSDA_core(
+                data_matrix = data_matrix,
+                sample_annotation = sample_annotation,
+                sample_id_col = sample_id_col,
+                batch_col = batch_col,
+                effect_col = effect_col,
+                ncomp_trt = ncomp_trt,
+                ncomp_bat = ncomp_bat,
+                keepX_trt = keepX_trt,
+                keepX_bat = keepX_bat,
+                balance = balance,
+                near_zero_var = near_zero_var,
+                max.iter = max.iter,
+                tol = tol,
+                run_splsda = run_splsda,
+                ...
+            )
+        }
     )
 }
 

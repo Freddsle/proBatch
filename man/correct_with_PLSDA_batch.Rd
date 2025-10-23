@@ -21,6 +21,7 @@ correct_with_PLSDA_batch(
   max.iter = 500,
   tol = 1e-06,
   format = c("wide", "long"),
+  fill_the_missing = NULL,
   keep_all = "default",
   run_splsda = FALSE,
   ...
@@ -69,6 +70,10 @@ else \code{TRUE} (as recommended by PLSDAbatch).}
 \item{max.iter, tol}{Passed to PLSDAbatch; max iterations and tolerance for convergence.}
 
 \item{format}{Either \code{"wide"} (matrix, features x samples) or \code{"long"} (data.frame).}
+
+\item{fill_the_missing}{Missing-value policy before invoking PLSDA-batch. If \code{NULL},
+missing values are left as-is (and the method will fail if NAs remain). Set \code{FALSE}
+to keep NA entries untouched, or supply a numeric value to impute prior to correction.}
 
 \item{keep_all}{For long format, columns to retain (see \code{subset_keep_cols()}).}
 

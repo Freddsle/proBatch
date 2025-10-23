@@ -14,6 +14,7 @@ correct_with_NormAE(
   format = c("wide", "long"),
   inj_order_col = NULL,
   qc_col_name = NULL,
+  fill_the_missing = NULL,
   keep_all = "default",
   python_env = NULL,
   conda_env = NULL,
@@ -51,6 +52,11 @@ If \code{NULL}, the order of \code{sample_annotation[[sample_id_col]]} is used.}
 
 \item{qc_col_name}{Optional column in \code{sample_annotation} marking QC samples.
 Logical, factor (level "QC"), or character ("QC") values are treated as QC.}
+
+\item{fill_the_missing}{Missing-value policy before invoking NormAE. If \code{NULL},
+missing values are left unchanged (and NormAE will fail if any remain). Set \code{FALSE}
+to keep NA entries untouched, or provide a numeric value / removal token (e.g., \code{"remove"})
+to impute or drop before correction.}
 
 \item{keep_all}{For long format, columns to retain (see \code{subset_keep_cols()}).}
 
