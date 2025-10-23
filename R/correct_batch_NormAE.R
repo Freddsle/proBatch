@@ -23,9 +23,11 @@
 #'     --mz_row set to "".
 #'     --rt_row set to "".
 #'     --early_stop set to False.
+#' @param conda_env Optional conda/mamba environment name. Ignored when \code{python_env}
+#'   is supplied. If neither is provided, a \code{"normae"} conda env is created - NOT TESTED.
+#' @param conda_env_path Optional path to an existing conda/mamba environment. When provided,
+#'   the environment is treated as ready with NormAE installed and used as-is.
 #' @param python_env Optional path to a Python binary.
-#' @param conda_env Optional conda environment name. Ignored when \code{python_env}
-#'   is supplied. If neither is provided, a \code{"normae"} conda env is created.
 #'
 #' @return Same type as input: numeric \code{matrix} for \code{format="wide"},
 #'   or a long \code{data.frame} for \code{format="long"}.
@@ -53,6 +55,7 @@ correct_with_NormAE <- function(
   keep_all = "default",
   python_env = NULL,
   conda_env = NULL,
+  conda_env_path = NULL,
   normae_args = list()
 ) {
     format <- match.arg(format)
@@ -78,6 +81,7 @@ correct_with_NormAE <- function(
             fill_the_missing = fill_the_missing,
             python_env = python_env,
             conda_env = conda_env,
+            conda_env_path = conda_env_path,
             normae_args = normae_args
         ))
     }
@@ -125,6 +129,7 @@ correct_with_NormAE <- function(
         fill_the_missing = fill_the_missing,
         python_env = python_env,
         conda_env = conda_env,
+        conda_env_path = conda_env_path,
         normae_args = normae_args
     )
 
@@ -144,6 +149,7 @@ correct_with_NormAE <- function(
   fill_the_missing = NULL,
   python_env = NULL,
   conda_env = NULL,
+  conda_env_path = NULL,
   normae_args = list()
 ) {
     if (is.null(sample_annotation)) {
@@ -176,6 +182,7 @@ correct_with_NormAE <- function(
                 qc_col_name = qc_col_name,
                 python_env = python_env,
                 conda_env = conda_env,
+                conda_env_path = conda_env_path,
                 normae_args = normae_args
             )
         }
@@ -191,12 +198,13 @@ correct_with_NormAE <- function(
   qc_col_name = NULL,
   python_env = NULL,
   conda_env = NULL,
+  conda_env_path = NULL,
   normae_args = list()
 ) {
     stopifnot(is.matrix(data_matrix))
     if (is.null(sample_annotation)) stop("sample_annotation is required.")
 
-    # --- SA coverage + ordering (minimal, deterministic) ---------------------
+    # --- SA coverage + ordering ------------------------------------------------
     sample_ids <- colnames(data_matrix)
     if (is.null(sample_ids) || !length(sample_ids)) {
         stop("data_matrix must have column names (sample IDs).")
@@ -207,31 +215,25 @@ correct_with_NormAE <- function(
     if (!(batch_col %in% names(sample_annotation))) {
         stop("Column '", batch_col, "' not in sample_annotation.")
     }
-
-    # Keep only rows for present samples and order to match data_matrix
     sa <- sample_annotation[sample_annotation[[sample_id_col]] %in% sample_ids, , drop = FALSE]
     sa[[sample_id_col]] <- as.character(sa[[sample_id_col]])
     sa <- sa[match(sample_ids, sa[[sample_id_col]]), , drop = FALSE]
-    if (anyNA(sa[[sample_id_col]])) {
-        stop("Some matrix samples are absent in sample_annotation.")
-    }
+    if (anyNA(sa[[sample_id_col]])) stop("Some matrix samples are absent in sample_annotation.")
 
-    # --- Injection order (if missing, synthesize 1..n) -----------------------
+    # --- Injection order + QC ---------------------------------------------------
     inj_res <- .normae_prepare_injection_order(sa, sample_id_col, inj_order_col)
     sa <- inj_res$sample_annotation
     inj_col_name <- inj_res$inj_col_name
 
-    # --- QC (optional, tolerant) ---------------------------------------------
     qc_res <- .preprocess_qc_column(sa, qc_col_name, sample_id_col)
     sa <- qc_res$sample_annotation
     qc_col_name <- qc_res$qc_col_name
     qc_indicator_value <- qc_res$qc_indicator_value
 
-    # --- Python resolver (reticulate first, basilisk as fallback) ------------
-    python_bin <- .normae_prepare_python(python_env, conda_env)
+    # --- Python resolver (reticulate first, basilisk fallback) ------------------
+    python_bin <- .normae_prepare_python(python_env, conda_env, conda_env_path)
 
-    # --- I/O in the *working directory* --------------------------------------
-    # Prepare input CSV files for NormAE CLI
+    # --- I/O: create isolated run dir ------------------------------------------
     meta_df <- as.data.frame(t(data_matrix), check.names = FALSE)
     rownames(meta_df) <- sample_ids
     run_tag <- paste0("normae_", format(Sys.time(), "%Y%m%d_%H%M%S"), "_", as.integer(runif(1, 1, 1e9)))
@@ -243,24 +245,19 @@ correct_with_NormAE <- function(
     out_dir <- file.path(run_dir, "output")
     dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
-    write.csv(meta_df, meta_path, quote = TRUE)
+    write.csv(meta_df, meta_path, quote = TRUE, row.names = TRUE) # explicit
     cols_needed <- unique(c(
         sample_id_col, batch_col,
         if (!is.null(inj_col_name)) inj_col_name,
         if (!is.null(qc_col_name)) qc_col_name
     ))
     sa_write <- sa[, cols_needed, drop = FALSE]
-    # Convert factors to characters to avoid writing factor levels
-    for (nm in names(sa_write)) {
-        if (is.factor(sa_write[[nm]])) {
-            sa_write[[nm]] <- as.character(sa_write[[nm]])
-        }
-    }
+    for (nm in names(sa_write)) if (is.factor(sa_write[[nm]])) sa_write[[nm]] <- as.character(sa_write[[nm]])
     write.csv(sa_write, sample_path, quote = TRUE, row.names = FALSE)
 
-    # --- CLI args -----------------------------------------------------------
+    # --- CLI args ---------------------------------------------------------------
     cli_args <- c(
-        "--meta_csv", normalizePath(meta_path, winslash = "/", mustWork = TRUE),
+        "--meta_csv",   normalizePath(meta_path, winslash = "/", mustWork = TRUE),
         "--sample_csv", normalizePath(sample_path, winslash = "/", mustWork = TRUE),
         "--output_dir", normalizePath(out_dir, winslash = "/", mustWork = TRUE),
         "--batch_indicator_col", batch_col
@@ -268,148 +265,239 @@ correct_with_NormAE <- function(
     if (!is.null(inj_col_name) && nzchar(inj_col_name)) {
         cli_args <- c(cli_args, "--order_indicator_col", inj_col_name)
     }
-    if (!is.null(qc_col_name) && nzchar(qc_col_name)) {
+    if (!is.null(qc_col_name) && nzchar(trimws(qc_col_name))) {
         cli_args <- c(
-            cli_args, "--qc_indicator_col", qc_col_name,
+            cli_args,
+            "--qc_indicator_col", trimws(qc_col_name),
             "--qc_indicator_value", if (is.null(qc_indicator_value)) "QC" else qc_indicator_value
         )
+    } else {
+        # Explicitly pass empty QC column to the CLI when no QC column is provided
+        cli_args <- c(cli_args, "--qc_indicator_col", "''")
     }
-    # Append any additional NormAE CLI arguments
     cli_args <- unname(c(cli_args, .normae_format_cli_args(normae_args)))
 
-    # --- Run NormAE CLI via system call -------------------------------------
-    out <- system2(python_bin, c("-m", "normae.cli", cli_args), stdout = TRUE, stderr = TRUE)
-    status <- attr(out, "status")
-    if (is.null(status)) status <- 0L
+    # --- Run: prefer `python -m normae`, fallback to `python -m normae.cli` -----
+    run_try <- function(mod) {
+        # print what command would be run for debugging
+        cmd <- c("-m", mod, cli_args)
+        # cat("Running command:", shQuote(python_bin), paste(cmd, collapse = " "), "\n")
+
+        stat <- suppressWarnings(system2(python_bin, cmd, stdout = "", stderr = ""))
+        if (is.null(stat) || length(stat) != 1L) stat <- 0L
+        as.integer(stat)
+    }
+    status <- run_try("normae")
+
     if (!identical(status, 0L)) {
-        stop("NormAE CLI failed.\n", paste(out, collapse = "\n"), call. = FALSE)
+        ## after streaming, re-run with capture ONLY to include text in the stop() message
+        out <- tryCatch(system2(python_bin, c("-m", "normae", cli_args), stdout = TRUE, stderr = TRUE),
+            error = function(e) paste("Failed to capture output:", conditionMessage(e))
+        )
+        status2 <- run_try("normae.cli")
+        if (!identical(status2, 0L)) {
+            out2 <- tryCatch(system2(python_bin, c("-m", "normae.cli", cli_args), stdout = TRUE, stderr = TRUE),
+                error = function(e) paste("Failed to capture output:", conditionMessage(e))
+            )
+            unlink(run_dir, recursive = TRUE)
+            stop("NormAE CLI failed.\n---- Attempt 1: python -m normae ----\n",
+                paste(out, collapse = "\n"),
+                "\n---- Attempt 2: python -m normae.cli ----\n",
+                paste(out2, collapse = "\n"),
+                call. = FALSE
+            )
+        }
     }
 
-    # --- Read result and reconcile dimensions -------------------------------
+    # --- Read result & align ----------------------------------------------------
     res_csv <- file.path(out_dir, "X_clean.csv")
     if (!file.exists(res_csv)) {
+        # unlink(run_dir, recursive = TRUE)
         stop("NormAE did not produce 'X_clean.csv' in: ", out_dir, call. = FALSE)
     }
     res_df <- read.csv(res_csv, check.names = FALSE, row.names = 1)
     res_mat <- as.matrix(res_df)
     storage.mode(res_mat) <- "double"
 
-    # Check orientation and align output to input matrix dimensions
     aligned <- if (identical(dim(res_mat), dim(data_matrix)) &&
         identical(colnames(res_mat), colnames(data_matrix))) {
         res_mat
     } else if (identical(rownames(res_mat), colnames(data_matrix))) {
         t(res_mat)
     } else {
+        # unlink(run_dir, recursive = TRUE)
         stop("Unexpected NormAE output shape; cannot align to input.")
     }
     dimnames(aligned) <- dimnames(data_matrix)
-
-    # Clean up temporary directory
-    unlink(run_dir, recursive = TRUE)
+    # unlink(run_dir, recursive = TRUE)
     aligned
 }
 
-.normae_prepare_python <- function(python_env = NULL, conda_env = NULL) {
-    # Ensure at least one Python interface package is available (reticulate or basilisk)
-    if (!.pb_requireNamespace("reticulate")) {
-        if (!.pb_requireNamespace("basilisk")) {
-            stop("NormAE correction requires either the 'reticulate' package or 'basilisk' package.")
-        }
-        # Fallback to basilisk: create/use a Python environment with NormAE installed
-        env <- basilisk::BasiliskEnvironment(
-            envname = "normae", pkgname = "proBatch",
-            packages = c("python=3.10"),
-            pip = c("git+https://github.com/luyiyun/NormAE.git")
-        )
-        env_path <- basilisk::obtainEnvironmentPath(env)
-        py <- basilisk::getPythonBinary(env_path)
-        return(py)
-    }
+.normae_cli_requirement <- function() {
+    "normae @ git+https://github.com/luyiyun/NormAE.git@release"
+}
 
-    # If we reach here, reticulate is available. Use reticulate's facilities:
+.normae_python_basilisk <- function() {
+    if (!.pb_requireNamespace("basilisk")) {
+        stop("NormAE requires either 'reticulate' or 'basilisk'; neither is available.")
+    }
+    # Bioconductor recommends disabling strict version checks while discovering versions.
+    basilisk::setBasiliskCheckVersions(FALSE)
+    env <- basilisk::BasiliskEnvironment(
+        envname = "normae_basilisk",
+        pkgname = "proBatch",
+        packages = c("python=3.10"),
+        pip = c(.normae_cli_requirement())
+    )
+    env_path <- basilisk::obtainEnvironmentPath(env)
+    py <- basilisk::getPythonBinary(env_path)
+    py
+}
+
+.normae_prepare_python <- function(python_env = NULL, conda_env = NULL, conda_env_path = NULL) {
+    basilisk_fallback <- function() .normae_python_basilisk()
+    pip_spec <- .normae_cli_requirement()
+
     has_cli <- function(py) {
-        if (!nzchar(py) || !file.exists(py) || dir.exists(py)) {
+        if (is.null(py) || !nzchar(py) || !file.exists(py)) {
             return(FALSE)
         }
-        out <- tryCatch(
-            system2(py, c("-c", "import importlib.util as u; print('OK' if u.find_spec('normae.cli') else 'NO')"),
-                stdout = TRUE, stderr = TRUE
+        probe <- tempfile("normae-cli-probe-", fileext = ".py")
+        on.exit(unlink(probe), add = TRUE)
+        # Look for either `normae.__main__` (python -m normae) or a CLI module.
+        writeLines(
+            c(
+                "import importlib.util, sys",
+                "mods = ('normae.__main__','normae.cli')",
+                "ok = any(importlib.util.find_spec(m) is not None for m in mods)",
+                "sys.exit(0 if ok else 1)"
             ),
-            error = function(e) character()
+            probe
         )
-        any(grepl("^OK$", out))
+        status <- suppressWarnings(tryCatch(system2(py, probe, stdout = FALSE, stderr = FALSE),
+            warning = function(w) NA_integer_, error = function(e) NA_integer_
+        ))
+        if (length(status) != 1L || is.na(status)) {
+            return(FALSE)
+        }
+        identical(as.integer(status), 0L)
     }
 
     ensure_normae <- function(py) {
         if (has_cli(py)) {
             return(py)
         }
-        # Upgrade pip and install NormAE from GitHub
-        system2(py, c("-m", "pip", "install", "--upgrade", "pip"), stdout = TRUE, stderr = TRUE)
-        cmd <- c("-m", "pip", "install", "git+https://github.com/luyiyun/NormAE.git")
-        out <- system2(py, cmd, stdout = TRUE, stderr = TRUE)
-        if (!has_cli(py)) {
-            stop("Failed to install 'normae' into Python at: ", py,
-                "\nOutput:\n", paste(out, collapse = "\n"),
-                call. = FALSE
-            )
+        # Try to get pip up-to-date and install NormAE CLI
+        try(system2(py, c("-m", "pip", "install", "--upgrade", "pip"), stdout = TRUE, stderr = TRUE), silent = TRUE)
+        out <- tryCatch(
+            system2(py, c("-m", "pip", "install", pip_spec), stdout = TRUE, stderr = TRUE),
+            error = function(e) character()
+        )
+        if (has_cli(py)) {
+            return(py)
         }
-        py
+        stop("Failed to install 'normae' into Python (", py, ").\n", paste(out, collapse = "\n"), call. = FALSE)
     }
 
-    # 1) If a specific Python binary path is provided, use it
+    # 1) Explicit Python binary
     if (!is.null(python_env)) {
         py <- normalizePath(python_env, winslash = "/", mustWork = FALSE)
-        if (!file.exists(py)) {
-            stop("Provided python_env does not exist: ", python_env, call. = FALSE)
-        }
+        if (!file.exists(py)) stop("Provided python_env does not exist: ", python_env)
         return(ensure_normae(py))
     }
 
-    # 2) If a specific conda environment name is provided, use or create it
-    if (!is.null(conda_env)) {
-        py <- tryCatch(reticulate::conda_python(conda_env, conda = "auto"),
-            error = function(e) NULL
-        )
-        if (is.null(py)) {
-            # Create env if missing
-            py <- reticulate::conda_create(envname = conda_env, python_version = "3.10", conda = "auto")
+    # 2) Explicit conda env path (assume preinstalled)
+    if (!is.null(conda_env_path)) {
+        env_path <- normalizePath(conda_env_path, winslash = "/", mustWork = FALSE)
+        if (!nzchar(env_path) || (!dir.exists(env_path) && !file.exists(env_path))) {
+            stop("Provided conda_env_path does not exist: ", conda_env_path)
         }
-        return(ensure_normae(py))
-    }
-
-    # 3) If system default Python already has NormAE CLI, use it
-    path_py <- Sys.which("python")
-    if (nzchar(path_py) && has_cli(path_py)) {
-        return(normalizePath(path_py, winslash = "/", mustWork = FALSE))
-    }
-
-    # 4) Otherwise, create or use a conda environment named "normae" via reticulate
-    if (is.na(reticulate::conda_binary(conda = "auto"))) {
-        # Install Miniconda if no conda is available
-        reticulate::install_miniconda()
-    }
-    py <- reticulate::conda_create(envname = "normae", python_version = "3.10", conda = "auto")
-    py <- ensure_normae(py)
-    if (has_cli(py)) {
+        candidates <- if (dir.exists(env_path)) {
+            c(
+                file.path(env_path, "bin", "python"),
+                file.path(env_path, "bin", "python3"),
+                file.path(env_path, "bin", "python.exe"),
+                file.path(env_path, "python"),
+                file.path(env_path, "python3"),
+                file.path(env_path, "python.exe"),
+                file.path(env_path, "Scripts", "python.exe"),
+                file.path(env_path, "Scripts", "python")
+            )
+        } else {
+            env_path
+        }
+        candidates <- candidates[file.exists(candidates)]
+        if (!length(candidates)) stop("Could not locate a Python binary under conda_env_path: ", conda_env_path)
+        py <- normalizePath(candidates[[1]], winslash = "/", mustWork = FALSE)
+        if (!has_cli(py)) stop("Provided conda_env_path does not contain a NormAE CLI installation.")
         return(py)
     }
 
-    # 5) Last resort: install Python and use virtualenv (for non-Windows platforms)
-    reticulate::install_python(version = "3.10")
-    if (!"normae" %in% reticulate::virtualenv_list()) {
-        reticulate::virtualenv_create("normae")
+    # 3) If reticulate is unavailable -> basilisk immediately
+    if (!.pb_requireNamespace("reticulate")) {
+        if (!.pb_requireNamespace("basilisk")) {
+            stop("NormAE correction requires either 'reticulate' or 'basilisk'.")
+        }
+        return(basilisk_fallback())
     }
-    vpy <- reticulate::virtualenv_python("normae")
-    ensure_normae(vpy)
+
+    # 4) Reticulate path (single conda binary pinned across calls to avoid env lookup mismatch)
+    conda_bin <- tryCatch(reticulate::conda_binary("auto"), error = function(e) NULL)
+    conda_arg <- function() if (!is.null(conda_bin) && !is.na(conda_bin) && nzchar(conda_bin)) conda_bin else "auto"
+
+    py_final <- tryCatch(
+        {
+            # Named conda env
+            if (!is.null(conda_env)) {
+                py <- tryCatch(reticulate::conda_python(conda_env, conda = conda_arg()), error = function(e) NULL)
+                if (is.null(py)) {
+                    reticulate::conda_create(envname = conda_env, python_version = "3.10", conda = conda_arg())
+                    py <- tryCatch(reticulate::conda_python(conda_env, conda = conda_arg()), error = function(e) NULL)
+                }
+                if (is.null(py)) stop("Unable to resolve Python binary for conda environment '", conda_env, "'.")
+                return(ensure_normae(py))
+            }
+
+            # System python already OK?
+            path_py <- Sys.which("python")
+            if (nzchar(path_py) && has_cli(path_py)) {
+                return(normalizePath(path_py, winslash = "/", mustWork = FALSE))
+            }
+
+            # Default 'normae' env via conda
+            if (is.null(conda_bin) || is.na(conda_bin)) {
+                reticulate::install_miniconda()
+                conda_bin <- reticulate::conda_binary("auto")
+            }
+            py <- tryCatch(reticulate::conda_python("normae", conda = conda_arg()), error = function(e) NULL)
+            if (is.null(py)) {
+                reticulate::conda_create(envname = "normae", python_version = "3.10", conda = conda_arg())
+                py <- tryCatch(reticulate::conda_python("normae", conda = conda_arg()), error = function(e) NULL)
+            }
+            if (is.null(py)) stop("Unable to resolve Python binary for default 'normae' conda environment.")
+            ensure_normae(py)
+        },
+        error = function(e) {
+            if (.pb_requireNamespace("basilisk")) {
+                warning("Reticulate setup for NormAE failed (", conditionMessage(e), "); using Basilisk-managed environment.")
+                return(basilisk_fallback())
+            }
+            stop(e)
+        }
+    )
+
+    if (!has_cli(py_final)) {
+        return(basilisk_fallback())
+    }
+    py_final
 }
 
 .normae_format_cli_args <- function(normae_args) {
     if (is.null(normae_args)) normae_args <- list()
     # Set internal defaults if not overridden by user
-    if (!("mz_row" %in% names(normae_args))) normae_args$mz_row <- ""
-    if (!("rt_row" %in% names(normae_args))) normae_args$rt_row <- ""
+    if (!("mz_row" %in% names(normae_args))) normae_args$mz_row <- "''"
+    if (!("rt_row" %in% names(normae_args))) normae_args$rt_row <- "''"
+
     if (!("early_stop" %in% names(normae_args))) normae_args$early_stop <- FALSE
 
     reserved <- c(
@@ -440,7 +528,7 @@ correct_with_NormAE <- function(
     }
 
     if (is.null(inj_order_col) || identical(inj_order_col, "")) {
-        inj_col_name <- "..normae_order"
+        inj_col_name <- "normae_order"
         sample_annotation[[inj_col_name]] <- seq_len(nrow(sample_annotation))
         return(list(
             sample_annotation = sample_annotation,

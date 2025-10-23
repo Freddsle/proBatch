@@ -18,6 +18,7 @@ correct_with_NormAE(
   keep_all = "default",
   python_env = NULL,
   conda_env = NULL,
+  conda_env_path = NULL,
   normae_args = list()
 )
 }
@@ -62,8 +63,11 @@ to impute or drop before correction.}
 
 \item{python_env}{Optional path to a Python binary.}
 
-\item{conda_env}{Optional conda environment name. Ignored when \code{python_env}
-is supplied. If neither is provided, a \code{"normae"} conda env is created.}
+\item{conda_env}{Optional conda/mamba environment name. Ignored when \code{python_env}
+is supplied. If neither is provided, a \code{"normae"} conda env is created - NOT TESTED.}
+
+\item{conda_env_path}{Optional path to an existing conda/mamba environment. When provided,
+the environment is treated as ready with NormAE installed and used as-is.}
 
 \item{normae_args}{Named list of CLI parameters forwarded to \code{normae}.
 Entries are translated to \code{--name value} pairs. Default: empty list.
