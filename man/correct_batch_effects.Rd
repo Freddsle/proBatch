@@ -255,29 +255,10 @@ via \code{"MedianCentering"}, \code{"MeanCentering"}, \code{"ComBat"},
 or \code{"removeBatchEffect"}. Works for long or wide via \code{format}.
 }
 \examples{
-# Load example data
 data(
     list = c("example_sample_annotation", "example_proteome"),
     package = "proBatch"
 )
-
-# 1) Per-feature centering (LONG): medians
-median_centered_df <- center_feature_batch(
-    x = example_proteome,
-    sample_annotation = example_sample_annotation,
-    format = "long", stat = "medians",
-    sample_id_col = "FullRunName", batch_col = "MS_batch",
-    feature_id_col = "peptide_group_label", measure_col = "Intensity"
-)
-
-# 2) Per-feature centering (WIDE): means
-data(example_proteome_matrix, package = "proBatch")
-mean_centered_mat <- center_feature_batch(
-    x = example_proteome_matrix,
-    sample_annotation = example_sample_annotation,
-    format = "wide", stat = "means",
-    sample_id_col = "FullRunName", batch_col = "MS_batch",
-    feature_id_col = "peptide_group_label", measure_col = "Intensity"
 median_centered_df <- center_feature_batch_medians_df(
     example_proteome, example_sample_annotation
 )
@@ -305,15 +286,10 @@ adjusted_df <- adjust_batch_trend_df(
 )
 plot_fit <- plot_with_fitting_curve(
     unique(adjusted_df$peptide_group_label),
-<<<<<<< HEAD
-    df_long = adjusted_df, measure_col = "preTrendFit_Intensity",
-    fit_df = adjusted_df, sample_annotation = example_sample_annotation
-=======
     df_long = adjusted_df,
     measure_col = "preTrendFit_Intensity",
     fit_df = adjusted_df,
     sample_annotation = example_sample_annotation
->>>>>>> origin/main
 )
 
 # 5) One-call wrapper (continuous + discrete)
