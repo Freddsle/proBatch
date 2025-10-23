@@ -257,7 +257,7 @@ correct_with_NormAE <- function(
 
     # --- CLI args ---------------------------------------------------------------
     cli_args <- c(
-        "--meta_csv",   normalizePath(meta_path, winslash = "/", mustWork = TRUE),
+        "--meta_csv", normalizePath(meta_path, winslash = "/", mustWork = TRUE),
         "--sample_csv", normalizePath(sample_path, winslash = "/", mustWork = TRUE),
         "--output_dir", normalizePath(out_dir, winslash = "/", mustWork = TRUE),
         "--batch_indicator_col", batch_col
@@ -283,9 +283,28 @@ correct_with_NormAE <- function(
         cmd <- c("-m", mod, cli_args)
         # cat("Running command:", shQuote(python_bin), paste(cmd, collapse = " "), "\n")
 
-        stat <- suppressWarnings(system2(python_bin, cmd, stdout = "", stderr = ""))
-        if (is.null(stat) || length(stat) != 1L) stat <- 0L
-        as.integer(stat)
+        stat <- system2(python_bin, cmd, stdout = "", stderr = "")
+        status <- attr(stat, "status", exact = TRUE)
+        if (!is.null(status)) {
+            stat <- status
+        }
+        if (is.null(stat) || !length(stat)) {
+            return(0L)
+        }
+        stat <- stat[[1L]]
+        if (is.integer(stat)) {
+            return(stat)
+        }
+        if (is.numeric(stat)) {
+            return(as.integer(stat))
+        }
+        if (is.character(stat)) {
+            stat_chr <- trimws(stat, which = "both")
+            if (grepl("^-?\\d+$", stat_chr, perl = TRUE)) {
+                return(as.integer(stat_chr))
+            }
+        }
+        NA_integer_
     }
     status <- run_try("normae")
 

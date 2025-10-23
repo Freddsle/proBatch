@@ -334,8 +334,8 @@ test_that(".run_normae_core derives default injection order when none supplied",
         expect_equal(result, data_matrix + 50)
 
         idx_order <- match("--order_indicator_col", captured$args)
-        expect_identical(captured$args[idx_order + 1L], "..normae_order")
-        expect_equal(captured$sample_csv$`..normae_order`, c(1, 2, 3))
+        expect_identical(captured$args[idx_order + 1L], "normae_order")
+        expect_equal(captured$sample_csv$`normae_order`, c(1, 2, 3))
     })
 })
 
@@ -507,7 +507,7 @@ test_that("correct_with_NormAE runs the NormAE CLI when available (integration)"
                 batch_col = "MS_batch",
                 inj_order_col = "InjectionOrder",
                 format = "wide",
-                conda_env_path = "/home/yuliya-cosybio/.local/share/mamba/envs/normae",
+                # conda_env_path = "/home/yuliya-cosybio/.local/share/mamba/envs/normae",
                 normae_args = list()
             ),
             error = function(e) {
