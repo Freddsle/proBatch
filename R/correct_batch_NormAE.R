@@ -10,7 +10,8 @@
 #' @inheritParams correct_with_ComBat
 #' @param format One of `"long"` or `"wide"`.
 #' @param inj_order_col Column in \code{sample_annotation} with injection order.
-#'   If \code{NULL}, the order of \code{sample_annotation[[sample_id_col]]} is used.
+#'   If \code{NULL}, the column is omitted.
+#'   If \code{"sequential"}, the order of \code{sample_annotation[[sample_id_col]]} is used.
 #' @param qc_col_name Optional column in \code{sample_annotation} marking QC samples.
 #'   Logical, factor (level "QC"), or character ("QC") values are treated as QC.
 #' @param fill_the_missing Missing-value policy before invoking NormAE. If \code{NULL},
@@ -221,9 +222,13 @@ correct_with_NormAE <- function(
     if (anyNA(sa[[sample_id_col]])) stop("Some matrix samples are absent in sample_annotation.")
 
     # --- Injection order + QC ---------------------------------------------------
-    inj_res <- .normae_prepare_injection_order(sa, sample_id_col, inj_order_col)
-    sa <- inj_res$sample_annotation
-    inj_col_name <- inj_res$inj_col_name
+    if (is.null(inj_order_col)) {
+        inj_col_name <- "''"
+    } else {
+        inj_res <- .normae_prepare_injection_order(sa, sample_id_col, inj_order_col)
+        sa <- inj_res$sample_annotation
+        inj_col_name <- inj_res$inj_col_name
+    }
 
     qc_res <- .preprocess_qc_column(sa, qc_col_name, sample_id_col)
     sa <- qc_res$sample_annotation
@@ -248,7 +253,7 @@ correct_with_NormAE <- function(
     write.csv(meta_df, meta_path, quote = TRUE, row.names = TRUE) # explicit
     cols_needed <- unique(c(
         sample_id_col, batch_col,
-        if (!is.null(inj_col_name)) inj_col_name,
+        if (!is.null(inj_col_name) && inj_col_name != "''") inj_col_name,
         if (!is.null(qc_col_name)) qc_col_name
     ))
     sa_write <- sa[, cols_needed, drop = FALSE]
@@ -279,15 +284,14 @@ correct_with_NormAE <- function(
 
     # --- Run: prefer `python -m normae`, fallback to `python -m normae.cli` -----
     run_try <- function(mod) {
-        # print what command would be run for debugging
         cmd <- c("-m", mod, cli_args)
-        # cat("Running command:", shQuote(python_bin), paste(cmd, collapse = " "), "\n")
+        cat("Running command:", shQuote(python_bin), paste(cmd, collapse = " "), "\n")
 
-        stat <- system2(python_bin, cmd, stdout = "", stderr = "")
+        env <- .normae_overlay_env() # <<< inject overlay only for this subprocess
+        stat <- system2(python_bin, cmd, stdout = "", stderr = "", env = env)
+
         status <- attr(stat, "status", exact = TRUE)
-        if (!is.null(status)) {
-            stat <- status
-        }
+        if (!is.null(status)) stat <- status
         if (is.null(stat) || !length(stat)) {
             return(0L)
         }
@@ -310,12 +314,15 @@ correct_with_NormAE <- function(
 
     if (!identical(status, 0L)) {
         ## after streaming, re-run with capture ONLY to include text in the stop() message
-        out <- tryCatch(system2(python_bin, c("-m", "normae", cli_args), stdout = TRUE, stderr = TRUE),
+        env <- .normae_overlay_env()
+        out <- tryCatch(
+            system2(python_bin, c("-m", "normae", cli_args), stdout = TRUE, stderr = TRUE, env = env),
             error = function(e) paste("Failed to capture output:", conditionMessage(e))
         )
         status2 <- run_try("normae.cli")
         if (!identical(status2, 0L)) {
-            out2 <- tryCatch(system2(python_bin, c("-m", "normae.cli", cli_args), stdout = TRUE, stderr = TRUE),
+            out2 <- tryCatch(
+                system2(python_bin, c("-m", "normae.cli", cli_args), stdout = TRUE, stderr = TRUE, env = env),
                 error = function(e) paste("Failed to capture output:", conditionMessage(e))
             )
             unlink(run_dir, recursive = TRUE)
@@ -546,7 +553,7 @@ correct_with_NormAE <- function(
         stop("Sample ID column '", sample_id_col, "' not found in sample_annotation.")
     }
 
-    if (is.null(inj_order_col) || identical(inj_order_col, "")) {
+    if (inj_order_col == "sequential") {
         inj_col_name <- "normae_order"
         sample_annotation[[inj_col_name]] <- seq_len(nrow(sample_annotation))
         return(list(
@@ -620,4 +627,43 @@ correct_with_NormAE <- function(
     }
     # Default: no values qualify as QC (non-matching type)
     logical(length(values))
+}
+
+
+.normae_overlay_dir <- function() {
+    # 1) option takes precedence
+    opt <- getOption("proBatch.normae_overlay_dir", NULL)
+    if (!is.null(opt) && dir.exists(opt)) {
+        return(normalizePath(opt, winslash = "/", mustWork = FALSE))
+    }
+    # 2) env var
+    env <- Sys.getenv("PROBATCH_NORMAE_OVERLAY", "")
+    if (nzchar(env) && dir.exists(env)) {
+        return(normalizePath(env, winslash = "/", mustWork = FALSE))
+    }
+    # 3) installed resource under inst/
+    inst <- system.file("overrides/normae", package = "proBatch")
+    if (nzchar(inst) && dir.exists(inst)) {
+        return(normalizePath(inst, winslash = "/", mustWork = FALSE))
+    }
+    # 4) development tree path (your current location)
+    dev <- file.path(getwd(), "inst", "overrides", "normae")
+    if (dir.exists(dev) && file.exists(file.path(dev, "__main__.py"))) {
+        return(normalizePath(dev, winslash = "/", mustWork = FALSE))
+    }
+    NULL
+}
+
+.normae_overlay_env <- function(base_env = character(0)) {
+    od <- .normae_overlay_dir()
+    if (is.null(od)) {
+        return(base_env)
+    }
+    main_py <- file.path(od, "__main__.py")
+    if (!file.exists(main_py)) {
+        stop("Configured NormAE overlay dir lacks '__main__.py': ", od)
+    }
+    old_pp <- Sys.getenv("PYTHONPATH", "")
+    new_pp <- if (nzchar(old_pp)) paste(od, old_pp, sep = .Platform$path.sep) else od
+    c(base_env, paste0("PYTHONPATH=", new_pp))
 }

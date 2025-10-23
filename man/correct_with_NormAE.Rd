@@ -49,7 +49,8 @@ internally for consistency.}
 \item{format}{One of `"long"` or `"wide"`.}
 
 \item{inj_order_col}{Column in \code{sample_annotation} with injection order.
-If \code{NULL}, the order of \code{sample_annotation[[sample_id_col]]} is used.}
+If \code{NULL}, the column is omitted.
+If \code{"sequential"}, the order of \code{sample_annotation[[sample_id_col]]} is used.}
 
 \item{qc_col_name}{Optional column in \code{sample_annotation} marking QC samples.
 Logical, factor (level "QC"), or character ("QC") values are treated as QC.}

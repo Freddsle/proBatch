@@ -162,10 +162,13 @@ call_mocked_run_normae_core <- function(fake_py, fake_align, fake_system2, ...) 
     patched_env <- new.env(parent = environment(run_normae_core))
     patched_env$.normae_prepare_python <- function(...) fake_py
     patched_env$.align_sample_annotation <- fake_align
-    patched_env$system2 <- fake_system2
+    patched_env$system2 <- function(command, args, stdout, stderr, ...) {
+        fake_system2(command, args, stdout, stderr)
+    }
     environment(run_normae_core) <- patched_env
     run_normae_core(...)
 }
+
 
 test_that(".normae_matrix_step rejects matrices with NAs", {
     m <- matrix(
@@ -325,7 +328,7 @@ test_that(".run_normae_core derives default injection order when none supplied",
             sample_annotation = sample_annotation,
             sample_id_col = "FullRunName",
             batch_col = "MS_batch",
-            inj_order_col = NULL,
+            inj_order_col = "sequential", # trigger defaulting
             qc_col_name = NULL,
             normae_args = list()
         )
@@ -377,7 +380,6 @@ test_that(".normae_qc_mask handles logical, factor, and character inputs", {
     )
 })
 
-# TODO: Check why these tests do not work - either they are broken or they need to be removed:
 test_that("correct_with_NormAE runs the NormAE CLI when available (integration)", {
     skip_on_cran()
     skip_if(nzchar(Sys.getenv("BBS_HOME")), "Skipping on Bioconductor build system")
