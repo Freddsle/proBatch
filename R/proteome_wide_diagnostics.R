@@ -41,14 +41,6 @@
 #' selected_samples <- example_sample_annotation$FullRunName[selected_batches]
 #' test_matrix <- example_proteome_matrix[, selected_samples]
 #'
-#' hierarchical_clustering_plot <- plot_hierarchical_clustering(
-#'     example_proteome_matrix, example_sample_annotation,
-#'     factors_to_plot = c("MS_batch", "Diet", "DateTime"),
-#'     color_list = NULL,
-#'     distance = "euclidean", agglomeration = "complete",
-#'     label_samples = FALSE
-#' )
-#'
 #' # with defined color scheme:
 #' color_list <- sample_annotation_to_colors(example_sample_annotation,
 #'     factor_columns = c("MS_batch", "Strain", "Diet", "digestion_batch"),
@@ -57,7 +49,7 @@
 #' hierarchical_clustering_plot <- plot_hierarchical_clustering(
 #'     example_proteome_matrix, example_sample_annotation,
 #'     factors_to_plot = c("MS_batch", "Strain", "DateTime", "digestion_batch"),
-#'     color_list = color_list,
+#'     color_list = color_list, # can be NULL
 #'     distance = "euclidean", agglomeration = "complete",
 #'     label_samples = FALSE
 #' )
@@ -273,14 +265,10 @@ plot_hierarchical_clustering <- function(data_matrix, ...) UseMethod("plot_hiera
 #' # Load necessary datasets
 #' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
 #'
-#' log_transformed_matrix <- log_transform_dm(example_proteome_matrix)
-#' heatmap_plot <- plot_heatmap_diagnostic(log_transformed_matrix,
-#'     example_sample_annotation,
-#'     factors_to_plot = c("MS_batch", "digestion_batch", "Diet", "DateTime"),
-#'     cluster_cols = TRUE, cluster_rows = FALSE,
-#'     show_rownames = FALSE, show_colnames = FALSE
-#' )
+#' # Use a smaller subset for the example
+#' example_proteome_matrix_small <- example_proteome_matrix[1:50, ]
 #'
+#' log_transformed_matrix <- log_transform_dm(example_proteome_matrix_small)
 #' color_list <- sample_annotation_to_colors(example_sample_annotation,
 #'     factor_columns = c(
 #'         "MS_batch", "EarTag", "Strain",
@@ -294,7 +282,7 @@ plot_hierarchical_clustering <- function(data_matrix, ...) UseMethod("plot_hiera
 #'     example_sample_annotation,
 #'     factors_to_plot = c("MS_batch", "digestion_batch", "Diet", "DateTime"),
 #'     cluster_cols = TRUE, cluster_rows = FALSE,
-#'     color_list = color_list,
+#'     color_list = color_list, # can be NULL
 #'     show_rownames = FALSE, show_colnames = FALSE
 #' )
 #'
@@ -705,7 +693,7 @@ plot_heatmap_generic <- function(data_matrix, ...) UseMethod("plot_heatmap_gener
 #'
 #' @examples
 #' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
-#' matrix_test <- example_proteome_matrix[1:150, ]
+#' matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
 #' pvca_df <- calculate_PVCA(matrix_test, example_sample_annotation,
 #'     factors_for_PVCA = c("MS_batch", "digestion_batch", "Diet", "Sex", "Strain"),
 #'     pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1
@@ -868,17 +856,16 @@ calculate_PVCA <- function(data_matrix, ...) UseMethod("calculate_PVCA")
 #'
 #' @examples
 #' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
-#' matrix_test <- example_proteome_matrix[1:150, ]
-#' pvca_plot <- plot_PVCA(matrix_test, example_sample_annotation,
-#'     technical_factors = c("MS_batch", "digestion_batch"),
-#'     biological_factors = c("Diet", "Sex", "Strain")
-#' )
+#' matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
 #'
 #' pvca_file <- tempfile("pvca", fileext = ".png")
-#' pvca_plot <- plot_PVCA(matrix_test, example_sample_annotation,
+#' pvca_plot <- plot_PVCA(
+#'     matrix_test,
+#'     example_sample_annotation,
 #'     technical_factors = c("MS_batch", "digestion_batch"),
 #'     biological_factors = c("Diet", "Sex", "Strain"),
-#'     filename = pvca_file, width = 28, height = 22, units = "cm"
+#'     filename = pvca_file, # save to file, can be NULL
+#'     width = 12, height = 8, units = "cm"
 #' )
 #' unlink(pvca_file)
 #'
@@ -1020,7 +1007,8 @@ plot_PVCA <- function(data_matrix, ...) UseMethod("plot_PVCA")
 #'
 #' @examples
 #' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
-#' matrix_test <- example_proteome_matrix[1:150, ]
+#' matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
+#'
 #' pvca_df_res <- prepare_PVCA_df(matrix_test, example_sample_annotation,
 #'     technical_factors = c("MS_batch", "digestion_batch"),
 #'     biological_factors = c("Diet", "Sex", "Strain"),
@@ -1149,7 +1137,7 @@ prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
 #'
 #' @examples
 #' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
-#' matrix_test <- example_proteome_matrix[1:150, ]
+#' matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
 #' pvca_df_res <- prepare_PVCA_df(matrix_test, example_sample_annotation,
 #'     technical_factors = c("MS_batch", "digestion_batch"),
 #'     biological_factors = c("Diet", "Sex", "Strain"),
@@ -1356,10 +1344,11 @@ plot_PVCA.df <- function(df, ...) UseMethod("plot_PVCA.df")
 #'
 #' @examples
 #' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
-#' pca_plot <- plot_PCA(example_proteome_matrix, example_sample_annotation,
+#' matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
+#' pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
 #'     color_by = "MS_batch", plot_title = "PCA colored by MS batch"
 #' )
-#' pca_plot <- plot_PCA(example_proteome_matrix, example_sample_annotation,
+#' pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
 #'     color_by = "DateTime", plot_title = "PCA colored by DateTime"
 #' )
 #'
@@ -1367,12 +1356,12 @@ plot_PVCA.df <- function(df, ...) UseMethod("plot_PVCA.df")
 #'     factor_columns = c("MS_batch", "digestion_batch"),
 #'     numeric_columns = c("DateTime", "order")
 #' )
-#' pca_plot <- plot_PCA(example_proteome_matrix, example_sample_annotation,
+#' pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
 #'     color_by = "DateTime", color_scheme = color_list[["DateTime"]]
 #' )
 #'
 #' pca_file <- tempfile("pca_plot", fileext = ".png")
-#' pca_plot <- plot_PCA(example_proteome_matrix, example_sample_annotation,
+#' pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
 #'     color_by = "DateTime", plot_title = "PCA colored by DateTime",
 #'     filename = pca_file, width = 14, height = 9, units = "cm"
 #' )

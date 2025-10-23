@@ -110,10 +110,11 @@ plot PCA plot
 }
 \examples{
 data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
-pca_plot <- plot_PCA(example_proteome_matrix, example_sample_annotation,
+matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
+pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
     color_by = "MS_batch", plot_title = "PCA colored by MS batch"
 )
-pca_plot <- plot_PCA(example_proteome_matrix, example_sample_annotation,
+pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
     color_by = "DateTime", plot_title = "PCA colored by DateTime"
 )
 
@@ -121,12 +122,12 @@ color_list <- sample_annotation_to_colors(example_sample_annotation,
     factor_columns = c("MS_batch", "digestion_batch"),
     numeric_columns = c("DateTime", "order")
 )
-pca_plot <- plot_PCA(example_proteome_matrix, example_sample_annotation,
+pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
     color_by = "DateTime", color_scheme = color_list[["DateTime"]]
 )
 
 pca_file <- tempfile("pca_plot", fileext = ".png")
-pca_plot <- plot_PCA(example_proteome_matrix, example_sample_annotation,
+pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
     color_by = "DateTime", plot_title = "PCA colored by DateTime",
     filename = pca_file, width = 14, height = 9, units = "cm"
 )

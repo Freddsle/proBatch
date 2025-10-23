@@ -71,7 +71,7 @@ Calculate variance distribution by variable
 }
 \examples{
 data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
-matrix_test <- example_proteome_matrix[1:150, ]
+matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
 pvca_df <- calculate_PVCA(matrix_test, example_sample_annotation,
     factors_for_PVCA = c("MS_batch", "digestion_batch", "Diet", "Sex", "Strain"),
     pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1

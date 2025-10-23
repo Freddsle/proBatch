@@ -78,29 +78,17 @@
 #' }
 #'
 #' @examples
-#' # Load example data
 #' data(
 #'     list = c("example_sample_annotation", "example_proteome"),
 #'     package = "proBatch"
 #' )
-#'
-#' # 1) Per-feature centering (LONG): medians
-#' median_centered_df <- center_feature_batch(
-#'     x = example_proteome,
-#'     sample_annotation = example_sample_annotation,
-#'     format = "long", stat = "medians",
-#'     sample_id_col = "FullRunName", batch_col = "MS_batch",
-#'     feature_id_col = "peptide_group_label", measure_col = "Intensity"
+#' median_centered_df <- center_feature_batch_medians_df(
+#'     example_proteome, example_sample_annotation
 #' )
 #'
-#' # 2) Per-feature centering (WIDE): means
-#' data(example_proteome_matrix, package = "proBatch")
-#' mean_centered_mat <- center_feature_batch(
-#'     x = example_proteome_matrix,
-#'     sample_annotation = example_sample_annotation,
-#'     format = "wide", stat = "means",
-#'     sample_id_col = "FullRunName", batch_col = "MS_batch",
-#'     feature_id_col = "peptide_group_label", measure_col = "Intensity"
+#' combat_corrected_df <- correct_with_ComBat_df(
+#'     example_proteome,
+#'     example_sample_annotation
 #' )
 #'
 #' # 3) ComBat (discrete) — drop NA features/samples first if needed
@@ -121,8 +109,10 @@
 #' )
 #' plot_fit <- plot_with_fitting_curve(
 #'     unique(adjusted_df$peptide_group_label),
-#'     df_long = adjusted_df, measure_col = "preTrendFit_Intensity",
-#'     fit_df = adjusted_df, sample_annotation = example_sample_annotation
+#'     df_long = adjusted_df,
+#'     measure_col = "preTrendFit_Intensity",
+#'     fit_df = adjusted_df,
+#'     sample_annotation = example_sample_annotation
 #' )
 #'
 #' # 5) One-call wrapper (continuous + discrete)
@@ -1361,8 +1351,9 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
 #'     list = c("example_sample_annotation", "example_proteome_matrix"),
 #'     package = "proBatch"
 #' )
+#' example_proteome_small <- example_proteome_matrix[1:100, ]
 #' batch_corrected_matrix <- correct_with_removeBatchEffect_dm(
-#'     example_proteome_matrix,
+#'     example_proteome_small,
 #'     example_sample_annotation,
 #'     batch_col = "MS_batch",
 #'     covariates_cols = c("Diet", "Sex")

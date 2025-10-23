@@ -278,6 +278,13 @@ mean_centered_mat <- center_feature_batch(
     format = "wide", stat = "means",
     sample_id_col = "FullRunName", batch_col = "MS_batch",
     feature_id_col = "peptide_group_label", measure_col = "Intensity"
+median_centered_df <- center_feature_batch_medians_df(
+    example_proteome, example_sample_annotation
+)
+
+combat_corrected_df <- correct_with_ComBat_df(
+    example_proteome,
+    example_sample_annotation
 )
 
 # 3) ComBat (discrete) — drop NA features/samples first if needed
@@ -298,8 +305,15 @@ adjusted_df <- adjust_batch_trend_df(
 )
 plot_fit <- plot_with_fitting_curve(
     unique(adjusted_df$peptide_group_label),
+<<<<<<< HEAD
     df_long = adjusted_df, measure_col = "preTrendFit_Intensity",
     fit_df = adjusted_df, sample_annotation = example_sample_annotation
+=======
+    df_long = adjusted_df,
+    measure_col = "preTrendFit_Intensity",
+    fit_df = adjusted_df,
+    sample_annotation = example_sample_annotation
+>>>>>>> origin/main
 )
 
 # 5) One-call wrapper (continuous + discrete)

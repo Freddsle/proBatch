@@ -126,14 +126,10 @@ Plot the heatmap of samples (cols) vs features (rows)
 # Load necessary datasets
 data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
 
-log_transformed_matrix <- log_transform_dm(example_proteome_matrix)
-heatmap_plot <- plot_heatmap_diagnostic(log_transformed_matrix,
-    example_sample_annotation,
-    factors_to_plot = c("MS_batch", "digestion_batch", "Diet", "DateTime"),
-    cluster_cols = TRUE, cluster_rows = FALSE,
-    show_rownames = FALSE, show_colnames = FALSE
-)
+# Use a smaller subset for the example
+example_proteome_matrix_small <- example_proteome_matrix[1:50, ]
 
+log_transformed_matrix <- log_transform_dm(example_proteome_matrix_small)
 color_list <- sample_annotation_to_colors(example_sample_annotation,
     factor_columns = c(
         "MS_batch", "EarTag", "Strain",
@@ -147,7 +143,7 @@ heatmap_plot <- plot_heatmap_diagnostic(log_transformed_matrix,
     example_sample_annotation,
     factors_to_plot = c("MS_batch", "digestion_batch", "Diet", "DateTime"),
     cluster_cols = TRUE, cluster_rows = FALSE,
-    color_list = color_list,
+    color_list = color_list, # can be NULL
     show_rownames = FALSE, show_colnames = FALSE
 )
 
