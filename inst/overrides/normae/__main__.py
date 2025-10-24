@@ -1,131 +1,159 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+NormAE CLI overlay for proBatch integration (no plotting).
 
-# NormAE CLI overlay for proBatch integration (without PCA plotting)
-# From https://github.com/luyiyun/NormAE
+Goal
+----
+Behave EXACTLY like upstream `python -m normae` while preventing any plotting
+and avoiding GUI/file I/O from matplotlib, without re-implementing CLI logic.
 
-import argparse
+Strategy
+--------
+1) Use non-GUI backend; no-op `plt.show`, `plt.savefig`, and Figure.savefig.
+2) Patch NormAE's own plotters BEFORE the CLI binds them:
+     - `normae.utils.plot_pca`  -> returns (Figure, Axes)
+     - `normae.estimator.NormAE.plot_history` -> no-op (returns None)
+3) Execute the official package entrypoint via `runpy.run_module("normae", "__main__")`.
+
+Non-zero SystemExit codes propagate to the caller (e.g., your R wrapper).
+"""
+
+from __future__ import annotations
+
 import os
 import sys
-import pandas as pd
-import numpy as np
 import importlib
+import runpy
+from types import ModuleType
+from typing import Callable
 
-def _none_if_empty(s):
-    if s is None:
-        return None
-    s = str(s).strip()
-    if s in ("", "''", '""', "None", "none", "NA", "na"):
-        return None
-    return s
+# --------------------------- generic helpers ---------------------------
 
-def _coerce_float_matrix(df: pd.DataFrame) -> pd.DataFrame:
-    out = df.copy()
-    for c in out.columns:
-        out[c] = pd.to_numeric(out[c], errors="coerce")
-    if out.isnull().values.any():
-        # NormAE expects no NaNs; caller (proBatch) handles imputation/removal already.
-        raise SystemExit("ERROR: NaNs detected in meta_csv after numeric coercion.")
-    return out
+def _noop(*args, **kwargs):
+    return None
 
-def _infer_id_col(samples: pd.DataFrame, X_idx: pd.Index) -> str:
-    # pick the column with maximal exact-match coverage to X index
-    Xs = set(map(str, X_idx.tolist()))
-    best = None
-    best_hits = -1
-    for col in samples.columns:
-        vals = list(map(str, samples[col].tolist()))
-        hits = sum(v in Xs for v in vals)
-        if hits > best_hits and len(set(vals)) == len(vals):  # uniqueness safeguard
-            best = col
-            best_hits = hits
-    if best is None:
-        # fallback to first column
-        return samples.columns[0]
-    return best
-
-def _mask_equals(values: pd.Series, target: str) -> pd.Series:
-    # robust QC match
-    v = values.astype(str).str.strip().str.lower()
-    t = str(target).strip().lower()
-    return v == t
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="NormAE CLI overlay without PCA plotting"
-    )
-    parser.add_argument("--meta_csv", required=True, help="CSV with features (columns) and samples (rows).")
-    parser.add_argument("--sample_csv", required=True, help="CSV with sample annotation.")
-    parser.add_argument("--output_dir", required=True, help="Output directory containing X_clean.csv")
-    parser.add_argument("--batch_indicator_col", required=True, help="Column name in sample_csv for batch labels.")
-    parser.add_argument("--order_indicator_col", default="", help="Column name in sample_csv for injection order.")
-    parser.add_argument("--qc_indicator_col", default="", help="Column in sample_csv marking QC samples.")
-    parser.add_argument("--qc_indicator_value", default="QC", help="Value indicating QC rows when qc_indicator_col is provided.")
-
-    # Accept and ignore any additional CLI args (keeps compatibility with future flags).
-    args, _extras = parser.parse_known_args()
-
-    order_col = _none_if_empty(args.order_indicator_col)
-    qc_col    = _none_if_empty(args.qc_indicator_col)
-    qc_val    = args.qc_indicator_value
-
-    # 1) Load data
-    X = pd.read_csv(args.meta_csv, index_col=0)
-    # proBatch writes meta as t(data_matrix): rows=samples, cols=features
-    X = _coerce_float_matrix(X)
-
-    samples = pd.read_csv(args.sample_csv)
-    if args.batch_indicator_col not in samples.columns:
-        raise SystemExit(f"ERROR: batch column '{args.batch_indicator_col}' not found in sample_csv.")
-
-    if order_col is not None and order_col not in samples.columns:
-        raise SystemExit(f"ERROR: order column '{order_col}' not found in sample_csv.")
-
-    id_col = _infer_id_col(samples, X.index)
-    samples = samples.set_index(id_col)
-
-    # Strict reindex to X order; error if missing
+def _ensure_headless_matplotlib() -> None:
+    """Select a headless backend and suppress display/writes.
+    DO NOT patch plt.subplots/plt.figure — upstream relies on their return values.
+    """
+    os.environ.setdefault("MPLBACKEND", "Agg")
     try:
-        samples = samples.loc[X.index]
-    except KeyError as e:
-        missing = [s for s in X.index if s not in samples.index]
-        raise SystemExit(f"ERROR: sample_csv is missing {len(missing)} samples present in meta_csv; first missing: {missing[:5]}")
+        import matplotlib
+        try:
+            matplotlib.use("Agg", force=True)
+        except Exception:
+            pass
 
-    # 2) Prepare labels / orders / QC
-    y = samples[args.batch_indicator_col].values
-    z = samples[order_col].values if order_col is not None else None
+        # Patch pyplot functions that cause UI or disk writes
+        try:
+            import matplotlib.pyplot as plt
+            if hasattr(plt, "show"):
+                plt.show = _noop
+            if hasattr(plt, "savefig"):
+                plt.savefig = _noop
+        except Exception:
+            pass
 
-    X_qc = y_qc = z_qc = None
-    if qc_col is not None:
-        if qc_col not in samples.columns:
-            raise SystemExit(f"ERROR: QC column '{qc_col}' not found in sample_csv.")
-        qc_mask = _mask_equals(samples[qc_col], qc_val)
-        if qc_mask.any():
-            X_qc = X.loc[qc_mask].values
-            y_qc = samples.loc[qc_mask, args.batch_indicator_col].values
-            z_qc = samples.loc[qc_mask, order_col].values if order_col is not None else None
+        # Patch Figure.savefig too (covers fig.savefig(...))
+        try:
+            from matplotlib.figure import Figure
+            if hasattr(Figure, "savefig"):
+                Figure.savefig = _noop
+            # Optional belt-and-suspenders: avoid layout churn
+            if hasattr(Figure, "tight_layout"):
+                # harmless if left alone, but neutralize just in case
+                Figure.tight_layout = (lambda self, *a, **k: None)
+        except Exception:
+            pass
 
-    # 3) Import the real NormAE class from the installed package
-    #    (we are only overriding __main__, not the rest of the package).
+    except Exception:
+        # If matplotlib is not installed, it's fine because we also patch NormAE plotters.
+        pass
+
+
+# --------------------------- NormAE patching ---------------------------
+
+def _patch_callables_with_name_fragment(mod: ModuleType, frag: str, replacer: Callable) -> int:
+    """Replace any callable attribute whose name contains `frag` (case-insensitive)."""
+    n = 0
+    frag = frag.lower()
+    for attr in list(dir(mod)):
+        if frag in attr.lower():
+            try:
+                obj = getattr(mod, attr)
+            except Exception:
+                continue
+            if callable(obj):
+                try:
+                    setattr(mod, attr, replacer)
+                    n += 1
+                except Exception:
+                    pass
+    return n
+
+def _plot_pca_stub(*args, **kwargs):
+    """Return a real (Figure, Axes) pair so upstream `fig, _ = plot_pca(...)` keeps working."""
     try:
-        normae_pkg = importlib.import_module("normae")
-        if hasattr(normae_pkg, "NormAE"):
-            NormAE = normae_pkg.NormAE
-        else:
-            # Some layouts expose class under submodule:
-            NormAE = importlib.import_module("normae.normae").NormAE
-    except Exception as e:
-        raise SystemExit(f"ERROR: failed to import NormAE from installed package: {e}")
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(1, 1)  # returns (Figure, Axes) by contract
+        return fig, ax
+    except Exception:
+        # Fallback dummy with the minimal methods sometimes used by callers
+        class _Dummy:
+            def savefig(self, *a, **k): return None
+            def tight_layout(self, *a, **k): return None
+        return _Dummy(), _Dummy()
 
-    # 4) Fit / Transform (no plotting)
-    model = NormAE()
-    model.fit(X.values, y=y, z=z, X_qc=X_qc, y_qc=y_qc, z_qc=z_qc)
-    X_clean = model.transform(X.values)
+def _plot_history_stub(self, *args, **kwargs):
+    """Harmless replacement for NormAE.plot_history; upstream doesn't rely on its return."""
+    return None
 
-    # 5) Write output exactly where proBatch expects it
-    os.makedirs(args.output_dir, exist_ok=True)
-    out_csv = os.path.join(args.output_dir, "X_clean.csv")
-    pd.DataFrame(X_clean, index=X.index, columns=X.columns).to_csv(out_csv)
+def _patch_normae_plotters() -> None:
+    """Import NormAE components and neuter plotting *before* running the CLI."""
+    # Import package root so submodules resolve
+    importlib.import_module("normae")
+
+    # 1) Patch utils.plot_pca specifically (must return (fig, ax))
+    try:
+        utils = importlib.import_module("normae.utils")
+        if hasattr(utils, "plot_pca"):
+            setattr(utils, "plot_pca", _plot_pca_stub)
+        # For any other utils.*plot* helpers that might be called, default to true no-op.
+        # (If the CLI later unpacks another function, we can specialize it similarly.)
+        _patch_callables_with_name_fragment(utils, "plot", _noop)
+        # Reassert the specific plot_pca stub in case the blanket patch hit it:
+        if hasattr(utils, "plot_pca"):
+            setattr(utils, "plot_pca", _plot_pca_stub)
+    except Exception:
+        pass
+
+    # 2) Patch estimator.NormAE.plot_history
+    try:
+        estimator = importlib.import_module("normae.estimator")
+        NormAE_cls = getattr(estimator, "NormAE", None)
+        if NormAE_cls is not None and hasattr(NormAE_cls, "plot_history"):
+            setattr(NormAE_cls, "plot_history", _plot_history_stub)
+    except Exception:
+        pass
+
+
+# ------------------------------ main ------------------------------
+
+def main() -> None:
+    _ensure_headless_matplotlib()
+    _patch_normae_plotters()
+
+    # Execute upstream CLI exactly like `python -m normae`
+    try:
+        if sys.argv:
+            sys.argv[0] = "normae"
+        runpy.run_module("normae", run_name="__main__", alter_sys=True)
+    except SystemExit as e:
+        # propagate non-zero exits
+        code = e.code
+        if code not in (None, 0):
+            raise
 
 if __name__ == "__main__":
     main()

@@ -235,7 +235,7 @@ correct_with_NormAE <- function(
     qc_col_name <- qc_res$qc_col_name
     qc_indicator_value <- qc_res$qc_indicator_value
 
-    # --- Python resolver (reticulate first, basilisk fallback) ------------------
+    # --- Python resolver --------------------------------------------------------
     python_bin <- .normae_prepare_python(python_env, conda_env, conda_env_path)
 
     # --- I/O: create isolated run dir ------------------------------------------
@@ -282,39 +282,55 @@ correct_with_NormAE <- function(
     }
     cli_args <- unname(c(cli_args, .normae_format_cli_args(normae_args)))
 
-    # --- Run: prefer `python -m normae`, fallback to `python -m normae.cli` -----
+    env <- .normae_overlay_env()
+
+    # ---- Prefer the overlay script if present (guaranteed path execution) -----
+    overlay_dir <- .normae_overlay_dir()
+    if (!is.null(overlay_dir)) {
+        overlay_main <- file.path(overlay_dir, "__main__.py")
+        cmd <- c(overlay_main, cli_args)
+        cat("Running command:", shQuote(python_bin), paste(cmd, collapse = " "), "\n")
+        stat <- system2(python_bin, cmd, stdout = "", stderr = "", env = env)
+        status <- if (length(stat)) as.integer(stat[[1L]]) else 0L
+        if (!identical(status, 0L)) {
+            # capture overlay error for diagnostics, then fallback to package CLIs
+            out_overlay <- tryCatch(
+                system2(python_bin, c(overlay_main, cli_args), stdout = TRUE, stderr = TRUE, env = env),
+                error = function(e) paste("Failed to capture overlay output:", conditionMessage(e))
+            )
+            message("Overlay run failed; falling back to installed 'normae' module.\n", paste(out_overlay, collapse = "\n"))
+        } else {
+            # success path; proceed to read X_clean.csv
+            res_csv <- file.path(out_dir, "X_clean.csv")
+            if (!file.exists(res_csv)) {
+                stop("NormAE overlay finished but did not produce 'X_clean.csv' in: ", out_dir, call. = FALSE)
+            }
+            res_df <- read.csv(res_csv, check.names = FALSE, row.names = 1)
+            res_mat <- as.matrix(res_df)
+            storage.mode(res_mat) <- "double"
+            aligned <- if (identical(dim(res_mat), dim(data_matrix)) &&
+                identical(colnames(res_mat), colnames(data_matrix))) {
+                res_mat
+            } else if (identical(rownames(res_mat), colnames(data_matrix))) {
+                t(res_mat)
+            } else {
+                stop("Unexpected NormAE overlay output shape; cannot align to input.")
+            }
+            dimnames(aligned) <- dimnames(data_matrix)
+            return(aligned)
+        }
+    }
+
+    # ---- Fallbacks: installed CLI (may plot PCA; last resort) ------------------
     run_try <- function(mod) {
         cmd <- c("-m", mod, cli_args)
         cat("Running command:", shQuote(python_bin), paste(cmd, collapse = " "), "\n")
-
-        env <- .normae_overlay_env() # <<< inject overlay only for this subprocess
         stat <- system2(python_bin, cmd, stdout = "", stderr = "", env = env)
-
-        status <- attr(stat, "status", exact = TRUE)
-        if (!is.null(status)) stat <- status
-        if (is.null(stat) || !length(stat)) {
-            return(0L)
-        }
-        stat <- stat[[1L]]
-        if (is.integer(stat)) {
-            return(stat)
-        }
-        if (is.numeric(stat)) {
-            return(as.integer(stat))
-        }
-        if (is.character(stat)) {
-            stat_chr <- trimws(stat, which = "both")
-            if (grepl("^-?\\d+$", stat_chr, perl = TRUE)) {
-                return(as.integer(stat_chr))
-            }
-        }
-        NA_integer_
+        status <- if (length(stat)) as.integer(stat[[1L]]) else 0L
+        if (is.na(status)) NA_integer_ else status
     }
     status <- run_try("normae")
-
     if (!identical(status, 0L)) {
-        ## after streaming, re-run with capture ONLY to include text in the stop() message
-        env <- .normae_overlay_env()
         out <- tryCatch(
             system2(python_bin, c("-m", "normae", cli_args), stdout = TRUE, stderr = TRUE, env = env),
             error = function(e) paste("Failed to capture output:", conditionMessage(e))
@@ -631,7 +647,7 @@ correct_with_NormAE <- function(
 
 
 .normae_overlay_dir <- function() {
-    # 1) option takes precedence
+    # 1) explicit option
     opt <- getOption("proBatch.normae_overlay_dir", NULL)
     if (!is.null(opt) && dir.exists(opt)) {
         return(normalizePath(opt, winslash = "/", mustWork = FALSE))
@@ -641,18 +657,22 @@ correct_with_NormAE <- function(
     if (nzchar(env) && dir.exists(env)) {
         return(normalizePath(env, winslash = "/", mustWork = FALSE))
     }
-    # 3) installed resource under inst/
-    inst <- system.file("overrides/normae", package = "proBatch")
-    if (nzchar(inst) && dir.exists(inst)) {
-        return(normalizePath(inst, winslash = "/", mustWork = FALSE))
+
+    # 3) installed package layout: inst/ is flattened; files land under <lib>/proBatch/overrides/normae
+    root <- tryCatch(find.package("proBatch"), error = function(e) "")
+    if (nzchar(root)) {
+        inst_overrides <- file.path(root, "overrides", "normae")
+        if (dir.exists(inst_overrides) && file.exists(file.path(inst_overrides, "__main__.py"))) {
+            return(normalizePath(inst_overrides, winslash = "/", mustWork = FALSE))
+        }
+        # 4) development tree layout: keep files under inst/
+        dev_overrides <- file.path(root, "inst", "overrides", "normae")
+        if (dir.exists(dev_overrides) && file.exists(file.path(dev_overrides, "__main__.py"))) {
+            return(normalizePath(dev_overrides, winslash = "/", mustWork = FALSE))
+        }
     }
-    # 4) development tree path (your current location)
-    dev <- file.path(getwd(), "inst", "overrides", "normae")
-    if (dir.exists(dev) && file.exists(file.path(dev, "__main__.py"))) {
-        return(normalizePath(dev, winslash = "/", mustWork = FALSE))
-    }
-    NULL
 }
+
 
 .normae_overlay_env <- function(base_env = character(0)) {
     od <- .normae_overlay_dir()
@@ -663,7 +683,8 @@ correct_with_NormAE <- function(
     if (!file.exists(main_py)) {
         stop("Configured NormAE overlay dir lacks '__main__.py': ", od)
     }
+    pkg_root <- normalizePath(dirname(od), winslash = "/", mustWork = FALSE)
     old_pp <- Sys.getenv("PYTHONPATH", "")
-    new_pp <- if (nzchar(old_pp)) paste(od, old_pp, sep = .Platform$path.sep) else od
+    new_pp <- if (nzchar(old_pp)) paste(pkg_root, old_pp, sep = .Platform$path.sep) else pkg_root
     c(base_env, paste0("PYTHONPATH=", new_pp))
 }
