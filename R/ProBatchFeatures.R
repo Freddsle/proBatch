@@ -378,6 +378,100 @@ ProBatchFeatures_from_long <- function(
     )
 }
 
+#' Coerce a QFeatures object into ProBatchFeatures
+#'
+#' Wraps an existing \code{QFeatures} instance into the \code{ProBatchFeatures} subclass,
+#' initialising the operation log and optional assay renaming when a single assay is present.
+#'
+#' @param object A \code{QFeatures} object to wrap.
+#' @param level Character scalar used as the default level when renaming a single assay.
+#' @param pipeline Character scalar used as the default pipeline when renaming a single assay.
+#' @param sample_id_name Optional character scalar indicating the sample ID column name in colData.
+#'
+#' @return A \code{ProBatchFeatures} object containing the same assays as \code{object}.
+#'
+#' @examples
+#' if (requireNamespace("QFeatures", quietly = TRUE)) {
+#'     data(example_proteome_matrix, package = "proBatch")
+#'     data(example_sample_annotation, package = "proBatch")
+#'     cd <- S4Vectors::DataFrame(example_sample_annotation)
+#'     rownames(cd) <- example_sample_annotation$FullRunName
+#'     se <- SummarizedExperiment::SummarizedExperiment(
+#'         assays = list(intensity = example_proteome_matrix),
+#'         colData = cd
+#'     )
+#'     qf <- QFeatures::QFeatures(
+#'         experiments = list(peptideRaw = se),
+#'         colData = cd
+#'     )
+#'     as_ProBatchFeatures(qf, level = "peptide")
+#' }
+#'
+#' @export
+as_ProBatchFeatures <- function(object, level = "feature", pipeline = "raw", sample_id_name = NULL) {
+    stopifnot(is(object, "QFeatures"))
+
+    qf <- object
+    if (length(qf) == 0L) {
+        stop("Cannot coerce a QFeatures object with no assays.")
+    }
+
+    nm <- names(qf)
+    level <- level %||% "feature"
+    if (is.na(level) || !nzchar(level)) {
+        level <- "feature"
+    }
+    pipeline <- pipeline %||% "raw"
+    if (is.na(pipeline) || !nzchar(pipeline)) {
+        pipeline <- "raw"
+    }
+
+    if (length(qf) == 1L) {
+        current_name <- if (is.null(nm)) "" else nm[[1]]
+        if (!nzchar(current_name) || !grepl("::", current_name, fixed = TRUE)) {
+            names(qf) <- .pb_assay_name(level, pipeline)
+        }
+    } else if (!is.null(nm) && any(!grepl("::", nm, fixed = TRUE))) {
+        warning(
+            "Some assay names do not follow the '<level>::<pipeline>' convention; ",
+            "consider renaming manually."
+        )
+    }
+
+    empty_log <- DataFrame(
+        step      = character(),
+        fun       = character(),
+        from      = character(),
+        to        = character(),
+        params    = I(vector("list", 0L)),
+        timestamp = as.POSIXct(character()),
+        pkg       = character()
+    )
+
+    # in case there is no sample id name column in colData, initialize column with rownames
+    cd <- S4Vectors::DataFrame(colData(qf))
+    if (is.null(sample_id_name) && !is.null(rownames(cd))) {
+        sample_id_name <- "sample_id"
+    } else if (!is.null(sample_id_name) && nzchar(sample_id_name)) {
+        if (!sample_id_name %in% colnames(cd)) {
+            warning(
+                "sample_id_name '", sample_id_name,
+                "' not found in colData; initializing with rownames."
+            )
+            sample_id_name <- "sample_id"
+        }
+    }
+    if (!is.null(sample_id_name) && nzchar(sample_id_name)) {
+        if (!sample_id_name %in% colnames(cd)) {
+            cd[[sample_id_name]] <- rownames(cd)
+            S4Vectors::rownames(cd) <- rownames(cd)
+            colData(qf) <- cd
+        }
+    }
+
+    new("ProBatchFeatures", qf, chain = character(), oplog = empty_log)
+}
+
 `%||%` <- function(a, b) if (!is.null(a)) a else b
 
 # ---------------------------

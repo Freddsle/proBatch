@@ -162,6 +162,8 @@ call_mocked_run_normae_core <- function(fake_py, fake_align, fake_system2, ...) 
     patched_env <- new.env(parent = environment(run_normae_core))
     patched_env$.normae_prepare_python <- function(...) fake_py
     patched_env$.align_sample_annotation <- fake_align
+    patched_env$.normae_overlay_dir <- function() NULL
+    patched_env$.normae_overlay_env <- function(base_env = character(0)) base_env
     patched_env$system2 <- function(command, args, stdout, stderr, ...) {
         fake_system2(command, args, stdout, stderr)
     }
@@ -223,7 +225,11 @@ test_that(".run_normae_core builds CLI command and returns cleaned matrix (mocke
             out_dir <- args[match("--output_dir", args) + 1L]
             clean_matrix <- data_matrix + 100
             utils::write.csv(clean_matrix, file.path(out_dir, "X_clean.csv"), quote = TRUE)
-            structure("NormAE CLI mock", status = 0L)
+            if (isTRUE(stdout) || isTRUE(stderr)) {
+                structure("NormAE CLI mock", status = 0L)
+            } else {
+                0L
+            }
         }
 
         result <- call_mocked_run_normae_core(
@@ -315,7 +321,11 @@ test_that(".run_normae_core derives default injection order when none supplied",
             out_dir <- args[match("--output_dir", args) + 1L]
             clean_matrix <- data_matrix + 50
             utils::write.csv(clean_matrix, file.path(out_dir, "X_clean.csv"), quote = TRUE)
-            structure("NormAE CLI mock", status = 0L)
+            if (isTRUE(stdout) || isTRUE(stderr)) {
+                structure("NormAE CLI mock", status = 0L)
+            } else {
+                0L
+            }
         }
 
         result <- call_mocked_run_normae_core(
@@ -509,7 +519,7 @@ test_that("correct_with_NormAE runs the NormAE CLI when available (integration)"
                 batch_col = "MS_batch",
                 inj_order_col = "InjectionOrder",
                 format = "wide",
-                # conda_env_path = "/home/yuliya-cosybio/.local/share/mamba/envs/normae",
+                conda_env_path = "/home/yuliya-cosybio/.local/share/mamba/envs/normae/",
                 normae_args = list()
             ),
             error = function(e) {

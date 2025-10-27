@@ -128,6 +128,95 @@ test_that("constructor (long) delegates to long_to_matrix", {
     )
 })
 
+test_that("as_ProBatchFeatures wraps single-assay QFeatures with renaming", {
+    skip_if_not_installed("QFeatures")
+
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    sample_order <- match(
+        colnames(example_proteome_matrix),
+        example_sample_annotation$FullRunName
+    )
+    expect_false(anyNA(sample_order))
+    cd <- S4Vectors::DataFrame(
+        example_sample_annotation[sample_order, , drop = FALSE]
+    )
+    rownames(cd) <- example_sample_annotation$FullRunName[sample_order]
+
+    se <- SummarizedExperiment::SummarizedExperiment(
+        assays  = list(intensity = example_proteome_matrix),
+        colData = cd
+    )
+
+    qf <- QFeatures::QFeatures(
+        experiments = list(peptideRaw = se),
+        colData = cd
+    )
+
+    pbf <- as_ProBatchFeatures(qf, level = "peptide")
+
+    expect_s4_class(pbf, "ProBatchFeatures")
+    expect_true(validObject(pbf))
+    expect_identical(names(pbf), "peptide::raw")
+    expect_identical(pb_current_assay(pbf), "peptide::raw")
+    expect_identical(get_chain(pbf), character())
+    expect_identical(nrow(get_operation_log(pbf)), 0L)
+    expect_equal(
+        pb_assay_matrix(pbf),
+        as.matrix(SummarizedExperiment::assay(qf[[1]])),
+        ignore_attr = TRUE
+    )
+    cd_pbf <- as.data.frame(colData(pbf))
+    cd_qf <- as.data.frame(colData(qf))
+    expect_equal(cd_pbf[names(cd_qf)], cd_qf, ignore_attr = TRUE)
+    expect_true("sample_id" %in% names(cd_pbf))
+    expect_identical(cd_pbf$sample_id, rownames(SummarizedExperiment::colData(qf)))
+
+    qf2 <- QFeatures::QFeatures(
+        experiments = list(peptideRaw = se),
+        colData = cd
+    )
+    pbf2 <- as_ProBatchFeatures(qf2, level = "peptide", pipeline = "custom")
+    expect_identical(names(pbf2), "peptide::custom")
+})
+
+test_that("as_ProBatchFeatures warns on multi-assay naming mismatches", {
+    skip_if_not_installed("QFeatures")
+
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    sample_order <- match(
+        colnames(example_proteome_matrix),
+        example_sample_annotation$FullRunName
+    )
+    expect_false(anyNA(sample_order))
+    cd <- S4Vectors::DataFrame(
+        example_sample_annotation[sample_order, , drop = FALSE]
+    )
+    rownames(cd) <- example_sample_annotation$FullRunName[sample_order]
+
+    se1 <- SummarizedExperiment::SummarizedExperiment(
+        assays  = list(intensity = example_proteome_matrix),
+        colData = cd
+    )
+    se2 <- SummarizedExperiment::SummarizedExperiment(
+        assays  = list(intensity = example_proteome_matrix),
+        colData = cd
+    )
+
+    qf_multi <- QFeatures::QFeatures(
+        experiments = list(peptideRaw = se1, proteinNorm = se2),
+        colData = cd
+    )
+
+    expect_warning(
+        as_ProBatchFeatures(qf_multi),
+        "Some assay names do not follow"
+    )
+})
+
 test_that("pb_as_long reuses matrix_to_long and round-trips vs direct call", {
     data(example_proteome_matrix, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")

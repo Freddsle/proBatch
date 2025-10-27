@@ -51,7 +51,6 @@ pbf_multi <- proBatch:::.pb_add_assay_with_link(
 )
 
 
-
 test_that("plot_NA_heatmap.default returns pheatmap", {
     skip_if_not_installed("pheatmap")
 
