@@ -1,8 +1,15 @@
 testthat::skip_if_not_installed("QFeatures")
 
-make_test_pbf <- function(mat) {
+make_test_pbf <- function(mat, sa_extra = NULL) {
     stopifnot(!is.null(colnames(mat)))
     sa <- data.frame(Sample = colnames(mat), stringsAsFactors = FALSE)
+    if (!is.null(sa_extra)) {
+        stopifnot(is.data.frame(sa_extra))
+        if (nrow(sa_extra) != nrow(sa)) {
+            stop("`sa_extra` must have one row per sample.")
+        }
+        sa <- cbind(sa, sa_extra)
+    }
     suppressMessages(ProBatchFeatures(
         data_matrix = mat,
         sample_annotation = sa,
@@ -174,6 +181,132 @@ test_that("pb_filterNA validates final_name length when creating new assays", {
     expect_error(
         pb_filterNA(pbf, inplace = FALSE, final_name = c("a", "b")),
         "`final_name` must be length 1 or match `pbf_name`"
+    )
+})
+
+test_that("pb_groupfilterNA removes features lacking per-group replicates in place", {
+    mat <- matrix(
+        c(
+            1, 2, 3, 4,
+            NA, NA, 5, 6,
+            1, NA, 2, NA
+        ),
+        nrow = 3,
+        byrow = TRUE,
+        dimnames = list(paste0("f", 1:3), paste0("s", 1:4))
+    )
+    sa_extra <- data.frame(
+        Batch = rep(c("B1", "B2"), each = 2),
+        stringsAsFactors = FALSE
+    )
+    pbf <- make_test_pbf(mat, sa_extra = sa_extra)
+    assay_name <- pb_current_assay(pbf)
+
+    res <- suppressMessages(pb_groupfilterNA(
+        pbf,
+        group_cols = "Batch",
+        min_valid = 2L,
+        inplace = TRUE
+    ))
+
+    expect_s4_class(res, "ProBatchFeatures")
+    expect_identical(names(res), names(pbf))
+
+    filtered <- assay(res[[assay_name]], "intensity")
+    expect_true(is.matrix(filtered))
+    expect_identical(rownames(filtered), "f1")
+
+    log <- get_operation_log(res)
+    expect_equal(nrow(log), 1L)
+    expect_identical(as.character(log$step), "groupfilterNA")
+    expect_identical(as.character(log$from), assay_name)
+    expect_identical(as.character(log$to), assay_name)
+    expect_identical(log$params[[1]]$group_cols, "Batch")
+    expect_identical(log$params[[1]]$min_valid, 2L)
+})
+
+test_that("pb_groupfilterNA stores new assays when not operating in place", {
+    mat <- matrix(
+        c(
+            1, 2, 3, 4,
+            NA, NA, 5, 6,
+            1, NA, 2, NA
+        ),
+        nrow = 3,
+        byrow = TRUE,
+        dimnames = list(paste0("f", 1:3), paste0("s", 1:4))
+    )
+    sa_extra <- data.frame(
+        Batch = rep(c("B1", "B2"), each = 2),
+        stringsAsFactors = FALSE
+    )
+    pbf <- make_test_pbf(mat, sa_extra = sa_extra)
+    assay_name <- pb_current_assay(pbf)
+    original_names <- names(pbf)
+
+    res <- suppressMessages(pb_groupfilterNA(
+        pbf,
+        group_cols = "Batch",
+        min_valid = 2L,
+        inplace = FALSE,
+        final_name = "filtered_group"
+    ))
+
+    expect_s4_class(res, "ProBatchFeatures")
+    expect_setequal(original_names, names(pbf))
+    expect_equal(length(names(res)), length(original_names) + 1L)
+
+    new_name <- setdiff(names(res), original_names)
+    expect_identical(new_name, "filtered_group")
+
+    filtered <- assay(res[[new_name]], "intensity")
+    expect_identical(rownames(filtered), "f1")
+
+    log <- get_operation_log(res)
+    expect_equal(nrow(log), 1L)
+    expect_identical(as.character(log$step), "groupfilterNA")
+    expect_identical(as.character(log$from), assay_name)
+    expect_identical(as.character(log$to), new_name)
+    expect_identical(log$params[[1]]$group_cols, "Batch")
+    expect_identical(log$params[[1]]$min_valid, 2L)
+})
+
+test_that("pb_groupfilterNA validates presence of grouping columns", {
+    mat <- matrix(
+        c(1, 2, 3, 4),
+        nrow = 2,
+        byrow = TRUE,
+        dimnames = list(paste0("f", 1:2), paste0("s", 1:2))
+    )
+    pbf <- make_test_pbf(mat)
+
+    expect_error(
+        pb_groupfilterNA(pbf, group_cols = "Batch"),
+        "missing group column(s)",
+        fixed = TRUE
+    )
+})
+
+test_that("pb_groupfilterNA errors when a group has too few samples", {
+    mat <- matrix(
+        c(
+            1, 2, 3,
+            4, 5, NA
+        ),
+        nrow = 2,
+        byrow = TRUE,
+        dimnames = list(paste0("f", 1:2), paste0("s", 1:3))
+    )
+    sa_extra <- data.frame(
+        Batch = c("B1", "B1", "B2"),
+        stringsAsFactors = FALSE
+    )
+    pbf <- make_test_pbf(mat, sa_extra = sa_extra)
+
+    expect_error(
+        pb_groupfilterNA(pbf, group_cols = "Batch", min_valid = 2L),
+        "requires at least 2",
+        fixed = TRUE
     )
 })
 

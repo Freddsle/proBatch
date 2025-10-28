@@ -507,7 +507,7 @@ as_ProBatchFeatures <- function(object,
         qf[[idx]] <- se
     }
 
-    out <- new2("ProBatchFeatures", qf, chain = character(), oplog = empty_log, check = TRUE)
+    out <- S4Vectors::new2("ProBatchFeatures", qf, chain = character(), oplog = empty_log, check = TRUE)
     validObject(out)
     out
 }

@@ -6,6 +6,7 @@
 \alias{pb_infIsNA}
 \alias{pb_nNA}
 \alias{pb_filterNA}
+\alias{pb_groupfilterNA}
 \title{Apply `QFeatures` missing-data helpers to stored assays}
 \usage{
 pb_zeroIsNA(object, pbf_name = names(object), ...)
@@ -15,6 +16,16 @@ pb_infIsNA(object, pbf_name = names(object), ...)
 pb_nNA(object, pbf_name = names(object), ...)
 
 pb_filterNA(object, pbf_name = NULL, inplace = FALSE, final_name = NULL, ...)
+
+pb_groupfilterNA(
+  object,
+  pbf_name = NULL,
+  group_cols,
+  min_valid = 2L,
+  inplace = FALSE,
+  final_name = NULL,
+  ...
+)
 }
 \arguments{
 \item{object}{A `ProBatchFeatures` object.}
@@ -33,11 +44,20 @@ If `FALSE`, the modified assay(s) will be added to the object with
 \item{final_name}{Character (used by `pb_filterNA()` only), name for the
 modified assay(s) if `inplace` is `FALSE`. If `NULL` (default), the
 original name(s) with suffix `_filteredNA` will be used.}
+
+\item{group_cols}{Character vector (used by `pb_groupfilterNA()` only)
+specifying sample-annotation column(s) that define the groups within which
+missingness must be evaluated.}
+
+\item{min_valid}{Integer scalar (used by `pb_groupfilterNA()` only),
+minimum number of non-missing values required within each group to retain a
+feature. Default: `2L`.}
 }
 \value{
-`pb_zeroIsNA()`, `pb_infIsNA()` and `pb_filterNA()` return the
-  updated `ProBatchFeatures` object. `pb_nNA()` returns the output of the
-  corresponding `QFeatures::nNA()` call (a `list` of `DataFrame`s).
+`pb_zeroIsNA()`, `pb_infIsNA()`, `pb_filterNA()` and
+  `pb_groupfilterNA()` return the updated `ProBatchFeatures` object.
+  `pb_nNA()` returns the output of the corresponding `QFeatures::nNA()` call
+  (a `list` of `DataFrame`s).
 }
 \description{
 These wrappers delegate to the corresponding `QFeatures` generics while
