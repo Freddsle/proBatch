@@ -113,6 +113,55 @@ correct_with_BERT <- function(
     )
 }
 
+.sanitize_covariates_for_BERT <- function(sample_annotation, covariates_cols) {
+    if (is.null(covariates_cols) || !length(covariates_cols)) {
+        return(list(
+            sample_annotation = sample_annotation,
+            covariates_cols = covariates_cols
+        ))
+    }
+
+    if (!is.character(covariates_cols)) {
+        stop("`covariates_cols` must be a character vector of column names.")
+    }
+
+    missing_cov <- setdiff(covariates_cols, names(sample_annotation))
+    if (length(missing_cov)) {
+        stop(
+            "Covariates missing in sample_annotation: ",
+            paste(missing_cov, collapse = ", ")
+        )
+    }
+
+    for (covariate in covariates_cols) {
+        cov_values <- sample_annotation[[covariate]]
+
+        if (is.null(cov_values)) {
+            stop("Covariate '", covariate, "' unexpectedly NULL.")
+        }
+
+        if (is.logical(cov_values)) {
+            cov_values <- as.numeric(cov_values)
+        } else if (is.factor(cov_values)) {
+            cov_values <- as.numeric(cov_values)
+        } else if (inherits(cov_values, c("Date", "POSIXct", "POSIXlt"))) {
+            cov_values <- as.numeric(cov_values)
+        } else if (!is.numeric(cov_values)) {
+            fac <- factor(cov_values, exclude = NULL)
+            cov_values <- as.numeric(fac)
+        } else {
+            cov_values <- as.numeric(cov_values)
+        }
+
+        sample_annotation[[covariate]] <- cov_values
+    }
+
+    list(
+        sample_annotation = sample_annotation,
+        covariates_cols = covariates_cols
+    )
+}
+
 .run_BERT_core <- function(
   data_matrix, # features × samples (numeric)
   sample_annotation, # data.frame
@@ -126,6 +175,15 @@ correct_with_BERT <- function(
   ...
 ) {
     bert_method <- match.arg(bert_method)
+
+    if (is.null(sample_annotation)) {
+        stop("sample_annotation must be provided for batch correction")
+    }
+    sample_annotation <- as.data.frame(sample_annotation)
+
+    if (!(batch_col %in% names(sample_annotation))) {
+        stop("Batch column is not present in sample_annotation")
+    }
 
     # Align SA to matrix columns (samples)
     sample_annotation <- .align_sample_annotation(
@@ -141,29 +199,11 @@ correct_with_BERT <- function(
     df_t <- t(data_matrix) # samples × features
     storage.mode(df_t) <- "double"
 
-    # Ensure SA contains required columns
-    if (!(batch_col %in% names(sample_annotation))) {
-        stop("Batch column is not present in sample_annotation")
-    }
-
     # Tranform covariates_cols to design format (BERT requires numeric values in covariates)
-    if (!is.null(covariates_cols) && length(covariates_cols)) {
-        missing_cov <- setdiff(covariates_cols, names(sample_annotation))
-        if (length(missing_cov)) {
-            stop("Covariates missing in sample_annotation: ", paste(missing_cov, collapse = ", "))
-        }
-        covariates <- as.data.frame(sample_annotation[, covariates_cols, drop = FALSE])
-        mod <- model.matrix(~., data = covariates)
-        # replace original covariates with design matrix columns (excluding intercept)
-        orig_covariates <- covariates_cols
-        if (ncol(mod) > 1) {
-            new_covariates <- colnames(mod)[-1]
-            sample_annotation <- cbind(
-                sample_annotation[, setdiff(names(sample_annotation), orig_covariates), drop = FALSE],
-                as.data.frame(mod[, -1, drop = FALSE])
-            )
-            covariates_cols <- new_covariates
-        }
+    if (!is.null(covariates_cols) && length(covariates_cols) > 0L) {
+        prepared <- .sanitize_covariates_for_BERT(sample_annotation, covariates_cols)
+        sample_annotation <- prepared$sample_annotation
+        covariates_cols <- prepared$covariates_cols
     }
 
     # Minimal BERT metadata columns; rely on 'batchname', 'samplename', 'covariatename' args

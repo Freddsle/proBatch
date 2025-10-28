@@ -381,7 +381,7 @@ ProBatchFeatures_from_long <- function(
 #' Coerce a QFeatures object into ProBatchFeatures
 #'
 #' Wraps an existing \code{QFeatures} instance into the \code{ProBatchFeatures} subclass,
-#' initialising the operation log and optional assay renaming when a single assay is present.
+#' initializing the operation log and optional assay renaming when a single assay is present.
 #'
 #' @param object A \code{QFeatures} object to wrap.
 #' @param level Character scalar used as the default level when renaming a single assay.
@@ -408,34 +408,32 @@ ProBatchFeatures_from_long <- function(
 #' }
 #'
 #' @export
-as_ProBatchFeatures <- function(object, level = "feature", pipeline = "raw", sample_id_name = NULL) {
-    stopifnot(is(object, "QFeatures"))
+as_ProBatchFeatures <- function(object,
+                                level = "feature",
+                                pipeline = "raw",
+                                sample_id_name = NULL) {
+    if (!is(object, "QFeatures")) {
+        stop("`object` must be a QFeatures object.", call. = FALSE)
+    }
 
     qf <- object
     if (length(qf) == 0L) {
-        stop("Cannot coerce a QFeatures object with no assays.")
+        stop("Cannot coerce a QFeatures object with no assays.", call. = FALSE)
     }
 
     nm <- names(qf)
-    level <- level %||% "feature"
-    if (is.na(level) || !nzchar(level)) {
-        level <- "feature"
-    }
-    pipeline <- pipeline %||% "raw"
-    if (is.na(pipeline) || !nzchar(pipeline)) {
-        pipeline <- "raw"
-    }
+
+    # Normalize 'level' and 'pipeline' (avoid %||%)
+    level <- if (is.null(level) || is.na(level) || !nzchar(level)) "feature" else as.character(level)
+    pipeline <- if (is.null(pipeline) || is.na(pipeline) || !nzchar(pipeline)) "raw" else as.character(pipeline)
 
     if (length(qf) == 1L) {
-        current_name <- if (is.null(nm)) "" else nm[[1]]
+        current_name <- if (length(nm)) nm[[1L]] else ""
         if (!nzchar(current_name) || !grepl("::", current_name, fixed = TRUE)) {
             names(qf) <- .pb_assay_name(level, pipeline)
         }
-    } else if (!is.null(nm) && any(!grepl("::", nm, fixed = TRUE))) {
-        warning(
-            "Some assay names do not follow the '<level>::<pipeline>' convention; ",
-            "consider renaming manually."
-        )
+    } else if (length(nm) && any(!grepl("::", nm, fixed = TRUE))) {
+        warning("Some assay names do not follow the '<level>::<pipeline>' convention; consider renaming manually.")
     }
 
     empty_log <- DataFrame(
@@ -444,33 +442,76 @@ as_ProBatchFeatures <- function(object, level = "feature", pipeline = "raw", sam
         from      = character(),
         to        = character(),
         params    = I(vector("list", 0L)),
-        timestamp = as.POSIXct(character()),
+        timestamp = as.POSIXct(character(), tz = "UTC"),
         pkg       = character()
     )
 
-    # in case there is no sample id name column in colData, initialize column with rownames
-    cd <- S4Vectors::DataFrame(colData(qf))
-    if (is.null(sample_id_name) && !is.null(rownames(cd))) {
-        sample_id_name <- "sample_id"
-    } else if (!is.null(sample_id_name) && nzchar(sample_id_name)) {
-        if (!sample_id_name %in% colnames(cd)) {
-            warning(
-                "sample_id_name '", sample_id_name,
-                "' not found in colData; initializing with rownames."
-            )
-            sample_id_name <- "sample_id"
-        }
-    }
-    if (!is.null(sample_id_name) && nzchar(sample_id_name)) {
-        if (!sample_id_name %in% colnames(cd)) {
-            cd[[sample_id_name]] <- rownames(cd)
-            S4Vectors::rownames(cd) <- rownames(cd)
-            colData(qf) <- cd
+    cd <- DataFrame(SummarizedExperiment::colData(qf))
+
+    # Ensure colData rownames exist and are consistent with first assay
+    if ((is.null(rownames(cd)) || anyNA(rownames(cd)) || any(!nzchar(rownames(cd)))) && length(qf)) {
+        first_se <- qf[[1L]]
+        if (is(first_se, "SummarizedExperiment")) {
+            cn <- colnames(first_se)
+            if (length(cn) != nrow(cd)) {
+                stop("colData had invalid/missing rownames and its number of rows (", nrow(cd),
+                    ") does not match the number of samples in the first assay (", length(cn), ").",
+                    call. = FALSE
+                )
+            }
+            rownames(cd) <- cn
         }
     }
 
-    new("ProBatchFeatures", qf, chain = character(), oplog = empty_log)
+    # Sample ID column handling
+    final_sample_id <- NULL
+    if (!is.null(sample_id_name) && nzchar(sample_id_name)) {
+        final_sample_id <- as.character(sample_id_name)
+        if (!final_sample_id %in% colnames(cd)) {
+            warning("sample_id_name '", final_sample_id, "' not found in colData; initializing with rownames.")
+            if (is.null(rownames(cd))) {
+                stop("Cannot initialise sample_id_name without colData rownames.", call. = FALSE)
+            }
+            cd[[final_sample_id]] <- rownames(cd)
+        }
+    } else if ("sample_id" %in% colnames(cd)) {
+        final_sample_id <- "sample_id"
+    } else if (!is.null(rownames(cd))) {
+        final_sample_id <- "sample_id"
+        message("sample_id_name not provided; creating 'sample_id' column from colData rownames.")
+        cd[[final_sample_id]] <- rownames(cd)
+    }
+
+    if (!is.null(final_sample_id)) {
+        cd[[final_sample_id]] <- as.character(cd[[final_sample_id]])
+    }
+
+    colData(qf) <- cd
+
+    nm <- names(qf)
+    for (idx in seq_along(qf)) {
+        se <- qf[[idx]]
+        if (!is(se, "SummarizedExperiment")) {
+            next
+        }
+
+        assay_name <- if (length(nm) >= idx) nm[[idx]] else paste0("assay", idx)
+        se <- .pb_harmonize_colData(qf, se, from_assay = assay_name)
+
+        if (length(assays(se)) == 1L) {
+            cur <- assayNames(se)
+            if (!length(cur) || is.na(cur) || !nzchar(cur)) {
+                assayNames(se) <- "intensity"
+            }
+        }
+        qf[[idx]] <- se
+    }
+
+    out <- new2("ProBatchFeatures", qf, chain = character(), oplog = empty_log, check = TRUE)
+    validObject(out)
+    out
 }
+
 
 `%||%` <- function(a, b) if (!is.null(a)) a else b
 

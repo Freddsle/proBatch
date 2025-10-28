@@ -25,7 +25,7 @@ A \code{ProBatchFeatures} object containing the same assays as \code{object}.
 }
 \description{
 Wraps an existing \code{QFeatures} instance into the \code{ProBatchFeatures} subclass,
-initialising the operation log and optional assay renaming when a single assay is present.
+initializing the operation log and optional assay renaming when a single assay is present.
 }
 \examples{
 if (requireNamespace("QFeatures", quietly = TRUE)) {

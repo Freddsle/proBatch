@@ -314,8 +314,8 @@ correct_with_RUVIII_C <- function(
         } else {
             stop(paste(
                 "No technical replicates detected (all replicate groups are size 1).",
-                "Set use_pseudorep = TRUE to construct PRPS pseudo-replicates,",
-                "or set rep_force = TRUE to force automatic PRPS-like pairing (NOT recommended)."
+                "\n\tSet use_pseudorep = TRUE to construct PRPS pseudo-replicates,",
+                "\n\tor set rep_force = TRUE to force automatic PRPS-like pairing (NOT recommended)."
             ))
         }
 
@@ -451,7 +451,7 @@ correct_with_RUVIII_C <- function(
   control_features = character(0) # features for similarity; fallback -> all
 ) {
     message(
-        "PRPS: constructing pseudo-replicates based on within-group similarity",
+        "PRPS: constructing pseudo-replicates based on within-group similarity. ",
         "This functionality is experimental; use with caution."
     )
     sample_ids <- colnames(data_matrix)
