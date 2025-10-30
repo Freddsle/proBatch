@@ -32,6 +32,14 @@
         safe_register("ruviiic", .ruviiic_matrix_step)
         safe_register("RUVIII_C", .ruviiic_matrix_step)
     }
+
+    if (
+        .pb_requireNamespace("omicsGMF", only_info = TRUE) &&
+        .pb_requireNamespace("sgdGMF", only_info = TRUE)
+    ) {
+        safe_register("omicsGMFImpute", .omicsgmf_matrix_step)
+        safe_register("omicsgmfimpute", .omicsgmf_matrix_step)
+    }
 }
 
 # internal helper to assert package availability without attaching it
