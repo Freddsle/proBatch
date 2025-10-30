@@ -184,7 +184,7 @@ test_that("pb_filterNA validates final_name length when creating new assays", {
     )
 })
 
-test_that("pb_groupfilterNA removes features lacking per-group replicates in place", {
+test_that("pb_groupfilterNA retains union of group-wise valid features in place", {
     mat <- matrix(
         c(
             1, 2, 3, 4,
@@ -214,7 +214,7 @@ test_that("pb_groupfilterNA removes features lacking per-group replicates in pla
 
     filtered <- assay(res[[assay_name]], "intensity")
     expect_true(is.matrix(filtered))
-    expect_identical(rownames(filtered), "f1")
+    expect_identical(rownames(filtered), c("f1", "f2"))
 
     log <- get_operation_log(res)
     expect_equal(nrow(log), 1L)
@@ -223,9 +223,10 @@ test_that("pb_groupfilterNA removes features lacking per-group replicates in pla
     expect_identical(as.character(log$to), assay_name)
     expect_identical(log$params[[1]]$group_cols, "Batch")
     expect_identical(log$params[[1]]$min_valid, 2L)
+    expect_null(log$params[[1]]$pNA)
 })
 
-test_that("pb_groupfilterNA stores new assays when not operating in place", {
+test_that("pb_groupfilterNA stores union of group-wise valid features when not operating in place", {
     mat <- matrix(
         c(
             1, 2, 3, 4,
@@ -260,7 +261,7 @@ test_that("pb_groupfilterNA stores new assays when not operating in place", {
     expect_identical(new_name, "filtered_group")
 
     filtered <- assay(res[[new_name]], "intensity")
-    expect_identical(rownames(filtered), "f1")
+    expect_identical(rownames(filtered), c("f1", "f2"))
 
     log <- get_operation_log(res)
     expect_equal(nrow(log), 1L)
@@ -269,6 +270,77 @@ test_that("pb_groupfilterNA stores new assays when not operating in place", {
     expect_identical(as.character(log$to), new_name)
     expect_identical(log$params[[1]]$group_cols, "Batch")
     expect_identical(log$params[[1]]$min_valid, 2L)
+    expect_null(log$params[[1]]$pNA)
+})
+
+test_that("pb_groupfilterNA respects pNA thresholds when supplied", {
+    mat <- matrix(
+        c(
+            1, 2, 3, 4,
+            NA, 2, NA, 4,
+            NA, NA, 5, 6
+        ),
+        nrow = 3,
+        byrow = TRUE,
+        dimnames = list(paste0("f", 1:3), paste0("s", 1:4))
+    )
+    sa_extra <- data.frame(
+        Batch = rep(c("B1", "B2"), each = 2),
+        stringsAsFactors = FALSE
+    )
+    pbf <- make_test_pbf(mat, sa_extra = sa_extra)
+    assay_name <- pb_current_assay(pbf)
+
+    res <- suppressMessages(pb_groupfilterNA(
+        pbf,
+        group_cols = "Batch",
+        min_valid = NULL,
+        pNA = 0.25,
+        inplace = TRUE
+    ))
+
+    filtered <- assay(res[[assay_name]], "intensity")
+    expect_identical(rownames(filtered), c("f1", "f3"))
+
+    log <- get_operation_log(res)
+    expect_equal(nrow(log), 1L)
+    expect_null(log$params[[1]]$min_valid)
+    expect_equal(log$params[[1]]$pNA, 0.25)
+})
+
+test_that("pb_groupfilterNA combines min_valid and pNA per group", {
+    mat <- matrix(
+        c(
+            1, 2, 3, 4, 5, 6,
+            NA, 2, 3, 7, 8, 9,
+            NA, NA, 5, 6, NA, NA
+        ),
+        nrow = 3,
+        byrow = TRUE,
+        dimnames = list(paste0("f", 1:3), paste0("s", 1:6))
+    )
+    sa_extra <- data.frame(
+        Batch = c(rep("B1", 3), rep("B2", 3)),
+        stringsAsFactors = FALSE
+    )
+    pbf <- make_test_pbf(mat, sa_extra = sa_extra)
+    assay_name <- pb_current_assay(pbf)
+
+    res <- suppressMessages(pb_groupfilterNA(
+        pbf,
+        group_cols = "Batch",
+        min_valid = 2L,
+        pNA = 0.25,
+        inplace = TRUE
+    ))
+
+    filtered <- assay(res[[assay_name]], "intensity")
+    expect_identical(rownames(filtered), c("f1", "f2"))
+
+    log <- get_operation_log(res)
+    expect_equal(nrow(log), 1L)
+    expect_equal(log$params[[1]]$min_valid, 2L)
+    expect_equal(log$params[[1]]$pNA, 0.25)
 })
 
 test_that("pb_groupfilterNA validates presence of grouping columns", {

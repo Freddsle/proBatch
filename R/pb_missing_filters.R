@@ -25,12 +25,19 @@
 #' @param min_valid Integer scalar (used by `pb_groupfilterNA()` only),
 #'   minimum number of non-missing values required within each group to retain a
 #'   feature. Default: `2L`.
+#' @param pNA Numeric scalar (used by `pb_groupfilterNA()` only), maximum
+#'   proportion of missing values allowed within each group to retain a feature.
+#'   Must be in the range `[0, 1]`. If both `min_valid` and `pNA` are provided,
+#'   the stricter requirement is applied per group by enforcing the larger
+#'   minimum number of observed values implied by either threshold.
 #' @param ... Additional parameters forwarded to the underlying
 #'   `QFeatures` method where applicable.
 #' @return `pb_zeroIsNA()`, `pb_infIsNA()`, `pb_filterNA()` and
 #'   `pb_groupfilterNA()` return the updated `ProBatchFeatures` object.
 #'   `pb_nNA()` returns the output of the corresponding `QFeatures::nNA()` call
 #'   (a `list` of `DataFrame`s).
+#' @details For grouped filtering, features are retained if they meet the
+#'   missingness criteria in at least one group defined by `group_cols`.
 #' @name pb_missing_helpers
 NULL
 
@@ -164,6 +171,7 @@ pb_groupfilterNA <- function(
   pbf_name = NULL,
   group_cols,
   min_valid = 2L,
+  pNA = NULL,
   inplace = FALSE,
   final_name = NULL,
   ...
@@ -179,9 +187,22 @@ pb_groupfilterNA <- function(
         stop("`group_cols` must contain non-missing, non-empty column names.", call. = FALSE)
     }
 
-    min_valid <- as.integer(min_valid)
-    if (length(min_valid) != 1L || is.na(min_valid) || min_valid < 0L) {
-        stop("`min_valid` must be a single non-negative integer.", call. = FALSE)
+    if (!is.null(min_valid)) {
+        min_valid <- as.integer(min_valid)
+        if (length(min_valid) != 1L || is.na(min_valid) || min_valid < 0L) {
+            stop("`min_valid` must be a single non-negative integer.", call. = FALSE)
+        }
+    }
+
+    if (!is.null(pNA)) {
+        if (!is.numeric(pNA) || length(pNA) != 1L || is.na(pNA) || pNA < 0 || pNA > 1) {
+            stop("`pNA` must be a single numeric value between 0 and 1.", call. = FALSE)
+        }
+        pNA <- as.numeric(pNA)
+    }
+
+    if (is.null(min_valid) && is.null(pNA)) {
+        stop("Provide at least one of `min_valid` or `pNA` to perform filtering.", call. = FALSE)
     }
 
     if (is.null(pbf_name)) {
@@ -231,19 +252,20 @@ pb_groupfilterNA <- function(
         group_factor <- interaction(group_df, drop = TRUE, lex.order = TRUE)
         split_indices <- split(seq_along(group_factor), group_factor, drop = TRUE)
 
-        keep_features <- rownames(current)
-        if (is.null(keep_features)) {
+        feature_ids <- rownames(current)
+        if (is.null(feature_ids)) {
             stop(
                 "Assay '", nm, "' has no rownames; cannot perform grouped filtering.",
                 call. = FALSE
             )
         }
+        keep_logical <- setNames(rep(FALSE, length(feature_ids)), feature_ids)
 
-        if (min_valid > 0L && length(keep_features)) {
+        if (length(feature_ids)) {
             for (grp_name in names(split_indices)) {
                 idx_cols <- split_indices[[grp_name]]
                 group_size <- length(idx_cols)
-                if (group_size < min_valid) {
+                if (!is.null(min_valid) && group_size < min_valid) {
                     stop(
                         "Assay '", nm, "' has group '", grp_name,
                         "' with ", group_size,
@@ -254,7 +276,22 @@ pb_groupfilterNA <- function(
                 sub_se <- current[, idx_cols, drop = FALSE]
                 tmp_name <- "tmp_group"
                 tmp_obj <- QFeatures(setNames(list(sub_se), tmp_name))
-                p_na <- 1 - (min_valid / group_size)
+                # Derive the per-group minimum number of observed values implied by
+                # `min_valid` and `pNA`, then convert to an allowed missingness proportion.
+                inferred_min_valid <- 0L
+                if (!is.null(min_valid)) {
+                    inferred_min_valid <- max(inferred_min_valid, min_valid)
+                }
+                if (!is.null(pNA)) {
+                    required_from_pna <- as.integer(ceiling((1 - pNA) * group_size))
+                    inferred_min_valid <- max(inferred_min_valid, required_from_pna)
+                }
+                inferred_min_valid <- as.integer(inferred_min_valid)
+                if (inferred_min_valid == 0L) {
+                    p_na <- 1
+                } else {
+                    p_na <- 1 - (inferred_min_valid / group_size)
+                }
                 if (!is.finite(p_na) || p_na < 0) {
                     p_na <- 0
                 } else if (p_na > 1) {
@@ -265,13 +302,14 @@ pb_groupfilterNA <- function(
                     c(list(tmp_obj, i = tmp_name, pNA = p_na), params)
                 )
                 keep_group <- rownames(filtered_tmp[[tmp_name]])
-                keep_features <- keep_features[keep_features %in% keep_group]
-                if (!length(keep_features)) {
-                    break
+                if (length(keep_group)) {
+                    common <- intersect(keep_group, names(keep_logical))
+                    keep_logical[common] <- TRUE
                 }
             }
         }
 
+        keep_features <- names(keep_logical)[keep_logical]
         filtered_se <- current[keep_features, , drop = FALSE]
         features_after <- nrow(filtered_se)
 
@@ -294,6 +332,7 @@ pb_groupfilterNA <- function(
             list(
                 group_cols = group_cols,
                 min_valid = min_valid,
+                pNA = pNA,
                 inplace = inplace
             ),
             params
