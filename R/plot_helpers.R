@@ -88,6 +88,79 @@
     }, character(1), USE.NAMES = FALSE)
 }
 
+.pb_break_long_assay_title <- function(title, max_length = 35L) {
+    if (is.na(title) || !nzchar(title) || nchar(title) <= max_length) {
+        return(title)
+    }
+
+    hyphen_pos <- gregexpr("-", title, fixed = TRUE)[[1]]
+    hyphen_pos <- hyphen_pos[hyphen_pos > 1 & hyphen_pos < nchar(title)]
+    if (!length(hyphen_pos)) {
+        return(title)
+    }
+
+    mid_point <- nchar(title) / 2
+    idx <- hyphen_pos[which.min(abs(hyphen_pos - mid_point))]
+    left <- substr(title, 1, idx)
+    right <- substr(title, idx + 1, nchar(title))
+    right <- trimws(right)
+
+    paste0(left, "\n\t", right)
+}
+
+.pb_refactor_assay_titles <- function(titles, use_shared_title = TRUE, max_length = 35L) {
+    if (!length(titles)) {
+        return(list(titles = titles, shared_title = NULL))
+    }
+
+    titles <- gsub("_on_", "-", titles, fixed = TRUE)
+    titles <- trimws(titles)
+    original_titles <- titles
+
+    shared_title <- NULL
+
+    if (use_shared_title && length(titles) > 1L) {
+        split_titles <- strsplit(titles, "-", fixed = TRUE)
+        split_titles <- lapply(split_titles, trimws)
+        min_len <- min(lengths(split_titles))
+
+        shared_parts <- character()
+        if (min_len > 0) {
+            for (i in seq_len(min_len)) {
+                parts_i <- vapply(split_titles, function(x) x[[i]], character(1))
+                parts_i <- trimws(parts_i)
+                unique_parts <- unique(parts_i[nzchar(parts_i)])
+                if (length(unique_parts) == 1L) {
+                    shared_parts <- c(shared_parts, unique_parts)
+                } else {
+                    break
+                }
+            }
+        }
+
+        if (length(shared_parts)) {
+            shared_title <- paste(shared_parts, collapse = " - ")
+            remove_len <- length(shared_parts)
+            titles <- vapply(seq_along(split_titles), function(idx) {
+                parts <- split_titles[[idx]]
+                if (length(parts) > remove_len) {
+                    remainder <- parts[-seq_len(remove_len)]
+                    remainder <- remainder[nzchar(remainder)]
+                    if (length(remainder)) {
+                        return(paste(remainder, collapse = " - "))
+                    }
+                }
+                original_titles[[idx]]
+            }, character(1), USE.NAMES = FALSE)
+        }
+    }
+
+    titles <- trimws(titles)
+    titles <- vapply(titles, .pb_break_long_assay_title, character(1), max_length = max_length)
+
+    list(titles = titles, shared_title = shared_title)
+}
+
 .pb_prepare_multi_assay <- function(object, pbf_name, dots, plot_title,
                                     default_title_fun = .pb_default_title,
                                     set_silent = FALSE) {
@@ -103,13 +176,29 @@
         dots$silent <- TRUE
     }
 
+    resolved_titles <- .pb_resolve_titles(assays, plot_title, default_fun = default_title_fun)
+    title_info <- .pb_refactor_assay_titles(
+        titles = resolved_titles,
+        use_shared_title = is.null(plot_title)
+    )
+
     list(
         assays = assays,
         dots = dots,
-        titles = .pb_resolve_titles(assays, plot_title, default_fun = default_title_fun),
+        titles = title_info$titles,
+        shared_title = title_info$shared_title,
         filename_list = filename_list,
         split_arg = function(arg) .pb_split_arg_by_assay(arg, assays)
     )
+}
+
+.pb_attach_shared_title <- function(plot_list, shared_title) {
+    if (!is.null(shared_title) && nzchar(shared_title)) {
+        attr(plot_list, "pb_shared_title") <- shared_title
+    } else if (!is.null(attr(plot_list, "pb_shared_title", exact = TRUE))) {
+        attr(plot_list, "pb_shared_title") <- NULL
+    }
+    plot_list
 }
 
 .pb_per_assay_dots <- function(dots, filename_list, index) {
@@ -163,6 +252,7 @@
                                               return_subplots,
                                               subplot_ncol,
                                               share_axes) {
+    shared_title <- attr(plot_list, "pb_shared_title", exact = TRUE)
     if (!length(plot_list)) {
         return(invisible(NULL))
     }
@@ -189,10 +279,17 @@
                 titleX = TRUE,
                 titleY = TRUE
             ))
-            return(do.call(plotly::subplot, subplot_args))
+            subplot_obj <- do.call(plotly::subplot, subplot_args)
+            if (!is.null(shared_title) && nzchar(shared_title)) {
+                subplot_obj <- plotly::layout(
+                    subplot_obj,
+                    title = list(text = shared_title)
+                )
+            }
+            return(subplot_obj)
         }
 
-        return(plot_list)
+        return(.pb_attach_shared_title(plot_list, shared_title))
     }
 
     if (isTRUE(return_subplots)) {
@@ -230,9 +327,17 @@
     n <- length(grobs)
     ncol <- if (is.null(plot_ncol)) ceiling(sqrt(n)) else plot_ncol
     nrow <- ceiling(n / ncol)
+    shared_title <- attr(plot_list, "pb_shared_title", exact = TRUE)
+    top_arg <- list()
+    if (!is.null(shared_title) && nzchar(shared_title)) {
+        top_arg <- list(top = grid::textGrob(
+            shared_title,
+            gp = grid::gpar(fontface = "bold")
+        ))
+    }
     arranged <- do.call(
         gridExtra::arrangeGrob,
-        list(grobs = grobs, nrow = nrow, ncol = ncol)
+        c(list(grobs = grobs, nrow = nrow, ncol = ncol), top_arg)
     )
     if (isTRUE(draw)) {
         grid::grid.newpage()

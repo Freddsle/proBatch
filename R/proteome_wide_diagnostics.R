@@ -189,6 +189,7 @@ plot_hierarchical_clustering.ProBatchFeatures <- function(data_matrix, pbf_name 
     filename_list <- prep$filename_list
     split_arg <- prep$split_arg
     titles <- prep$titles
+    shared_title <- prep$shared_title
 
     default_sample_annotation <- as.data.frame(colData(object))
     sample_ann_list <- split_arg(sample_annotation)
@@ -218,6 +219,8 @@ plot_hierarchical_clustering.ProBatchFeatures <- function(data_matrix, pbf_name 
 
         plot_list[[i]] <- do.call(plot_hierarchical_clustering.default, call_args)
     }
+
+    plot_list <- .pb_attach_shared_title(plot_list, shared_title)
 
     has_plots <- vapply(plot_list, function(x) !is.null(x), logical(1))
     if (!any(has_plots)) {
@@ -407,6 +410,7 @@ plot_heatmap_diagnostic.ProBatchFeatures <- function(data_matrix, pbf_name = NUL
     filename_list <- prep$filename_list
     split_arg <- prep$split_arg
     titles <- prep$titles
+    shared_title <- prep$shared_title
 
     default_sample_annotation <- as.data.frame(colData(object))
     sample_ann_list <- split_arg(sample_annotation)
@@ -441,6 +445,8 @@ plot_heatmap_diagnostic.ProBatchFeatures <- function(data_matrix, pbf_name = NUL
 
         plot_list[[i]] <- do.call(plot_heatmap_diagnostic.default, call_args)
     }
+
+    plot_list <- .pb_attach_shared_title(plot_list, shared_title)
 
     .pb_arrange_plot_list(plot_list, convert_fun = function(x) x$gtable, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
 }
@@ -630,6 +636,7 @@ plot_heatmap_generic.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
     filename_list <- prep$filename_list
     split_arg <- prep$split_arg
     titles <- prep$titles
+    shared_title <- prep$shared_title
 
     default_col_ann <- as.data.frame(colData(object))
     col_ann_list <- split_arg(column_annotation_df)
@@ -665,6 +672,8 @@ plot_heatmap_generic.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
         ), call_args)
         plot_list[[i]] <- do.call(plot_heatmap_generic.default, call_args)
     }
+
+    plot_list <- .pb_attach_shared_title(plot_list, shared_title)
 
     .pb_arrange_plot_list(plot_list, convert_fun = function(x) x$gtable, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
 }
@@ -944,6 +953,7 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
     filename_list <- prep$filename_list
     split_arg <- prep$split_arg
     titles <- prep$titles
+    shared_title <- prep$shared_title
 
     if (is.null(sample_annotation)) {
         sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
@@ -977,6 +987,8 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
 
         plot_list[[i]] <- do.call(plot_PVCA.default, call_args)
     }
+
+    plot_list <- .pb_attach_shared_title(plot_list, shared_title)
 
     .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
 }
@@ -1248,6 +1260,7 @@ plot_PVCA.df.ProBatchFeatures <- function(df, pbf_name = NULL,
     filename_list <- prep$filename_list
     split_arg <- prep$split_arg
     titles <- prep$titles
+    shared_title <- prep$shared_title
     add_values_arg <- NULL
     if ("add_values" %in% names(prepare_dots)) {
         add_values_arg <- prepare_dots$add_values
@@ -1312,6 +1325,8 @@ plot_PVCA.df.ProBatchFeatures <- function(df, pbf_name = NULL,
 
         plot_list[[i]] <- do.call(plot_PVCA.df.default, plot_args)
     }
+
+    plot_list <- .pb_attach_shared_title(plot_list, shared_title)
 
     .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
 }
@@ -1484,6 +1499,7 @@ plot_PCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
     filename_list <- prep$filename_list
     split_arg <- prep$split_arg
     titles <- prep$titles
+    shared_title <- prep$shared_title
 
     default_sample_annotation <- as.data.frame(colData(object))
     sample_ann_list <- split_arg(sample_annotation)
@@ -1509,6 +1525,8 @@ plot_PCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
 
         plot_list[[i]] <- do.call(plot_PCA.default, call_args)
     }
+
+    plot_list <- .pb_attach_shared_title(plot_list, shared_title)
 
     .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
 }
@@ -1720,6 +1738,7 @@ plot_TSNE.ProBatchFeatures <- function(x, pbf_name = NULL,
     filename_list <- prep$filename_list
     split_arg <- prep$split_arg
     titles <- prep$titles
+    shared_title <- prep$shared_title
 
     default_sample_annotation <- as.data.frame(colData(object))
     sample_ann_list <- split_arg(sample_annotation)
@@ -1746,6 +1765,8 @@ plot_TSNE.ProBatchFeatures <- function(x, pbf_name = NULL,
 
         plot_list[[i]] <- do.call(plot_TSNE.default, call_args)
     }
+
+    plot_list <- .pb_attach_shared_title(plot_list, shared_title)
 
     return(.pb_finalize_embedding_collection(
         plot_list = plot_list,
@@ -1969,6 +1990,7 @@ plot_UMAP.ProBatchFeatures <- function(x, pbf_name = NULL,
     filename_list <- prep$filename_list
     split_arg <- prep$split_arg
     titles <- prep$titles
+    shared_title <- prep$shared_title
 
     default_sample_annotation <- as.data.frame(colData(object))
     sample_ann_list <- split_arg(sample_annotation)
@@ -1995,6 +2017,8 @@ plot_UMAP.ProBatchFeatures <- function(x, pbf_name = NULL,
 
         plot_list[[i]] <- do.call(plot_UMAP.default, call_args)
     }
+
+    plot_list <- .pb_attach_shared_title(plot_list, shared_title)
 
     return(.pb_finalize_embedding_collection(
         plot_list = plot_list,
