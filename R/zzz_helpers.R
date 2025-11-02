@@ -35,10 +35,15 @@
 
     if (
         .pb_requireNamespace("omicsGMF", only_info = TRUE) &&
-        .pb_requireNamespace("sgdGMF", only_info = TRUE)
+            .pb_requireNamespace("sgdGMF", only_info = TRUE)
     ) {
         safe_register("omicsGMFImpute", .omicsgmf_matrix_step)
         safe_register("omicsgmfimpute", .omicsgmf_matrix_step)
+    }
+
+    if (.pb_requireNamespace("PRONE", only_info = TRUE)) {
+        safe_register("PRONEImpute", .prone_matrix_step)
+        safe_register("proneImpute", .prone_matrix_step)
     }
 }
 
