@@ -50,7 +50,7 @@
         safe_register("MFimpute", .missforest_matrix_step)
         safe_register("missForestImpute", .missforest_matrix_step)
         safe_register("mfimpute", .missforest_matrix_step)
-    }   
+    }
 }
 
 # internal helper to assert package availability without attaching it

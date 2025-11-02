@@ -19,7 +19,7 @@
 #' and samples in columns**. This adapter therefore **transposes** before
 #' calling `missForest()` and **transposes back** afterward. This is required by
 #' the upstream package design and cannot be avoided. See the missForest manual
-#' for details. (Stekhoven & Bühlmann 2012; CRAN missForest pdf). 
+#' for details. (Stekhoven & Bühlmann 2012; CRAN missForest pdf).
 #'
 #' @param x Object to impute; one of:
 #'   \itemize{
@@ -42,7 +42,7 @@
 #' @return Object of the same class as `x`, with imputed values.
 #'
 #' @references
-#' Stekhoven DJ, Bühlmann P. MissForest—non-parametric missing value imputation for mixed-type data. 
+#' Stekhoven DJ, Bühlmann P. MissForest—non-parametric missing value imputation for mixed-type data.
 #' Bioinformatics. 2012 Jan 1;28(1):112-8.
 #' DOI:  https://doi.org/10.1093/bioinformatics/btr597.
 #'
@@ -100,8 +100,9 @@ imputeMissForest <- function(x,
     }
 
     stop("imputeMissForest(): unsupported object of class ",
-         paste(class(x), collapse = "/"),
-         call. = FALSE)
+        paste(class(x), collapse = "/"),
+        call. = FALSE
+    )
 }
 
 # ---------------------------------------------------------------------
@@ -134,11 +135,11 @@ imputeMissForest_df <- function(x,
 
     ## 3) wide -> long again
     matrix_to_long(
-        data_matrix      = imputed_matrix,
+        data_matrix = imputed_matrix,
         sample_annotation = sample_annotation,
-        feature_id_col    = feature_id_col,
-        measure_col       = measure_col,
-        sample_id_col     = sample_id_col
+        feature_id_col = feature_id_col,
+        measure_col = measure_col,
+        sample_id_col = sample_id_col
     )
 }
 
@@ -169,11 +170,11 @@ imputeMissForest_dm <- function(x,
 #' @rdname imputeMissForest
 #' @export
 imputeMissForest.ProBatchFeatures <- function(
-    x,
-    sample_id_col = "FullRunName",
-    pbf_name      = NULL,
-    final_name    = NULL,
-    ...
+  x,
+  sample_id_col = "FullRunName",
+  pbf_name = NULL,
+  final_name = NULL,
+  ...
 ) {
     object <- x
     .pb_requireNamespace("missForest")
@@ -183,15 +184,21 @@ imputeMissForest.ProBatchFeatures <- function(
         message("`pbf_name` not provided, using the most recent assay: ", pbf_name)
     }
 
-    params <- list(
-        sample_id_col = sample_id_col
-    )
     extra <- list(...)
-    if (length(extra)) {
-        params <- modifyList(params, extra)
+    mf_args <- list()
+    if (length(extra) && "missforest_args" %in% names(extra)) {
+        supplied <- extra[["missforest_args"]]
+        if (length(supplied)) {
+            mf_args <- supplied
+        }
+        extra[["missforest_args"]] <- NULL
     }
+    if (length(extra)) {
+        mf_args <- modifyList(mf_args, extra)
+    }
+    params <- if (length(mf_args)) list(missforest_args = mf_args) else list()
 
-    step_name  <- "missForestImpute"
+    step_name <- "missForestImpute"
     step_label <- .pb_step_label(step_name, params)
 
     out <- .pb_apply_step(
@@ -202,7 +209,7 @@ imputeMissForest.ProBatchFeatures <- function(
         params = params
     )
 
-    object    <- out$object
+    object <- out$object
     assay_new <- out$assay
 
     if (!is.null(final_name) && !is.null(assay_new) && assay_new %in% names(object)) {
@@ -258,11 +265,12 @@ missForestImpute <- function(x, ...) {
 
     if (is.null(colnames(data_matrix))) {
         stop("missForest imputation requires matrix column names (sample identifiers).",
-             call. = FALSE)
+            call. = FALSE
+        )
     }
 
     ## preserve names
-    feat_ids   <- rownames(data_matrix)
+    feat_ids <- rownames(data_matrix)
     sample_ids <- colnames(data_matrix)
 
     ## --------------------------------------------------------------
@@ -283,7 +291,8 @@ missForestImpute <- function(x, ...) {
 
     if (!nrow(core_mat) || !ncol(core_mat)) {
         stop("missForest(): no data left to impute after removing all-NA rows/columns.",
-             call. = FALSE)
+            call. = FALSE
+        )
     }
 
     ## --------------------------------------------------------------
@@ -296,7 +305,7 @@ missForestImpute <- function(x, ...) {
     ##    upstream returns a list with $ximp, $OOBerror, $error, ...
     ## --------------------------------------------------------------
     mf_call <- c(list(xmis = core_df), missforest_args)
-    mf_res  <- do.call(missForest::missForest, mf_call)
+    mf_res <- do.call(missForest::missForest, mf_call)
 
     imputed_df <- mf_res$ximp
 
@@ -345,7 +354,7 @@ missForestImpute <- function(x, ...) {
 
     ## attach OOB diagnostics (does not break API)
     attr(imputed, "missForest_OOBerror") <- mf_res$OOBerror
-    attr(imputed, "missForest_error")    <- mf_res$error
+    attr(imputed, "missForest_error") <- mf_res$error
 
     imputed
 }
