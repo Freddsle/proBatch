@@ -91,9 +91,17 @@ imputeMissForest <- function(x,
     }
 
     ## --- pipelines should go through pb_transform() -----------------------
-    if (inherits(x, "ProBatchFeatures") || inherits(x, "QFeatures")) {
+    if (inherits(x, "ProBatchFeatures")) {
+        return(imputeMissForest.ProBatchFeatures(
+            x = x,
+            sample_id_col = sample_id_col,
+            ...
+        ))
+    }
+
+    if (inherits(x, "QFeatures")) {
         stop(
-            "imputeMissForest(): ProBatchFeatures/QFeatures inputs are not supported directly. ",
+            "imputeMissForest(): QFeatures inputs are not supported directly. ",
             "Use pb_transform(..., steps = 'missForestImpute') to apply missForest within a pipeline.",
             call. = FALSE
         )
@@ -243,9 +251,16 @@ missForestImpute <- function(x, ...) {
         x <- as.matrix(x)
     }
 
+    dots <- list(...)
+    if (length(dots) == 1L && !is.null(dots$missforest_args)) {
+        mf_args <- dots$missforest_args
+    } else {
+        mf_args <- dots
+    }
+
     .missforest_matrix_step(
         data_matrix     = x,
-        missforest_args = list(...)
+        missforest_args = mf_args
     )
 }
 
@@ -257,6 +272,12 @@ missForestImpute <- function(x, ...) {
 .missforest_matrix_step <- function(data_matrix,
                                     missforest_args = list()) {
     .pb_requireNamespace("missForest")
+
+    # 0) accept the pipeline's "list(missforest_args = ...)" shape
+    if (length(missforest_args) == 1L &&
+        !is.null(missforest_args$missforest_args)) {
+        missforest_args <- missforest_args$missforest_args
+    }
 
     if (!is.matrix(data_matrix)) {
         data_matrix <- as.matrix(data_matrix)
