@@ -42,9 +42,9 @@
 #' @return Object of the same class as `x`, with imputed values.
 #'
 #' @references
-#' Stekhoven DJ, Bühlmann P (2012) “MissForest — nonparametric missing value
-#' imputation for mixed-type data.” *Bioinformatics* 28(1):112–118.
-#' CRAN package **missForest**. :contentReference[oaicite:2]{index=2}
+#' Stekhoven DJ, Bühlmann P. MissForest—non-parametric missing value imputation for mixed-type data. 
+#' Bioinformatics. 2012 Jan 1;28(1):112-8.
+#' DOI:  https://doi.org/10.1093/bioinformatics/btr597.
 #'
 #' @rdname imputeMissForest
 #' @export
