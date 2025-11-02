@@ -17,6 +17,39 @@ local_fake_omicsgmf_step <- function(fake_step) {
     )
 }
 
+make_test_pbf <- function() {
+    testthat::skip_if_not_installed("QFeatures")
+    testthat::skip_if_not_installed("SummarizedExperiment")
+    testthat::skip_if_not_installed("S4Vectors")
+
+    # 1) small assay, 2 features × 3 samples
+    se <- SummarizedExperiment::SummarizedExperiment(
+        assays = list(
+            raw = matrix(
+                c(
+                    1, NA, 3,
+                    4, 5, NA
+                ),
+                nrow = 2,
+                byrow = TRUE,
+                dimnames = list(
+                    c("feat1", "feat2"),
+                    c("s1", "s2", "s3")
+                )
+            )
+        ),
+        colData = S4Vectors::DataFrame(
+            FullRunName = c("s1", "s2", "s3"),
+            Batch = c("A", "A", "B")
+        )
+    )
+
+    qf <- QFeatures::QFeatures(list(raw = se))
+    testthat::skip_if_not("as_ProBatchFeatures" %in% getNamespaceExports("proBatch"))
+    proBatch::as_ProBatchFeatures(qf)
+}
+
+
 test_that("impute_with_omicsGMF(wide): forwards parameters and preserves dimnames (mocked)", {
     m <- matrix(
         as.numeric(1:9),
@@ -40,25 +73,17 @@ test_that("impute_with_omicsGMF(wide): forwards parameters and preserves dimname
                           design_formula,
                           family,
                           ncomponents,
-                          max_rank,
-                          run_rank,
-                          rank_args,
-                          gmf_args,
-                          impute_args,
-                          fill_the_missing) {
+                          gmf_args = list(),
+                          impute_args = list()) {
         captured$data_matrix <- data_matrix
         captured$sample_annotation <- sample_annotation
         captured$args <- list(
-            sample_id_col = sample_id_col,
-            design_formula = design_formula,
-            family = family,
-            ncomponents = ncomponents,
-            max_rank = max_rank,
-            run_rank = run_rank,
-            rank_args = rank_args,
-            gmf_args = gmf_args,
-            impute_args = impute_args,
-            fill_the_missing = fill_the_missing
+            sample_id_col   = sample_id_col,
+            design_formula  = design_formula,
+            family          = family,
+            ncomponents     = ncomponents,
+            gmf_args        = gmf_args,
+            impute_args     = impute_args
         )
         storage.mode(data_matrix) <- "double"
         data_matrix + 0.5
@@ -70,15 +95,11 @@ test_that("impute_with_omicsGMF(wide): forwards parameters and preserves dimname
         x = m,
         sample_annotation = sa,
         sample_id_col = "FullRunName",
-        design_formula = ~ Condition,
+        design_formula = ~Condition,
         family = poisson(),
         ncomponents = 3L,
-        max_rank = 8L,
-        run_rank = FALSE,
-        rank_args = list(seed = 101),
         gmf_args = list(name = "custom_dimred"),
         impute_args = list(name = "custom_imputed"),
-        fill_the_missing = FALSE,
         format = "wide"
     )
 
@@ -94,12 +115,8 @@ test_that("impute_with_omicsGMF(wide): forwards parameters and preserves dimname
     expect_identical(captured$args$design_formula, stats::as.formula("~Condition"))
     expect_identical(captured$args$family$family, poisson()$family)
     expect_identical(captured$args$ncomponents, 3L)
-    expect_identical(captured$args$max_rank, 8L)
-    expect_false(captured$args$run_rank)
-    expect_identical(captured$args$rank_args, list(seed = 101))
     expect_identical(captured$args$gmf_args, list(name = "custom_dimred"))
     expect_identical(captured$args$impute_args, list(name = "custom_imputed"))
-    expect_false(captured$args$fill_the_missing)
 })
 
 test_that("impute_with_omicsGMF(long): adds preImpute_* and respects keep_all = 'minimal' (mocked)", {
@@ -130,25 +147,17 @@ test_that("impute_with_omicsGMF(long): adds preImpute_* and respects keep_all = 
                           design_formula,
                           family,
                           ncomponents,
-                          max_rank,
-                          run_rank,
-                          rank_args,
-                          gmf_args,
-                          impute_args,
-                          fill_the_missing) {
+                          gmf_args = list(),
+                          impute_args = list()) {
         captured$data_matrix <- data_matrix
         captured$sample_annotation <- sample_annotation
         captured$args <- list(
-            sample_id_col = sample_id_col,
-            design_formula = design_formula,
-            family = family,
-            ncomponents = ncomponents,
-            max_rank = max_rank,
-            run_rank = run_rank,
-            rank_args = rank_args,
-            gmf_args = gmf_args,
-            impute_args = impute_args,
-            fill_the_missing = fill_the_missing
+            sample_id_col   = sample_id_col,
+            design_formula  = design_formula,
+            family          = family,
+            ncomponents     = ncomponents,
+            gmf_args        = gmf_args,
+            impute_args     = impute_args
         )
         storage.mode(data_matrix) <- "double"
         data_matrix + 42
@@ -162,13 +171,11 @@ test_that("impute_with_omicsGMF(long): adds preImpute_* and respects keep_all = 
         feature_id_col = "peptide_group_label",
         sample_id_col = "FullRunName",
         measure_col = "Intensity",
-        design_formula = ~ Condition,
+        design_formula = ~Condition,
         family = gaussian(),
-        max_rank = 5L,
-        rank_args = list(alpha = 0.1),
+        ncomponents = 2L,
         gmf_args = list(name = "gmf_name"),
         impute_args = list(name = "imputed_name"),
-        fill_the_missing = NULL,
         keep_all = "minimal",
         format = "long"
     )
@@ -191,8 +198,51 @@ test_that("impute_with_omicsGMF(long): adds preImpute_* and respects keep_all = 
         captured$sample_annotation$FullRunName,
         colnames(expected_matrix)
     )
-    expect_identical(captured$args$rank_args, list(alpha = 0.1))
+    expect_identical(captured$args$ncomponents, 2L)
     expect_identical(captured$args$gmf_args, list(name = "gmf_name"))
     expect_identical(captured$args$impute_args, list(name = "imputed_name"))
 })
 
+
+test_that("impute_with_omicsGMF(ProBatchFeatures) calls .pb_apply_step with correct params", {
+    pbf <- make_test_pbf()
+
+    captured <- new.env(parent = emptyenv())
+
+    testthat::local_mocked_bindings(
+        .pb_requireNamespace = function(...) invisible(TRUE),
+        .pb_apply_step = function(object, from, step, fun, params) {
+            captured$object <- object
+            captured$from <- from
+            captured$step <- step
+            captured$fun <- fun
+            captured$params <- params
+            # mimic what your real helper returns
+            list(object = object, assay = "omicsGMFImpute_1")
+        },
+        .package = "proBatch"
+    )
+
+    out <- impute_with_omicsGMF(
+        x = pbf,
+        ncomponents = 3L,
+        sample_id_col = "FullRunName",
+        design_formula = ~Batch
+    )
+
+    expect_s4_class(out, "ProBatchFeatures")
+    expect_identical(captured$fun, "omicsGMFImpute")
+    expect_identical(captured$params$ncomponents, 3L)
+    expect_identical(captured$params$sample_id_col, "FullRunName")
+})
+
+
+
+test_that("impute_with_omicsGMF() errors when ncomponents is missing", {
+    m <- matrix(1, 2, 2)
+    expect_error(
+        impute_with_omicsGMF(m, sample_annotation = data.frame(FullRunName = c("V1", "V2"))),
+        "`ncomponents` must be supplied",
+        fixed = TRUE
+    )
+})

@@ -22,6 +22,7 @@ pb_groupfilterNA(
   pbf_name = NULL,
   group_cols,
   min_valid = 2L,
+  pNA = NULL,
   inplace = FALSE,
   final_name = NULL,
   ...
@@ -52,6 +53,12 @@ missingness must be evaluated.}
 \item{min_valid}{Integer scalar (used by `pb_groupfilterNA()` only),
 minimum number of non-missing values required within each group to retain a
 feature. Default: `2L`.}
+
+\item{pNA}{Numeric scalar (used by `pb_groupfilterNA()` only), maximum
+proportion of missing values allowed within each group to retain a feature.
+Must be in the range `[0, 1]`. If both `min_valid` and `pNA` are provided,
+the stricter requirement is applied per group by enforcing the larger
+minimum number of observed values implied by either threshold.}
 }
 \value{
 `pb_zeroIsNA()`, `pb_infIsNA()`, `pb_filterNA()` and
@@ -65,4 +72,8 @@ ensuring that the requested assays remain part of the `ProBatchFeatures`
 object. Only assays that are already materialised can be modified.
 If a transformation step was applied as a "fast" step (log, log2, etc.),
 consider re-running it with `store_fast_steps = TRUE`.
+}
+\details{
+For grouped filtering, features are retained if they meet the
+  missingness criteria in at least one group defined by `group_cols`.
 }

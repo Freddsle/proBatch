@@ -1,8 +1,8 @@
 #' Impute missing values with omicsGMF
 #'
 #' @description
-#' Function [impute_with_omicsGMF()] reconstructs missing values using the \pkg{omicsGMF} 
-#' probabilistic matrix factorisation workflow. Works on long data.frames (`format = "long"`), 
+#' Function [impute_with_omicsGMF()] reconstructs missing values using the \pkg{omicsGMF}
+#' probabilistic matrix factorisation workflow. Works on long data.frames (`format = "long"`),
 #' wide matrices (`format = "wide"`), and can be applied to `ProBatchFeatures` pipelines via
 #' [pb_transform()] (see Details).
 #'
@@ -10,7 +10,7 @@
 #' the latent dimensionality prior to fitting [`omicsGMF::runGMF()`] and
 #' imputing with [`omicsGMF::imputeGMF()`]. Provide the resulting `ncomponents`
 #' explicitly here.
-#' 
+#'
 #' For more details on the omicsGMF method, see the package documentation:
 #' <https://bioconductor.org/packages/omicsGMF/> and the GitHub repository:
 #' <https://github.com/statOmics/omicsGMF>.
@@ -24,7 +24,7 @@
 #' @param sample_id_col Column name identifying samples.
 #' @param batch_col Optional column indicating batch membership in long-format data.
 #' @param design_formula Formula (or character string coercible to one) used to
-#'   build the design matrix from sample_annotation and passed as `X` to omicsGMF 
+#'   build the design matrix from sample_annotation and passed as `X` to omicsGMF
 #'   - sample-level covariate matrix. Defaults to `~ 1`.
 #' @param family GLM family passed to omicsGMF (default: `gaussian()`).
 #' @param ncomponents Positive integer with the latent dimensionality returned by
@@ -32,7 +32,7 @@
 #' @param ntop Numeric scalar specifying the number of features with the highest variances to
 #'   use for dimensionality reduction. Default uses all features.
 #' @param feature_id_col Column name identifying features in long-format data. Ignored for wide matrices.
-#' @param measure_col Column name storing intensity/abundance measurements in long-format data. 
+#' @param measure_col Column name storing intensity/abundance measurements in long-format data.
 #'  Ignored for wide matrices.
 #' @param keep_all Columns retained in the long-format output; passed to
 #'   [subset_keep_cols()]. Ignored for wide matrices.
@@ -47,10 +47,10 @@
 #'   - `omicsGMF::imputeGMF()`, or
 #'   - `omicsGMF::runRankGMF()`.
 #'   For the full list of parameters, see the respective function documentation.
-#' 
+#'
 #' @details
-#' For `ProBatchFeatures` inputs, the function delegates to [pb_transform()] with
-#' the registered `"omicsGMFImpute"` step. Any unspecified `sample_annotation`
+#' For `ProBatchFeatures` inputs, the function applies the registered `"omicsGMFImpute"`
+#' step (the same entry used by [pb_transform()]). Any unspecified `sample_annotation`
 #' argument is sourced from the object's `colData`.
 #'
 #' The helper requires the following packages to be installed:
@@ -66,15 +66,16 @@
 #'
 #' @seealso [handle_missing_values()], [pb_transform()],
 #'   `omicsGMF::runGMF`, `omicsGMF::imputeGMF`
+#' @name impute_with_omicsGMF
 #' @export
-NULL 
- 
+NULL
+
 
 #' @rdname impute_with_omicsGMF
 #' @export
 impute_with_omicsGMF <- function(
   x,
-  sample_annotation,
+  sample_annotation = NULL,
   ncomponents,
   feature_id_col = "peptide_group_label",
   measure_col = "Intensity",
@@ -106,10 +107,21 @@ impute_with_omicsGMF <- function(
         ))
     }
 
+    if (missing(sample_annotation) || is.null(sample_annotation)) {
+        stop('argument "sample_annotation" is missing, with no default', call. = FALSE)
+    }
+
     .pb_requireNamespace("omicsGMF")
     .pb_requireNamespace("sgdGMF")
+    .pb_requireNamespace("SingleCellExperiment")
 
     format <- match.arg(format)
+
+    dots <- list(...)
+    if ("ntop" %in% names(dots)) {
+        warning("forcing ntop = NULL for omicsGMF imputation")
+        dots$ntop <- NULL
+    }
 
     if (identical(format, "wide")) {
         if (!is.matrix(x)) {
@@ -145,6 +157,14 @@ impute_with_omicsGMF <- function(
         sample_id_col = sample_id_col,
         qual_col = NULL
     )
+
+    if (!is.null(sample_annotation)) {
+        sample_annotation <- .align_sample_annotation(
+            sample_annotation = sample_annotation,
+            sample_ids = colnames(data_matrix),
+            sample_id_col = sample_id_col
+        )
+    }
 
     imputed_matrix <- .omicsgmf_matrix_step(
         data_matrix = data_matrix,
@@ -202,6 +222,7 @@ impute_with_omicsGMF.ProBatchFeatures <- function(
     object <- x
     .pb_requireNamespace("omicsGMF")
     .pb_requireNamespace("sgdGMF")
+    .pb_requireNamespace("SingleCellExperiment")
 
     if (missing(ncomponents) || is.null(ncomponents)) {
         stop("`ncomponents` must be supplied. Run estimate_omicsGMF_rank() first.", call. = FALSE)
@@ -210,6 +231,11 @@ impute_with_omicsGMF.ProBatchFeatures <- function(
     if (is.null(pbf_name)) {
         pbf_name <- pb_current_assay(object)
         message("`pbf_name` not provided, using the most recent assay: ", pbf_name)
+    }
+
+    if (is.null(sample_annotation)) {
+        sample_annotation <- as.data.frame(.pb_coldata_for_assay(object, pbf_name))
+        message("`sample_annotation` not provided, using colData from the ProBatchFeatures object.")
     }
 
     params <- list(
@@ -228,14 +254,25 @@ impute_with_omicsGMF.ProBatchFeatures <- function(
         params$sample_annotation <- sample_annotation
     }
 
-    pb_transform(
+    step_name <- "omicsGMFImpute"
+    step_label <- .pb_step_label(step_name, params)
+
+    out <- .pb_apply_step(
         object = object,
         from = pbf_name,
-        steps = "omicsGMFImpute",
-        funs = list(.omicsgmf_matrix_step),
-        params_list = list(params),
-        final_name = final_name
+        step = step_label,
+        fun = step_name,
+        params = params
     )
+
+    object <- out$object
+    assay_name <- out$assay
+
+    if (!is.null(final_name) && !is.null(assay_name) && assay_name %in% names(object)) {
+        names(object)[match(assay_name, names(object))] <- final_name
+    }
+
+    object
 }
 
 #' @rdname impute_with_omicsGMF
@@ -255,6 +292,7 @@ estimate_omicsGMF_rank <- function(
 ) {
     .pb_requireNamespace("omicsGMF")
     .pb_requireNamespace("sgdGMF")
+    .pb_requireNamespace("SingleCellExperiment")
 
     format <- match.arg(format)
 
@@ -292,6 +330,7 @@ estimate_omicsGMF_rank <- function(
         qual_col = NULL
     )
 
+    rank_args <- list(...)
     .omicsgmf_rank_matrix_step(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
@@ -314,10 +353,12 @@ estimate_omicsGMF_rank <- function(
   design_formula = ~1,
   family = gaussian(),
   max_rank = 10,
+  rank_args = list(),
   ...
 ) {
     .pb_requireNamespace("omicsGMF")
     .pb_requireNamespace("sgdGMF")
+    .pb_requireNamespace("SingleCellExperiment")
 
     max_rank <- as.integer(max_rank)
     if (is.na(max_rank) || max_rank < 1L) {
@@ -401,15 +442,19 @@ estimate_omicsGMF_rank <- function(
 
             dimred_name <- gmf_args$name %||% "omicsGMF"
             gmf_call <- modifyList(
-                list(object = sce, X = X, exprs_values = exprs_name, family = family, ncomponents = ncomponents, name = dimred_name),
+                list(x = sce, X = X, exprs_values = exprs_name, family = family, ncomponents = ncomponents, name = dimred_name),
                 gmf_args
             )
+            # Imputation is only possible after running runGMF using all features.
+            gmf_call$ntop <- NULL
+            gmf_call$subset_row <- NULL
+
             sce <- do.call(omicsGMF::runGMF, gmf_call)
 
             imputed_name <- impute_args$name %||% "omicsGMF_imputed"
             impute_call <- modifyList(
                 list(
-                    object = sce,
+                    x = sce,
                     exprs_values = exprs_name,
                     reducedDimName = dimred_name,
                     name = imputed_name
@@ -451,7 +496,7 @@ estimate_omicsGMF_rank <- function(
   rank_args
 ) {
     rank_call <- modifyList(
-        list(object = sce, X = X, exprs_values = exprs_name, family = family, maxcomp = max_rank),
+        list(x = sce, X = X, exprs_values = exprs_name, family = family, maxcomp = max_rank),
         rank_args
     )
     ranked_sce <- do.call(omicsGMF::runRankGMF, rank_call)
@@ -466,7 +511,7 @@ estimate_omicsGMF_rank <- function(
     if (is.null(meta) || !length(meta)) {
         return(NULL)
     }
-    gmf_meta <- meta$GMF %||% meta$gmf
+    gmf_meta <- meta$rank_GMF %||% meta$gmf
     if (is.null(gmf_meta)) {
         return(NULL)
     }
