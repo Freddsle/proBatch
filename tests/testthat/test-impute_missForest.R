@@ -221,7 +221,10 @@ testthat::test_that(".missforest_matrix_step() actually runs missForest when ins
         )
     )
 
-    res <- proBatch:::`.missforest_matrix_step`(m)
+    expect_warning(
+        res <- proBatch:::`.missforest_matrix_step`(m),
+        "removed and reinserted 1 all-NA rows and 0 all-NA columns"
+    )
 
     ## original dim + names are back
     expect_matrix_like(res, m)
