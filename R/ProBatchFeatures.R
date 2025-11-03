@@ -118,7 +118,7 @@ setValidity("ProBatchFeatures", function(object) {
         if (handle_flag && anyNA(m)) {
             m <- handle_missing_values(
                 data_matrix = m,
-                warning_message = "Median normalization: applying requested missing-value handling before centering.",
+                warning_message = "Median normalization: applying requested missing value handling before centering.",
                 fill_the_missing = fill_the_missing
             )
             if (!nrow(m) || !ncol(m)) {

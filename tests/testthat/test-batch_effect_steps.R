@@ -132,12 +132,14 @@ test_that("medianNorm step handles fill_the_missing via pb_transform", {
         fill_the_missing = 0
     )
 
-    pbf2 <- pb_transform(
-        pbf,
-        from = "feature::raw",
-        steps = "medianNorm",
-        params_list = list(params),
-        store_fast_steps = TRUE
+    suppressWarnings(
+        pbf2 <- pb_transform(
+            pbf,
+            from = "feature::raw",
+            steps = "medianNorm",
+            params_list = list(params),
+            store_fast_steps = TRUE
+        )
     )
 
     assay_name <- "feature::medianNorm_on_raw"
