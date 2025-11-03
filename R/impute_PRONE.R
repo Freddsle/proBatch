@@ -167,6 +167,55 @@ imputePRONE_dm <- function(x,
         col_data <- S4Vectors::DataFrame(aligned_sa)
         rownames(col_data) <- sample_ids
     }
+
+    condition_arg <- NULL
+    if (!is.null(condition_col)) {
+        if (is.character(condition_col) && length(condition_col) == 1L) {
+            if (!(condition_col %in% colnames(col_data))) {
+                stop(
+                    "PRONE imputation: condition column '", condition_col,
+                    "' not found in sample annotation.",
+                    call. = FALSE
+                )
+            }
+            condition_arg <- condition_col
+        } else {
+            cond_values <- condition_col
+            if (!is.null(names(cond_values))) {
+                idx <- match(sample_ids, names(cond_values))
+                if (anyNA(idx)) {
+                    stop(
+                        "PRONE imputation: condition vector is missing values for some samples.",
+                        call. = FALSE
+                    )
+                }
+                cond_values <- cond_values[idx]
+            } else {
+                if (length(cond_values) != length(sample_ids)) {
+                    stop(
+                        "PRONE imputation: unnamed condition vector must match the number of samples.",
+                        call. = FALSE
+                    )
+                }
+                cond_values <- cond_values
+            }
+
+            cond_values <- unname(as.vector(cond_values))
+
+            existing_names <- colnames(col_data)
+            base_name <- ".pb_prone_condition"
+            new_name <- base_name
+            counter <- 1L
+            while (!is.null(existing_names) && new_name %in% existing_names) {
+                counter <- counter + 1L
+                new_name <- paste0(base_name, "_", counter)
+            }
+
+            col_data[[new_name]] <- cond_values
+            condition_arg <- new_name
+        }
+    }
+
     # Add Column with rownames for merging later
     col_data$Column <- rownames(col_data)
 
@@ -181,7 +230,7 @@ imputePRONE_dm <- function(x,
     se_imp <- prone_impute(
         se,
         ain = assay_in,
-        condition = condition_col
+        condition = condition_arg
     )
 
     SummarizedExperiment::assay(se_imp, assay_in)
@@ -204,7 +253,7 @@ imputePRONE_dm <- function(x,
 .pb_load_prone_impute <- function() {
     override_path <- .pb_prone_override_path()
     if (!is.null(override_path)) {
-        override_env <- new.env(parent = baseenv())
+        override_env <- new.env(parent = environment())
         tryCatch(
             {
                 sys.source(override_path, envir = override_env)

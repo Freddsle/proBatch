@@ -1,6 +1,5 @@
 # TEMPORARY FILE TO AVOID PRONE IMPUTATION ERRORS WHEN RUNNING WITH CONDITIONS
 
-library(magrittr)
 
 #' Method to impute SummarizedExperiment.
 #' This method performs a mixed imputation on the proteins. It uses a k-nearest neighbor imputation for proteins with missing values at random (MAR) and imputes missing values by random draws from a left-shifted Gaussian distribution for proteins with missing values not at random (MNAR).
@@ -25,6 +24,7 @@ library(magrittr)
 #'
 #' @import PRONE
 impute_se <- function(se, ain = NULL, condition = NULL) {
+    library(magrittr)
     se_imputed <- se
     # check input
     condition <- PRONE::get_condition_value(se, condition)
