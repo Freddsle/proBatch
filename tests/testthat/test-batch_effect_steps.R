@@ -106,3 +106,49 @@ test_that("pb_transform applies limmaRBE step via registry", {
     expect_equal(dim(m_limma), dim(m_raw))
     expect_gt(sum(abs(m_limma - m_raw), na.rm = TRUE), 0)
 })
+
+test_that("medianNorm step handles fill_the_missing via pb_transform", {
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    sub_matrix <- example_proteome_matrix[1:5, 1:5, drop = FALSE]
+    sub_matrix[1, 2] <- NA_real_
+
+    sample_ann <- example_sample_annotation[
+        match(colnames(sub_matrix), example_sample_annotation$FullRunName), ,
+        drop = FALSE
+    ]
+
+    pbf <- ProBatchFeatures(
+        data_matrix = sub_matrix,
+        sample_annotation = sample_ann,
+        sample_id_col = "FullRunName",
+        name = "raw"
+    )
+
+    params <- list(
+        sample_annotation = as.data.frame(colData(pbf)),
+        sample_id_col = "FullRunName",
+        fill_the_missing = 0
+    )
+
+    pbf2 <- pb_transform(
+        pbf,
+        from = "feature::raw",
+        steps = "medianNorm",
+        params_list = list(params),
+        store_fast_steps = TRUE
+    )
+
+    assay_name <- "feature::medianNorm_on_raw"
+    expect_true(assay_name %in% names(pbf2))
+
+    m_norm <- pb_assay_matrix(pbf2, assay_name)
+    expect_false(anyNA(m_norm))
+
+    log <- get_operation_log(pbf2)
+    median_idx <- which(as.character(log$step) == "medianNorm")
+    expect_gt(length(median_idx), 0L)
+    median_entry <- log[median_idx[length(median_idx)], , drop = FALSE]
+    expect_identical(median_entry$params[[1]]$fill_the_missing, 0)
+})

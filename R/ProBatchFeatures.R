@@ -112,7 +112,19 @@ setValidity("ProBatchFeatures", function(object) {
                                sample_annotation = NULL,
                                sample_id_col = "FullRunName",
                                group_col = NULL,
-                               inside_batch = FALSE) {
+                               inside_batch = FALSE,
+                               fill_the_missing = NULL) {
+        handle_flag <- !is.null(fill_the_missing) || identical(fill_the_missing, FALSE)
+        if (handle_flag && anyNA(m)) {
+            m <- handle_missing_values(
+                data_matrix = m,
+                warning_message = "Median normalization: applying requested missing-value handling before centering.",
+                fill_the_missing = fill_the_missing
+            )
+            if (!nrow(m) || !ncol(m)) {
+                stop("No data remaining after handling missing values for median normalization")
+            }
+        }
         normalize_sample_medians_dm(
             data_matrix = m,
             sample_annotation = sample_annotation,
