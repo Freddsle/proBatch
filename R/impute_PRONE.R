@@ -167,17 +167,69 @@ imputePRONE_dm <- function(x,
         col_data <- S4Vectors::DataFrame(aligned_sa)
         rownames(col_data) <- sample_ids
     }
+    # Add Column with rownames for merging later
+    col_data$Column <- rownames(col_data)
 
     se <- SummarizedExperiment::SummarizedExperiment(
         assays = setNames(list(data_matrix), assay_in),
         colData = col_data
     )
 
-    se_imp <- PRONE::impute_se(
+    # RUN PRONE
+    prone_impute <- .pb_prone_impute_fun()
+    # TODO: switch back to PRONE::impute_se once the upstream bug is fixed.
+    se_imp <- prone_impute(
         se,
         ain = assay_in,
         condition = condition_col
     )
 
     SummarizedExperiment::assay(se_imp, assay_in)
+}
+
+.pb_prone_impute_fun <- local({
+    override_fun <- NULL
+    function() {
+        opt_fun <- getOption("proBatch.prone_impute_se", NULL)
+        if (is.function(opt_fun)) {
+            return(opt_fun)
+        }
+        if (is.null(override_fun)) {
+            override_fun <<- .pb_load_prone_impute()
+        }
+        override_fun
+    }
+})
+
+.pb_load_prone_impute <- function() {
+    override_path <- .pb_prone_override_path()
+    if (!is.null(override_path)) {
+        override_env <- new.env(parent = baseenv())
+        tryCatch(
+            {
+                sys.source(override_path, envir = override_env)
+                fun <- override_env$impute_se
+                if (is.function(fun)) {
+                    return(fun)
+                }
+            },
+            error = function(e) NULL
+        )
+    }
+    PRONE::impute_se
+}
+
+.pb_prone_override_path <- function() {
+    inst_path <- system.file("overrides/PRONE/Imputation.R", package = "proBatch")
+    if (nzchar(inst_path) && file.exists(inst_path)) {
+        return(inst_path)
+    }
+    pkg_root <- tryCatch(find.package("proBatch"), error = function(e) "")
+    if (nzchar(pkg_root)) {
+        dev_path <- file.path(pkg_root, "inst", "overrides", "PRONE", "Imputation.R")
+        if (file.exists(dev_path)) {
+            return(dev_path)
+        }
+    }
+    NULL
 }
