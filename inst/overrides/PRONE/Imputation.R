@@ -1,5 +1,6 @@
 # TEMPORARY FILE TO AVOID PRONE IMPUTATION ERRORS WHEN RUNNING WITH CONDITIONS
 
+library(magrittr)
 
 #' Method to impute SummarizedExperiment.
 #' This method performs a mixed imputation on the proteins. It uses a k-nearest neighbor imputation for proteins with missing values at random (MAR) and imputes missing values by random draws from a left-shifted Gaussian distribution for proteins with missing values not at random (MNAR).
@@ -37,7 +38,7 @@ impute_se <- function(se, ain = NULL, condition = NULL) {
         dt <- merge(dt, coldata, by = "Column")
 
         proteins_MNAR <- dt %>%
-            dplyr::group_by(ID, get(!!sym(condition))) %>%
+            dplyr::group_by(ID, !!sym(condition)) %>%
             dplyr::summarize(NAs = all(is.na(Intensity))) %>%
             dplyr::filter(NAs) %>%
             dplyr::pull(ID) %>%

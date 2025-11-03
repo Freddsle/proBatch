@@ -32,6 +32,12 @@ make_prone_test_pbf <- function() {
 
 local_mocked_prone <- function(mock_fun) {
     caller_env <- parent.frame()
+    prev_opt <- getOption("proBatch.prone_impute_se", NULL)
+    withr::defer(
+        options(proBatch.prone_impute_se = prev_opt),
+        envir = caller_env
+    )
+    options(proBatch.prone_impute_se = mock_fun)
     testthat::local_mocked_bindings(
         impute_se = mock_fun,
         .package = "PRONE",
