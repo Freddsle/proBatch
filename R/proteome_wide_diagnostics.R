@@ -1170,10 +1170,17 @@ plot_PVCA.df.default <- function(df,
     pvca_res <- df
     pvca_res <- pvca_res %>%
         mutate(label = factor(label, levels = label))
+    max_weight <- max(pvca_res$weights, na.rm = TRUE)
+    if (!is.finite(max_weight)) {
+        max_weight <- 0
+    }
 
     gg <- ggplot(pvca_res, aes(x = label, y = weights, fill = category)) +
         geom_bar(stat = "identity", color = "black") +
         ylab("Weighted average proportion variance")
+    if (max_weight > 0) {
+        gg <- gg + expand_limits(y = if (max_weight * 1.001 <= 1) max_weight * 1.001 else 1.05)
+    }
 
     if (is.null(colors_for_bars)) {
         colors_for_bars <- c("grey", wes_palettes$Rushmore[3:5])
