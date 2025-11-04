@@ -269,13 +269,22 @@ missForestImpute <- function(x, ...) {
 # ---------------------------------------------------------------------
 
 #' @keywords internal
-.missforest_matrix_step <- function(data_matrix,
-                                    missforest_args = list()) {
+.missforest_matrix_step <- function(
+    data_matrix,
+    sample_annotation, # not used, for API symmetry
+    sample_id_col = "FullRunName", # not used, for API symmetry
+    missforest_args = list(),
+    ...) {
     .pb_requireNamespace("missForest")
 
+    # If ... contains agruments, merge them into missforest_args
+    extra_args <- list(...)
+    if (length(extra_args)) {
+        missforest_args <- modifyList(missforest_args, extra_args)
+    }
+
     # 0) accept the pipeline's "list(missforest_args = ...)" shape
-    if (length(missforest_args) == 1L &&
-        !is.null(missforest_args$missforest_args)) {
+    if (length(missforest_args) == 1L && !is.null(missforest_args$missforest_args)) {
         missforest_args <- missforest_args$missforest_args
     }
 
