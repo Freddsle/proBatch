@@ -953,6 +953,8 @@ pb_transform <- function(
   backend = c("auto", "memory", "hdf5"),
   hdf5_path = NULL
 ) {
+    # TODO: Sequential supply of methods and parameters does not work as expected, especially when
+    # some steps are not stored. TBD FIX!
     backend <- match.arg(backend)
     stopifnot(is(object, "ProBatchFeatures"))
     if (is.null(funs)) funs <- steps
