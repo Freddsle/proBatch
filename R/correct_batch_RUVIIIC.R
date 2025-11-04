@@ -231,185 +231,174 @@ correct_with_RUVIII_C <- function(
   rep_force = FALSE,
   ...
 ) {
-    if (!is.matrix(data_matrix)) {
-        data_matrix <- as.matrix(data_matrix)
-    }
-    storage.mode(data_matrix) <- "double"
-
+    version <- match.arg(version)
     handle_flag <- !is.null(fill_the_missing) || identical(fill_the_missing, FALSE)
-    if (handle_flag && anyNA(data_matrix)) {
-        data_matrix <- handle_missing_values(
-            data_matrix,
-            warning_message = "Applying requested missing-value handling (fill_the_missing) before RUV-III-C.",
-            fill_the_missing = fill_the_missing
-        )
-        if (!nrow(data_matrix) || !ncol(data_matrix)) {
-            stop("No data remaining after handling missing values for RUV-III-C correction.")
-        }
-    }
+    .run_matrix_method(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        fill_the_missing = fill_the_missing,
+        missing_warning = "Applying requested missing-value handling (fill_the_missing) before RUV-III-C.",
+        method_fun = function(data_matrix, sample_annotation) {
+            feature_ids <- rownames(data_matrix)
+            sample_ids <- colnames(data_matrix)
 
-    feature_ids <- rownames(data_matrix)
-    sample_ids <- colnames(data_matrix)
+            if (is.null(feature_ids) || !length(feature_ids)) {
+                stop("data_matrix must have row names (feature identifiers).")
+            }
+            if (is.null(sample_ids) || !length(sample_ids)) {
+                stop("data_matrix must have column names (sample identifiers).")
+            }
 
-    if (is.null(feature_ids) || !length(feature_ids)) {
-        stop("data_matrix must have row names (feature identifiers).")
-    }
-    if (is.null(sample_ids) || !length(sample_ids)) {
-        stop("data_matrix must have column names (sample identifiers).")
-    }
+            if (!(replicate_col %in% names(sample_annotation))) {
+                stop(sprintf("replicate_col '%s' is not present in sample_annotation.", replicate_col))
+            }
+            replicate_ids <- sample_annotation[[replicate_col]]
+            if (any(is.na(replicate_ids))) {
+                stop("replicate_col contains missing values; provide replicate identifiers for all samples.")
+            }
+            replicate_ids <- as.character(replicate_ids)
 
-    sample_annotation <- .align_sample_annotation(
-        sample_annotation,
-        sample_ids = sample_ids,
-        sample_id_col = sample_id_col
-    )
-    if (!(replicate_col %in% names(sample_annotation))) {
-        stop(sprintf("replicate_col '%s' is not present in sample_annotation.", replicate_col))
-    }
-    replicate_ids <- sample_annotation[[replicate_col]]
-    if (any(is.na(replicate_ids))) {
-        stop("replicate_col contains missing values; provide replicate identifiers for all samples.")
-    }
-    replicate_ids <- as.character(replicate_ids)
+            # ---- Decide PRPS / rep_force path only when ALL groups are singletons ----
+            tab <- table(replicate_ids)
+            all_singletons <- all(tab == 1L)
 
-    # ---- Decide PRPS / rep_force path only when ALL groups are singletons ----
-    tab <- table(replicate_ids)
-    all_singletons <- all(tab == 1L)
+            prps_used <- FALSE
+            kept <- rep(TRUE, length(sample_ids))
 
-    prps_used <- FALSE
-    kept <- rep(TRUE, length(sample_ids))
-
-    if (all_singletons) {
-        if (isTRUE(use_pseudorep)) {
-            # regular PRPS using provided grouping (or 'condition')
-            prps_ids <- .prps_make_ids(
-                data_matrix = data_matrix,
-                sample_annotation = sample_annotation,
-                sample_id_col = sample_id_col,
-                group_cols = prps_group_cols,
-                control_features = negative_control_features
-            )
-        } else if (isTRUE(rep_force)) {
-            warning(paste(
-                "rep_force=TRUE: no technical replicates detected; constructing automatic PRPS-like",
-                "pairs (without requiring prps_group_cols). Results may be unreliable; interpret with caution."
-            ))
-            # If no grouping supplied and no 'condition', create a single ALL group to permit pairing
-            grp_cols <- prps_group_cols
-            if (is.null(grp_cols)) {
-                if (!"condition" %in% names(sample_annotation)) {
-                    sample_annotation$.__ALL__ <- factor("ALL", levels = "ALL")
-                    grp_cols <- ".__ALL__"
+            if (all_singletons) {
+                if (isTRUE(use_pseudorep)) {
+                    # regular PRPS using provided grouping (or 'condition')
+                    prps_ids <- .prps_make_ids(
+                        data_matrix = data_matrix,
+                        sample_annotation = sample_annotation,
+                        sample_id_col = sample_id_col,
+                        group_cols = prps_group_cols,
+                        control_features = negative_control_features
+                    )
+                } else if (isTRUE(rep_force)) {
+                    warning(paste(
+                        "rep_force=TRUE: no technical replicates detected; constructing automatic PRPS-like",
+                        "pairs (without requiring prps_group_cols). Results may be unreliable; interpret with caution."
+                    ))
+                    # If no grouping supplied and no 'condition', create a single ALL group to permit pairing
+                    grp_cols <- prps_group_cols
+                    if (is.null(grp_cols)) {
+                        if (!"condition" %in% names(sample_annotation)) {
+                            sample_annotation$.__ALL__ <- factor("ALL", levels = "ALL")
+                            grp_cols <- ".__ALL__"
+                        } else {
+                            grp_cols <- "condition"
+                        }
+                    }
+                    prps_ids <- .prps_make_ids(
+                        data_matrix = data_matrix,
+                        sample_annotation = sample_annotation,
+                        sample_id_col = sample_id_col,
+                        group_cols = grp_cols,
+                        control_features = negative_control_features
+                    )
                 } else {
-                    grp_cols <- "condition"
+                    stop(paste(
+                        "No technical replicates detected (all replicate groups are size 1).",
+                        "\n\tSet use_pseudorep = TRUE to construct PRPS pseudo-replicates,",
+                        "\n\tor set rep_force = TRUE to force automatic PRPS-like pairing (NOT recommended)."
+                    ))
+                }
+
+                if (!anyDuplicated(prps_ids[!is.na(prps_ids)])) {
+                    stop("PRPS pairing failed: no replicate pairs could be formed.")
+                }
+                kept <- !is.na(prps_ids)
+                if (sum(kept) < 2L) {
+                    stop("PRPS formed fewer than 2 samples; cannot proceed.")
+                }
+                if (any(!kept)) {
+                    warning(sprintf(
+                        "PRPS: %d sample(s) could not be paired and will be passed through unchanged.",
+                        sum(!kept)
+                    ))
+                }
+                replicate_ids <- prps_ids
+                prps_used <- TRUE
+            }
+
+            # Design matrix M (over kept samples if PRPS/rep_force was used)
+            replicate_levels <- unique(replicate_ids[kept])
+            design_matrix <- matrix(
+                0,
+                nrow = sum(kept),
+                ncol = length(replicate_levels),
+                dimnames = list(sample_ids[kept], replicate_levels)
+            )
+            design_matrix[
+                cbind(seq_len(sum(kept)), match(replicate_ids[kept], replicate_levels))
+            ] <- 1
+            storage.mode(design_matrix) <- "double"
+
+            # Validate to_correct & controls
+            if (is.null(to_correct)) {
+                to_correct <- feature_ids
+            } else {
+                to_correct <- unique(as.character(to_correct))
+                missing_features <- setdiff(to_correct, feature_ids)
+                if (length(missing_features)) {
+                    stop(
+                        "to_correct contains features absent from data_matrix: ",
+                        paste(missing_features, collapse = ", ")
+                    )
                 }
             }
-            prps_ids <- .prps_make_ids(
-                data_matrix = data_matrix,
-                sample_annotation = sample_annotation,
-                sample_id_col = sample_id_col,
-                group_cols = grp_cols,
-                control_features = negative_control_features
+            missing_controls <- setdiff(negative_control_features, feature_ids)
+            if (length(missing_controls)) {
+                stop(
+                    "negative_control_features missing from data_matrix",
+                    if (handle_flag) " after handling missing values" else "",
+                    ": ",
+                    paste(missing_controls, collapse = ", ")
+                )
+            }
+
+            # Run core (subset Y to kept if PRPS/rep_force path)
+            result <- .run_RUVIIIC_core(
+                k = k,
+                Y = t(if (prps_used) data_matrix[, kept, drop = FALSE] else data_matrix),
+                M = design_matrix,
+                to_correct = to_correct,
+                controls = negative_control_features,
+                version = version,
+                with_extra = with_extra,
+                with_alpha = with_alpha,
+                with_w = with_w,
+                progress = progress,
+                ...
             )
-        } else {
-            stop(paste(
-                "No technical replicates detected (all replicate groups are size 1).",
-                "\n\tSet use_pseudorep = TRUE to construct PRPS pseudo-replicates,",
-                "\n\tor set rep_force = TRUE to force automatic PRPS-like pairing (NOT recommended)."
-            ))
-        }
 
-        if (!anyDuplicated(prps_ids[!is.na(prps_ids)])) {
-            stop("PRPS pairing failed: no replicate pairs could be formed.")
-        }
-        kept <- !is.na(prps_ids)
-        if (sum(kept) < 2L) {
-            stop("PRPS formed fewer than 2 samples; cannot proceed.")
-        }
-        if (any(!kept)) {
-            warning(sprintf(
-                "PRPS: %d sample(s) could not be paired and will be passed through unchanged.",
-                sum(!kept)
-            ))
-        }
-        replicate_ids <- prps_ids
-        prps_used <- TRUE
-    }
+            # Transpose back and reassemble (if we dropped samples)
+            if (is.list(result) && !is.null(result$newY)) {
+                corrected <- as.matrix(result$newY) # samples x features
+                storage.mode(corrected) <- "double"
+                corrected <- t(corrected) # features x samples (kept only)
+                if (prps_used && any(!kept)) {
+                    full <- data_matrix
+                    full[, kept] <- corrected
+                    corrected <- full
+                }
+                result$newY <- corrected
+                return(result)
+            }
 
-    # Design matrix M (over kept samples if PRPS/rep_force was used)
-    replicate_levels <- unique(replicate_ids[kept])
-    design_matrix <- matrix(
-        0,
-        nrow = sum(kept),
-        ncol = length(replicate_levels),
-        dimnames = list(sample_ids[kept], replicate_levels)
+            corrected <- as.matrix(result) # samples x features
+            storage.mode(corrected) <- "double"
+            corrected <- t(corrected) # features x samples (kept only)
+            if (prps_used && any(!kept)) {
+                full <- data_matrix
+                full[, kept] <- corrected
+                corrected <- full
+            }
+            corrected
+        }
     )
-    design_matrix[
-        cbind(seq_len(sum(kept)), match(replicate_ids[kept], replicate_levels))
-    ] <- 1
-    storage.mode(design_matrix) <- "double"
-
-    # Validate to_correct & controls
-    if (is.null(to_correct)) {
-        to_correct <- feature_ids
-    } else {
-        to_correct <- unique(as.character(to_correct))
-        missing_features <- setdiff(to_correct, feature_ids)
-        if (length(missing_features)) {
-            stop(
-                "to_correct contains features absent from data_matrix: ",
-                paste(missing_features, collapse = ", ")
-            )
-        }
-    }
-    missing_controls <- setdiff(negative_control_features, feature_ids)
-    if (length(missing_controls)) {
-        stop(
-            "negative_control_features missing from data_matrix",
-            if (handle_flag) " after handling missing values" else "",
-            ": ",
-            paste(missing_controls, collapse = ", ")
-        )
-    }
-
-    # Run core (subset Y to kept if PRPS/rep_force path)
-    result <- .run_RUVIIIC_core(
-        k = k,
-        Y = t(if (prps_used) data_matrix[, kept, drop = FALSE] else data_matrix),
-        M = design_matrix,
-        to_correct = to_correct,
-        controls = negative_control_features,
-        version = match.arg(version),
-        with_extra = with_extra,
-        with_alpha = with_alpha,
-        with_w = with_w,
-        progress = progress,
-        ...
-    )
-
-    # Transpose back and reassemble (if we dropped samples)
-    if (is.list(result) && !is.null(result$newY)) {
-        corrected <- as.matrix(result$newY) # samples x features
-        storage.mode(corrected) <- "double"
-        corrected <- t(corrected) # features x samples (kept only)
-        if (prps_used && any(!kept)) {
-            full <- data_matrix
-            full[, kept] <- corrected
-            corrected <- full
-        }
-        result$newY <- corrected
-        return(result)
-    }
-
-    corrected <- as.matrix(result) # samples x features
-    storage.mode(corrected) <- "double"
-    corrected <- t(corrected) # features x samples (kept only)
-    if (prps_used && any(!kept)) {
-        full <- data_matrix
-        full[, kept] <- corrected
-        corrected <- full
-    }
-    corrected
 }
 
 .run_RUVIIIC_core <- function(

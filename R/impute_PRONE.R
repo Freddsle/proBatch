@@ -155,85 +155,102 @@ imputePRONE_dm <- function(x,
         stop("PRONE imputation requires matrix column names (sample identifiers).", call. = FALSE)
     }
     sample_ids <- colnames(data_matrix)
+    sample_id_col_local <- sample_id_col
+    placeholder_col <- NULL
+    sample_annotation_local <- sample_annotation
 
-    if (is.null(sample_annotation)) {
-        col_data <- S4Vectors::DataFrame(row.names = sample_ids)
-    } else {
-        aligned_sa <- .align_sample_annotation(
-            sample_annotation = sample_annotation,
-            sample_ids = sample_ids,
-            sample_id_col = sample_id_col
+    if (is.null(sample_annotation_local)) {
+        placeholder_col <- ".pb_prone_sample_id"
+        sample_annotation_local <- data.frame(
+            .pb_prone_sample_id = sample_ids,
+            stringsAsFactors = FALSE
         )
-        col_data <- S4Vectors::DataFrame(aligned_sa)
-        rownames(col_data) <- sample_ids
+        sample_id_col_local <- placeholder_col
     }
 
-    condition_arg <- NULL
-    if (!is.null(condition_col)) {
-        if (is.character(condition_col) && length(condition_col) == 1L) {
-            if (!(condition_col %in% colnames(col_data))) {
-                stop(
-                    "PRONE imputation: condition column '", condition_col,
-                    "' not found in sample annotation.",
-                    call. = FALSE
-                )
+    .run_matrix_method(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation_local,
+        sample_id_col = sample_id_col_local,
+        fill_the_missing = NULL,
+        missing_warning = "PRONE imputation cannot operate without sample identifiers.",
+        method_fun = function(data_matrix, sample_annotation) {
+            sample_ids_local <- colnames(data_matrix)
+            sample_df <- as.data.frame(sample_annotation)
+
+            if (!is.null(placeholder_col) && placeholder_col %in% names(sample_df)) {
+                sample_df[[placeholder_col]] <- NULL
             }
-            condition_arg <- condition_col
-        } else {
-            cond_values <- condition_col
-            if (!is.null(names(cond_values))) {
-                idx <- match(sample_ids, names(cond_values))
-                if (anyNA(idx)) {
-                    stop(
-                        "PRONE imputation: condition vector is missing values for some samples.",
-                        call. = FALSE
-                    )
+
+            rownames(sample_df) <- sample_ids_local
+
+            condition_arg <- NULL
+            if (!is.null(condition_col)) {
+                if (is.character(condition_col) && length(condition_col) == 1L) {
+                    if (!(condition_col %in% colnames(sample_df))) {
+                        stop(
+                            "PRONE imputation: condition column '", condition_col,
+                            "' not found in sample annotation.",
+                            call. = FALSE
+                        )
+                    }
+                    condition_arg <- condition_col
+                } else {
+                    cond_values <- condition_col
+                    if (!is.null(names(cond_values))) {
+                        idx <- match(sample_ids_local, names(cond_values))
+                        if (anyNA(idx)) {
+                            stop(
+                                "PRONE imputation: condition vector is missing values for some samples.",
+                                call. = FALSE
+                            )
+                        }
+                        cond_values <- cond_values[idx]
+                    } else {
+                        if (length(cond_values) != length(sample_ids_local)) {
+                            stop(
+                                "PRONE imputation: unnamed condition vector must match the number of samples.",
+                                call. = FALSE
+                            )
+                        }
+                    }
+
+                    cond_values <- unname(as.vector(cond_values))
+
+                    existing_names <- colnames(sample_df)
+                    base_name <- ".pb_prone_condition"
+                    new_name <- base_name
+                    counter <- 1L
+                    while (!is.null(existing_names) && new_name %in% existing_names) {
+                        counter <- counter + 1L
+                        new_name <- paste0(base_name, "_", counter)
+                    }
+
+                    sample_df[[new_name]] <- cond_values
+                    condition_arg <- new_name
                 }
-                cond_values <- cond_values[idx]
-            } else {
-                if (length(cond_values) != length(sample_ids)) {
-                    stop(
-                        "PRONE imputation: unnamed condition vector must match the number of samples.",
-                        call. = FALSE
-                    )
-                }
-                cond_values <- cond_values
             }
 
-            cond_values <- unname(as.vector(cond_values))
+            col_data <- S4Vectors::DataFrame(sample_df)
+            rownames(col_data) <- sample_ids_local
+            col_data$Column <- rownames(col_data)
 
-            existing_names <- colnames(col_data)
-            base_name <- ".pb_prone_condition"
-            new_name <- base_name
-            counter <- 1L
-            while (!is.null(existing_names) && new_name %in% existing_names) {
-                counter <- counter + 1L
-                new_name <- paste0(base_name, "_", counter)
-            }
+            se <- SummarizedExperiment::SummarizedExperiment(
+                assays = setNames(list(data_matrix), assay_in),
+                colData = col_data
+            )
 
-            col_data[[new_name]] <- cond_values
-            condition_arg <- new_name
+            prone_impute <- .pb_prone_impute_fun()
+            # TODO: switch back to PRONE::impute_se once the upstream bug is fixed.
+            se_imp <- prone_impute(
+                se,
+                ain = assay_in,
+                condition = condition_arg
+            )
+
+            SummarizedExperiment::assay(se_imp, assay_in)
         }
-    }
-
-    # Add Column with rownames for merging later
-    col_data$Column <- rownames(col_data)
-
-    se <- SummarizedExperiment::SummarizedExperiment(
-        assays = setNames(list(data_matrix), assay_in),
-        colData = col_data
     )
-
-    # RUN PRONE
-    prone_impute <- .pb_prone_impute_fun()
-    # TODO: switch back to PRONE::impute_se once the upstream bug is fixed.
-    se_imp <- prone_impute(
-        se,
-        ain = assay_in,
-        condition = condition_arg
-    )
-
-    SummarizedExperiment::assay(se_imp, assay_in)
 }
 
 .pb_prone_impute_fun <- local({
