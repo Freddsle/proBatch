@@ -248,7 +248,18 @@ imputePRONE_dm <- function(x,
                 condition = condition_arg
             )
 
-            SummarizedExperiment::assay(se_imp, assay_in)
+            # Prefer the override's "<assay>_imputed" output when available; fall back
+            # to the original assay to stay compatible with upstream PRONE builds.
+            imputed_assay <- paste0(assay_in, "_imputed")
+            assay_names <- SummarizedExperiment::assayNames(se_imp)
+            assay_to_use <- if (imputed_assay %in% assay_names) imputed_assay else assay_in
+
+            imputed_mat <- SummarizedExperiment::assay(se_imp, assay_to_use)
+            if (!is.matrix(imputed_mat)) {
+                imputed_mat <- as.matrix(imputed_mat)
+            }
+            storage.mode(imputed_mat) <- "double"
+            imputed_mat
         }
     )
 }

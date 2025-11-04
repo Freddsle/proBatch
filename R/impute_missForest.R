@@ -270,11 +270,12 @@ missForestImpute <- function(x, ...) {
 
 #' @keywords internal
 .missforest_matrix_step <- function(
-    data_matrix,
-    sample_annotation, # not used, for API symmetry
-    sample_id_col = "FullRunName", # not used, for API symmetry
-    missforest_args = list(),
-    ...) {
+  data_matrix,
+  sample_annotation, # not used, for API symmetry
+  sample_id_col = "FullRunName", # not used, for API symmetry
+  missforest_args = list(),
+  ...
+) {
     .pb_requireNamespace("missForest")
 
     # If ... contains agruments, merge them into missforest_args

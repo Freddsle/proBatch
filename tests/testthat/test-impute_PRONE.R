@@ -120,3 +120,50 @@ test_that("pb_transform with PRONEImpute accepts condition vectors", {
         ignore_attr = TRUE
     )
 })
+
+test_that("imputePRONE_dm returns the imputed assay matrix", {
+    skip_if_not_installed("PRONE")
+    skip_if_not_installed("SummarizedExperiment")
+
+    dm <- matrix(
+        c(1, NA, 3, 4),
+        nrow = 2,
+        dimnames = list(
+            c("featA", "featB"),
+            c("sample1", "sample2")
+        )
+    )
+
+    sa <- data.frame(
+        FullRunName = colnames(dm),
+        stringsAsFactors = FALSE
+    )
+
+    expected <- dm
+    expected[1, 2] <- 2
+
+    local_mocked_prone(function(se, ain, condition) {
+        se_out <- se
+        SummarizedExperiment::assay(
+            se_out,
+            paste0(ain, "_imputed"),
+            withDimnames = FALSE
+        ) <- expected
+        se_out
+    })
+
+    res <- imputePRONE_dm(
+        dm,
+        sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        assay_in = "raw"
+    )
+
+    expect_equal(
+        res,
+        expected,
+        ignore_attr = TRUE
+    )
+    expect_false(anyNA(res))
+    expect_identical(storage.mode(res), "double")
+})
