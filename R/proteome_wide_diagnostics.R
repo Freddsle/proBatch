@@ -858,6 +858,7 @@ calculate_PVCA <- function(data_matrix, ...) UseMethod("calculate_PVCA")
 #' @param ... Additional arguments passed to lower-level methods.
 #' @param base_size base size of the text in the plot
 #' @param add_values logical; when `TRUE`, annotates each bar with its rounded weight.
+#' @param path_to_save_results optional path to save the PVCA results data frame as CSV.
 #'
 #' @name plot_PVCA
 #' @return \code{ggplot} object with the plot
@@ -892,7 +893,9 @@ plot_PVCA.default <- function(data_matrix, sample_annotation,
                               units = c("cm", "in", "mm"),
                               plot_title = NULL,
                               theme = "classic",
-                              base_size = 15, ...) {
+                              base_size = 15,
+                              path_to_save_results = NULL,
+                              ...) {
     dots <- list(...)
     add_values <- FALSE
     if ("add_values" %in% names(dots)) {
@@ -909,7 +912,8 @@ plot_PVCA.default <- function(data_matrix, sample_annotation,
         biological_factors = biological_factors,
         fill_the_missing = fill_the_missing,
         pca_threshold = pca_threshold,
-        variance_threshold = variance_threshold
+        variance_threshold = variance_threshold,
+        path_to_save_results = path_to_save_results
     )
 
     plot_args <- list(
@@ -939,6 +943,7 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
                                        plot_title = NULL,
                                        return_gridExtra = FALSE,
                                        plot_ncol = NULL,
+                                       path_to_save_results = NULL,
                                        ...) {
     object <- data_matrix
     prep <- .pb_prepare_multi_assay(
@@ -975,6 +980,10 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
         }
         sample_ann <- as.data.frame(sample_ann, stringsAsFactors = FALSE)
 
+        if (!is.null(path_to_save_results)) {
+            path_to_save_results_assay <- file.path(path_to_save_results, assay_nm)
+        }
+
         call_args <- .pb_per_assay_dots(dots, filename_list, i)
 
         call_args <- c(list(
@@ -982,7 +991,8 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
             sample_annotation = sample_ann,
             feature_id_col = feature_id_col,
             sample_id_col = sample_id_col,
-            plot_title = titles[i]
+            plot_title = titles[i],
+            path_to_save_results = path_to_save_results_assay
         ), call_args)
 
         plot_list[[i]] <- do.call(plot_PVCA.default, call_args)
@@ -1012,6 +1022,7 @@ plot_PVCA <- function(data_matrix, ...) UseMethod("plot_PVCA")
 #' excluded.
 #' If \code{NULL}, features with missing values are excluded.
 #' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
+#' @param path_to_save_results optional path to save the PVCA results data frame as CSV.
 #' @param ... Additional arguments forwarded between methods.
 #'
 #' @return data frame with weights and factors, combined in a way ready for plotting
@@ -1033,7 +1044,9 @@ prepare_PVCA_df.default <- function(data_matrix, sample_annotation,
                                     technical_factors = c("MS_batch", "instrument"),
                                     biological_factors = c("cell_line", "drug_dose"),
                                     fill_the_missing = -1,
-                                    pca_threshold = .6, variance_threshold = .01,
+                                    pca_threshold = .6,
+                                    variance_threshold = .01,
+                                    path_to_save_results = NULL,
                                     ...) {
     factors_for_PVCA <- c(technical_factors, biological_factors)
 
@@ -1072,6 +1085,16 @@ prepare_PVCA_df.default <- function(data_matrix, sample_annotation,
         arrange(desc(weights)) %>%
         arrange(label == label_of_small) %>%
         arrange(label == "resid")
+
+    # if path_to_save_results is provided, save the pvca_res data frame there
+    if (!is.null(path_to_save_results)) {
+        if (!dir.exists(path_to_save_results)) {
+            dir.create(path_to_save_results, recursive = TRUE)
+        }
+        pvca_res_file <- file.path(path_to_save_results, "PVCA_results_aggregated.csv")
+        write.csv(pvca_res, pvca_res_file, row.names = FALSE)
+    }
+
     return(pvca_res)
 }
 
@@ -1179,7 +1202,7 @@ plot_PVCA.df.default <- function(df,
         geom_bar(stat = "identity", color = "black") +
         ylab("Weighted average proportion variance")
     if (max_weight > 0) {
-        gg <- gg + expand_limits(y = if (max_weight * 1.001 <= 1) max_weight * 1.001 else 1.05)
+        gg <- gg + expand_limits(y = if (max_weight * 1.05 <= 1) max_weight * 1.05 else 1.05)
     }
 
     if (is.null(colors_for_bars)) {

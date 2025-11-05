@@ -24,6 +24,7 @@
   plot_title = NULL,
   theme = "classic",
   base_size = 15,
+  path_to_save_results = NULL,
   ...
 )
 
@@ -36,6 +37,7 @@
   plot_title = NULL,
   return_gridExtra = FALSE,
   plot_ncol = NULL,
+  path_to_save_results = NULL,
   ...
 )
 }
@@ -94,6 +96,8 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 \item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
 
 \item{base_size}{base size of the text in the plot}
+
+\item{path_to_save_results}{optional path to save the PVCA results data frame as CSV.}
 
 \item{...}{Additional arguments passed to lower-level methods.}
 
