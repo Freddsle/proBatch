@@ -175,6 +175,7 @@ imputePRONE_dm <- function(x,
         fill_the_missing = NULL,
         missing_warning = "PRONE imputation cannot operate without sample identifiers.",
         method_fun = function(data_matrix, sample_annotation) {
+            original_data_matrix <- data_matrix
             sample_ids_local <- colnames(data_matrix)
             sample_df <- as.data.frame(sample_annotation)
 
@@ -259,9 +260,41 @@ imputePRONE_dm <- function(x,
                 imputed_mat <- as.matrix(imputed_mat)
             }
             storage.mode(imputed_mat) <- "double"
+
+            if (!is.null(condition_arg)) {
+                imputed_mat <- .pb_prone_condition_cleanup(
+                    original_matrix = original_data_matrix,
+                    imputed_matrix = imputed_mat
+                )
+            }
+
             imputed_mat
         }
     )
+}
+
+.pb_prone_condition_cleanup <- function(original_matrix, imputed_matrix) {
+    rows_with_na_before <- rowSums(is.na(original_matrix)) > 0L
+    rows_with_na_after <- rowSums(is.na(imputed_matrix)) > 0L
+
+    before_count <- sum(rows_with_na_before)
+    after_count <- sum(rows_with_na_after)
+
+    base_msg <- paste0(
+        "PRONE condition imputation: ",
+        before_count,
+        " rows had missing values before; ",
+        after_count,
+        " remain after."
+    )
+
+    if (after_count > 0L) {
+        message(base_msg, " Removing remaining rows.")
+        return(imputed_matrix[!rows_with_na_after, , drop = FALSE])
+    }
+
+    message(base_msg, " No rows removed.")
+    imputed_matrix
 }
 
 .pb_prone_impute_fun <- local({

@@ -140,7 +140,7 @@ test_that("imputePRONE_dm returns the imputed assay matrix", {
     )
 
     expected <- dm
-    expected[1, 2] <- 2
+    expected["featB", "sample1"] <- 2
 
     local_mocked_prone(function(se, ain, condition) {
         se_out <- se
