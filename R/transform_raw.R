@@ -103,7 +103,8 @@ log_transform_dm.ProBatchFeatures <- function(x, log_base = 2, offset = 1,
         steps = step,
         funs = list(log_transform_dm.default),
         params_list = list(list(log_base = log_base, offset = offset)),
-        final_name = final_name
+        final_name = final_name,
+        ...
     )
     object
 }
