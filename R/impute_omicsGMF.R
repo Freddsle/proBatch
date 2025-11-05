@@ -400,6 +400,64 @@ estimate_omicsGMF_rank <- function(
     )
 }
 
+.omicsgmf_fit_and_impute <- function(
+  data_matrix,
+  sample_annotation,
+  design_formula,
+  family,
+  ncomponents,
+  gmf_args,
+  impute_args
+) {
+    sample_df <- as.data.frame(sample_annotation)
+    exprs_name <- "omicsGMF_input"
+
+    sce <- SingleCellExperiment::SingleCellExperiment(
+        assays = setNames(list(data_matrix), exprs_name),
+        colData = S4Vectors::DataFrame(sample_df)
+    )
+
+    design_formula_local <- .omicsgmf_normalize_formula(design_formula)
+    X <- stats::model.matrix(design_formula_local, data = as.data.frame(SummarizedExperiment::colData(sce)))
+
+    gmf_args <- gmf_args %||% list()
+    impute_args <- impute_args %||% list()
+
+    dimred_name <- gmf_args$name %||% "omicsGMF"
+    gmf_call <- modifyList(
+        list(x = sce, X = X, exprs_values = exprs_name, family = family, ncomponents = ncomponents, name = dimred_name),
+        gmf_args
+    )
+    # Imputation is only possible after running runGMF using all features.
+    gmf_call$ntop <- NULL
+    gmf_call$subset_row <- NULL
+
+    sce <- do.call(omicsGMF::runGMF, gmf_call)
+
+    imputed_name <- impute_args$name %||% "omicsGMF_imputed"
+    impute_call <- modifyList(
+        list(
+            x = sce,
+            exprs_values = exprs_name,
+            reducedDimName = dimred_name,
+            name = imputed_name
+        ),
+        impute_args
+    )
+    sce <- do.call(omicsGMF::imputeGMF, impute_call)
+
+    final_impute_name <- impute_call$name %||% imputed_name
+    imputed <- SummarizedExperiment::assay(sce, final_impute_name)
+    storage.mode(imputed) <- "double"
+
+    list(
+        sce = sce,
+        dimred_name = dimred_name,
+        imputed = imputed,
+        imputed_assay = final_impute_name
+    )
+}
+
 .omicsgmf_matrix_step <- function(
   data_matrix,
   sample_annotation,
@@ -426,47 +484,16 @@ estimate_omicsGMF_rank <- function(
         fill_the_missing = NULL,
         missing_warning = "omicsGMF imputation removed rows/columns while handling missing values.",
         method_fun = function(data_matrix, sample_annotation) {
-            sample_df <- as.data.frame(sample_annotation)
-            exprs_name <- "omicsGMF_input"
-
-            sce <- SingleCellExperiment::SingleCellExperiment(
-                assays = setNames(list(data_matrix), exprs_name),
-                colData = S4Vectors::DataFrame(sample_df)
+            fit <- .omicsgmf_fit_and_impute(
+                data_matrix = data_matrix,
+                sample_annotation = sample_annotation,
+                design_formula = design_formula,
+                family = family,
+                ncomponents = ncomponents,
+                gmf_args = gmf_args,
+                impute_args = impute_args
             )
-
-            design_formula_local <- .omicsgmf_normalize_formula(design_formula)
-            X <- stats::model.matrix(design_formula_local, data = as.data.frame(SummarizedExperiment::colData(sce)))
-
-            gmf_args <- gmf_args %||% list()
-            impute_args <- impute_args %||% list()
-
-            dimred_name <- gmf_args$name %||% "omicsGMF"
-            gmf_call <- modifyList(
-                list(x = sce, X = X, exprs_values = exprs_name, family = family, ncomponents = ncomponents, name = dimred_name),
-                gmf_args
-            )
-            # Imputation is only possible after running runGMF using all features.
-            gmf_call$ntop <- NULL
-            gmf_call$subset_row <- NULL
-
-            sce <- do.call(omicsGMF::runGMF, gmf_call)
-
-            imputed_name <- impute_args$name %||% "omicsGMF_imputed"
-            impute_call <- modifyList(
-                list(
-                    x = sce,
-                    exprs_values = exprs_name,
-                    reducedDimName = dimred_name,
-                    name = imputed_name
-                ),
-                impute_args
-            )
-            sce <- do.call(omicsGMF::imputeGMF, impute_call)
-
-            final_impute_name <- impute_call$name %||% imputed_name
-            imputed <- SummarizedExperiment::assay(sce, final_impute_name)
-            storage.mode(imputed) <- "double"
-            imputed
+            fit$imputed
         }
     )
 }
