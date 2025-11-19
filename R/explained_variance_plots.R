@@ -423,7 +423,7 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
                                       height = NA,
                                       units = c("cm", "in", "mm"),
                                       sort_label = NULL,
-                                      category_order = c("biological", "biol:techn", "technical", "residual")) {
+                                      category_order = c("biological", "biol:techn", "residual", "technical")) {
     if (!length(pvca_df_list)) {
         return(invisible(NULL))
     }
@@ -472,7 +472,14 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
     if (is.null(category_order)) {
         category_order <- unique(stacked_df$category)
         if ("residual" %in% category_order) {
-            category_order <- c(setdiff(category_order, "residual"), "residual")
+            non_res <- setdiff(category_order, "residual")
+            # if there are at least two non-residual categories, perform the rotation,
+            # otherwise just put 'residual' at the end (handles length 0 or 1 safely)
+            if (length(non_res) >= 2) {
+                category_order <- c(non_res[-1], "residual", non_res[1])
+            } else {
+                category_order <- c(non_res, "residual")
+            }
         }
     } else {
         category_order <- category_order[category_order %in% unique(stacked_df$category)]
@@ -485,7 +492,7 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
         }
     }
     stacked_df <- stacked_df %>%
-        mutate(category = factor(category, levels = category_order))
+        mutate(category = factor(category, levels = rev(category_order)))
 
     present_assays <- unique(stacked_df$assay)
     assay_levels <- assays[assays %in% present_assays]
