@@ -314,6 +314,8 @@ correct_with_NormAE <- function(
             } else if (identical(rownames(res_mat), colnames(data_matrix))) {
                 t(res_mat)
             } else {
+                message("Shape of NormAE overlay output does not match input; cannot align.")
+                message("Shape of input matrix: ", paste(dim(data_matrix), collapse = " x "), ". Shape of output matrix: ", paste(dim(res_mat), collapse = " x "), ".")
                 stop("Unexpected NormAE overlay output shape; cannot align to input.")
             }
             dimnames(aligned) <- dimnames(data_matrix)

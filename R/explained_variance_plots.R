@@ -1,0 +1,1517 @@
+#' Calculate variance distribution by variable
+#'
+#' @inheritParams proBatch
+#' @param factors_for_PVCA vector of factors from \code{sample_annotation}, that
+#'   are used in PVCA analysis
+#' @param pca_threshold the percentile value of the minimum amount of the
+#'   variabilities that the selected principal components need to explain
+#' @param variance_threshold the percentile value of weight each of the factors
+#'   needs to explain (the rest will be lumped together)
+#' @param fill_the_missing numeric value determining how  missing values
+#' should be substituted. If \code{NULL}, features with missing values are
+#' excluded.
+#' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
+#' @param ... Additional arguments forwarded between methods.
+#'
+#' @name calculate_PVCA
+#' @return data frame of weights of Principal Variance Components
+#' @export
+#'
+#' @examples
+#' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+#' matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
+#' pvca_df <- calculate_PVCA(matrix_test, example_sample_annotation,
+#'     factors_for_PVCA = c("MS_batch", "digestion_batch", "Diet", "Sex", "Strain"),
+#'     pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1
+#' )
+calculate_PVCA.default <- function(data_matrix, sample_annotation,
+                                   feature_id_col = "peptide_group_label",
+                                   sample_id_col = "FullRunName",
+                                   factors_for_PVCA = c(
+                                       "MS_batch", "digestion_batch",
+                                       "Diet", "Sex", "Strain"
+                                   ),
+                                   pca_threshold = .6, variance_threshold = .01,
+                                   fill_the_missing = -1) {
+    alignment <- .pb_align_matrix_and_annotation(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        check_args = list(
+            batch_col = NULL,
+            order_col = NULL,
+            facet_col = NULL
+        )
+    )
+    data_matrix <- alignment$data_matrix
+    sample_annotation <- alignment$sample_annotation
+
+    # if factors_for_PVCA is NULL, add default columns
+    if (is.null(factors_for_PVCA)) {
+        factors_for_PVCA <- intersect(
+            c("MS_batch", "digestion_batch", "Diet", "Sex", "Strain"),
+            names(sample_annotation)
+        )
+    }
+
+    sample_annotation <- sample_annotation %>%
+        select(all_of(c(sample_id_col, factors_for_PVCA))) %>%
+        mutate(across(where(is.POSIXct), as.numeric)) %>%
+        as.data.frame() %>%
+        remove_rownames() %>%
+        column_to_rownames(var = sample_id_col)
+    data_matrix <- check_feature_id_col_in_dm(feature_id_col, data_matrix)
+
+    data_matrix <- .pb_handle_missing_wrapper(
+        data_matrix = data_matrix,
+        warning_message = "PVCA cannot operate with missing values in the matrix",
+        fill_the_missing = fill_the_missing
+    )
+
+    covrts.annodf <- AnnotatedDataFrame(data = sample_annotation)
+    data_matrix <- data_matrix[, rownames(sample_annotation)]
+    expr_set <- ExpressionSet(
+        assayData = data_matrix,
+        phenoData = covrts.annodf
+    )
+    pvcaAssess <- pvcaBatchAssess(expr_set, factors_for_PVCA,
+        threshold = pca_threshold
+    )
+    pvcaAssess_df <- data.frame(
+        weights = as.vector(pvcaAssess$dat),
+        label = pvcaAssess$label,
+        stringsAsFactors = FALSE
+    )
+
+    label_of_small <- sprintf("Below %1.0f%%", 100 * variance_threshold)
+    if (sum(pvcaAssess_df$weights < variance_threshold) > 1) {
+        small_weights <- pvcaAssess_df$weights < variance_threshold
+        pvca_res_small <- sum(pvcaAssess_df$weights[small_weights])
+        pvca_res <- pvcaAssess_df[pvcaAssess_df$weights >= variance_threshold, ]
+        pvca_res_add <- data.frame(weights = pvca_res_small, label = label_of_small)
+        pvca_res <- rbind(pvca_res, pvca_res_add)
+    } else {
+        pvca_res <- pvcaAssess_df
+    }
+    return(pvca_res)
+}
+
+#' @rdname calculate_PVCA
+#' @method calculate_PVCA ProBatchFeatures
+#' @export
+calculate_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
+                                            sample_annotation = NULL,
+                                            feature_id_col = "peptide_group_label",
+                                            sample_id_col = "FullRunName",
+                                            ...) {
+    object <- data_matrix
+    prep <- .pb_prepare_multi_assay(
+        object = object,
+        pbf_name = pbf_name,
+        dots = list(...),
+        plot_title = NULL,
+        default_title_fun = function(x) x
+    )
+    assays <- prep$assays
+    dots <- prep$dots
+    split_arg <- prep$split_arg
+
+    default_sample_annotation <- as.data.frame(colData(object))
+    sample_ann_list <- split_arg(sample_annotation)
+
+    pvca_list <- vector("list", length(assays))
+    names(pvca_list) <- assays
+
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        data_matrix <- pb_assay_matrix(object, assay_nm)
+        sample_ann <- sample_ann_list[[i]]
+        if (is.null(sample_ann)) {
+            sample_ann <- default_sample_annotation
+        }
+
+        call_args <- c(list(
+            data_matrix = data_matrix,
+            sample_annotation = sample_ann,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col
+        ), dots)
+
+        pvca_list[[i]] <- do.call(calculate_PVCA.default, call_args)
+    }
+
+    if (length(pvca_list) == 1L) {
+        return(pvca_list[[1L]])
+    }
+
+    pvca_list
+}
+
+#' @export
+calculate_PVCA <- function(data_matrix, ...) UseMethod("calculate_PVCA")
+
+#' Plot variance distribution by variable
+#'
+#' @inheritParams proBatch
+#' @param technical_factors vector \code{sample_annotation} column names that
+#' are technical covariates
+#' @param biological_factors vector \code{sample_annotation} column names, that
+#'   are biologically meaningful covariates
+#' @param colors_for_bars four-item color vector, specifying colors for the
+#'   following categories: c('residual', 'biological', 'biol:techn',
+#'   'technical')
+#' @param pca_threshold the percentile value of the minimum amount of the
+#'   variabilities that the selected principal components need to explain
+#' @param variance_threshold the percentile value of weight each of the
+#'  covariates needs to explain (the rest will be lumped together)
+#' @param fill_the_missing numeric value determining how  missing values
+#' should be substituted. If \code{NULL}, features with missing values are
+#' excluded.
+#' If \code{NULL}, features with missing values are excluded.
+#' @param data_matrix Input object: matrix-like data or a `ProBatchFeatures` instance.
+#' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
+#' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
+#' @param plot_ncol Number of columns when arranging multiple assay plots.
+#' @param ... Additional arguments passed to lower-level methods.
+#' @param base_size base size of the text in the plot
+#' @param add_values logical; when `TRUE`, annotates each bar with its rounded weight.
+#' @param path_to_save_results optional path to save the PVCA results data frame as CSV.
+#'
+#' @name plot_PVCA
+#' @return \code{ggplot} object with the plot
+#' @export
+#'
+#' @examples
+#' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+#' matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
+#'
+#' pvca_file <- tempfile("pvca", fileext = ".png")
+#' pvca_plot <- plot_PVCA(
+#'     matrix_test,
+#'     example_sample_annotation,
+#'     technical_factors = c("MS_batch", "digestion_batch"),
+#'     biological_factors = c("Diet", "Sex", "Strain"),
+#'     filename = pvca_file, # save to file, can be NULL
+#'     width = 12, height = 8, units = "cm"
+#' )
+#' unlink(pvca_file)
+#'
+#' @seealso \code{\link{sample_annotation_to_colors}},
+#' \code{\link[ggplot2]{ggplot}}
+plot_PVCA.default <- function(data_matrix, sample_annotation,
+                              feature_id_col = "peptide_group_label",
+                              sample_id_col = "FullRunName",
+                              technical_factors = c("MS_batch", "instrument"),
+                              biological_factors = c("cell_line", "drug_dose"),
+                              fill_the_missing = -1,
+                              pca_threshold = .6, variance_threshold = .01,
+                              colors_for_bars = NULL,
+                              filename = NULL, width = NA, height = NA,
+                              units = c("cm", "in", "mm"),
+                              plot_title = NULL,
+                              theme = "classic",
+                              base_size = 15,
+                              path_to_save_results = NULL,
+                              ...) {
+    dots <- list(...)
+    add_values <- FALSE
+    if ("add_values" %in% names(dots)) {
+        add_values <- isTRUE(dots$add_values)
+        dots$add_values <- NULL
+    }
+
+    pvca_res <- prepare_PVCA_df(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        technical_factors = technical_factors,
+        biological_factors = biological_factors,
+        fill_the_missing = fill_the_missing,
+        pca_threshold = pca_threshold,
+        variance_threshold = variance_threshold,
+        path_to_save_results = path_to_save_results
+    )
+
+    plot_args <- list(
+        df = pvca_res,
+        colors_for_bars = colors_for_bars,
+        filename = filename,
+        width = width,
+        height = height,
+        units = units,
+        plot_title = plot_title,
+        theme = theme,
+        base_size = base_size,
+        add_values = add_values
+    )
+
+    gg <- do.call(plot_PVCA.df, plot_args)
+    return(gg)
+}
+
+#' @rdname plot_PVCA
+#' @method plot_PVCA ProBatchFeatures
+#' @export
+plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
+                                       sample_annotation = NULL,
+                                       feature_id_col = "peptide_group_label",
+                                       sample_id_col = "FullRunName",
+                                       plot_title = NULL,
+                                       return_gridExtra = FALSE,
+                                       plot_ncol = NULL,
+                                       path_to_save_results = NULL,
+                                       ...) {
+    object <- data_matrix
+    prep <- .pb_prepare_multi_assay(
+        object = object,
+        pbf_name = pbf_name,
+        dots = list(...),
+        plot_title = plot_title,
+        default_title_fun = function(x) x
+    )
+    assays <- prep$assays
+    dots <- prep$dots
+    filename_list <- prep$filename_list
+    split_arg <- prep$split_arg
+    titles <- prep$titles
+    shared_title <- prep$shared_title
+
+    if (is.null(sample_annotation)) {
+        sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
+        rownames(sample_annotation) <- NULL
+    }
+    sample_ann_list <- split_arg(sample_annotation)
+    default_sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
+    rownames(default_sample_annotation) <- NULL
+
+    plot_list <- vector("list", length(assays))
+    names(plot_list) <- assays
+
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        data_matrix <- pb_assay_matrix(object, assay_nm)
+        sample_ann <- sample_ann_list[[i]]
+        if (is.null(sample_ann)) {
+            sample_ann <- default_sample_annotation
+        }
+        sample_ann <- as.data.frame(sample_ann, stringsAsFactors = FALSE)
+
+        if (!is.null(path_to_save_results)) {
+            path_to_save_results_assay <- file.path(path_to_save_results, assay_nm)
+        }
+
+        call_args <- .pb_per_assay_dots(dots, filename_list, i)
+
+        call_args <- c(list(
+            data_matrix = data_matrix,
+            sample_annotation = sample_ann,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col,
+            plot_title = titles[i],
+            path_to_save_results = path_to_save_results_assay
+        ), call_args)
+
+        plot_list[[i]] <- do.call(plot_PVCA.default, call_args)
+    }
+
+    plot_list <- .pb_attach_shared_title(plot_list, shared_title)
+
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
+}
+
+#' @export
+plot_PVCA <- function(data_matrix, ...) UseMethod("plot_PVCA")
+
+#' prepare the weights of Principal Variance Components
+#'
+#' @inheritParams proBatch
+#' @param technical_factors vector \code{sample_annotation} column names that
+#' are technical covariates
+#' @param biological_factors vector \code{sample_annotation} column names, that
+#'   are biologically meaningful covariates
+#' @param pca_threshold the percentile value of the minimum amount of the
+#'   variabilities that the selected principal components need to explain
+#' @param variance_threshold the percentile value of weight each of the
+#'  covariates needs to explain (the rest will be lumped together)
+#' @param fill_the_missing numeric value determining how  missing values
+#' should be substituted. If \code{NULL}, features with missing values are
+#' excluded.
+#' If \code{NULL}, features with missing values are excluded.
+#' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
+#' @param path_to_save_results optional path to save the PVCA results data frame as CSV.
+#' @param ... Additional arguments forwarded between methods.
+#'
+#' @return data frame with weights and factors, combined in a way ready for plotting
+#' @export
+#'
+#' @examples
+#' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+#' matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
+#'
+#' pvca_df_res <- prepare_PVCA_df(matrix_test, example_sample_annotation,
+#'     technical_factors = c("MS_batch", "digestion_batch"),
+#'     biological_factors = c("Diet", "Sex", "Strain"),
+#'     pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1
+#' )
+#' @name prepare_PVCA_df
+prepare_PVCA_df.default <- function(data_matrix, sample_annotation,
+                                    feature_id_col = "peptide_group_label",
+                                    sample_id_col = "FullRunName",
+                                    technical_factors = c("MS_batch", "instrument"),
+                                    biological_factors = c("cell_line", "drug_dose"),
+                                    fill_the_missing = -1,
+                                    pca_threshold = .6,
+                                    variance_threshold = .01,
+                                    path_to_save_results = NULL,
+                                    ...) {
+    factors_for_PVCA <- c(technical_factors, biological_factors)
+
+    pvca_res <- calculate_PVCA(
+        data_matrix,
+        sample_annotation,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        factors_for_PVCA = factors_for_PVCA,
+        pca_threshold = pca_threshold,
+        variance_threshold = variance_threshold,
+        fill_the_missing = fill_the_missing
+    )
+
+    tech_interactions <- expand.grid(technical_factors, technical_factors) %>%
+        mutate(tech_interactions = paste(Var1, Var2, sep = ":")) %>%
+        pull(tech_interactions)
+    biol_interactions <- expand.grid(biological_factors, biological_factors) %>%
+        mutate(biol_interactions = paste(Var1, Var2, sep = ":")) %>%
+        pull(biol_interactions)
+
+    label_of_small <- sprintf("Below %1.0f%%", 100 * variance_threshold)
+    technical_factors <- c(technical_factors, tech_interactions)
+    biological_factors <- c(biological_factors, biol_interactions)
+    pvca_res <- pvca_res %>% mutate(category = ifelse(label %in% technical_factors,
+        "technical",
+        ifelse(label %in% biological_factors,
+            "biological",
+            ifelse(label %in% c(label_of_small, "resid"),
+                "residual", "biol:techn"
+            )
+        )
+    ))
+
+    pvca_res <- pvca_res %>%
+        arrange(desc(weights)) %>%
+        arrange(label == label_of_small) %>%
+        arrange(label == "resid")
+
+    # if path_to_save_results is provided, save the pvca_res data frame there
+    if (!is.null(path_to_save_results)) {
+        if (!dir.exists(path_to_save_results)) {
+            dir.create(path_to_save_results, recursive = TRUE)
+        }
+        pvca_res_file <- file.path(path_to_save_results, "PVCA_results_aggregated.csv")
+        write.csv(pvca_res, pvca_res_file, row.names = FALSE)
+    }
+
+    return(pvca_res)
+}
+
+#' @rdname prepare_PVCA_df
+#' @method prepare_PVCA_df ProBatchFeatures
+#' @export
+prepare_PVCA_df.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
+                                             sample_annotation = NULL,
+                                             feature_id_col = "peptide_group_label",
+                                             sample_id_col = "FullRunName",
+                                             ...) {
+    object <- data_matrix
+    prep <- .pb_prepare_multi_assay(
+        object = object,
+        pbf_name = pbf_name,
+        dots = list(...),
+        plot_title = NULL,
+        default_title_fun = function(x) x
+    )
+    assays <- prep$assays
+    dots <- prep$dots
+    split_arg <- prep$split_arg
+
+    default_sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
+    sample_ann_list <- split_arg(sample_annotation)
+
+    pvca_df_list <- vector("list", length(assays))
+    names(pvca_df_list) <- assays
+
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        data_matrix <- pb_assay_matrix(object, assay_nm)
+        sample_ann <- sample_ann_list[[i]]
+        if (is.null(sample_ann)) {
+            sample_ann <- default_sample_annotation
+        }
+        sample_ann <- as.data.frame(sample_ann, stringsAsFactors = FALSE)
+
+        call_args <- c(list(
+            data_matrix = data_matrix,
+            sample_annotation = sample_ann,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col
+        ), dots)
+
+        pvca_df_list[[i]] <- do.call(prepare_PVCA_df.default, call_args)
+    }
+
+    if (length(pvca_df_list) == 1L) {
+        return(pvca_df_list[[1L]])
+    }
+
+    pvca_df_list
+}
+
+#' @export
+prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
+
+#' plot PVCA, when the analysis is completed
+#'
+#' @inheritParams proBatch
+#' @param df Data frame of PVCA weights, typically the result of `calculate_PVCA()`.
+#' @param colors_for_bars four-item color vector, specifying colors for the
+#'   following categories: c('residual', 'biological', 'biol:techn',
+#'   'technical')
+#' @param base_size base size of the text in the plot
+#' @param pbf_name Assay name(s) used when `df` is a `ProBatchFeatures`.
+#' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
+#' @param plot_ncol Number of columns when arranging multiple assay plots.
+#' @param ... Additional arguments forwarded to `prepare_PVCA_df()`.
+#' @param add_values logical; when `TRUE`, annotates each bar with its rounded weight.
+#'
+#' @return \code{ggplot} object with bars as weights, colored by bio/tech factors
+#' @export
+#'
+#' @examples
+#' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+#' matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
+#' pvca_df_res <- prepare_PVCA_df(matrix_test, example_sample_annotation,
+#'     technical_factors = c("MS_batch", "digestion_batch"),
+#'     biological_factors = c("Diet", "Sex", "Strain"),
+#'     pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1
+#' )
+#' colors_for_bars <- c("grey", "green", "blue", "red")
+#' names(colors_for_bars) <- c("residual", "biological", "biol:techn", "technical")
+#'
+#' pvca_plot <- plot_PVCA.df(pvca_df_res, colors_for_bars)
+#' @name plot_PVCA.df
+plot_PVCA.df.default <- function(df,
+                                 colors_for_bars = NULL,
+                                 filename = NULL, width = NA, height = NA,
+                                 units = c("cm", "in", "mm"),
+                                 plot_title = NULL,
+                                 theme = "classic",
+                                 base_size = 15, add_values = FALSE, ...) {
+    pvca_res <- df
+    pvca_res <- pvca_res %>%
+        mutate(label = factor(label, levels = label))
+    max_weight <- max(pvca_res$weights, na.rm = TRUE)
+    if (!is.finite(max_weight)) {
+        max_weight <- 0
+    }
+
+    gg <- ggplot(pvca_res, aes(x = label, y = weights, fill = category)) +
+        geom_bar(stat = "identity", color = "black") +
+        ylab("Weighted average proportion variance")
+    if (max_weight > 0) {
+        gg <- gg + expand_limits(y = if (max_weight * 1.05 <= 1) max_weight * 1.05 else 1.05)
+    }
+
+    if (is.null(colors_for_bars)) {
+        colors_for_bars <- c("grey", wes_palettes$Rushmore[3:5])
+        names(colors_for_bars) <- c(
+            "residual", "biological",
+            "biol:techn", "technical"
+        )
+    } else {
+        if (length(colors_for_bars) != 4) {
+            color_names <- paste(c(
+                "residual", "biological", "biol:techn",
+                "technical"
+            ), collapse = " ")
+            warning(sprintf("four colors for: %s were expected", color_names))
+        }
+    }
+    gg <- gg + scale_fill_manual(values = colors_for_bars)
+
+    if (!is.null(plot_title)) {
+        gg <- gg + ggtitle(plot_title)
+    }
+
+    # Change the theme
+    if (!is.null(theme) && theme == "classic") {
+        gg <- gg + theme_classic(base_size = base_size)
+    } else {
+        message("plotting with default ggplot theme, only theme = 'classic'
+            implemented")
+    }
+
+    gg <- gg +
+        theme(
+            axis.title.x = element_blank(),
+            axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5),
+            plot.title = element_text(size = round(base_size * 1.2, 0))
+        ) +
+        xlab(NULL) +
+        guides(fill = guide_legend(override.aes = list(color = NA), title = NULL))
+
+    if (isTRUE(add_values)) {
+        gg <- gg +
+            geom_text(aes(label = sprintf("%.2f", weights)),
+                vjust = -0.3,
+                size = base_size / 3
+            )
+    }
+
+    save_ggplot(filename, units, width, height, gg)
+
+    return(gg)
+}
+
+#' @rdname plot_PVCA.df
+#' @method plot_PVCA.df ProBatchFeatures
+#' @export
+plot_PVCA.df.ProBatchFeatures <- function(df, pbf_name = NULL,
+                                          sample_annotation = NULL,
+                                          feature_id_col = "peptide_group_label",
+                                          sample_id_col = "FullRunName",
+                                          colors_for_bars = NULL,
+                                          filename = NULL, width = NA, height = NA,
+                                          units = c("cm", "in", "mm"),
+                                          plot_title = NULL,
+                                          theme = "classic",
+                                          base_size = 20,
+                                          return_gridExtra = FALSE,
+                                          plot_ncol = NULL,
+                                          ...) {
+    object <- df
+    dots <- list(...)
+    if (!"filename" %in% names(dots)) {
+        dots <- c(list(filename = filename), dots)
+    }
+
+    prep <- .pb_prepare_multi_assay(
+        object = object,
+        pbf_name = pbf_name,
+        dots = dots,
+        plot_title = plot_title,
+        default_title_fun = function(x) x
+    )
+    assays <- prep$assays
+    prepare_dots <- prep$dots
+    filename_list <- prep$filename_list
+    split_arg <- prep$split_arg
+    titles <- prep$titles
+    shared_title <- prep$shared_title
+    add_values_arg <- NULL
+    if ("add_values" %in% names(prepare_dots)) {
+        add_values_arg <- prepare_dots$add_values
+        prepare_dots$add_values <- NULL
+    }
+    add_values_list <- split_arg(add_values_arg)
+
+    default_sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
+    rownames(default_sample_annotation) <- NULL
+
+    if (is.null(sample_annotation)) {
+        sample_annotation <- default_sample_annotation
+    }
+    sample_ann_list <- split_arg(sample_annotation)
+
+    if (is.list(colors_for_bars) && !is.data.frame(colors_for_bars)) {
+        colors_for_bars_list <- split_arg(colors_for_bars)
+    } else {
+        colors_for_bars_list <- rep(list(colors_for_bars), length(assays))
+    }
+
+    plot_list <- vector("list", length(assays))
+    names(plot_list) <- assays
+
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        data_matrix <- pb_assay_matrix(object, assay_nm)
+        sample_ann <- sample_ann_list[[i]]
+        if (is.null(sample_ann)) {
+            sample_ann <- default_sample_annotation
+        }
+        sample_ann <- as.data.frame(sample_ann, stringsAsFactors = FALSE)
+
+        prepare_args <- c(list(
+            data_matrix = data_matrix,
+            sample_annotation = sample_ann,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col
+        ), prepare_dots)
+        pvca_res <- do.call(prepare_PVCA_df.default, prepare_args)
+
+        fn <- filename
+        if (!is.null(filename_list)) {
+            fn <- filename_list[[i]]
+        }
+
+        plot_args <- list(
+            df = pvca_res,
+            colors_for_bars = colors_for_bars_list[[i]],
+            filename = fn,
+            width = width,
+            height = height,
+            units = units,
+            plot_title = titles[i],
+            theme = theme,
+            base_size = base_size
+        )
+        add_values_val <- add_values_list[[i]]
+        if (!is.null(add_values_val)) {
+            plot_args$add_values <- isTRUE(add_values_val)
+        }
+
+        plot_list[[i]] <- do.call(plot_PVCA.df.default, plot_args)
+    }
+
+    plot_list <- .pb_attach_shared_title(plot_list, shared_title)
+
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
+}
+
+#' @export
+plot_PVCA.df <- function(df, ...) UseMethod("plot_PVCA.df")
+
+#' Calculate per-feature variance partition contributions
+#'
+#' @inheritParams proBatch
+#' @param form model formula passed to `variancePartition::fitExtractVarPartModel()`
+#'   when `factors_for_variance_partition` is `NULL`.
+#' @param factors_for_variance_partition vector of \code{sample_annotation}
+#'   column names used to build a formula when `form` is `NULL`.
+#' @param fill_the_missing numeric value determining how missing values should be
+#'   substituted. If \code{NULL}, features with missing values are excluded.
+#' @param ... Additional arguments forwarded to
+#'   `variancePartition::fitExtractVarPartModel()`.
+#'
+#' @return data frame with columns \code{feature_id}, \code{label} and
+#'   \code{variance_explained}.
+#' @name calculate_variance_partition
+#' @export
+#' @importFrom variancePartition fitExtractVarPartModel
+#'
+#' @examples
+#' if (requireNamespace("variancePartition", quietly = TRUE)) {
+#'     data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+#'     matrix_test <- na.omit(example_proteome_matrix)[1:30, ]
+#'     vp_res <- calculate_variance_partition(
+#'         matrix_test,
+#'         example_sample_annotation,
+#'         form = ~ Diet + Sex
+#'     )
+#' }
+calculate_variance_partition.default <- function(data_matrix, sample_annotation,
+                                                 feature_id_col = "peptide_group_label",
+                                                 sample_id_col = "FullRunName",
+                                                 form = NULL,
+                                                 factors_for_variance_partition = NULL,
+                                                 fill_the_missing = -1,
+                                                 ...) {
+    alignment <- .pb_align_matrix_and_annotation(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        check_args = list(
+            batch_col = NULL,
+            order_col = NULL,
+            facet_col = NULL
+        )
+    )
+    data_matrix <- alignment$data_matrix
+    sample_annotation <- alignment$sample_annotation
+
+    if (is.null(form)) {
+        if (is.null(factors_for_variance_partition)) {
+            factors_for_variance_partition <- c(
+                "MS_batch", "digestion_batch", "Diet",
+                "Sex", "Strain"
+            )
+        }
+        factors_for_variance_partition <- factors_for_variance_partition[
+            factors_for_variance_partition %in% names(sample_annotation)
+        ]
+        if (!length(factors_for_variance_partition)) {
+            stop("No valid variables supplied via 'form' or 'factors_for_variance_partition'.")
+        }
+        form <- reformulate(factors_for_variance_partition)
+    } else {
+        form <- as.formula(form)
+        vars_in_form <- all.vars(form)
+        missing_vars <- setdiff(vars_in_form, names(sample_annotation))
+        if (length(missing_vars) > 0) {
+            stop(sprintf(
+                "Variables missing from sample_annotation: %s",
+                paste(missing_vars, collapse = ", ")
+            ))
+        }
+    }
+
+    vars_in_form <- all.vars(form)
+    sample_annotation <- sample_annotation %>%
+        select(all_of(unique(c(sample_id_col, vars_in_form)))) %>%
+        mutate(across(where(is.POSIXct), as.numeric)) %>%
+        as.data.frame(stringsAsFactors = FALSE) %>%
+        remove_rownames() %>%
+        column_to_rownames(var = sample_id_col)
+
+    data_matrix <- check_feature_id_col_in_dm(feature_id_col, data_matrix)
+    data_matrix <- .pb_handle_missing_wrapper(
+        data_matrix = data_matrix,
+        warning_message = "variancePartition cannot operate with missing values in the matrix",
+        fill_the_missing = fill_the_missing
+    )
+    data_matrix <- as.matrix(data_matrix)
+    data_matrix <- data_matrix[, rownames(sample_annotation), drop = FALSE]
+
+    var_part <- variancePartition::fitExtractVarPartModel(
+        exprObj = data_matrix,
+        formula = form,
+        data = sample_annotation,
+        ...
+    )
+
+    var_part_df <- as.data.frame(var_part, stringsAsFactors = FALSE)
+    if (!nrow(var_part_df)) {
+        return(tibble(
+            feature_id = character(),
+            label = character(),
+            variance_explained = numeric()
+        ))
+    }
+    label_levels <- colnames(var_part_df)
+    var_part_df <- var_part_df %>%
+        rownames_to_column(var = "feature_id") %>%
+        pivot_longer(
+            cols = -feature_id,
+            names_to = "label",
+            values_to = "variance_explained"
+        ) %>%
+        mutate(label = factor(label, levels = label_levels))
+
+    return(var_part_df)
+}
+
+#' @rdname calculate_variance_partition
+#' @method calculate_variance_partition ProBatchFeatures
+#' @export
+calculate_variance_partition.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
+                                                          sample_annotation = NULL,
+                                                          feature_id_col = "peptide_group_label",
+                                                          sample_id_col = "FullRunName",
+                                                          ...) {
+    object <- data_matrix
+    prep <- .pb_prepare_multi_assay(
+        object = object,
+        pbf_name = pbf_name,
+        dots = list(...),
+        plot_title = NULL,
+        default_title_fun = function(x) x
+    )
+    assays <- prep$assays
+    dots <- prep$dots
+    split_arg <- prep$split_arg
+
+    default_sample_annotation <- as.data.frame(colData(object))
+    sample_ann_list <- split_arg(sample_annotation)
+
+    vp_list <- vector("list", length(assays))
+    names(vp_list) <- assays
+
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        data_matrix <- pb_assay_matrix(object, assay_nm)
+        sample_ann <- sample_ann_list[[i]]
+        if (is.null(sample_ann)) {
+            sample_ann <- default_sample_annotation
+        }
+
+        call_args <- c(list(
+            data_matrix = data_matrix,
+            sample_annotation = sample_ann,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col
+        ), dots)
+
+        vp_list[[i]] <- do.call(calculate_variance_partition.default, call_args)
+    }
+
+    if (length(vp_list) == 1L) {
+        return(vp_list[[1L]])
+    }
+
+    vp_list
+}
+
+#' @export
+calculate_variance_partition <- function(data_matrix, ...) UseMethod("calculate_variance_partition")
+
+#' Prepare variance partition results for plotting
+#'
+#' @inheritParams proBatch
+#' @inheritParams calculate_variance_partition
+#' @param technical_factors vector with technically driven covariates.
+#' @param biological_factors vector with biologically driven covariates.
+#' @param variance_threshold numeric threshold; values below the threshold are
+#'   summed per feature and reported as a single group.
+#' @param path_to_save_results optional path to save the variance partition
+#'   results as CSV.
+#' @param ... Additional arguments forwarded between methods.
+#'
+#' @return data frame ready for plotting variance partition distributions.
+#' @export
+#'
+#' @examples
+#' if (requireNamespace("variancePartition", quietly = TRUE)) {
+#'     data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+#'     matrix_test <- na.omit(example_proteome_matrix)[1:30, ]
+#'     vp_df <- prepare_variance_partition_df(
+#'         matrix_test,
+#'         example_sample_annotation,
+#'         technical_factors = "MS_batch",
+#'         biological_factors = c("Diet", "Sex"),
+#'         variance_threshold = 0.05
+#'     )
+#' }
+prepare_variance_partition_df.default <- function(data_matrix, sample_annotation,
+                                                  feature_id_col = "peptide_group_label",
+                                                  sample_id_col = "FullRunName",
+                                                  technical_factors = c("MS_batch", "instrument"),
+                                                  biological_factors = c("cell_line", "drug_dose"),
+                                                  fill_the_missing = -1,
+                                                  form = NULL,
+                                                  factors_for_variance_partition = NULL,
+                                                  variance_threshold = NULL,
+                                                  path_to_save_results = NULL,
+                                                  ...) {
+    if (is.null(form)) {
+        if (is.null(factors_for_variance_partition)) {
+            factors_for_variance_partition <- c(technical_factors, biological_factors)
+        }
+    } else {
+        factors_for_variance_partition <- NULL
+    }
+
+    vp_res <- calculate_variance_partition(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        form = form,
+        factors_for_variance_partition = factors_for_variance_partition,
+        fill_the_missing = fill_the_missing,
+        ...
+    )
+
+    if (!nrow(vp_res)) {
+        return(vp_res)
+    }
+
+    label_levels <- levels(vp_res$label)
+    if (is.null(label_levels)) {
+        label_levels <- unique(vp_res$label)
+    }
+    vp_res <- vp_res %>% mutate(label = as.character(label))
+
+    label_of_small <- NULL
+    if (!is.null(variance_threshold)) {
+        label_of_small <- sprintf("Below %1.0f%%", 100 * variance_threshold)
+        small_res <- vp_res %>%
+            filter(variance_explained < variance_threshold) %>%
+            group_by(feature_id) %>%
+            summarise(variance_explained = sum(variance_explained, na.rm = TRUE), .groups = "drop") %>%
+            filter(variance_explained > 0) %>%
+            mutate(label = label_of_small)
+
+        vp_res <- vp_res %>%
+            filter(variance_explained >= variance_threshold)
+
+        if (nrow(small_res) > 0) {
+            vp_res <- dplyr::bind_rows(vp_res, small_res)
+        }
+    }
+
+    if (!is.null(label_of_small) && !label_of_small %in% label_levels) {
+        label_levels <- c(label_levels, label_of_small)
+    }
+
+    residual_labels <- c("Residuals", "resid", "residual")
+    if (!is.null(label_of_small)) {
+        residual_labels <- c(residual_labels, label_of_small)
+    }
+
+    vp_res <- vp_res %>%
+        mutate(category = ifelse(label %in% technical_factors,
+            "technical",
+            ifelse(label %in% biological_factors,
+                "biological",
+                ifelse(label %in% residual_labels,
+                    "residual", "biol:techn"
+                )
+            )
+        ))
+
+    present_labels <- unique(vp_res$label)
+    final_levels <- c(label_levels[label_levels %in% present_labels], setdiff(present_labels, label_levels))
+    vp_res <- vp_res %>%
+        mutate(label = factor(label, levels = final_levels))
+
+    if (!is.null(path_to_save_results)) {
+        if (!dir.exists(path_to_save_results)) {
+            dir.create(path_to_save_results, recursive = TRUE)
+        }
+        vp_res_file <- file.path(path_to_save_results, "variance_partition_results_long.csv")
+        write.csv(vp_res, vp_res_file, row.names = FALSE)
+    }
+
+    vp_res
+}
+
+#' @rdname prepare_variance_partition_df
+#' @method prepare_variance_partition_df ProBatchFeatures
+#' @export
+prepare_variance_partition_df.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
+                                                           sample_annotation = NULL,
+                                                           feature_id_col = "peptide_group_label",
+                                                           sample_id_col = "FullRunName",
+                                                           ...) {
+    object <- data_matrix
+    prep <- .pb_prepare_multi_assay(
+        object = object,
+        pbf_name = pbf_name,
+        dots = list(...),
+        plot_title = NULL,
+        default_title_fun = function(x) x
+    )
+    assays <- prep$assays
+    dots <- prep$dots
+    split_arg <- prep$split_arg
+
+    default_sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
+    sample_ann_list <- split_arg(sample_annotation)
+
+    vp_df_list <- vector("list", length(assays))
+    names(vp_df_list) <- assays
+
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        data_matrix <- pb_assay_matrix(object, assay_nm)
+        sample_ann <- sample_ann_list[[i]]
+        if (is.null(sample_ann)) {
+            sample_ann <- default_sample_annotation
+        }
+        sample_ann <- as.data.frame(sample_ann, stringsAsFactors = FALSE)
+
+        call_args <- c(list(
+            data_matrix = data_matrix,
+            sample_annotation = sample_ann,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col
+        ), dots)
+
+        vp_df_list[[i]] <- do.call(prepare_variance_partition_df.default, call_args)
+    }
+
+    if (length(vp_df_list) == 1L) {
+        return(vp_df_list[[1L]])
+    }
+
+    vp_df_list
+}
+
+#' @export
+prepare_variance_partition_df <- function(data_matrix, ...) UseMethod("prepare_variance_partition_df")
+
+#' Plot variance partition distributions
+#'
+#' @inheritParams proBatch
+#' @inheritParams prepare_variance_partition_df
+#' @param colors_for_boxes four-item color vector, specifying colors for the
+#'   following categories: c('residual', 'biological', 'biol:techn', 'technical').
+#' @param plot_title optional plot title.
+#' @param theme ggplot2 theme to apply. Currently, only `"classic"` is supported.
+#' @param base_size base size of the text in the plot.
+#' @param add_medians logical; when `TRUE`, annotates each box with its rounded
+#'   median value.
+#' @param median_position numeric adjustment applied to the median labels when
+#'   they are nudged upwards.
+#' @param show_legend logical; controls legend display.
+#' @param y_limits numeric vector of length two specifying y-axis limits.
+#' @param return_gridExtra logical; when `TRUE`, returns arranged grobs instead of
+#'   a list of plots (for multi-assay objects).
+#' @param plot_ncol number of columns when arranging multiple assay plots.
+#' @param path_to_save_results optional path to save the prepared results as CSV.
+#' @param ... Additional arguments forwarded to `prepare_variance_partition_df()`.
+#'
+#' @return ggplot object (or list of ggplot objects for multi-assay inputs).
+#' @export
+#'
+#' @examples
+#' if (requireNamespace("variancePartition", quietly = TRUE)) {
+#'     data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+#'     matrix_test <- na.omit(example_proteome_matrix)[1:30, ]
+#'     plot_variance_partition(
+#'         matrix_test,
+#'         example_sample_annotation,
+#'         technical_factors = "MS_batch",
+#'         biological_factors = c("Diet", "Sex"),
+#'         variance_threshold = 0.05
+#'     )
+#' }
+plot_variance_partition.default <- function(data_matrix, sample_annotation,
+                                            feature_id_col = "peptide_group_label",
+                                            sample_id_col = "FullRunName",
+                                            technical_factors = c("MS_batch", "instrument"),
+                                            biological_factors = c("cell_line", "drug_dose"),
+                                            fill_the_missing = -1,
+                                            form = NULL,
+                                            factors_for_variance_partition = NULL,
+                                            variance_threshold = NULL,
+                                            colors_for_boxes = NULL,
+                                            filename = NULL, width = NA, height = NA,
+                                            units = c("cm", "in", "mm"),
+                                            plot_title = NULL,
+                                            theme = "classic",
+                                            base_size = 15,
+                                            add_medians = FALSE,
+                                            median_position = 0.05,
+                                            show_legend = TRUE,
+                                            y_limits = c(0, 1),
+                                            path_to_save_results = NULL,
+                                            ...) {
+    vp_res <- prepare_variance_partition_df(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        technical_factors = technical_factors,
+        biological_factors = biological_factors,
+        fill_the_missing = fill_the_missing,
+        form = form,
+        factors_for_variance_partition = factors_for_variance_partition,
+        variance_threshold = variance_threshold,
+        path_to_save_results = path_to_save_results,
+        ...
+    )
+
+    plot_args <- list(
+        df = vp_res,
+        colors_for_boxes = colors_for_boxes,
+        filename = filename,
+        width = width,
+        height = height,
+        units = units,
+        plot_title = plot_title,
+        theme = theme,
+        base_size = base_size,
+        add_medians = add_medians,
+        median_position = median_position,
+        show_legend = show_legend,
+        y_limits = y_limits
+    )
+
+    gg <- do.call(plot_variance_partition.df, plot_args)
+
+    return(gg)
+}
+
+#' @rdname plot_variance_partition
+#' @method plot_variance_partition ProBatchFeatures
+#' @export
+plot_variance_partition.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
+                                                     sample_annotation = NULL,
+                                                     feature_id_col = "peptide_group_label",
+                                                     sample_id_col = "FullRunName",
+                                                     colors_for_boxes = NULL,
+                                                     filename = NULL, width = NA, height = NA,
+                                                     units = c("cm", "in", "mm"),
+                                                     plot_title = NULL,
+                                                     theme = "classic",
+                                                     base_size = 20,
+                                                     return_gridExtra = FALSE,
+                                                     plot_ncol = NULL,
+                                                     path_to_save_results = NULL,
+                                                     ...) {
+    object <- data_matrix
+    dots <- list(...)
+    if (!"filename" %in% names(dots)) {
+        dots <- c(list(filename = filename), dots)
+    }
+
+    prep <- .pb_prepare_multi_assay(
+        object = object,
+        pbf_name = pbf_name,
+        dots = dots,
+        plot_title = plot_title,
+        default_title_fun = function(x) x
+    )
+    assays <- prep$assays
+    prepare_dots <- prep$dots
+    filename_list <- prep$filename_list
+    split_arg <- prep$split_arg
+    titles <- prep$titles
+    shared_title <- prep$shared_title
+    add_medians_arg <- NULL
+    if ("add_medians" %in% names(prepare_dots)) {
+        add_medians_arg <- prepare_dots$add_medians
+        prepare_dots$add_medians <- NULL
+    }
+    add_medians_list <- split_arg(add_medians_arg)
+
+    median_position_arg <- NULL
+    if ("median_position" %in% names(prepare_dots)) {
+        median_position_arg <- prepare_dots$median_position
+        prepare_dots$median_position <- NULL
+    }
+    median_position_list <- split_arg(median_position_arg)
+
+    show_legend_arg <- NULL
+    if ("show_legend" %in% names(prepare_dots)) {
+        show_legend_arg <- prepare_dots$show_legend
+        prepare_dots$show_legend <- NULL
+    }
+    show_legend_list <- split_arg(show_legend_arg)
+
+    y_limits_arg <- NULL
+    if ("y_limits" %in% names(prepare_dots)) {
+        y_limits_arg <- prepare_dots$y_limits
+        prepare_dots$y_limits <- NULL
+    }
+    y_limits_list <- split_arg(y_limits_arg)
+
+    default_sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
+    rownames(default_sample_annotation) <- NULL
+
+    if (is.null(sample_annotation)) {
+        sample_annotation <- default_sample_annotation
+    }
+    sample_ann_list <- split_arg(sample_annotation)
+
+    if (is.list(colors_for_boxes) && !is.data.frame(colors_for_boxes)) {
+        colors_for_boxes_list <- split_arg(colors_for_boxes)
+    } else {
+        colors_for_boxes_list <- rep(list(colors_for_boxes), length(assays))
+    }
+
+    plot_list <- vector("list", length(assays))
+    names(plot_list) <- assays
+
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        data_matrix <- pb_assay_matrix(object, assay_nm)
+        sample_ann <- sample_ann_list[[i]]
+        if (is.null(sample_ann)) {
+            sample_ann <- default_sample_annotation
+        }
+        sample_ann <- as.data.frame(sample_ann, stringsAsFactors = FALSE)
+
+        path_to_save_results_assay <- NULL
+        if (!is.null(path_to_save_results)) {
+            path_to_save_results_assay <- file.path(path_to_save_results, assay_nm)
+        }
+
+        prepare_args <- c(list(
+            data_matrix = data_matrix,
+            sample_annotation = sample_ann,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col,
+            path_to_save_results = path_to_save_results_assay
+        ), prepare_dots)
+        vp_res <- do.call(prepare_variance_partition_df.default, prepare_args)
+
+        fn <- filename
+        if (!is.null(filename_list)) {
+            fn <- filename_list[[i]]
+        }
+
+        plot_args <- list(
+            df = vp_res,
+            colors_for_boxes = colors_for_boxes_list[[i]],
+            filename = fn,
+            width = width,
+            height = height,
+            units = units,
+            plot_title = titles[i],
+            theme = theme,
+            base_size = base_size
+        )
+        add_medians_val <- add_medians_list[[i]]
+        if (!is.null(add_medians_val)) {
+            plot_args$add_medians <- isTRUE(add_medians_val)
+        }
+        median_position_val <- median_position_list[[i]]
+        if (!is.null(median_position_val)) {
+            plot_args$median_position <- median_position_val
+        }
+        show_legend_val <- show_legend_list[[i]]
+        if (!is.null(show_legend_val)) {
+            plot_args$show_legend <- isTRUE(show_legend_val)
+        }
+        y_limits_val <- y_limits_list[[i]]
+        if (!is.null(y_limits_val)) {
+            plot_args$y_limits <- y_limits_val
+        }
+
+        plot_list[[i]] <- do.call(plot_variance_partition.df.default, plot_args)
+    }
+
+    plot_list <- .pb_attach_shared_title(plot_list, shared_title)
+
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
+}
+
+#' @export
+plot_variance_partition <- function(data_matrix, ...) UseMethod("plot_variance_partition")
+
+#' Plot variance partition results stored as a data frame
+#'
+#' @inheritParams plot_variance_partition
+#' @param df data frame produced by `prepare_variance_partition_df()` or a
+#'   compatible structure.
+#' @param ... Additional arguments ignored or forwarded between methods.
+#'
+#' @return ggplot object
+#' @export
+plot_variance_partition.df.default <- function(df,
+                                               colors_for_boxes = NULL,
+                                               filename = NULL, width = NA, height = NA,
+                                               units = c("cm", "in", "mm"),
+                                               plot_title = NULL,
+                                               theme = "classic",
+                                               base_size = 15,
+                                               add_medians = FALSE,
+                                               median_position = 0.05,
+                                               show_legend = TRUE,
+                                               y_limits = c(0, 1),
+                                               ...) {
+    units <- match.arg(units)
+    vp_res <- df
+    if (!"variance_explained" %in% names(vp_res)) {
+        stop("Input data frame must contain a 'variance_explained' column.")
+    }
+    label_levels <- levels(vp_res$label)
+    if (is.null(label_levels)) {
+        label_levels <- unique(vp_res$label)
+    }
+    vp_res <- vp_res %>%
+        mutate(label = factor(label, levels = label_levels))
+
+    gg <- ggplot(vp_res, aes(x = label, y = variance_explained, fill = category)) +
+        geom_boxplot()
+
+    if (is.null(colors_for_boxes)) {
+        colors_for_boxes <- c("grey", wes_palettes$Rushmore[3:5])
+        names(colors_for_boxes) <- c("residual", "biological", "biol:techn", "technical")
+    } else if (length(colors_for_boxes) != 4) {
+        color_names <- paste(c("residual", "biological", "biol:techn", "technical"), collapse = " ")
+        warning(sprintf("four colors for: %s were expected", color_names))
+    }
+    gg <- gg + scale_fill_manual(values = colors_for_boxes)
+
+    if (!is.null(plot_title)) {
+        gg <- gg + ggtitle(plot_title)
+    }
+
+    if (!is.null(y_limits)) {
+        gg <- gg + coord_cartesian(ylim = y_limits)
+    }
+
+    if (!is.null(theme) && theme == "classic") {
+        gg <- gg + theme_classic(base_size = base_size)
+    } else {
+        message("plotting with default ggplot theme, only theme = 'classic' implemented")
+    }
+
+    legend_position <- "right"
+    if (!isTRUE(show_legend)) {
+        legend_position <- "none"
+    }
+
+    gg <- gg +
+        theme(
+            axis.title.x = element_blank(),
+            axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5),
+            plot.title = element_text(size = round(base_size * 1.2, 0)),
+            legend.position = legend_position
+        ) +
+        ylab("Variance explained") +
+        xlab(NULL)
+
+    if (isTRUE(add_medians)) {
+        medians <- vp_res %>%
+            group_by(label) %>%
+            summarise(median_value = median(variance_explained, na.rm = TRUE), .groups = "drop")
+        upper_limit <- 1
+        if (!is.null(y_limits) && length(y_limits) == 2 && all(is.finite(y_limits))) {
+            upper_limit <- max(y_limits)
+        }
+        gg <- gg +
+            geom_text(
+                data = medians,
+                aes(
+                    x = label,
+                    y = median_value,
+                    label = sprintf("%.2f", median_value)
+                ),
+                nudge_y = ifelse(medians$median_value > (upper_limit - median_position),
+                    -median_position,
+                    median_position
+                ),
+                size = base_size / 3,
+                color = "black"
+            )
+    }
+
+    save_ggplot(filename, units, width, height, gg)
+
+    gg
+}
+
+#' @rdname plot_variance_partition.df
+#' @method plot_variance_partition.df ProBatchFeatures
+#' @export
+plot_variance_partition.df.ProBatchFeatures <- function(df, pbf_name = NULL,
+                                                        sample_annotation = NULL,
+                                                        feature_id_col = "peptide_group_label",
+                                                        sample_id_col = "FullRunName",
+                                                        colors_for_boxes = NULL,
+                                                        filename = NULL, width = NA, height = NA,
+                                                        units = c("cm", "in", "mm"),
+                                                        plot_title = NULL,
+                                                        theme = "classic",
+                                                        base_size = 20,
+                                                        return_gridExtra = FALSE,
+                                                        plot_ncol = NULL,
+                                                        ...) {
+    object <- df
+    dots <- list(...)
+    if (!"filename" %in% names(dots)) {
+        dots <- c(list(filename = filename), dots)
+    }
+
+    prep <- .pb_prepare_multi_assay(
+        object = object,
+        pbf_name = pbf_name,
+        dots = dots,
+        plot_title = plot_title,
+        default_title_fun = function(x) x
+    )
+    assays <- prep$assays
+    prepare_dots <- prep$dots
+    filename_list <- prep$filename_list
+    split_arg <- prep$split_arg
+    titles <- prep$titles
+    shared_title <- prep$shared_title
+    add_medians_arg <- NULL
+    if ("add_medians" %in% names(prepare_dots)) {
+        add_medians_arg <- prepare_dots$add_medians
+        prepare_dots$add_medians <- NULL
+    }
+    add_medians_list <- split_arg(add_medians_arg)
+
+    median_position_arg <- NULL
+    if ("median_position" %in% names(prepare_dots)) {
+        median_position_arg <- prepare_dots$median_position
+        prepare_dots$median_position <- NULL
+    }
+    median_position_list <- split_arg(median_position_arg)
+
+    show_legend_arg <- NULL
+    if ("show_legend" %in% names(prepare_dots)) {
+        show_legend_arg <- prepare_dots$show_legend
+        prepare_dots$show_legend <- NULL
+    }
+    show_legend_list <- split_arg(show_legend_arg)
+
+    y_limits_arg <- NULL
+    if ("y_limits" %in% names(prepare_dots)) {
+        y_limits_arg <- prepare_dots$y_limits
+        prepare_dots$y_limits <- NULL
+    }
+    y_limits_list <- split_arg(y_limits_arg)
+
+    default_sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
+    rownames(default_sample_annotation) <- NULL
+
+    if (is.null(sample_annotation)) {
+        sample_annotation <- default_sample_annotation
+    }
+    sample_ann_list <- split_arg(sample_annotation)
+
+    if (is.list(colors_for_boxes) && !is.data.frame(colors_for_boxes)) {
+        colors_for_boxes_list <- split_arg(colors_for_boxes)
+    } else {
+        colors_for_boxes_list <- rep(list(colors_for_boxes), length(assays))
+    }
+
+    plot_list <- vector("list", length(assays))
+    names(plot_list) <- assays
+
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        data_matrix <- pb_assay_matrix(object, assay_nm)
+        sample_ann <- sample_ann_list[[i]]
+        if (is.null(sample_ann)) {
+            sample_ann <- default_sample_annotation
+        }
+        sample_ann <- as.data.frame(sample_ann, stringsAsFactors = FALSE)
+
+        prepare_args <- c(list(
+            data_matrix = data_matrix,
+            sample_annotation = sample_ann,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col
+        ), prepare_dots)
+        vp_res <- do.call(prepare_variance_partition_df.default, prepare_args)
+
+        fn <- filename
+        if (!is.null(filename_list)) {
+            fn <- filename_list[[i]]
+        }
+
+        plot_args <- list(
+            df = vp_res,
+            colors_for_boxes = colors_for_boxes_list[[i]],
+            filename = fn,
+            width = width,
+            height = height,
+            units = units,
+            plot_title = titles[i],
+            theme = theme,
+            base_size = base_size
+        )
+        add_medians_val <- add_medians_list[[i]]
+        if (!is.null(add_medians_val)) {
+            plot_args$add_medians <- isTRUE(add_medians_val)
+        }
+        median_position_val <- median_position_list[[i]]
+        if (!is.null(median_position_val)) {
+            plot_args$median_position <- median_position_val
+        }
+        show_legend_val <- show_legend_list[[i]]
+        if (!is.null(show_legend_val)) {
+            plot_args$show_legend <- isTRUE(show_legend_val)
+        }
+        y_limits_val <- y_limits_list[[i]]
+        if (!is.null(y_limits_val)) {
+            plot_args$y_limits <- y_limits_val
+        }
+
+        plot_list[[i]] <- do.call(plot_variance_partition.df.default, plot_args)
+    }
+
+    plot_list <- .pb_attach_shared_title(plot_list, shared_title)
+
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
+}
+
+#' @export
+plot_variance_partition.df <- function(df, ...) UseMethod("plot_variance_partition.df")
