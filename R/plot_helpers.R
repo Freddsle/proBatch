@@ -161,6 +161,37 @@
     list(titles = titles, shared_title = shared_title)
 }
 
+.pb_plot_title_values <- function(title) {
+    if (is.null(title)) {
+        return(character())
+    }
+    values <- unlist(title, recursive = TRUE, use.names = FALSE)
+    if (!length(values)) {
+        return(character())
+    }
+
+    values <- as.character(values)
+    values <- values[!is.na(values)]
+    values <- trimws(values)
+    values[nzchar(values)]
+}
+
+.pb_collapsed_plot_title <- function(title) {
+    values <- .pb_plot_title_values(title)
+    if (!length(values)) {
+        return(NULL)
+    }
+    paste(values, collapse = "\n")
+}
+
+.pb_first_plot_title <- function(title) {
+    values <- .pb_plot_title_values(title)
+    if (!length(values)) {
+        return(NULL)
+    }
+    values[[1]]
+}
+
 .pb_prepare_multi_assay <- function(object, pbf_name, dots, plot_title,
                                     default_title_fun = .pb_default_title,
                                     set_silent = FALSE) {

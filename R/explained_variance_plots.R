@@ -175,6 +175,8 @@ calculate_PVCA <- function(data_matrix, ...) UseMethod("calculate_PVCA")
 #' @param stacked_bar logical; when `TRUE` and multiple `pbf_name` values are
 #'   provided, combines all assays in a single stacked bar chart (supported for
 #'   `ProBatchFeatures` inputs only).
+#' @param stacked_plot_title optional character vector that annotates the stacked
+#'   PVCA plot when `stacked_bar = TRUE`; elements are joined with newlines.
 #' @param sort_stacked optional factor name used to order stacked bars when
 #'   `stacked_bar = TRUE`; assays are ordered by the explained variance of this
 #'   factor in descending order.
@@ -267,6 +269,7 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
                                        return_gridExtra = FALSE,
                                        plot_ncol = NULL,
                                        stacked_bar = FALSE,
+                                       stacked_plot_title = "Plot of weighted average proportion variance vs effects in PVCA",
                                        sort_stacked = NULL,
                                        category_order = NULL,
                                        path_to_save_results = NULL,
@@ -352,11 +355,12 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
         base_size_arg <- if ("base_size" %in% names(dots)) dots$base_size else 15
         colors_arg <- dots$colors_for_bars
 
-        stacked_title <- NULL
-        if (!is.null(plot_title)) {
-            stacked_title <- plot_title[1]
-        } else {
-            stacked_title <- shared_title
+        stacked_title <- .pb_collapsed_plot_title(stacked_plot_title)
+        if (is.null(stacked_title)) {
+            stacked_title <- .pb_first_plot_title(plot_title)
+            if (is.null(stacked_title)) {
+                stacked_title <- shared_title
+            }
         }
 
         gg <- .pb_plot_pvca_stacked_bar(
@@ -588,6 +592,8 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
 #' @param colors_for_bars Character vector of four colors (residual, biological,
 #'   biol:techn, technical) passed to the stacked bar helper.
 #' @param plot_title Optional plot title.
+#' @param stacked_plot_title Optional character vector used to annotate the stacked
+#'   plot title; elements are joined with newline characters.
 #' @param theme Plot theme; only `"classic"` is currently implemented.
 #' @param base_size Base font size passed to `theme_classic()`.
 #' @param filename Optional path to save the stacked plot.
@@ -602,6 +608,7 @@ plot_PVCA_stacked_from_saved <- function(pvca_dir,
                                          sort_stacked = NULL,
                                          colors_for_bars = NULL,
                                          plot_title = NULL,
+                                         stacked_plot_title = "Plot of weighted average proportion variance vs effects in PVCA",
                                          theme = "classic",
                                          base_size = 15,
                                          filename = NULL,
@@ -642,12 +649,16 @@ plot_PVCA_stacked_from_saved <- function(pvca_dir,
     assay_names <- make.unique(assay_names, sep = "_")
     names(pvca_dfs) <- assay_names
 
+    stacked_title <- .pb_collapsed_plot_title(stacked_plot_title)
+    if (is.null(stacked_title)) {
+        stacked_title <- .pb_collapsed_plot_title(plot_title)
+    }
     units <- match.arg(units)
     gg <- .pb_plot_pvca_stacked_bar(
         pvca_df_list = pvca_dfs,
         assays = assay_names,
         colors_for_bars = colors_for_bars,
-        plot_title = plot_title,
+        plot_title = stacked_title,
         theme = theme,
         base_size = base_size,
         filename = filename,
@@ -832,6 +843,8 @@ prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
 #' @param stacked_bar logical; when `TRUE` and multiple `pbf_name` entries are
 #'   supplied for a `ProBatchFeatures` object, a single stacked bar chart is
 #'   produced instead of subplots.
+#' @param stacked_plot_title optional character vector providing lines for the
+#'   stacked plot title; entries are joined with newlines before rendering.
 #' @param sort_stacked optional factor name; when `stacked_bar = TRUE`, assays
 #'   are ordered by the explained variance of this factor (descending).
 #' @param ... Additional arguments forwarded to `prepare_PVCA_df()`.
@@ -953,6 +966,7 @@ plot_PVCA.df.ProBatchFeatures <- function(df, pbf_name = NULL,
                                           return_gridExtra = FALSE,
                                           plot_ncol = NULL,
                                           stacked_bar = FALSE,
+                                          stacked_plot_title = "Plot of weighted average proportion variance vs effects in PVCA",
                                           sort_stacked = NULL,
                                           category_order = NULL,
                                           ...) {
@@ -1029,11 +1043,12 @@ plot_PVCA.df.ProBatchFeatures <- function(df, pbf_name = NULL,
                 stacked_filename <- filename_list[[idx[1]]]
             }
         }
-        stacked_title <- NULL
-        if (!is.null(plot_title)) {
-            stacked_title <- plot_title[1]
-        } else {
-            stacked_title <- shared_title
+        stacked_title <- .pb_collapsed_plot_title(stacked_plot_title)
+        if (is.null(stacked_title)) {
+            stacked_title <- .pb_first_plot_title(plot_title)
+            if (is.null(stacked_title)) {
+                stacked_title <- shared_title
+            }
         }
         stacked_colors <- NULL
         color_idx <- which(!vapply(colors_for_bars_list, is.null, logical(1)))

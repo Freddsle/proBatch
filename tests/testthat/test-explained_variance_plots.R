@@ -210,6 +210,41 @@ test_that("plot_PVCA ProBatchFeatures stacked bar sorts assays by requested fact
     expect_equal(levels(stacked_plot$data$assay), rev(expected_order))
 })
 
+test_that("plot_PVCA stacked bar honors stacked_plot_title", {
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    matrix_small <- na.omit(example_proteome_matrix)[1:40, 1:6]
+    sample_ids <- colnames(matrix_small)
+    sample_ann <- example_sample_annotation[match(sample_ids, example_sample_annotation$FullRunName), ]
+
+    pbf <- suppressMessages(ProBatchFeatures(
+        data_matrix = matrix_small,
+        sample_annotation = sample_ann,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    ))
+    pbf <- suppressMessages(pb_transform(
+        pbf,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    ))
+
+    stacked_title <- c("Stacked PVCA", "/path/to/data")
+    stacked_plot <- suppressWarnings(plot_PVCA(
+        pbf,
+        sample_id_col = "FullRunName",
+        technical_factors = c("MS_batch"),
+        biological_factors = c("Diet", "Sex"),
+        stacked_bar = TRUE,
+        stacked_plot_title = stacked_title,
+        fill_the_missing = NULL
+    ))
+
+    expect_equal(stacked_plot$labels$title, paste(stacked_title, collapse = "\n"))
+})
+
 test_that("prepare_variance_partition_df exports CSV and keeps categories", {
     skip_if_not_installed("variancePartition")
 
