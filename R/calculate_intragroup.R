@@ -219,7 +219,7 @@ plot_intragroup_variation.ProBatchFeatures <- function(data_matrix,
             fill_the_missing = fill_the_missing,
             group_cols = group_cols,
             assay_label = assay_nm,
-            assay_display = titles[[i]],
+            assay_display = assay_nm,
             plot_title = titles[[i]],
             call_info = metric_info$call,
             metric_name = metric_info$name,
@@ -580,7 +580,7 @@ plot_intragroup_variation <- function(data_matrix, ...) UseMethod("plot_intragro
 
     if (n_assays == 1L) {
         assay_name <- levels(df$assay_display)[1]
-        assay_line <- .pb_break_long_assay_title(assay_name)
+        assay_line <- .pb_intragroup_format_assay_label(assay_name)
         gg <- gg + ggplot2::labs(
             title = sprintf("%s\nAssay: %s", metric_label, assay_line),
             subtitle = NULL
@@ -588,16 +588,47 @@ plot_intragroup_variation <- function(data_matrix, ...) UseMethod("plot_intragro
         gg <- gg + ggplot2::xlab("Grouping factor")
     } else {
         gg <- gg + ggplot2::facet_wrap(~group_column, ncol = facet_ncol)
-        gg <- gg + ggplot2::scale_x_discrete(labels = function(x) vapply(x, .pb_break_long_assay_title, character(1)))
-        subtitle <- NULL
+        subtitle_parts <- character()
         if (!is.null(shared_title) && nzchar(shared_title)) {
-            subtitle <- shared_title
+            subtitle_parts <- c(subtitle_parts, shared_title)
         }
+        level_label <- .pb_intragroup_common_level(assay_levels)
+        include_level_in_labels <- is.null(level_label)
+        gg <- gg + ggplot2::scale_x_discrete(labels = function(x) {
+            vapply(
+                x,
+                .pb_intragroup_format_assay_label,
+                character(1),
+                include_level = include_level_in_labels
+            )
+        })
+        if (!is.null(level_label) && nzchar(level_label) && !level_label %in% subtitle_parts) {
+            subtitle_parts <- c(subtitle_parts, level_label)
+        }
+        subtitle <- if (length(subtitle_parts)) paste(subtitle_parts, collapse = "\n") else NULL
         gg <- gg + ggplot2::labs(title = metric_label, subtitle = subtitle)
         gg <- gg + ggplot2::xlab("Assay")
     }
 
     gg
+}
+
+.pb_intragroup_common_level <- function(assay_labels) {
+    if (!length(assay_labels)) {
+        return(NULL)
+    }
+    levels <- vapply(
+        assay_labels,
+        .pb_intragroup_assay_level,
+        character(1),
+        USE.NAMES = FALSE
+    )
+    levels <- unique(levels[nzchar(levels)])
+    if (length(levels) == 1L) {
+        levels[[1]]
+    } else {
+        NULL
+    }
 }
 
 .pb_intragroup_group_colors <- function(group_levels) {

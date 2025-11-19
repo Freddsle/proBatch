@@ -108,6 +108,78 @@
     paste0(left, "\n\t", right)
 }
 
+.pb_intragroup_assay_label_parts <- function(title) {
+    if (is.null(title) || !nzchar(title) || !grepl("::", title, fixed = TRUE)) {
+        return(list(level = NULL, steps = character()))
+    }
+    parts <- strsplit(title, "::", fixed = TRUE)[[1]]
+    if (length(parts) < 2L) {
+        return(list(level = NULL, steps = character()))
+    }
+    level <- trimws(parts[[1]])
+    remainder <- trimws(paste(parts[-1], collapse = "::"))
+    if (!nzchar(remainder)) {
+        return(list(level = level, steps = character()))
+    }
+    steps <- strsplit(remainder, "_", fixed = TRUE)[[1]]
+    steps <- trimws(steps)
+    steps <- steps[nzchar(steps)]
+    if (!length(steps)) {
+        return(list(level = level, steps = character()))
+    }
+    connectors <- tolower(steps) == "on"
+    steps <- steps[!connectors]
+    list(level = level, steps = steps)
+}
+
+.pb_intragroup_assay_level <- function(title) {
+    parts <- .pb_intragroup_assay_label_parts(title)
+    if (is.null(parts$level) || !nzchar(parts$level)) {
+        return("")
+    }
+    parts$level
+}
+
+.pb_intragroup_split_long_underscore <- function(line, max_len = 10L) {
+    if (is.null(line) || !nzchar(line) || nchar(line) <= max_len || !grepl("_", line, fixed = TRUE)) {
+        return(line)
+    }
+    parts <- strsplit(line, "_", fixed = TRUE)[[1]]
+    parts <- trimws(parts)
+    parts <- parts[nzchar(parts)]
+    if (!length(parts)) {
+        return(line)
+    }
+    parts
+}
+
+.pb_intragroup_format_assay_label <- function(title, include_level = TRUE) {
+    if (is.null(title) || !nzchar(title)) {
+        return(title)
+    }
+    parts <- .pb_intragroup_assay_label_parts(title)
+    lines <- character()
+    if (include_level && !is.null(parts$level) && nzchar(parts$level)) {
+        lines <- c(lines, paste0(parts$level, " ::"))
+    }
+    if (length(parts$steps)) {
+        lines <- c(lines, parts$steps)
+    }
+    if (!length(lines) && nchar(title) > 10L && grepl("_", title, fixed = TRUE)) {
+        splits <- strsplit(title, "_", fixed = TRUE)[[1]]
+        splits <- trimws(splits)
+        splits <- splits[nzchar(splits)]
+        if (length(splits)) {
+            lines <- splits
+        }
+    }
+    if (!length(lines)) {
+        return(.pb_break_long_assay_title(title))
+    }
+    split_lines <- unlist(lapply(lines, .pb_intragroup_split_long_underscore), use.names = FALSE)
+    paste(split_lines, collapse = "\n")
+}
+
 .pb_refactor_assay_titles <- function(titles, use_shared_title = TRUE, max_length = 35L) {
     if (!length(titles)) {
         return(list(titles = titles, shared_title = NULL))
