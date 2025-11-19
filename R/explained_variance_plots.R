@@ -172,6 +172,12 @@ calculate_PVCA <- function(data_matrix, ...) UseMethod("calculate_PVCA")
 #' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
 #' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
+#' @param stacked_bar logical; when `TRUE` and multiple `pbf_name` values are
+#'   provided, combines all assays in a single stacked bar chart (supported for
+#'   `ProBatchFeatures` inputs only).
+#' @param sort_stacked optional factor name used to order stacked bars when
+#'   `stacked_bar = TRUE`; assays are ordered by the explained variance of this
+#'   factor in descending order.
 #' @param ... Additional arguments passed to lower-level methods.
 #' @param base_size base size of the text in the plot
 #' @param add_values logical; when `TRUE`, annotates each bar with its rounded weight.
@@ -260,6 +266,8 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
                                        plot_title = NULL,
                                        return_gridExtra = FALSE,
                                        plot_ncol = NULL,
+                                       stacked_bar = FALSE,
+                                       sort_stacked = NULL,
                                        path_to_save_results = NULL,
                                        ...) {
     object <- data_matrix
@@ -285,6 +293,87 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
     default_sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
     rownames(default_sample_annotation) <- NULL
 
+    stacked_requested <- isTRUE(stacked_bar)
+    use_stacked <- stacked_requested && length(assays) >= 2L
+
+    if (use_stacked) {
+        prepare_dots <- dots
+        drop_args <- c(
+            "colors_for_bars", "filename", "width", "height", "units",
+            "plot_title", "theme", "base_size", "add_values",
+            "stacked_bar", "sort_stacked", "return_gridExtra", "plot_ncol",
+            "path_to_save_results"
+        )
+        for (nm in drop_args) {
+            prepare_dots[[nm]] <- NULL
+        }
+
+        pvca_df_list <- vector("list", length(assays))
+        names(pvca_df_list) <- assays
+
+        for (i in seq_along(assays)) {
+            assay_nm <- assays[[i]]
+            data_matrix <- pb_assay_matrix(object, assay_nm)
+            sample_ann <- sample_ann_list[[i]]
+            if (is.null(sample_ann)) {
+                sample_ann <- default_sample_annotation
+            }
+            sample_ann <- as.data.frame(sample_ann, stringsAsFactors = FALSE)
+
+            path_to_save_results_assay <- NULL
+            if (!is.null(path_to_save_results)) {
+                path_to_save_results_assay <- file.path(path_to_save_results, assay_nm)
+            }
+
+            call_args <- c(list(
+                data_matrix = data_matrix,
+                sample_annotation = sample_ann,
+                feature_id_col = feature_id_col,
+                sample_id_col = sample_id_col,
+                path_to_save_results = path_to_save_results_assay
+            ), prepare_dots)
+
+            pvca_df_list[[i]] <- do.call(prepare_PVCA_df.default, call_args)
+        }
+
+        stacked_filename <- NULL
+        if (!is.null(filename_list)) {
+            idx <- which(!vapply(filename_list, is.null, logical(1)))
+            if (length(idx)) {
+                stacked_filename <- filename_list[[idx[1]]]
+            }
+        }
+
+        width_arg <- if ("width" %in% names(dots)) dots$width else NA
+        height_arg <- if ("height" %in% names(dots)) dots$height else NA
+        units_arg <- if ("units" %in% names(dots)) dots$units else c("cm", "in", "mm")
+        theme_arg <- if ("theme" %in% names(dots)) dots$theme else "classic"
+        base_size_arg <- if ("base_size" %in% names(dots)) dots$base_size else 15
+        colors_arg <- dots$colors_for_bars
+
+        stacked_title <- NULL
+        if (!is.null(plot_title)) {
+            stacked_title <- plot_title[1]
+        } else {
+            stacked_title <- shared_title
+        }
+
+        gg <- .pb_plot_pvca_stacked_bar(
+            pvca_df_list = pvca_df_list,
+            assays = assays,
+            colors_for_bars = colors_arg,
+            plot_title = stacked_title,
+            theme = theme_arg,
+            base_size = base_size_arg,
+            filename = stacked_filename,
+            width = width_arg,
+            height = height_arg,
+            units = units_arg,
+            sort_label = sort_stacked
+        )
+        return(gg)
+    }
+
     plot_list <- vector("list", length(assays))
     names(plot_list) <- assays
 
@@ -297,6 +386,7 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
         }
         sample_ann <- as.data.frame(sample_ann, stringsAsFactors = FALSE)
 
+        path_to_save_results_assay <- NULL
         if (!is.null(path_to_save_results)) {
             path_to_save_results_assay <- file.path(path_to_save_results, assay_nm)
         }
@@ -318,6 +408,143 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
     plot_list <- .pb_attach_shared_title(plot_list, shared_title)
 
     .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
+}
+
+.pb_plot_pvca_stacked_bar <- function(pvca_df_list,
+                                      assays,
+                                      colors_for_bars = NULL,
+                                      plot_title = NULL,
+                                      theme = "classic",
+                                      base_size = 15,
+                                      filename = NULL,
+                                      width = NA,
+                                      height = NA,
+                                      units = c("cm", "in", "mm"),
+                                      sort_label = NULL) {
+    if (!length(pvca_df_list)) {
+        return(invisible(NULL))
+    }
+
+    combined_list <- list()
+    label_levels <- character()
+
+    for (i in seq_along(pvca_df_list)) {
+        df <- pvca_df_list[[i]]
+        if (is.null(df) || !nrow(df)) {
+            next
+        }
+        assay_nm <- if (!is.null(names(pvca_df_list)) && nzchar(names(pvca_df_list)[i])) {
+            names(pvca_df_list)[i]
+        } else if (length(assays) >= i) {
+            assays[[i]]
+        } else {
+            paste0("assay_", i)
+        }
+        df <- df %>%
+            mutate(label = as.character(label), assay = assay_nm)
+
+        levs <- levels(df$label)
+        if (is.null(levs)) {
+            levs <- unique(df$label)
+        }
+        label_levels <- c(label_levels, levs)
+        combined_list[[length(combined_list) + 1L]] <- df
+    }
+
+    stacked_df <- bind_rows(combined_list)
+    if (!nrow(stacked_df)) {
+        return(invisible(NULL))
+    }
+
+    if (length(label_levels)) {
+        label_levels <- unique(label_levels)
+        label_levels <- c(label_levels, setdiff(unique(stacked_df$label), label_levels))
+    } else {
+        label_levels <- unique(stacked_df$label)
+    }
+
+    stacked_df <- stacked_df %>%
+        mutate(label = factor(label, levels = label_levels))
+
+    present_assays <- unique(stacked_df$assay)
+    assay_levels <- assays[assays %in% present_assays]
+    assay_levels <- unique(c(assay_levels, setdiff(present_assays, assay_levels)))
+
+    if (!is.null(sort_label)) {
+        sort_label_chr <- as.character(sort_label)[1]
+        sort_weights <- stacked_df %>%
+            filter(label == sort_label_chr) %>%
+            group_by(assay) %>%
+            summarise(weight = sum(weights, na.rm = TRUE), .groups = "drop") %>%
+            arrange(desc(weight))
+        if (nrow(sort_weights)) {
+            assay_levels <- c(sort_weights$assay, setdiff(assay_levels, sort_weights$assay))
+        }
+    }
+
+    display_levels <- rev(assay_levels)
+    stacked_df <- stacked_df %>%
+        mutate(assay = factor(assay, levels = display_levels))
+
+    colors_vec <- colors_for_bars
+    if (is.list(colors_vec) && !is.data.frame(colors_vec)) {
+        colors_vec <- colors_vec[[1]]
+    }
+    if (is.null(colors_vec)) {
+        colors_vec <- c("grey", wes_palettes$Rushmore[3:5])
+        names(colors_vec) <- c(
+            "residual", "biological",
+            "biol:techn", "technical"
+        )
+    } else if (length(colors_vec) != 4) {
+        color_names <- paste(c(
+            "residual", "biological", "biol:techn",
+            "technical"
+        ), collapse = " ")
+        warning(sprintf("four colors for: %s were expected", color_names))
+    }
+
+    totals <- stacked_df %>%
+        group_by(assay) %>%
+        summarise(total = sum(weights, na.rm = TRUE), .groups = "drop")
+    max_weight <- max(totals$total, na.rm = TRUE)
+    if (!is.finite(max_weight)) {
+        max_weight <- 0
+    }
+
+    gg <- ggplot(stacked_df, aes(x = weights, y = assay, fill = category)) +
+        geom_col(color = "black") +
+        xlab("Weighted average proportion variance") +
+        ylab(NULL)
+
+    if (max_weight > 0) {
+        gg <- gg + expand_limits(x = if (max_weight * 1.05 <= 1) max_weight * 1.05 else 1.05)
+    }
+
+    gg <- gg + scale_fill_manual(values = colors_vec)
+
+    if (!is.null(plot_title)) {
+        gg <- gg + ggtitle(plot_title)
+    }
+
+    if (!is.null(theme) && theme == "classic") {
+        gg <- gg + theme_classic(base_size = base_size)
+    } else {
+        message("plotting with default ggplot theme, only theme = 'classic'
+            implemented")
+    }
+
+    gg <- gg +
+        theme(
+            axis.title.y = element_blank(),
+            axis.text.y = element_text(hjust = 1),
+            plot.title = element_text(size = round(base_size * 1.2, 0))
+        ) +
+        guides(fill = guide_legend(override.aes = list(color = NA), title = NULL))
+
+    save_ggplot(filename, units, width, height, gg)
+
+    gg
 }
 
 #' @export
@@ -481,6 +708,11 @@ prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
 #' @param pbf_name Assay name(s) used when `df` is a `ProBatchFeatures`.
 #' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
+#' @param stacked_bar logical; when `TRUE` and multiple `pbf_name` entries are
+#'   supplied for a `ProBatchFeatures` object, a single stacked bar chart is
+#'   produced instead of subplots.
+#' @param sort_stacked optional factor name; when `stacked_bar = TRUE`, assays
+#'   are ordered by the explained variance of this factor (descending).
 #' @param ... Additional arguments forwarded to `prepare_PVCA_df()`.
 #' @param add_values logical; when `TRUE`, annotates each bar with its rounded weight.
 #'
@@ -588,6 +820,8 @@ plot_PVCA.df.ProBatchFeatures <- function(df, pbf_name = NULL,
                                           base_size = 20,
                                           return_gridExtra = FALSE,
                                           plot_ncol = NULL,
+                                          stacked_bar = FALSE,
+                                          sort_stacked = NULL,
                                           ...) {
     object <- df
     dots <- list(...)
@@ -629,8 +863,8 @@ plot_PVCA.df.ProBatchFeatures <- function(df, pbf_name = NULL,
         colors_for_bars_list <- rep(list(colors_for_bars), length(assays))
     }
 
-    plot_list <- vector("list", length(assays))
-    names(plot_list) <- assays
+    pvca_res_list <- vector("list", length(assays))
+    names(pvca_res_list) <- assays
 
     for (i in seq_along(assays)) {
         assay_nm <- assays[[i]]
@@ -648,7 +882,53 @@ plot_PVCA.df.ProBatchFeatures <- function(df, pbf_name = NULL,
             sample_id_col = sample_id_col
         ), prepare_dots)
         pvca_res <- do.call(prepare_PVCA_df.default, prepare_args)
+        pvca_res_list[[i]] <- pvca_res
 
+    }
+
+    stacked_requested <- isTRUE(stacked_bar)
+    use_stacked <- stacked_requested && length(assays) >= 2L
+    if (use_stacked) {
+        stacked_filename <- filename
+        if (!is.null(filename_list)) {
+            idx <- which(!vapply(filename_list, is.null, logical(1)))
+            if (length(idx)) {
+                stacked_filename <- filename_list[[idx[1]]]
+            }
+        }
+        stacked_title <- NULL
+        if (!is.null(plot_title)) {
+            stacked_title <- plot_title[1]
+        } else {
+            stacked_title <- shared_title
+        }
+        stacked_colors <- NULL
+        color_idx <- which(!vapply(colors_for_bars_list, is.null, logical(1)))
+        if (length(color_idx)) {
+            stacked_colors <- colors_for_bars_list[[color_idx[1]]]
+        }
+
+        gg <- .pb_plot_pvca_stacked_bar(
+            pvca_df_list = pvca_res_list,
+            assays = assays,
+            colors_for_bars = stacked_colors,
+            plot_title = stacked_title,
+            theme = theme,
+            base_size = base_size,
+            filename = stacked_filename,
+            width = width,
+            height = height,
+            units = units,
+            sort_label = sort_stacked
+        )
+        return(gg)
+    }
+
+    plot_list <- vector("list", length(assays))
+    names(plot_list) <- assays
+
+    for (i in seq_along(assays)) {
+        pvca_res <- pvca_res_list[[i]]
         fn <- filename
         if (!is.null(filename_list)) {
             fn <- filename_list[[i]]
@@ -684,10 +964,10 @@ plot_PVCA.df <- function(df, ...) UseMethod("plot_PVCA.df")
 #' Calculate per-feature variance partition contributions
 #'
 #' @inheritParams proBatch
-#' @param form model formula passed to `variancePartition::fitExtractVarPartModel()`
-#'   when `factors_for_variance_partition` is `NULL`.
-#' @param factors_for_variance_partition vector of \code{sample_annotation}
-#'   column names used to build a formula when `form` is `NULL`.
+#' @param model_formula model formula passed to
+#'   `variancePartition::fitExtractVarPartModel()`.
+#' @param model_variables vector of \code{sample_annotation} column names used to
+#'   build a formula when `model_formula` is `NULL`.
 #' @param fill_the_missing numeric value determining how missing values should be
 #'   substituted. If \code{NULL}, features with missing values are excluded.
 #' @param ... Additional arguments forwarded to
@@ -706,14 +986,14 @@ plot_PVCA.df <- function(df, ...) UseMethod("plot_PVCA.df")
 #'     vp_res <- calculate_variance_partition(
 #'         matrix_test,
 #'         example_sample_annotation,
-#'         form = ~ Diet + Sex
+#'         model_formula = ~ Diet + Sex
 #'     )
 #' }
 calculate_variance_partition.default <- function(data_matrix, sample_annotation,
                                                  feature_id_col = "peptide_group_label",
                                                  sample_id_col = "FullRunName",
-                                                 form = NULL,
-                                                 factors_for_variance_partition = NULL,
+                                                 model_formula = NULL,
+                                                 model_variables = NULL,
                                                  fill_the_missing = -1,
                                                  ...) {
     alignment <- .pb_align_matrix_and_annotation(
@@ -729,24 +1009,24 @@ calculate_variance_partition.default <- function(data_matrix, sample_annotation,
     data_matrix <- alignment$data_matrix
     sample_annotation <- alignment$sample_annotation
 
-    if (is.null(form)) {
-        if (is.null(factors_for_variance_partition)) {
-            factors_for_variance_partition <- c(
+    if (is.null(model_formula)) {
+        if (is.null(model_variables)) {
+            model_variables <- c(
                 "MS_batch", "digestion_batch", "Diet",
                 "Sex", "Strain"
             )
         }
-        factors_for_variance_partition <- factors_for_variance_partition[
-            factors_for_variance_partition %in% names(sample_annotation)
+        model_variables <- model_variables[
+            model_variables %in% names(sample_annotation)
         ]
-        if (!length(factors_for_variance_partition)) {
-            stop("No valid variables supplied via 'form' or 'factors_for_variance_partition'.")
+        if (!length(model_variables)) {
+            stop("No valid variables supplied via 'model_formula' or 'model_variables'.")
         }
-        form <- reformulate(factors_for_variance_partition)
+        model_formula <- reformulate(model_variables)
     } else {
-        form <- as.formula(form)
-        vars_in_form <- all.vars(form)
-        missing_vars <- setdiff(vars_in_form, names(sample_annotation))
+        model_formula <- as.formula(model_formula)
+        vars_in_model <- all.vars(model_formula)
+        missing_vars <- setdiff(vars_in_model, names(sample_annotation))
         if (length(missing_vars) > 0) {
             stop(sprintf(
                 "Variables missing from sample_annotation: %s",
@@ -755,9 +1035,9 @@ calculate_variance_partition.default <- function(data_matrix, sample_annotation,
         }
     }
 
-    vars_in_form <- all.vars(form)
+    vars_in_model <- all.vars(model_formula)
     sample_annotation <- sample_annotation %>%
-        select(all_of(unique(c(sample_id_col, vars_in_form)))) %>%
+        select(all_of(unique(c(sample_id_col, vars_in_model)))) %>%
         mutate(across(where(is.POSIXct), as.numeric)) %>%
         as.data.frame(stringsAsFactors = FALSE) %>%
         remove_rownames() %>%
@@ -774,7 +1054,7 @@ calculate_variance_partition.default <- function(data_matrix, sample_annotation,
 
     var_part <- variancePartition::fitExtractVarPartModel(
         exprObj = data_matrix,
-        formula = form,
+        formula = model_formula,
         data = sample_annotation,
         ...
     )
@@ -887,17 +1167,17 @@ prepare_variance_partition_df.default <- function(data_matrix, sample_annotation
                                                   technical_factors = c("MS_batch", "instrument"),
                                                   biological_factors = c("cell_line", "drug_dose"),
                                                   fill_the_missing = -1,
-                                                  form = NULL,
-                                                  factors_for_variance_partition = NULL,
+                                                  model_formula = NULL,
+                                                  model_variables = NULL,
                                                   variance_threshold = NULL,
                                                   path_to_save_results = NULL,
                                                   ...) {
-    if (is.null(form)) {
-        if (is.null(factors_for_variance_partition)) {
-            factors_for_variance_partition <- c(technical_factors, biological_factors)
+    if (is.null(model_formula)) {
+        if (is.null(model_variables)) {
+            model_variables <- c(technical_factors, biological_factors)
         }
     } else {
-        factors_for_variance_partition <- NULL
+        model_variables <- NULL
     }
 
     vp_res <- calculate_variance_partition(
@@ -905,8 +1185,8 @@ prepare_variance_partition_df.default <- function(data_matrix, sample_annotation
         sample_annotation = sample_annotation,
         feature_id_col = feature_id_col,
         sample_id_col = sample_id_col,
-        form = form,
-        factors_for_variance_partition = factors_for_variance_partition,
+        model_formula = model_formula,
+        model_variables = model_variables,
         fill_the_missing = fill_the_missing,
         ...
     )
@@ -1034,6 +1314,7 @@ prepare_variance_partition_df <- function(data_matrix, ...) UseMethod("prepare_v
 #'
 #' @inheritParams proBatch
 #' @inheritParams prepare_variance_partition_df
+#' @inheritParams prepare_variance_partition_df
 #' @param colors_for_boxes four-item color vector, specifying colors for the
 #'   following categories: c('residual', 'biological', 'biol:techn', 'technical').
 #' @param plot_title optional plot title.
@@ -1072,8 +1353,8 @@ plot_variance_partition.default <- function(data_matrix, sample_annotation,
                                             technical_factors = c("MS_batch", "instrument"),
                                             biological_factors = c("cell_line", "drug_dose"),
                                             fill_the_missing = -1,
-                                            form = NULL,
-                                            factors_for_variance_partition = NULL,
+                                            model_formula = NULL,
+                                            model_variables = NULL,
                                             variance_threshold = NULL,
                                             colors_for_boxes = NULL,
                                             filename = NULL, width = NA, height = NA,
@@ -1095,8 +1376,8 @@ plot_variance_partition.default <- function(data_matrix, sample_annotation,
         technical_factors = technical_factors,
         biological_factors = biological_factors,
         fill_the_missing = fill_the_missing,
-        form = form,
-        factors_for_variance_partition = factors_for_variance_partition,
+        model_formula = model_formula,
+        model_variables = model_variables,
         variance_threshold = variance_threshold,
         path_to_save_results = path_to_save_results,
         ...
