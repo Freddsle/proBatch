@@ -65,6 +65,44 @@ test_that("plot_intragroup_variation.default forwards matrices to PRONE", {
     expect_true(isTRUE(captured$pcv$diff))
 })
 
+test_that("plot_intragroup_variation.default honors fill_the_missing", {
+    testthat::skip_if_not_installed("PRONE")
+
+    dm <- matrix(
+        c(NA, 25, 50, 75, 100, 125),
+        nrow = 2,
+        dimnames = list(
+            c("feat1", "feat2"),
+            c("s1", "s2", "s3")
+        )
+    )
+    sample_ann <- data.frame(
+        FullRunName = c("s1", "s2", "s3"),
+        Condition = c("A", "B", "A"),
+        stringsAsFactors = FALSE
+    )
+
+    captured <- new.env(parent = emptyenv())
+    testthat::local_mocked_bindings(
+        plot_intragroup_correlation = function(se, ain, condition, method) {
+            captured$assay <- SummarizedExperiment::assay(se, ain)
+            mock_intragroup_plot("cor")
+        },
+        .package = "PRONE"
+    )
+
+    plot_intragroup_variation(
+        dm,
+        sample_annotation = sample_ann,
+        group_col = "Condition",
+        metrics = "correlation",
+        fill_the_missing = 0
+    )
+
+    expect_false(anyNA(captured$assay))
+    expect_identical(captured$assay[1, 1], 0)
+})
+
 test_that("plot_intragroup_variation.default handles multiple grouping columns", {
     testthat::skip_if_not_installed("PRONE")
 
