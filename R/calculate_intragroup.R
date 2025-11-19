@@ -30,6 +30,9 @@
 #' @param path_to_save_results Optional directory where the per-metric data are
 #'   written as CSV files. When operating on a `ProBatchFeatures` instance, set
 #'   this to a parent directory; one sub-directory per assay is created.
+#' @param fill_the_missing Missing-value policy applied to `data_matrix` before
+#'   calling PRONE. Defaults to `FALSE` (keep missing values). See
+#'   [handle_missing_values()] for the supported options.
 #' @param filename Optional output path for the combined plot of all metrics
 #'   (single assay).
 #' @param base_size Base font size used when annotating metric titles.
@@ -54,6 +57,7 @@ plot_intragroup_variation.default <- function(data_matrix,
                                               group_col,
                                               feature_id_col = "peptide_group_label",
                                               sample_id_col = "FullRunName",
+                                              fill_the_missing = FALSE,
                                               metrics = c("correlation", "PCV", "PMAD", "PEV"),
                                               correlation_method = c("pearson", "spearman", "kendall"),
                                               pcv_diff = FALSE,
@@ -92,6 +96,7 @@ plot_intragroup_variation.default <- function(data_matrix,
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
         feature_id_col = feature_id_col,
+        fill_the_missing = fill_the_missing,
         group_cols = group_cols,
         assay_label = assay_label,
         assay_display = plot_title,
@@ -126,6 +131,7 @@ plot_intragroup_variation.ProBatchFeatures <- function(data_matrix,
                                                        group_col,
                                                        feature_id_col = "peptide_group_label",
                                                        sample_id_col = "FullRunName",
+                                                       fill_the_missing = FALSE,
                                                        plot_title = NULL,
                                                        return_gridExtra = FALSE,
                                                        plot_ncol = NULL,
@@ -210,6 +216,7 @@ plot_intragroup_variation.ProBatchFeatures <- function(data_matrix,
             sample_annotation = sample_ann,
             sample_id_col = sample_id_col,
             feature_id_col = feature_id_col,
+            fill_the_missing = fill_the_missing,
             group_cols = group_cols,
             assay_label = assay_nm,
             assay_display = titles[[i]],
@@ -260,7 +267,8 @@ plot_intragroup_variation <- function(data_matrix, ...) UseMethod("plot_intragro
                                           sample_annotation,
                                           sample_id_col,
                                           feature_id_col,
-                                          group_col) {
+                                          group_col,
+                                          fill_the_missing = FALSE) {
     alignment <- .pb_align_matrix_and_annotation(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
@@ -281,6 +289,13 @@ plot_intragroup_variation <- function(data_matrix, ...) UseMethod("plot_intragro
         }
     }
     aligned_matrix <- check_feature_id_col_in_dm(feature_id_col, alignment$data_matrix)
+    if (!isFALSE(fill_the_missing)) {
+        aligned_matrix <- .pb_handle_missing_wrapper(
+            data_matrix = aligned_matrix,
+            warning_message = "Intragroup diagnostics cannot operate with missing values; adjust `fill_the_missing` to control preprocessing.",
+            fill_the_missing = fill_the_missing
+        )
+    }
     list(
         data_matrix = aligned_matrix,
         sample_annotation = annotation,
@@ -391,7 +406,7 @@ plot_intragroup_variation <- function(data_matrix, ...) UseMethod("plot_intragro
         stop("Provide exactly one metric per call when plotting intragroup variation.")
     }
     metric_choice <- metric_choice[[1]]
-    correlation_method <- match.arg(correlation_method)
+    correlation_method <- match.arg(correlation_method, c("pearson", "spearman", "kendall"))
 
     metric_titles <- c(
         correlation = "Intragroup correlation",
@@ -417,6 +432,7 @@ plot_intragroup_variation <- function(data_matrix, ...) UseMethod("plot_intragro
                                           sample_annotation,
                                           sample_id_col,
                                           feature_id_col,
+                                          fill_the_missing,
                                           group_cols,
                                           assay_label,
                                           assay_display,
@@ -429,7 +445,8 @@ plot_intragroup_variation <- function(data_matrix, ...) UseMethod("plot_intragro
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
         feature_id_col = feature_id_col,
-        group_col = group_cols
+        group_col = group_cols,
+        fill_the_missing = fill_the_missing
     )
     aligned_matrix <- prep$data_matrix
     aligned_annotation <- prep$sample_annotation
@@ -512,7 +529,7 @@ plot_intragroup_variation <- function(data_matrix, ...) UseMethod("plot_intragro
     }
     mapping <- gg$mapping
     value_col <- NULL
-    if (!is.null(mapping$y)) {
+    if (!is.null(mapping$y) && rlang::is_symbol(mapping$y)) {
         value_col <- rlang::as_name(mapping$y)
     }
     if (is.null(value_col) || !value_col %in% names(data)) {
