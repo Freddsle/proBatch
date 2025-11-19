@@ -971,7 +971,7 @@ plot_PVCA.df <- function(df, ...) UseMethod("plot_PVCA.df")
 #' @param fill_the_missing numeric value determining how missing values should be
 #'   substituted. If \code{NULL}, features with missing values are excluded.
 #' @param ... Additional arguments forwarded to
-#'   `variancePartition::fitExtractVarPartModel()`.
+#'   `variancePartition::fitExtractVarPartModel()` (e.g., `BPPARAM`).
 #'
 #' @return data frame with columns \code{feature_id}, \code{label} and
 #'   \code{variance_explained}.
@@ -988,6 +988,8 @@ plot_PVCA.df <- function(df, ...) UseMethod("plot_PVCA.df")
 #'         example_sample_annotation,
 #'         model_formula = ~ Diet + Sex
 #'     )
+#'     # Additional arguments (e.g., BPPARAM = BiocParallel::SnowParam(4)) can be
+#'     # supplied via `...` and will be forwarded to variancePartition.
 #' }
 calculate_variance_partition.default <- function(data_matrix, sample_annotation,
                                                  feature_id_col = "peptide_group_label",
@@ -996,6 +998,8 @@ calculate_variance_partition.default <- function(data_matrix, sample_annotation,
                                                  model_variables = NULL,
                                                  fill_the_missing = -1,
                                                  ...) {
+    fit_args <- list(...)
+
     alignment <- .pb_align_matrix_and_annotation(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
@@ -1052,12 +1056,13 @@ calculate_variance_partition.default <- function(data_matrix, sample_annotation,
     data_matrix <- as.matrix(data_matrix)
     data_matrix <- data_matrix[, rownames(sample_annotation), drop = FALSE]
 
-    var_part <- variancePartition::fitExtractVarPartModel(
+    fit_call <- c(list(
         exprObj = data_matrix,
         formula = model_formula,
-        data = sample_annotation,
-        ...
-    )
+        data = sample_annotation
+    ), fit_args)
+
+    var_part <- do.call(variancePartition::fitExtractVarPartModel, fit_call)
 
     var_part_df <- as.data.frame(var_part, stringsAsFactors = FALSE)
     if (!nrow(var_part_df)) {
@@ -1144,7 +1149,9 @@ calculate_variance_partition <- function(data_matrix, ...) UseMethod("calculate_
 #'   summed per feature and reported as a single group.
 #' @param path_to_save_results optional path to save the variance partition
 #'   results as CSV.
-#' @param ... Additional arguments forwarded between methods.
+#' @param ... Additional arguments forwarded to `calculate_variance_partition()`
+#'   and ultimately to `variancePartition::fitExtractVarPartModel()` (e.g.,
+#'   `BPPARAM`).
 #'
 #' @return data frame ready for plotting variance partition distributions.
 #' @export
@@ -1330,7 +1337,8 @@ prepare_variance_partition_df <- function(data_matrix, ...) UseMethod("prepare_v
 #'   a list of plots (for multi-assay objects).
 #' @param plot_ncol number of columns when arranging multiple assay plots.
 #' @param path_to_save_results optional path to save the prepared results as CSV.
-#' @param ... Additional arguments forwarded to `prepare_variance_partition_df()`.
+#' @param ... Additional arguments forwarded to `prepare_variance_partition_df()`
+#'   (and further to `variancePartition::fitExtractVarPartModel()`).
 #'
 #' @return ggplot object (or list of ggplot objects for multi-assay inputs).
 #' @export
@@ -1557,7 +1565,7 @@ plot_variance_partition <- function(data_matrix, ...) UseMethod("plot_variance_p
 #' @inheritParams plot_variance_partition
 #' @param df data frame produced by `prepare_variance_partition_df()` or a
 #'   compatible structure.
-#' @param ... Additional arguments ignored or forwarded between methods.
+#' @param ... Additional arguments ignored.
 #'
 #' @return ggplot object
 #' @export
