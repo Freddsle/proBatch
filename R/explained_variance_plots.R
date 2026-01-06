@@ -1030,7 +1030,6 @@ plot_PVCA.df.ProBatchFeatures <- function(df, pbf_name = NULL,
         ), prepare_dots)
         pvca_res <- do.call(prepare_PVCA_df.default, prepare_args)
         pvca_res_list[[i]] <- pvca_res
-
     }
 
     stacked_requested <- isTRUE(stacked_bar)
@@ -1317,6 +1316,7 @@ calculate_variance_partition <- function(data_matrix, ...) UseMethod("calculate_
 #'         variance_threshold = 0.05
 #'     )
 #' }
+#' @name prepare_variance_partition_df
 prepare_variance_partition_df.default <- function(data_matrix, sample_annotation,
                                                   feature_id_col = "peptide_group_label",
                                                   sample_id_col = "FullRunName",
@@ -1492,6 +1492,7 @@ prepare_variance_partition_df <- function(data_matrix, ...) UseMethod("prepare_v
 #' @param ... Additional arguments forwarded to `prepare_variance_partition_df()`
 #'   (and further to `variancePartition::fitExtractVarPartModel()`).
 #'
+#' @name plot_variance_partition
 #' @return ggplot object (or list of ggplot objects for multi-assay inputs).
 #' @export
 #'
@@ -1734,6 +1735,7 @@ plot_variance_partition <- function(data_matrix, ...) UseMethod("plot_variance_p
 #'   compatible structure.
 #' @param ... Additional arguments ignored.
 #'
+#' @name plot_variance_partition.df
 #' @return ggplot object
 #' @export
 plot_variance_partition.df.default <- function(df,

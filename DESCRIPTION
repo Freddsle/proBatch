@@ -45,6 +45,7 @@ Imports:
     preprocessCore,
     purrr,
     pvca,
+    PRONE,
     RColorBrewer,
     rlang,
     scales,
@@ -57,6 +58,7 @@ Imports:
     utils,
     umap,
     viridis,
+    variancePartition,
     wesanderson,
     WGCNA
 Suggests: 

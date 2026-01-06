@@ -476,12 +476,22 @@ convert_annotation_classes <- function(df, factor_columns, numeric_columns) {
 color_list_to_df <- function(color_list, sample_annotation,
                              sample_id_col = "FullRunName") {
     factors_to_map <- intersect(names(sample_annotation), names(color_list))
+    n_annotation_rows <- if (!is.null(sample_annotation)) nrow(sample_annotation) else 0
+    sample_id_values <- if (!is.null(sample_annotation)) sample_annotation[[sample_id_col]] else NULL
+    if (is.null(sample_id_values)) {
+        sample_id_values <- if (!is.null(sample_annotation)) rownames(sample_annotation) else NULL
+    }
+    if (is.null(sample_id_values)) {
+        sample_id_values <- seq_len(n_annotation_rows)
+    } else if (length(sample_id_values) != n_annotation_rows) {
+        sample_id_values <- seq_len(n_annotation_rows)
+    }
     if (!setequal(names(sample_annotation), names(color_list))) {
         warning("color list and sample annotation have different factors,
             using only intersection in color scheme!")
     }
     if (length(factors_to_map) == 0) {
-        color_df <- data.frame(row.names = sample_annotation[[sample_id_col]])
+        color_df <- data.frame(row.names = sample_id_values)
         return(color_df)
     }
     list_df <- lapply(factors_to_map, function(col_name) {
@@ -500,7 +510,7 @@ color_list_to_df <- function(color_list, sample_annotation,
     })
     names(list_df) <- factors_to_map
     color_df <- as.data.frame(do.call(cbind, list_df))
-    rownames(color_df) <- sample_annotation[[sample_id_col]]
+    rownames(color_df) <- sample_id_values
     return(color_df)
 }
 

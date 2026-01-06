@@ -237,7 +237,6 @@ test_that("impute_with_omicsGMF(ProBatchFeatures) calls .pb_apply_step with corr
 })
 
 
-
 test_that("impute_with_omicsGMF() errors when ncomponents is missing", {
     m <- matrix(1, 2, 2)
     expect_error(

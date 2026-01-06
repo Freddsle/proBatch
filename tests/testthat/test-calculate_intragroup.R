@@ -278,7 +278,7 @@ test_that("plot_intragroup_variation.default validates intragroup column", {
             sample_annotation = sample_ann,
             group_col = "MissingCol"
         ),
-        "group_col value\(s\) not found",
+        "group_col value\\(s\\) not found",
         fixed = FALSE
     )
 
