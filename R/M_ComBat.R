@@ -8,14 +8,14 @@
 #'   purified plasma cell gene expression microarrays with modified ComBat.
 #'   BMC Bioinformatics 16, 63 (2015). https://doi.org/10.1186/s12859-015-0478-3
 #'
-#'' @title Batch effect correction with modified ComBat (m-ComBat)
+#' @title Batch effect correction with modified ComBat (m-ComBat)
 #' @description Removes batch-associated linear effects for plotting/unsupervised
 #'   tasks. Works for long or wide via \code{format}. Use \code{covariates_cols}
 #'   to keep biological effects in the design (not removed).
 #' @inheritParams correct_with_ComBat
 #' @param covariates_cols optional sample_annotation columns for the design matrix.
 #'   These covariates will be preserved during batch correction.
-#' @return Matrix if \code{format="wide"}, data.frame if \code{"format="long"} with batch effects removed
+#' @return Matrix if \code{format="wide"}, data.frame if \code{format="long"} with batch effects removed
 #' @seealso \code{\link[limma]{removeBatchEffect}}
 #' @examples
 #' data(
@@ -234,4 +234,3 @@ correct_with_mComBat <- function(
 
     return(bayesdata)
 }
-################################################################################

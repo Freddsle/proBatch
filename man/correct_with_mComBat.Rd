@@ -2,15 +2,7 @@
 % Please edit documentation in R/M_ComBat.R
 \name{correct_with_mComBat}
 \alias{correct_with_mComBat}
-\title{The modification to ComBat by Johson, Rabinovic, and Li (Biostatistics, 2007)
-to shift data to mean and variance of subset of samples rather
-than grand mean and pooled variance (http://www.biomedcentral.com/1471-2105/16/63).
-The m-ComBat method was originally developed by Caleb K. Stein in 2014 (https://github.com/SteinCK/M-ComBat)
-and have been adapted to use inside proBatch package.
-Reference:
-  Stein, C.K., Qu, P., Epstein, J. et al. Removing batch effects from
-  purified plasma cell gene expression microarrays with modified ComBat.
-  BMC Bioinformatics 16, 63 (2015). https://doi.org/10.1186/s12859-015-0478-3}
+\title{Batch effect correction with modified ComBat (m-ComBat)}
 \usage{
 correct_with_mComBat(
   x,
@@ -80,7 +72,7 @@ value for imputed values (requant values).}
 to center the data (https://doi.org/10.1186/s12859-015-0478-3).}
 }
 \value{
-Matrix if \code{format="wide"}, data.frame if \code{"format="long"} with batch effects removed
+Matrix if \code{format="wide"}, data.frame if \code{format="long"} with batch effects removed
 }
 \description{
 Removes batch-associated linear effects for plotting/unsupervised
@@ -88,7 +80,15 @@ Removes batch-associated linear effects for plotting/unsupervised
   to keep biological effects in the design (not removed).
 }
 \details{
-' @title Batch effect correction with modified ComBat (m-ComBat)
+The modification to ComBat by Johson, Rabinovic, and Li (Biostatistics, 2007)
+to shift data to mean and variance of subset of samples rather
+than grand mean and pooled variance (http://www.biomedcentral.com/1471-2105/16/63).
+The m-ComBat method was originally developed by Caleb K. Stein in 2014 (https://github.com/SteinCK/M-ComBat)
+and have been adapted to use inside proBatch package.
+Reference:
+  Stein, C.K., Qu, P., Epstein, J. et al. Removing batch effects from
+  purified plasma cell gene expression microarrays with modified ComBat.
+  BMC Bioinformatics 16, 63 (2015). https://doi.org/10.1186/s12859-015-0478-3
 }
 \examples{
 data(
