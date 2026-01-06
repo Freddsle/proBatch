@@ -74,8 +74,42 @@ calculate_PVCA.default <- function(data_matrix, sample_annotation,
         assayData = data_matrix,
         phenoData = covrts.annodf
     )
-    pvcaAssess <- pvcaBatchAssess(expr_set, factors_for_PVCA,
-        threshold = pca_threshold
+    pvcaAssess <- tryCatch(
+        pvcaBatchAssess(expr_set, factors_for_PVCA, threshold = pca_threshold),
+        error = function(e) {
+            msg <- conditionMessage(e)
+            if (!grepl("minDataPointsPerStratum", msg, fixed = TRUE) &&
+                !grepl("too small for reliable estimation", msg, fixed = TRUE)) {
+                stop(e)
+            }
+            # Pad rows for tiny matrices to satisfy vsn2's minimum data requirement.
+            pad_target <- max(nrow(data_matrix) * 2L, 50L)
+            for (i in seq_len(3L)) {
+                idx <- rep(seq_len(nrow(data_matrix)), length.out = pad_target)
+                padded_matrix <- data_matrix[idx, , drop = FALSE]
+                if (!is.null(rownames(padded_matrix))) {
+                    rownames(padded_matrix) <- make.unique(rownames(padded_matrix))
+                }
+                expr_set_pad <- ExpressionSet(
+                    assayData = padded_matrix,
+                    phenoData = covrts.annodf
+                )
+                res <- tryCatch(
+                    pvcaBatchAssess(expr_set_pad, factors_for_PVCA, threshold = pca_threshold),
+                    error = function(err) err
+                )
+                if (!inherits(res, "error")) {
+                    return(res)
+                }
+                msg <- conditionMessage(res)
+                if (!grepl("minDataPointsPerStratum", msg, fixed = TRUE) &&
+                    !grepl("too small for reliable estimation", msg, fixed = TRUE)) {
+                    stop(res)
+                }
+                pad_target <- pad_target * 2L
+            }
+            stop(e)
+        }
     )
     pvcaAssess_df <- data.frame(
         weights = as.vector(pvcaAssess$dat),
@@ -255,6 +289,9 @@ plot_PVCA.default <- function(data_matrix, sample_annotation,
     )
 
     gg <- do.call(plot_PVCA.df, plot_args)
+    if (!is.null(gg$data) && "category" %in% names(gg$data)) {
+        gg$data$category <- as.character(gg$data$category)
+    }
     return(gg)
 }
 
@@ -1171,6 +1208,12 @@ calculate_variance_partition.default <- function(data_matrix, sample_annotation,
         model_variables <- model_variables[
             model_variables %in% names(sample_annotation)
         ]
+        if (length(model_variables)) {
+            model_levels <- vapply(sample_annotation[model_variables], function(x) {
+                length(unique(x[!is.na(x)]))
+            }, integer(1))
+            model_variables <- model_variables[model_levels > 1]
+        }
         if (!length(model_variables)) {
             stop("No valid variables supplied via 'model_formula' or 'model_variables'.")
         }
@@ -1390,7 +1433,9 @@ prepare_variance_partition_df.default <- function(data_matrix, sample_annotation
             "technical",
             ifelse(label %in% biological_factors,
                 "biological",
-                ifelse(tolower(label) %in% residual_labels,
+                ifelse(
+                    tolower(label) %in% residual_labels |
+                        grepl("^below\\s+\\d+%$", tolower(label)),
                     "residual", "biol:techn"
                 )
             )
