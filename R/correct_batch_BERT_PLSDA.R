@@ -723,7 +723,7 @@ correct_with_PLSDA_batch <- function(x,
     )
 
     idx <- which(ycum >= 0.99)[1]
-    value <- if (length(idx)) idx else ncomp_bat
+    value <- if (length(idx) && !is.na(idx)) idx else ncomp_bat
     message("Suggesting ncomp_bat = ", value, " (of maximum ", ncomp_bat, "). Rerun with user-supplied ncomp_bat if needed.")
     as.integer(value)
 }

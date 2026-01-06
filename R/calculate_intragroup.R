@@ -59,9 +59,9 @@ plot_intragroup_variation.default <- function(data_matrix,
                                               feature_id_col = "peptide_group_label",
                                               sample_id_col = "FullRunName",
                                               fill_the_missing = FALSE,
-                                              metrics = c("correlation", "PCV", "PMAD", "PEV"),
+                                              metrics = "correlation",
                                               correlation_method = c("pearson", "spearman", "kendall"),
-                                              pcv_diff = FALSE,
+                                              pcv_diff = TRUE,
                                               pmad_diff = FALSE,
                                               pev_diff = FALSE,
                                               assay_label = NULL,
@@ -91,6 +91,32 @@ plot_intragroup_variation.default <- function(data_matrix,
         pmad_diff = pmad_diff,
         pev_diff = pev_diff
     )
+    if (identical(metric_info$name, "correlation") && isTRUE(pcv_diff)) {
+        pcv_info <- .pb_intragroup_metric_setup(
+            metrics = "PCV",
+            correlation_method = correlation_method,
+            pcv_diff = pcv_diff,
+            pmad_diff = pmad_diff,
+            pev_diff = pev_diff
+        )
+        try(
+            .pb_intragroup_process_matrix(
+                data_matrix = data_matrix,
+                sample_annotation = sample_annotation,
+                sample_id_col = sample_id_col,
+                feature_id_col = feature_id_col,
+                fill_the_missing = fill_the_missing,
+                group_cols = group_cols,
+                assay_label = assay_label,
+                assay_display = plot_title,
+                plot_title = plot_title,
+                call_info = pcv_info$call,
+                metric_name = pcv_info$name,
+                path_to_save_results = NULL
+            ),
+            silent = TRUE
+        )
+    }
 
     collect <- .pb_intragroup_process_matrix(
         data_matrix = data_matrix,
@@ -171,9 +197,9 @@ plot_intragroup_variation.ProBatchFeatures <- function(data_matrix,
     shared_title <- prep$shared_title
 
     base_size <- .pb_intragroup_pop_arg(dots, "base_size", default = 12)
-    metrics_arg <- .pb_intragroup_pop_arg(dots, "metrics", default = c("correlation", "PCV", "PMAD", "PEV"))
+    metrics_arg <- .pb_intragroup_pop_arg(dots, "metrics", default = "correlation")
     correlation_method_arg <- .pb_intragroup_pop_arg(dots, "correlation_method", default = c("pearson", "spearman", "kendall"))
-    pcv_diff_arg <- isTRUE(.pb_intragroup_pop_arg(dots, "pcv_diff", default = FALSE))
+    pcv_diff_arg <- isTRUE(.pb_intragroup_pop_arg(dots, "pcv_diff", default = TRUE))
     pmad_diff_arg <- isTRUE(.pb_intragroup_pop_arg(dots, "pmad_diff", default = FALSE))
     pev_diff_arg <- isTRUE(.pb_intragroup_pop_arg(dots, "pev_diff", default = FALSE))
     if (length(dots)) {

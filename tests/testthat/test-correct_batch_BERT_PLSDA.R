@@ -82,28 +82,75 @@ test_that("correct_with_BERT(wide): preserves dimnames and returns numeric matri
 # -------------------------
 
 
-test_that(, {
-    # drop NA rows to avoid triggering validation errors
+test_that("correct_with_PLSDA_batch(wide): forwards args to PLSDAbatch (mocked)", {
+    testthat::skip_if_not_installed("PLSDAbatch")
 
+    m <- matrix(
+        c(
+            1, 2, 3, 4,
+            5, 6, 7, 8,
+            9, 10, 11, 12
+        ),
+        nrow = 3,
+        dimnames = list(paste0("f", 1:3), paste0("s", 1:4))
+    )
+    sa <- data.frame(
+        FullRunName = c("s4", "s1", "s2", "s3"),
+        MS_batch = c("B2", "B1", "B1", "B2"),
+        Sex = c("F", "F", "F", "M"),
+        stringsAsFactors = FALSE
+    )
 
-    # Capture arguments reaching PLSDAbatch::PLSDA_batch
+    captured <- new.env(parent = emptyenv())
+    captured$calls <- list()
 
+    testthat::local_mocked_bindings(
+        .select_ncomp_trt = function(...) 2L,
+        .select_keepX_trt = function(X, Y.trt, ncomp_trt, ...) rep(1L, ncomp_trt),
+        .package = "proBatch"
+    )
 
-    # samples x features
-    # record what the wrapper passed
-
-
-    # minimal structure used by .select_ncomp_bat()
-
+    testthat::local_mocked_bindings(
+        PLSDA_batch = function(X, Y.trt, Y.bat,
+                               ncomp.trt, ncomp.bat,
+                               keepX.trt = NULL, keepX.bat = NULL,
+                               max.iter = NULL, tol = NULL,
+                               near.zero.var = NULL, balance = NULL, ...) {
+            captured$calls[[length(captured$calls) + 1L]] <- list(
+                X = X,
+                Y.trt = Y.trt,
+                Y.bat = Y.bat,
+                ncomp.trt = ncomp.trt,
+                ncomp.bat = ncomp.bat,
+                keepX.trt = keepX.trt,
+                keepX.bat = keepX.bat,
+                max.iter = max.iter,
+                tol = tol,
+                near.zero.var = near.zero.var,
+                balance = balance
+            )
+            list(
+                X.nobatch = X,
+                explained_variance.bat = list(
+                    X = rep(0.5, ncomp.bat),
+                    Y = rep(0.5, ncomp.bat)
+                )
+            )
+        },
+        .package = "PLSDAbatch"
+    )
 
     # 1) basic wide run (auto-select ncomp_trt/bat; unbalanced=FALSE expected)
-    out <- correct_with_PLSDA_batch(,
+    out <- correct_with_PLSDA_batch(
+        x = m, sample_annotation = sa,
+        sample_id_col = "FullRunName",
         batch_col = "MS_batch",
         effect_col = "Sex",
         format = "wide"
     )
-
     expect_matrix_like(out, m)
+    last_call <- tail(captured$calls, 1)[[1]]
+    expect_false(last_call$balance)
 
     # 2) effect_col = NULL (should pass Y.trt = NULL into PLSDAbatch)
     out2 <- correct_with_PLSDA_batch(
@@ -114,6 +161,8 @@ test_that(, {
         format = "wide"
     )
     expect_matrix_like(out2, m)
+    last_call <- tail(captured$calls, 1)[[1]]
+    expect_null(last_call$Y.trt)
 
     # 3) sPLSDA path with tuning (keepX_trt inferred via tune.splsda)
     out3 <- correct_with_PLSDA_batch(
@@ -126,6 +175,8 @@ test_that(, {
         format = "wide"
     )
     expect_matrix_like(out3, m)
+    last_call <- tail(captured$calls, 1)[[1]]
+    expect_equal(last_call$keepX.trt, rep(1L, 2L))
 })
 
 test_that("correct_with_PLSDA_batch(wide): basic validation errors are informative", {

@@ -60,6 +60,19 @@ calculate_PVCA.default <- function(data_matrix, sample_annotation,
         as.data.frame() %>%
         remove_rownames() %>%
         column_to_rownames(var = sample_id_col)
+    if (!is.null(factors_for_PVCA)) {
+        factors_for_PVCA <- unique(factors_for_PVCA)
+        factors_for_PVCA <- factors_for_PVCA[factors_for_PVCA %in% names(sample_annotation)]
+        if (length(factors_for_PVCA)) {
+            level_counts <- vapply(sample_annotation[factors_for_PVCA], function(x) {
+                length(unique(x[!is.na(x)]))
+            }, integer(1))
+            factors_for_PVCA <- factors_for_PVCA[level_counts > 1L]
+        }
+        if (!length(factors_for_PVCA)) {
+            stop("No PVCA factors with more than one sampled level.")
+        }
+    }
     data_matrix <- check_feature_id_col_in_dm(feature_id_col, data_matrix)
 
     data_matrix <- .pb_handle_missing_wrapper(
@@ -1842,6 +1855,7 @@ plot_variance_partition.df.default <- function(df,
 
     if (!is.null(y_limits)) {
         gg <- gg + coord_cartesian(ylim = y_limits)
+        gg$coordinates$ylim <- y_limits
     }
 
     if (!is.null(theme) && theme == "classic") {
@@ -1881,6 +1895,7 @@ plot_variance_partition.df.default <- function(df,
                     y = median_value,
                     label = sprintf("%.2f", median_value)
                 ),
+                inherit.aes = FALSE,
                 nudge_y = ifelse(medians$median_value > (upper_limit - median_position),
                     -median_position,
                     median_position
