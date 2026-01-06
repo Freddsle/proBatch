@@ -19,7 +19,7 @@ biocViews: BatchEffect, Normalization, Preprocessing, Software, MassSpectrometry
 License: GPL-3
 URL: https://github.com/Freddsle/proBatch
 BugReports: https://github.com/Freddsle/proBatch/issues
-Depends: R (>= 4.4.3)   # temporary dependency to avoid R 4.5.0 related issues
+Depends: R (>= 4.4.3)
 Encoding: UTF-8
 LazyData: false
 Imports:
