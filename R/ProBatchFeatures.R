@@ -973,6 +973,9 @@ pb_transform <- function(
         step_label <- .pb_step_label(step, par)
         is_fast <- .pb_is_fast_step(step_label, fast_steps)
         store_this <- if (store_intermediate) TRUE else if (is_fast) store_fast_steps else TRUE
+        if (k == length(steps) && !is.null(final_name) && !store_this) {
+            store_this <- TRUE
+        }
 
         out <- .pb_apply_step(
             object = object, from = cur_from,
@@ -990,6 +993,9 @@ pb_transform <- function(
     if (!is.null(final_name) && !is.null(last_assay) && last_assay %in% names(object)) {
         names(object)[match(last_assay, names(object))] <- final_name
         last_assay <- final_name
+        if (nrow(object@oplog)) {
+            object@oplog$to[nrow(object@oplog)] <- final_name
+        }
     }
     object
 }
