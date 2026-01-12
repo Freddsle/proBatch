@@ -1415,7 +1415,14 @@ correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
     )
 }
 
-.mask_imputed_measure <- function(df, measure_col, qual_col, qual_value, temp_suffix = "temp") {
+.mask_imputed_measure <- function(df, measure_col, qual_col, qual_value, temp_suffix = "temp", df_long = NULL) {
+    # Backward/forward compatibility: accept either `df` or `df_long` argument
+    if (is.null(df) && !is.null(df_long)) {
+        df <- df_long
+    } else if (!is.null(df_long) && !identical(df, df_long)) {
+        stop("Provide either `df` or `df_long` (or ensure they are identical).")
+    }
+
     if (is.null(qual_col)) {
         return(df)
     }
@@ -1423,7 +1430,11 @@ correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
         stop("imputed value flag column (qual_col) is not in the data frame!")
     }
     temp_measure_col <- paste0(temp_suffix, "_", measure_col)
-    df[[temp_measure_col]] <- ifelse(df[[qual_col]] == qual_value, NA, df[[measure_col]])
+    df[[temp_measure_col]] <- ifelse(
+        df[[qual_col]] == qual_value,
+        NA,
+        df[[measure_col]]
+    )
     attr(df, "temp_measure_col") <- temp_measure_col
     df
 }

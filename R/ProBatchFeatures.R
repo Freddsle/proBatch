@@ -854,6 +854,7 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 #' @param params list of parameters for fun
 #' @param store logical: store result as new assay?
 #' @param new_level optional level label for the new assay (defaults to level parsed from 'from')
+#' @param to_override optional assay name override for the stored result
 #' @param backend "memory","hdf5","auto"
 #' @param hdf5_path optional filepath for HDF5Array
 #' @return list(object=updated, assay=assay_name_or_NULL, matrix=the_result_matrix)
@@ -862,7 +863,7 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 #' @noRd
 .pb_apply_step <- function(
   object, from, step, fun, params = list(),
-  store = TRUE, new_level = NULL,
+  store = TRUE, new_level = NULL, to_override = NULL,
   backend = c("auto", "memory", "hdf5"),
   hdf5_path = NULL, .base_m = NULL
 ) {
@@ -875,7 +876,7 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
     from_pipeline <- if (length(from_parts) >= 2) from_parts[2] else "raw"
     prev_tokens <- if (identical(from_pipeline, "raw")) "raw" else rev(strsplit(from_pipeline, "_on_", fixed = TRUE)[[1]])
     new_pipeline <- .pb_make_pipeline_name(c(prev_tokens, step))
-    to <- .pb_assay_name(new_level, new_pipeline)
+    to <- to_override %||% .pb_assay_name(new_level, new_pipeline)
 
     # Avoid duplicate identical entries
     fun_name <- if (is.character(fun)) fun else step
@@ -977,10 +978,12 @@ pb_transform <- function(
             store_this <- TRUE
         }
 
+        use_final_name <- k == length(steps) && !is.null(final_name)
         out <- .pb_apply_step(
             object = object, from = cur_from,
             step = step_label, fun = fun, params = par,
             store = store_this, new_level = if (k == length(steps)) level else level,
+            to_override = if (use_final_name) final_name else NULL,
             backend = backend, hdf5_path = hdf5_path,
             .base_m = base_m
         )
@@ -990,7 +993,8 @@ pb_transform <- function(
         if (store_this) cur_from <- last_assay
     }
     # Rename final assay if requested and it exists
-    if (!is.null(final_name) && !is.null(last_assay) && last_assay %in% names(object)) {
+    if (!is.null(final_name) && !is.null(last_assay) && last_assay %in% names(object) &&
+        !identical(last_assay, final_name)) {
         names(object)[match(last_assay, names(object))] <- final_name
         last_assay <- final_name
         if (nrow(object@oplog)) {

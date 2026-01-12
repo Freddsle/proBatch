@@ -821,3 +821,51 @@ test_that("pb_assay_matrix and pb_as_long compute fast logged assays on demand",
     ord <- order(long_fast$Feature, long_fast$Sample)
     expect_equal(long_fast[ord, ], manual_long[ord, ], ignore_attr = TRUE)
 })
+
+test_that("pb_transform honors final_name without colliding with pipeline-derived assay", {
+    data(example_proteome_matrix, package = "proBatch")
+    data(example_sample_annotation, package = "proBatch")
+
+    pbf <- ProBatchFeatures(
+        data_matrix = example_proteome_matrix,
+        sample_annotation = example_sample_annotation,
+        sample_id_col = "FullRunName",
+        name = "raw"
+    )
+
+    pbf <- pb_transform(
+        pbf,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    )
+
+    pbf <- pb_transform(
+        pbf,
+        from = "feature::log2_on_raw",
+        steps = "medianNorm",
+        params_list = list(list(
+            sample_annotation = example_sample_annotation,
+            sample_id_col = "FullRunName"
+        ))
+    )
+
+    expect_true("feature::medianNorm_on_log2_on_raw" %in% names(pbf))
+
+    expect_silent({
+        pbf <- pb_transform(
+            pbf,
+            from = "feature::log2_on_raw",
+            steps = "medianNorm",
+            final_name = "feature::medianNorm_zeroNA",
+            params_list = list(list(
+                sample_annotation = example_sample_annotation,
+                sample_id_col = "FullRunName",
+                fill_the_missing = 0
+            ))
+        )
+    })
+
+    expect_true("feature::medianNorm_on_log2_on_raw" %in% names(pbf))
+    expect_true("feature::medianNorm_zeroNA" %in% names(pbf))
+})
