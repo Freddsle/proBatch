@@ -891,7 +891,13 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
         }
     }
 
-    base_m <- if (!is.null(.base_m)) .base_m else pb_assay_matrix(object, assay = from)
+    base_m <- if (!is.null(.base_m)) {
+        .base_m
+    } else {
+        suppressMessages(
+            pb_assay_matrix(object, assay = from)
+        )
+    }
 
     f <- .pb_get_step_fun(fun)
     params <- .pb_enrich_step_params(object, from, f, params)
@@ -973,9 +979,13 @@ pb_transform <- function(
 
         step_label <- .pb_step_label(step, par)
         is_fast <- .pb_is_fast_step(step_label, fast_steps)
-        store_this <- if (store_intermediate) TRUE else if (is_fast) store_fast_steps else TRUE
-        if (k == length(steps) && !is.null(final_name) && !store_this) {
-            store_this <- TRUE
+        is_final <- k == length(steps)
+        store_this <- if (store_intermediate || is_final) {
+            TRUE
+        } else if (is_fast) {
+            store_fast_steps
+        } else {
+            TRUE
         }
 
         use_final_name <- k == length(steps) && !is.null(final_name)
