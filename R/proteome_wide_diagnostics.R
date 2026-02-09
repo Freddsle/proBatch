@@ -698,13 +698,17 @@ plot_heatmap_generic <- function(data_matrix, ...) UseMethod("plot_heatmap_gener
 #' @param shape_by Optional column used for point shapes in the PCA plot.
 #' @param point_size Point size supplied to `ggplot2::geom_point()`.
 #' @param point_alpha Alpha transparency for plotted points.
+#' @param marginal_density Logical; if `TRUE`, add marginal density plots above
+#'   and to the right of the PCA scatter plot.
 #' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
 #' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
 #' @param ... Additional arguments forwarded to lower-level plotting helpers.
 #'
 #' @return ggplot scatterplot colored by factor levels of column specified in
-#'   \code{factor_to_color}
+#'   \code{factor_to_color}. When `marginal_density = TRUE`, returns a ggplot
+#'   object if `ggplotify` or `cowplot` is available; otherwise returns a grid
+#'   grob.
 #' @name plot_PCA
 #' @export
 #'
@@ -716,6 +720,9 @@ plot_heatmap_generic <- function(data_matrix, ...) UseMethod("plot_heatmap_gener
 #' )
 #' pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
 #'     color_by = "DateTime", plot_title = "PCA colored by DateTime"
+#' )
+#' pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
+#'     color_by = "MS_batch", marginal_density = TRUE
 #' )
 #'
 #' color_list <- sample_annotation_to_colors(example_sample_annotation,
@@ -753,6 +760,7 @@ plot_PCA.default <- function(data_matrix,
                              plot_title = NULL,
                              theme_name = "classic",
                              base_size = 10, point_size = 3, point_alpha = 0.8,
+                             marginal_density = FALSE,
                              x_nPC = NULL, y_nPC = NULL) {
     prep <- .pb_prepare_embedding_inputs(
         data_matrix = data_matrix,
@@ -845,6 +853,15 @@ plot_PCA.default <- function(data_matrix,
     if (!is.null(plot_title)) {
         gg <- gg + ggtitle(plot_title) +
             theme(plot.title = element_text(face = "bold", hjust = .5))
+    }
+
+    if (isTRUE(marginal_density)) {
+        gg <- .pb_add_marginal_density(
+            base_plot = gg,
+            embedding_matrix = embedding_matrix,
+            base_size = base_size,
+            theme_name = theme_name
+        )
     }
     if (!is.null(filename)) {
         message(sprintf("Saving PCA plot to %s", filename))
@@ -1504,6 +1521,106 @@ plot_UMAP <- function(x, ...) UseMethod("plot_UMAP")
     }
 
     gg
+}
+
+.pb_add_marginal_density <- function(base_plot, embedding_matrix, base_size, theme_name,
+                                     density_fill = "grey85",
+                                     density_color = "grey40",
+                                     density_alpha = 0.7) {
+    if (!requireNamespace("gridExtra", quietly = TRUE)) {
+        stop("Install the `gridExtra` package to arrange marginal densities: install.packages(\"gridExtra\").")
+    }
+
+    if (ncol(embedding_matrix) < 2L) {
+        warning("Embedding matrix has fewer than two dimensions; returning the PCA scatter plot.")
+        return(base_plot)
+    }
+
+    dim1 <- embedding_matrix[, 1]
+    dim2 <- embedding_matrix[, 2]
+
+    if (!any(is.finite(dim1)) || !any(is.finite(dim2))) {
+        warning("Embedding coordinates are not finite; returning the PCA scatter plot.")
+        return(base_plot)
+    }
+
+    range_dim1 <- range(dim1, finite = TRUE)
+    range_dim2 <- range(dim2, finite = TRUE)
+    range_dim1 <- scales::expand_range(range_dim1, mul = 0.05)
+    range_dim2 <- scales::expand_range(range_dim2, mul = 0.05)
+
+    finite_idx <- is.finite(dim1) & is.finite(dim2)
+    if (!any(finite_idx)) {
+        warning("Embedding coordinates are not finite; returning the PCA scatter plot.")
+        return(base_plot)
+    }
+
+    density_df <- data.frame(
+        Dim1 = dim1[finite_idx],
+        Dim2 = dim2[finite_idx],
+        stringsAsFactors = FALSE
+    )
+
+    density_theme <- if (!is.null(theme_name) && theme_name == "classic") {
+        theme_classic(base_size = base_size)
+    } else {
+        theme_grey(base_size = base_size)
+    }
+
+    density_theme <- density_theme + theme(
+        axis.title = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        axis.line = element_blank(),
+        legend.position = "none",
+        plot.margin = margin(0, 0, 0, 0)
+    )
+
+    top_density <- ggplot(density_df, aes(x = Dim1)) +
+        geom_density(
+            fill = density_fill,
+            color = density_color,
+            alpha = density_alpha,
+            na.rm = TRUE
+        ) +
+        scale_x_continuous(limits = range_dim1, expand = ggplot2::expansion(mult = 0)) +
+        density_theme
+
+    right_density <- ggplot(density_df, aes(x = Dim2)) +
+        geom_density(
+            fill = density_fill,
+            color = density_color,
+            alpha = density_alpha,
+            na.rm = TRUE
+        ) +
+        scale_x_continuous(limits = range_dim2, expand = ggplot2::expansion(mult = 0)) +
+        coord_flip() +
+        density_theme
+
+    base_plot <- base_plot +
+        scale_x_continuous(limits = range_dim1, expand = ggplot2::expansion(mult = 0)) +
+        scale_y_continuous(limits = range_dim2, expand = ggplot2::expansion(mult = 0)) +
+        theme(legend.position = "bottom")
+
+    arranged <- gridExtra::arrangeGrob(
+        top_density,
+        grid::nullGrob(),
+        base_plot,
+        right_density,
+        nrow = 2,
+        ncol = 2,
+        widths = c(4, 1),
+        heights = c(1, 4)
+    )
+
+    if (requireNamespace("ggplotify", quietly = TRUE)) {
+        return(ggplotify::as.ggplot(arranged))
+    }
+    if (requireNamespace("cowplot", quietly = TRUE)) {
+        return(cowplot::ggdraw(arranged))
+    }
+    message("Returning a grid TableGrob object instead. Use grid.draw() it or ggsave() to plot or save. \nInstall the `ggplotify` or `cowplot` package to get a ggplot object instead.")
+    arranged
 }
 
 .pb_prepare_annotation_for_samples <- function(sample_annotation, sample_id_col, sample_ids, allow_partial = FALSE) {

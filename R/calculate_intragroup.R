@@ -237,6 +237,16 @@ plot_intragroup_variation.ProBatchFeatures <- function(data_matrix,
         }
         sample_ann <- as.data.frame(sample_ann, stringsAsFactors = FALSE)
 
+        display_label <- titles[[i]]
+        if (is.null(display_label) || !length(display_label)) {
+            display_label <- assay_nm
+        } else {
+            display_label <- as.character(display_label)[1]
+            if (!nzchar(display_label)) {
+                display_label <- assay_nm
+            }
+        }
+
         assay_path <- NULL
         if (!is.null(path_to_save_results)) {
             assay_path <- file.path(path_to_save_results, assay_nm)
@@ -250,7 +260,7 @@ plot_intragroup_variation.ProBatchFeatures <- function(data_matrix,
             fill_the_missing = fill_the_missing,
             group_cols = group_cols,
             assay_label = assay_nm,
-            assay_display = assay_nm,
+            assay_display = display_label,
             plot_title = titles[[i]],
             call_info = metric_info$call,
             metric_name = metric_info$name,

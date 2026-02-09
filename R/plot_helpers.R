@@ -425,7 +425,13 @@
     grobs <- if (is.null(convert_fun)) {
         plot_list
     } else {
-        lapply(plot_list, convert_fun)
+        lapply(plot_list, function(x) {
+            if (grid::is.grob(x) || inherits(x, "gtable")) {
+                x
+            } else {
+                convert_fun(x)
+            }
+        })
     }
     n <- length(grobs)
     ncol <- if (is.null(plot_ncol)) ceiling(sqrt(n)) else plot_ncol

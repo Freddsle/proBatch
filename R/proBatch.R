@@ -102,6 +102,7 @@
 #' @importFrom dplyr group_by ungroup across mutate rename select
 #' @importFrom dplyr any_of all_of
 #' @importFrom corrplot corrplot.mixed
+#' @importFrom cluster silhouette
 #' @importFrom data.table setnames
 #' @importFrom grDevices colorRampPalette
 #' @importFrom grDevices png pdf dev.off
