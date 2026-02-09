@@ -73,7 +73,11 @@ calculate_PVCA.default <- function(data_matrix, sample_annotation,
             stop("No PVCA factors with more than one sampled level.")
         }
     }
-    data_matrix <- check_feature_id_col_in_dm(feature_id_col, data_matrix)
+    data_matrix <- check_feature_id_col_in_dm(
+        feature_id_col = feature_id_col,
+        data_matrix = data_matrix,
+        issue_reported = TRUE
+    )
 
     data_matrix <- .pb_handle_missing_wrapper(
         data_matrix = data_matrix,
@@ -1343,6 +1347,80 @@ calculate_variance_partition.ProBatchFeatures <- function(data_matrix, pbf_name 
 #' @export
 calculate_variance_partition <- function(data_matrix, ...) UseMethod("calculate_variance_partition")
 
+.pb_select_abundance_features <- function(data_matrix,
+                                          sample_annotation,
+                                          sample_id_col,
+                                          feature_id_col,
+                                          fill_the_missing,
+                                          abundance_top_n,
+                                          abundance_direction = c("most", "least"),
+                                          abundance_stat = c("mean", "median")) {
+    if (is.null(abundance_top_n)) {
+        return(NULL)
+    }
+    if (!is.numeric(abundance_top_n) || length(abundance_top_n) != 1L ||
+        is.na(abundance_top_n) || !is.finite(abundance_top_n)) {
+        stop("`abundance_top_n` must be a single positive number.")
+    }
+    if (abundance_top_n <= 0) {
+        stop("`abundance_top_n` must be a positive number.")
+    }
+    if (abundance_top_n %% 1 != 0) {
+        stop("`abundance_top_n` must be an integer.")
+    }
+
+    abundance_direction <- match.arg(abundance_direction)
+    abundance_stat <- match.arg(abundance_stat)
+
+    alignment <- .pb_align_matrix_and_annotation(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        check_args = list(
+            batch_col = NULL,
+            order_col = NULL,
+            facet_col = NULL
+        )
+    )
+    data_matrix <- alignment$data_matrix
+
+    data_matrix <- check_feature_id_col_in_dm(feature_id_col, data_matrix)
+    data_matrix <- suppressMessages(suppressWarnings(
+        .pb_handle_missing_wrapper(
+            data_matrix = data_matrix,
+            warning_message = "variancePartition cannot operate with missing values in the matrix",
+            fill_the_missing = fill_the_missing
+        )
+    ))
+    data_matrix <- as.matrix(data_matrix)
+
+    if (!nrow(data_matrix)) {
+        return(character())
+    }
+
+    feature_ids <- rownames(data_matrix)
+    if (is.null(feature_ids)) {
+        feature_ids <- as.character(seq_len(nrow(data_matrix)))
+    }
+
+    abundance <- if (abundance_stat == "median") {
+        rowMedians(data_matrix, na.rm = TRUE)
+    } else {
+        rowMeans(data_matrix, na.rm = TRUE)
+    }
+
+    keep <- is.finite(abundance)
+    if (!any(keep)) {
+        return(character())
+    }
+    abundance <- abundance[keep]
+    feature_ids <- feature_ids[keep]
+
+    order_idx <- order(abundance, decreasing = abundance_direction == "most")
+    abundance_top_n <- min(as.integer(abundance_top_n), length(order_idx))
+    feature_ids[order_idx[seq_len(abundance_top_n)]]
+}
+
 #' Prepare variance partition results for plotting
 #'
 #' @inheritParams proBatch
@@ -1351,6 +1429,13 @@ calculate_variance_partition <- function(data_matrix, ...) UseMethod("calculate_
 #' @param biological_factors vector with biologically driven covariates.
 #' @param variance_threshold numeric threshold; values below the threshold are
 #'   summed per feature and reported as a single group.
+#' @param abundance_top_n optional integer specifying how many of the most/least
+#'   abundant features to keep for plotting.
+#' @param abundance_direction character, either `"most"` or `"least"`, defining
+#'   which tail of the abundance ranking to keep.
+#' @param abundance_stat character, either `"mean"` or `"median"`, indicating
+#'   how abundance is computed across samples before ranking (after missing-value
+#'   handling).
 #' @param path_to_save_results optional path to save the variance partition
 #'   results as CSV.
 #' @param ... Additional arguments forwarded to `calculate_variance_partition()`
@@ -1369,7 +1454,10 @@ calculate_variance_partition <- function(data_matrix, ...) UseMethod("calculate_
 #'         example_sample_annotation,
 #'         technical_factors = "MS_batch",
 #'         biological_factors = c("Diet", "Sex"),
-#'         variance_threshold = 0.05
+#'         variance_threshold = 0.05,
+#'         abundance_top_n = 20,
+#'         abundance_direction = "least",
+#'         abundance_stat = "median"
 #'     )
 #' }
 #' @name prepare_variance_partition_df
@@ -1382,6 +1470,9 @@ prepare_variance_partition_df.default <- function(data_matrix, sample_annotation
                                                   model_formula = NULL,
                                                   model_variables = NULL,
                                                   variance_threshold = NULL,
+                                                  abundance_top_n = NULL,
+                                                  abundance_direction = c("most", "least"),
+                                                  abundance_stat = c("mean", "median"),
                                                   path_to_save_results = NULL,
                                                   ...) {
     if (is.null(model_formula)) {
@@ -1412,6 +1503,25 @@ prepare_variance_partition_df.default <- function(data_matrix, sample_annotation
         label_levels <- unique(vp_res$label)
     }
     vp_res <- vp_res %>% mutate(label = as.character(label))
+
+    if (!is.null(abundance_top_n)) {
+        selected_features <- .pb_select_abundance_features(
+            data_matrix = data_matrix,
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
+            feature_id_col = feature_id_col,
+            fill_the_missing = fill_the_missing,
+            abundance_top_n = abundance_top_n,
+            abundance_direction = abundance_direction,
+            abundance_stat = abundance_stat
+        )
+        if (length(selected_features)) {
+            vp_res <- vp_res %>%
+                filter(feature_id %in% selected_features)
+        } else {
+            return(vp_res[0, , drop = FALSE])
+        }
+    }
 
     label_of_small <- NULL
     if (!is.null(variance_threshold)) {
@@ -1536,9 +1646,12 @@ prepare_variance_partition_df <- function(data_matrix, ...) UseMethod("prepare_v
 #' @param theme ggplot2 theme to apply. Currently, only `"classic"` is supported.
 #' @param base_size base size of the text in the plot.
 #' @param add_medians logical; when `TRUE`, annotates each box with its rounded
-#'   median value.
+#'   median value (boxplot mode only).
 #' @param median_position numeric adjustment applied to the median labels when
 #'   they are nudged upwards.
+#' @param summary_stat character defining the plot summary to draw: `"boxplot"`
+#'   (default), `"mean"`, or `"median"`. When `"mean"` or `"median"`, the plot
+#'   shows a single summary value per label instead of a distribution.
 #' @param show_legend logical; controls legend display.
 #' @param y_limits numeric vector of length two specifying y-axis limits.
 #' @param return_gridExtra logical; when `TRUE`, returns arranged grobs instead of
@@ -1563,7 +1676,10 @@ prepare_variance_partition_df <- function(data_matrix, ...) UseMethod("prepare_v
 #'         example_sample_annotation,
 #'         technical_factors = "MS_batch",
 #'         biological_factors = c("Diet", "Sex"),
-#'         variance_threshold = 0.05
+#'         variance_threshold = 0.05,
+#'         abundance_top_n = 20,
+#'         abundance_direction = "most",
+#'         summary_stat = "median"
 #'     )
 #' }
 plot_variance_partition.default <- function(data_matrix, sample_annotation,
@@ -1575,6 +1691,9 @@ plot_variance_partition.default <- function(data_matrix, sample_annotation,
                                             model_formula = NULL,
                                             model_variables = NULL,
                                             variance_threshold = NULL,
+                                            abundance_top_n = NULL,
+                                            abundance_direction = c("most", "least"),
+                                            abundance_stat = c("mean", "median"),
                                             colors_for_boxes = NULL,
                                             filename = NULL, width = NA, height = NA,
                                             units = c("cm", "in", "mm"),
@@ -1583,6 +1702,7 @@ plot_variance_partition.default <- function(data_matrix, sample_annotation,
                                             base_size = 15,
                                             add_medians = FALSE,
                                             median_position = 0.05,
+                                            summary_stat = c("boxplot", "mean", "median"),
                                             show_legend = TRUE,
                                             y_limits = c(0, 1),
                                             path_to_save_results = NULL,
@@ -1598,6 +1718,9 @@ plot_variance_partition.default <- function(data_matrix, sample_annotation,
         model_formula = model_formula,
         model_variables = model_variables,
         variance_threshold = variance_threshold,
+        abundance_top_n = abundance_top_n,
+        abundance_direction = abundance_direction,
+        abundance_stat = abundance_stat,
         path_to_save_results = path_to_save_results,
         ...
     )
@@ -1614,6 +1737,7 @@ plot_variance_partition.default <- function(data_matrix, sample_annotation,
         base_size = base_size,
         add_medians = add_medians,
         median_position = median_position,
+        summary_stat = summary_stat,
         show_legend = show_legend,
         y_limits = y_limits
     )
@@ -1673,6 +1797,13 @@ plot_variance_partition.ProBatchFeatures <- function(data_matrix, pbf_name = NUL
         prepare_dots$median_position <- NULL
     }
     median_position_list <- split_arg(median_position_arg)
+
+    summary_stat_arg <- NULL
+    if ("summary_stat" %in% names(prepare_dots)) {
+        summary_stat_arg <- prepare_dots$summary_stat
+        prepare_dots$summary_stat <- NULL
+    }
+    summary_stat_list <- split_arg(summary_stat_arg)
 
     show_legend_arg <- NULL
     if ("show_legend" %in% names(prepare_dots)) {
@@ -1764,6 +1895,10 @@ plot_variance_partition.ProBatchFeatures <- function(data_matrix, pbf_name = NUL
         if (!is.null(median_position_val)) {
             plot_args$median_position <- median_position_val
         }
+        summary_stat_val <- summary_stat_list[[i]]
+        if (!is.null(summary_stat_val)) {
+            plot_args$summary_stat <- summary_stat_val
+        }
         show_legend_val <- show_legend_list[[i]]
         if (!is.null(show_legend_val)) {
             plot_args$show_legend <- isTRUE(show_legend_val)
@@ -1805,6 +1940,7 @@ plot_variance_partition.df.default <- function(df,
                                                base_size = 15,
                                                add_medians = FALSE,
                                                median_position = 0.05,
+                                               summary_stat = c("boxplot", "mean", "median"),
                                                show_legend = TRUE,
                                                y_limits = c(0, 1),
                                                ...) {
@@ -1830,8 +1966,25 @@ plot_variance_partition.df.default <- function(df,
     vp_res <- vp_res %>%
         mutate(category = factor(category, levels = category_levels))
 
-    gg <- ggplot(vp_res, aes(x = label, y = variance_explained, fill = category)) +
-        geom_boxplot()
+    summary_stat <- match.arg(summary_stat)
+    if (summary_stat %in% c("mean", "median")) {
+        summary_fun <- if (summary_stat == "mean") mean else median
+        vp_res <- vp_res %>%
+            group_by(label, category) %>%
+            summarise(
+                variance_explained = summary_fun(variance_explained, na.rm = TRUE),
+                .groups = "drop"
+            ) %>%
+            mutate(
+                label = factor(label, levels = label_levels),
+                category = factor(category, levels = category_levels)
+            )
+        gg <- ggplot(vp_res, aes(x = label, y = variance_explained, fill = category)) +
+            geom_col()
+    } else {
+        gg <- ggplot(vp_res, aes(x = label, y = variance_explained, fill = category)) +
+            geom_boxplot()
+    }
 
     default_cat_names <- c("residual", "biological", "biol:techn", "technical")
     if (is.null(colors_for_boxes)) {
@@ -1876,10 +2029,16 @@ plot_variance_partition.df.default <- function(df,
             plot.title = element_text(size = round(base_size * 1.2, 0)),
             legend.position = legend_position
         ) +
-        ylab("Variance explained") +
+        ylab(if (summary_stat == "mean") {
+            "Mean variance explained"
+        } else if (summary_stat == "median") {
+            "Median variance explained"
+        } else {
+            "Variance explained"
+        }) +
         xlab(NULL)
 
-    if (isTRUE(add_medians)) {
+    if (isTRUE(add_medians) && summary_stat == "boxplot") {
         medians <- vp_res %>%
             group_by(label) %>%
             summarise(median_value = median(variance_explained, na.rm = TRUE), .groups = "drop")
@@ -1959,6 +2118,13 @@ plot_variance_partition.df.ProBatchFeatures <- function(df, pbf_name = NULL,
         prepare_dots$median_position <- NULL
     }
     median_position_list <- split_arg(median_position_arg)
+
+    summary_stat_arg <- NULL
+    if ("summary_stat" %in% names(prepare_dots)) {
+        summary_stat_arg <- prepare_dots$summary_stat
+        prepare_dots$summary_stat <- NULL
+    }
+    summary_stat_list <- split_arg(summary_stat_arg)
 
     show_legend_arg <- NULL
     if ("show_legend" %in% names(prepare_dots)) {
@@ -2043,6 +2209,10 @@ plot_variance_partition.df.ProBatchFeatures <- function(df, pbf_name = NULL,
         median_position_val <- median_position_list[[i]]
         if (!is.null(median_position_val)) {
             plot_args$median_position <- median_position_val
+        }
+        summary_stat_val <- summary_stat_list[[i]]
+        if (!is.null(summary_stat_val)) {
+            plot_args$summary_stat <- summary_stat_val
         }
         show_legend_val <- show_legend_list[[i]]
         if (!is.null(show_legend_val)) {

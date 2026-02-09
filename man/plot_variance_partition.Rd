@@ -17,6 +17,9 @@
   model_formula = NULL,
   model_variables = NULL,
   variance_threshold = NULL,
+  abundance_top_n = NULL,
+  abundance_direction = c("most", "least"),
+  abundance_stat = c("mean", "median"),
   colors_for_boxes = NULL,
   filename = NULL,
   width = NA,
@@ -27,6 +30,7 @@
   base_size = 15,
   add_medians = FALSE,
   median_position = 0.05,
+  summary_stat = c("boxplot", "mean", "median"),
   show_legend = TRUE,
   y_limits = c(0, 1),
   path_to_save_results = NULL,
@@ -90,6 +94,16 @@ build a formula when `model_formula` is `NULL`.}
 \item{variance_threshold}{numeric threshold; values below the threshold are
 summed per feature and reported as a single group.}
 
+\item{abundance_top_n}{optional integer specifying how many of the most/least
+abundant features to keep for plotting.}
+
+\item{abundance_direction}{character, either `"most"` or `"least"`, defining
+which tail of the abundance ranking to keep.}
+
+\item{abundance_stat}{character, either `"mean"` or `"median"`, indicating
+how abundance is computed across samples before ranking (after missing-value
+handling).}
+
 \item{colors_for_boxes}{four-item color vector, specifying colors for the
 following categories: c('residual', 'biological', 'biol:techn', 'technical').}
 
@@ -111,10 +125,14 @@ pdf and png format is supported}
 \item{base_size}{base size of the text in the plot.}
 
 \item{add_medians}{logical; when `TRUE`, annotates each box with its rounded
-median value.}
+median value (boxplot mode only).}
 
 \item{median_position}{numeric adjustment applied to the median labels when
 they are nudged upwards.}
+
+\item{summary_stat}{character defining the plot summary to draw: `"boxplot"`
+(default), `"mean"`, or `"median"`. When `"mean"` or `"median"`, the plot
+shows a single summary value per label instead of a distribution.}
 
 \item{show_legend}{logical; controls legend display.}
 
@@ -148,7 +166,10 @@ if (requireNamespace("variancePartition", quietly = TRUE)) {
         example_sample_annotation,
         technical_factors = "MS_batch",
         biological_factors = c("Diet", "Sex"),
-        variance_threshold = 0.05
+        variance_threshold = 0.05,
+        abundance_top_n = 20,
+        abundance_direction = "most",
+        summary_stat = "median"
     )
 }
 }

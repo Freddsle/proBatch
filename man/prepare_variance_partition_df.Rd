@@ -17,6 +17,9 @@
   model_formula = NULL,
   model_variables = NULL,
   variance_threshold = NULL,
+  abundance_top_n = NULL,
+  abundance_direction = c("most", "least"),
+  abundance_stat = c("mean", "median"),
   path_to_save_results = NULL,
   ...
 )
@@ -66,6 +69,16 @@ build a formula when `model_formula` is `NULL`.}
 \item{variance_threshold}{numeric threshold; values below the threshold are
 summed per feature and reported as a single group.}
 
+\item{abundance_top_n}{optional integer specifying how many of the most/least
+abundant features to keep for plotting.}
+
+\item{abundance_direction}{character, either `"most"` or `"least"`, defining
+which tail of the abundance ranking to keep.}
+
+\item{abundance_stat}{character, either `"mean"` or `"median"`, indicating
+how abundance is computed across samples before ranking (after missing-value
+handling).}
+
 \item{path_to_save_results}{optional path to save the variance partition
 results as CSV.}
 
@@ -88,7 +101,10 @@ if (requireNamespace("variancePartition", quietly = TRUE)) {
         example_sample_annotation,
         technical_factors = "MS_batch",
         biological_factors = c("Diet", "Sex"),
-        variance_threshold = 0.05
+        variance_threshold = 0.05,
+        abundance_top_n = 20,
+        abundance_direction = "least",
+        abundance_stat = "median"
     )
 }
 }

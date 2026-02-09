@@ -18,6 +18,7 @@
   base_size = 15,
   add_medians = FALSE,
   median_position = 0.05,
+  summary_stat = c("boxplot", "mean", "median"),
   show_legend = TRUE,
   y_limits = c(0, 1),
   ...
@@ -68,10 +69,14 @@ pdf and png format is supported}
 \item{base_size}{base size of the text in the plot.}
 
 \item{add_medians}{logical; when `TRUE`, annotates each box with its rounded
-median value.}
+median value (boxplot mode only).}
 
 \item{median_position}{numeric adjustment applied to the median labels when
 they are nudged upwards.}
+
+\item{summary_stat}{character defining the plot summary to draw: `"boxplot"`
+(default), `"mean"`, or `"median"`. When `"mean"` or `"median"`, the plot
+shows a single summary value per label instead of a distribution.}
 
 \item{show_legend}{logical; controls legend display.}
 
