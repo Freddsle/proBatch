@@ -91,12 +91,20 @@ test_that("plot_intragroup_variation.default honors fill_the_missing", {
         .package = "PRONE"
     )
 
-    plot_intragroup_variation(
-        dm,
-        sample_annotation = sample_ann,
-        group_col = "Condition",
-        metrics = "correlation",
-        fill_the_missing = 0
+    expect_warning(
+        expect_warning(
+            plot_intragroup_variation(
+                dm,
+                sample_annotation = sample_ann,
+                group_col = "Condition",
+                metrics = "correlation",
+                fill_the_missing = 0
+            ),
+            "Intragroup diagnostics cannot operate with missing values",
+            fixed = TRUE
+        ),
+        "filling missing values with 0",
+        fixed = TRUE
     )
 
     expect_false(anyNA(captured$assay))

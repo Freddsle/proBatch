@@ -99,22 +99,26 @@ plot_intragroup_variation.default <- function(data_matrix,
             pmad_diff = pmad_diff,
             pev_diff = pev_diff
         )
-        try(
-            .pb_intragroup_process_matrix(
-                data_matrix = data_matrix,
-                sample_annotation = sample_annotation,
-                sample_id_col = sample_id_col,
-                feature_id_col = feature_id_col,
-                fill_the_missing = fill_the_missing,
-                group_cols = group_cols,
-                assay_label = assay_label,
-                assay_display = plot_title,
-                plot_title = plot_title,
-                call_info = pcv_info$call,
-                metric_name = pcv_info$name,
-                path_to_save_results = NULL
-            ),
-            silent = TRUE
+        suppressWarnings(
+            suppressMessages(
+                try(
+                    .pb_intragroup_process_matrix(
+                        data_matrix = data_matrix,
+                        sample_annotation = sample_annotation,
+                        sample_id_col = sample_id_col,
+                        feature_id_col = feature_id_col,
+                        fill_the_missing = fill_the_missing,
+                        group_cols = group_cols,
+                        assay_label = assay_label,
+                        assay_display = plot_title,
+                        plot_title = plot_title,
+                        call_info = pcv_info$call,
+                        metric_name = pcv_info$name,
+                        path_to_save_results = NULL
+                    ),
+                    silent = TRUE
+                )
+            )
         )
     }
 
@@ -672,22 +676,26 @@ plot_intragroup_variation <- function(data_matrix, ...) UseMethod("plot_intragro
     if (!is.list(dots)) {
         stop("dots must be a list")
     }
+    dots_name <- deparse(substitute(dots))
     value <- default
-    if (!is.null(dots[[name]])) {
-        value <- dots[[name]]
+    if (length(names(dots)) && name %in% names(dots)) {
+        if (!is.null(dots[[name]])) {
+            value <- dots[[name]]
+        }
         dots[[name]] <- NULL
     }
-    assign(deparse(substitute(dots)), dots, parent.frame())
+    assign(dots_name, dots, parent.frame())
     value
 }
 
 .pb_intragroup_pop_units <- function(dots, default = "cm") {
     opts <- c("cm", "in", "mm")
+    dots_name <- deparse(substitute(dots))
     value <- default
     if (!is.null(dots$units)) {
         value <- dots$units
         dots$units <- NULL
     }
-    assign(deparse(substitute(dots)), dots, parent.frame())
+    assign(dots_name, dots, parent.frame())
     match.arg(as.character(value), opts)
 }
