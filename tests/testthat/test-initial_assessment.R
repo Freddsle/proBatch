@@ -1,6 +1,5 @@
 test_that("sample_mean_plots", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix <- example_proteome_matrix[1:20, ]
     expect_warning(
@@ -120,8 +119,7 @@ test_that("boxplot without outliers", {
 
 
 test_that("plot_sample_mean with ProBatchFeatures", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     pbf <- ProBatchFeatures(
         data_matrix = log2(example_proteome_matrix + 1),
@@ -145,8 +143,7 @@ test_that("plot_sample_mean with ProBatchFeatures", {
 
 test_that("plot_boxplot ProBatchFeatures handles multiple assays", {
     skip_if_not_installed("gridExtra")
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_small <- example_proteome_matrix[1:30, 1:5]
     sample_ids <- colnames(matrix_small)
@@ -176,8 +173,7 @@ test_that("plot_boxplot ProBatchFeatures handles multiple assays", {
 })
 
 test_that("plot_boxplot ProBatchFeatures returns ggplot for single assay", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_small <- example_proteome_matrix[1:30, 1:5]
     sample_ids <- colnames(matrix_small)
@@ -201,8 +197,7 @@ test_that("plot_boxplot ProBatchFeatures returns ggplot for single assay", {
 
 test_that("plot_boxplot ProBatchFeatures respects assay subset order", {
     skip_if_not_installed("gridExtra")
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_small <- example_proteome_matrix[1:30, 1:5]
     sample_ids <- colnames(matrix_small)

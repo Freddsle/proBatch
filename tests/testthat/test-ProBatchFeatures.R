@@ -1,6 +1,5 @@
 test_that("constructor (wide) builds a valid ProBatchFeatures object", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     # basic construct
     pbf <- ProBatchFeatures(
@@ -65,8 +64,7 @@ test_that("constructor (wide) builds a valid ProBatchFeatures object", {
 })
 
 test_that("constructor errors on malformed inputs (wide)", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     # no colnames => error
     dm <- example_proteome_matrix
@@ -131,8 +129,7 @@ test_that("constructor (long) delegates to long_to_matrix", {
 test_that("as_ProBatchFeatures wraps single-assay QFeatures with renaming", {
     skip_if_not_installed("QFeatures")
 
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     sample_order <- match(
         colnames(example_proteome_matrix),
@@ -184,8 +181,7 @@ test_that("as_ProBatchFeatures wraps single-assay QFeatures with renaming", {
 test_that("as_ProBatchFeatures warns on multi-assay naming mismatches", {
     skip_if_not_installed("QFeatures")
 
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     sample_order <- match(
         colnames(example_proteome_matrix),
@@ -218,8 +214,7 @@ test_that("as_ProBatchFeatures warns on multi-assay naming mismatches", {
 })
 
 test_that("pb_as_long reuses matrix_to_long and round-trips vs direct call", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     pbf <- ProBatchFeatures(
         data_matrix = example_proteome_matrix,
@@ -258,8 +253,7 @@ test_that("pb_as_long reuses matrix_to_long and round-trips vs direct call", {
 })
 
 test_that("internal logging helper updates oplog and chain", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     pbf <- ProBatchFeatures(example_proteome_matrix, example_sample_annotation, "FullRunName", "raw")
 
@@ -522,8 +516,7 @@ test_that("pb_assay_matrix and pb_as_long compute fast logged assays on demand",
 })
 
 test_that("pb_transform honors final_name without colliding with pipeline-derived assay", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     pbf <- ProBatchFeatures(
         data_matrix = example_proteome_matrix,

@@ -1,6 +1,5 @@
 test_that("pb_transform applies combat step via registry", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     batch1_ids <- head(example_sample_annotation$FullRunName[example_sample_annotation$MS_batch == "Batch_1"], 4)
     batch2_ids <- head(example_sample_annotation$FullRunName[example_sample_annotation$MS_batch == "Batch_2"], 4)
@@ -55,8 +54,7 @@ test_that("pb_transform applies combat step via registry", {
 })
 
 test_that("pb_transform applies limmaRBE step via registry", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     batch_ids <- example_sample_annotation$FullRunName[example_sample_annotation$MS_batch %in% c("Batch_1", "Batch_2")]
     sample_ids <- unique(batch_ids)
@@ -108,8 +106,7 @@ test_that("pb_transform applies limmaRBE step via registry", {
 })
 
 test_that("medianNorm step handles fill_the_missing via pb_transform", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     sub_matrix <- example_proteome_matrix[1:5, 1:5, drop = FALSE]
     sub_matrix[1, 2] <- NA_real_

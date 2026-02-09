@@ -122,8 +122,7 @@ test_that("iRT_peptides_plot", {
 
 test_that("fitting_trend_plots", {
     data(example_proteome, package = "proBatch")
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     short_df <- example_proteome[example_proteome$peptide_group_label %in%
         unique(example_proteome$peptide_group_label)[1:3], ]

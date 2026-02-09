@@ -414,8 +414,7 @@ test_that("correct_with_PLSDA_batch(long, integration) runs with PLSDAbatch inst
 test_that("ProBatchFeatures smoke-test (skipped if class/methods unavailable)", {
     testthat::skip_if_not_installed("PLSDAbatch")
 
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
     # drop NA rows to avoid triggering validation errors
     m <- example_proteome_matrix
     m <- m[!apply(is.na(m), 1, any), ]

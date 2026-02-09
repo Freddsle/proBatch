@@ -1,6 +1,5 @@
 test_that("pvca_plot", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_test <- example_proteome_matrix[1:150, ]
     expect_warning(
@@ -23,8 +22,7 @@ test_that("pvca_plot", {
 })
 
 test_that("prepare_PVCA_df aggregates weights, classifies categories, and saves CSV", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_test <- na.omit(example_proteome_matrix)[1:80, ]
     tmp_dir <- tempfile("pvca_export")
@@ -152,8 +150,7 @@ test_that("prepare_variance_partition_df keeps residual categories consistent", 
 })
 
 test_that("plot_PVCA ProBatchFeatures stacked bar sorts assays by requested factor", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_small <- na.omit(example_proteome_matrix)[1:40, 1:6]
     sample_ids <- colnames(matrix_small)
@@ -210,8 +207,7 @@ test_that("plot_PVCA ProBatchFeatures stacked bar sorts assays by requested fact
 })
 
 test_that("plot_PVCA stacked bar honors stacked_plot_title", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_small <- na.omit(example_proteome_matrix)[1:40, 1:6]
     sample_ids <- colnames(matrix_small)
@@ -247,8 +243,7 @@ test_that("plot_PVCA stacked bar honors stacked_plot_title", {
 test_that("prepare_variance_partition_df exports CSV and keeps categories", {
     skip_if_not_installed("variancePartition")
 
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_small <- na.omit(example_proteome_matrix)[1:30, 1:8]
     sample_ids <- colnames(matrix_small)
@@ -281,11 +276,97 @@ test_that("prepare_variance_partition_df exports CSV and keeps categories", {
     )
 })
 
+test_that("prepare_variance_partition_df can filter by abundance ranking", {
+    sample_ann <- data.frame(FullRunName = paste0("Run", 1:3), stringsAsFactors = FALSE)
+    data_matrix <- matrix(
+        c(
+            0, 0, 100,
+            20, 20, 20,
+            5, 5, 5
+        ),
+        nrow = 3,
+        byrow = TRUE,
+        dimnames = list(c("feat1", "feat2", "feat3"), sample_ann$FullRunName)
+    )
+
+    stub_varpart <- function(...) {
+        data.frame(
+            feature_id = rep(c("feat1", "feat2", "feat3"), each = 2),
+            label = rep(c("Tech", "Bio"), times = 3),
+            variance_explained = rep(c(0.6, 0.3), times = 3),
+            stringsAsFactors = FALSE
+        )
+    }
+
+    vp_mean <- with_mocked_bindings(
+        prepare_variance_partition_df.default(
+            data_matrix,
+            sample_ann,
+            technical_factors = "Tech",
+            biological_factors = "Bio",
+            fill_the_missing = NULL,
+            abundance_top_n = 1,
+            abundance_direction = "most",
+            abundance_stat = "mean"
+        ),
+        calculate_variance_partition = stub_varpart
+    )
+    expect_equal(unique(vp_mean$feature_id), "feat1")
+
+    vp_median <- with_mocked_bindings(
+        prepare_variance_partition_df.default(
+            data_matrix,
+            sample_ann,
+            technical_factors = "Tech",
+            biological_factors = "Bio",
+            fill_the_missing = NULL,
+            abundance_top_n = 1,
+            abundance_direction = "most",
+            abundance_stat = "median"
+        ),
+        calculate_variance_partition = stub_varpart
+    )
+    expect_equal(unique(vp_median$feature_id), "feat2")
+})
+
+test_that("prepare_variance_partition_df validates abundance_top_n", {
+    sample_ann <- data.frame(FullRunName = paste0("Run", 1:2), stringsAsFactors = FALSE)
+    data_matrix <- matrix(
+        c(1, 2, 3, 4),
+        nrow = 2,
+        dimnames = list(c("feat1", "feat2"), sample_ann$FullRunName)
+    )
+    stub_varpart <- function(...) {
+        data.frame(
+            feature_id = rep(c("feat1", "feat2"), each = 2),
+            label = rep(c("Tech", "Bio"), times = 2),
+            variance_explained = rep(c(0.6, 0.3), times = 2),
+            stringsAsFactors = FALSE
+        )
+    }
+    invalid_vals <- list(0, -1, 1.5, Inf, NA_real_)
+    for (val in invalid_vals) {
+        expect_error(
+            with_mocked_bindings(
+                prepare_variance_partition_df.default(
+                    data_matrix,
+                    sample_ann,
+                    technical_factors = "Tech",
+                    biological_factors = "Bio",
+                    fill_the_missing = NULL,
+                    abundance_top_n = val
+                ),
+                calculate_variance_partition = stub_varpart
+            ),
+            "abundance_top_n"
+        )
+    }
+})
+
 test_that("plot_variance_partition.df adds medians and respects legend toggle", {
     skip_if_not_installed("variancePartition")
 
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_small <- na.omit(example_proteome_matrix)[1:30, 1:8]
     sample_ids <- colnames(matrix_small)
@@ -315,6 +396,35 @@ test_that("plot_variance_partition.df adds medians and respects legend toggle", 
     expect_equal(vp_plot$coordinates$ylim, c(0, 0.6))
 })
 
+test_that("plot_variance_partition.df supports mean/median summaries", {
+    vp_res <- data.frame(
+        feature_id = rep(c("feat1", "feat2"), each = 2),
+        label = rep(c("Tech", "Bio"), times = 2),
+        variance_explained = c(0.4, 0.3, 0.5, 0.2),
+        category = rep(c("technical", "biological"), times = 2),
+        stringsAsFactors = FALSE
+    )
+
+    mean_plot <- plot_variance_partition.df.default(
+        vp_res,
+        summary_stat = "mean",
+        add_medians = TRUE
+    )
+    expect_s3_class(mean_plot, "ggplot")
+    mean_geoms <- vapply(mean_plot$layers, function(layer) class(layer$geom)[1], character(1))
+    expect_equal(unname(mean_geoms), "GeomCol")
+    expect_equal(mean_plot$labels$y, "Mean variance explained")
+
+    median_plot <- plot_variance_partition.df.default(
+        vp_res,
+        summary_stat = "median",
+        add_medians = TRUE
+    )
+    median_geoms <- vapply(median_plot$layers, function(layer) class(layer$geom)[1], character(1))
+    expect_equal(unname(median_geoms), "GeomCol")
+    expect_equal(median_plot$labels$y, "Median variance explained")
+})
+
 test_that("plot_variance_partition legend follows axis order with stable colors", {
     vp_res <- data.frame(
         feature_id = rep("feat", 4),
@@ -340,8 +450,7 @@ test_that("plot_variance_partition ProBatchFeatures arranges multiple assays", {
     skip_if_not_installed("variancePartition")
     skip_if_not_installed("gridExtra")
 
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_small <- na.omit(example_proteome_matrix)[1:35, 1:6]
     sample_ids <- colnames(matrix_small)
@@ -379,8 +488,7 @@ test_that("plot_variance_partition ProBatchFeatures arranges multiple assays", {
 })
 
 build_variance_partition_test_pbf <- function() {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_small <- na.omit(example_proteome_matrix)[1:35, 1:6]
     sample_ids <- colnames(matrix_small)

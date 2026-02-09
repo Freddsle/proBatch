@@ -1,6 +1,5 @@
 test_that("hierarchical_clustering", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_test <- example_proteome_matrix[1:10, ]
 
@@ -39,8 +38,7 @@ test_that("hierarchical_clustering", {
 
 
 test_that("heatmap_plot", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_test <- example_proteome_matrix[1:20, ]
     example_sample_annotation <- example_sample_annotation %>%
@@ -80,8 +78,7 @@ test_that("heatmap_plot", {
 
 
 test_that("pca_plot", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     expect_warning(
         expect_warning(
@@ -102,11 +99,25 @@ test_that("pca_plot", {
     expect_equal(pca$labels$colour, "MS_batch")
 })
 
+test_that("plot_PCA supports x_nPC/y_nPC", {
+    pb_test_load_example_data()
+
+    pca <- suppressWarnings(plot_PCA(
+        example_proteome_matrix, example_sample_annotation,
+        color_by = "MS_batch",
+        fill_the_missing = -1,
+        x_nPC = 2,
+        y_nPC = 3
+    ))
+
+    expect_match(pca$labels$x, "^PC2 ")
+    expect_match(pca$labels$y, "^PC3 ")
+})
+
 test_that("plot_TSNE returns ggplot by default", {
     skip_if_not_installed("Rtsne")
 
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     tsne_plot <- plot_TSNE(
         example_proteome_matrix, example_sample_annotation,
@@ -124,8 +135,7 @@ test_that("plot_TSNE use_plotlyrender returns plotly object", {
     skip_if_not_installed("plotly")
     skip_if_not_installed("Rtsne")
 
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     expect_warning(
         expect_warning(
@@ -149,8 +159,7 @@ test_that("plot_TSNE use_plotlyrender returns plotly object", {
 test_that("plot_UMAP returns ggplot by default", {
     skip_if_not_installed("umap")
 
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     expect_warning(
         expect_warning(
@@ -176,8 +185,7 @@ test_that("plot_UMAP use_plotlyrender returns plotly object", {
     skip_if_not_installed("plotly")
     skip_if_not_installed("umap")
 
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     expect_warning(
         expect_warning(
@@ -199,8 +207,7 @@ test_that("plot_UMAP use_plotlyrender returns plotly object", {
 
 test_that("plot_PCA ProBatchFeatures handles multiple assays", {
     skip_if_not_installed("gridExtra")
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_small <- example_proteome_matrix[1:40, 1:6]
     sample_ids <- colnames(matrix_small)
@@ -228,8 +235,7 @@ test_that("plot_PCA ProBatchFeatures handles multiple assays", {
 
 test_that("plot_heatmap_diagnostic ProBatchFeatures arranges multiple assays", {
     skip_if_not_installed("gridExtra")
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_small <- example_proteome_matrix[1:30, 1:5]
     sample_ids <- colnames(matrix_small)
@@ -264,8 +270,7 @@ test_that("plot_heatmap_diagnostic ProBatchFeatures arranges multiple assays", {
 test_that("plot_TSNE ProBatchFeatures arranges multiple assays by default", {
     skip_if_not_installed("Rtsne")
 
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_small <- example_proteome_matrix[1:30, 1:6]
     sample_ids <- colnames(matrix_small)
@@ -301,8 +306,7 @@ test_that("plot_TSNE ProBatchFeatures use_plotlyrender returns plotly objects", 
     skip_if_not_installed("plotly")
     skip_if_not_installed("Rtsne")
 
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_small <- example_proteome_matrix[1:30, 1:6]
     sample_ids <- colnames(matrix_small)
@@ -337,8 +341,7 @@ test_that("plot_TSNE ProBatchFeatures use_plotlyrender returns plotly objects", 
 test_that("plot_UMAP ProBatchFeatures arranges multiple assays by default", {
     skip_if_not_installed("umap")
 
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_small <- example_proteome_matrix[1:30, 1:6]
     sample_ids <- colnames(matrix_small)
@@ -373,8 +376,7 @@ test_that("plot_UMAP ProBatchFeatures use_plotlyrender returns plotly objects", 
     skip_if_not_installed("plotly")
     skip_if_not_installed("umap")
 
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_small <- example_proteome_matrix[1:30, 1:6]
     sample_ids <- colnames(matrix_small)
@@ -406,8 +408,7 @@ test_that("plot_UMAP ProBatchFeatures use_plotlyrender returns plotly objects", 
 })
 
 test_that("plot_PCA ProBatchFeatures returns ggplot for single assay", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_small <- example_proteome_matrix[1:40, 1:6]
     sample_ids <- colnames(matrix_small)
@@ -429,16 +430,19 @@ test_that("plot_PCA ProBatchFeatures returns ggplot for single assay", {
     res <- suppressWarnings(plot_PCA(
         pbf,
         pbf_name = single_assay,
-        sample_id_col = "FullRunName"
+        sample_id_col = "FullRunName",
+        x_nPC = 2,
+        y_nPC = 3
     ))
 
     expect_s3_class(res, "ggplot")
+    expect_match(res$labels$x, "^PC2 ")
+    expect_match(res$labels$y, "^PC3 ")
 })
 
 test_that("plot_PCA ProBatchFeatures respects assay subset order", {
     skip_if_not_installed("gridExtra")
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_small <- example_proteome_matrix[1:40, 1:6]
     sample_ids <- colnames(matrix_small)
@@ -470,8 +474,7 @@ test_that("plot_PCA ProBatchFeatures respects assay subset order", {
 })
 
 test_that("plot_heatmap_diagnostic ProBatchFeatures single assay returns pheatmap", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_small <- example_proteome_matrix[1:30, 1:5]
     sample_ids <- colnames(matrix_small)
@@ -498,8 +501,7 @@ test_that("plot_heatmap_diagnostic ProBatchFeatures single assay returns pheatma
 
 test_that("plot_heatmap_diagnostic ProBatchFeatures respects assay subset order", {
     skip_if_not_installed("gridExtra")
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_small <- example_proteome_matrix[1:30, 1:5]
     sample_ids <- colnames(matrix_small)

@@ -1,6 +1,5 @@
 test_that("internal add-assay-with-link links one-to-one when rows match", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     pbf <- ProBatchFeatures(example_proteome_matrix, example_sample_annotation, "FullRunName", name = "raw")
 
@@ -28,8 +27,7 @@ test_that("internal add-assay-with-link links one-to-one when rows match", {
 })
 
 test_that("show() prints chain and step count", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     pbf <- ProBatchFeatures(
         example_proteome_matrix,
@@ -58,8 +56,7 @@ test_that("show() prints chain and step count", {
 })
 
 test_that("validity checks fail on malformed oplog", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     pbf <- ProBatchFeatures(example_proteome_matrix, example_sample_annotation, "FullRunName", "raw")
 

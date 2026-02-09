@@ -45,8 +45,7 @@ test_that("protein_corrplot_plots", {
 
 
 test_that("sample_corr_heatmap", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     specified_samples <- example_sample_annotation$FullRunName[
         which(example_sample_annotation$order %in% 110:115)
@@ -79,8 +78,7 @@ test_that("sample_corr_heatmap", {
 
 
 test_that("sample_distribution_plot", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_test <- example_proteome_matrix[1:20, ]
     sample_dist <- plot_sample_corr_distribution(matrix_test,
@@ -99,8 +97,7 @@ test_that("sample_distribution_plot", {
 })
 
 test_that("calculate_sample_corr_distribution", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_test <- example_proteome_matrix[1:20, ]
     corr_distribution <- calculate_sample_corr_distr(

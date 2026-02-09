@@ -18,8 +18,7 @@ test_that("long_conversion_to_matrix", {
 
 
 test_that("matrix_conversion_to_long", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     rows <- c(
         which(rownames(example_proteome_matrix) == "10062_NVGVSFYADKPEVTQEQK_3"),

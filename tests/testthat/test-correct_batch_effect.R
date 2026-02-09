@@ -104,8 +104,7 @@ test_that("correct_batch_effects_df wrapper", {
 })
 
 test_that("correct_batch_effects_dm returns matrix", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     corrected <- correct_batch_effects(example_proteome_matrix, example_sample_annotation,
         discrete_func = "MedianCentering", no_fit_imputed = FALSE,
@@ -135,8 +134,7 @@ test_that("adjust_batch_trend_df keeps order column", {
 })
 
 test_that("adjust_batch_trend_dm forwards arguments", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     feature_subset <- rownames(example_proteome_matrix) %in%
         c("10062_NVGVSFYADKPEVTQEQK_3", "101233_QGFNVVVESGAGEASK_2")

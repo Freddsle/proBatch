@@ -24,8 +24,7 @@ test_that("find_duplicated_columns assigns default names when absent", {
 })
 
 test_that("find_duplicated_columns.ProBatchFeatures inspects sample metadata by default", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     example_sample_annotation$Diet_copy <- example_sample_annotation$Diet
 
@@ -42,8 +41,7 @@ test_that("find_duplicated_columns.ProBatchFeatures inspects sample metadata by 
 })
 
 test_that("find_duplicated_columns.ProBatchFeatures can inspect rowData and custom data frames", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
     data(example_peptide_annotation, package = "proBatch")
 
     example_sample_annotation$Diet_copy <- example_sample_annotation$Diet
@@ -120,8 +118,7 @@ test_that("metadata_column_summary handles data frames", {
 })
 
 test_that("metadata_column_summary.ProBatchFeatures summarises object metadata", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
     data(example_peptide_annotation, package = "proBatch")
 
     example_sample_annotation$Diet_copy <- example_sample_annotation$Diet
@@ -194,8 +191,7 @@ test_that("filter_metadata_columns removes columns based on missingness threshol
 })
 
 test_that("filter_metadata_columns.ProBatchFeatures filters metadata and can update inplace", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
     data(example_peptide_annotation, package = "proBatch")
 
     example_sample_annotation$Diet_copy <- example_sample_annotation$Diet
