@@ -12,13 +12,16 @@
 #' @param format One of \code{"long"} or \code{"wide"}.
 #' @param bert_method Edge adjustment inside BERT: one of \code{"ComBat"}, \code{"limma"}, \code{"ref"}.
 #'   Defaults to \code{"ComBat"}.
-#' @param combatmode Integer in \code{1:4} passed to BERT (parametric/non-parametric, mean.only). Default 1.
-#'   See \code{?BERT::BERT}. Ignored if \code{bert_method != "ComBat"}.
-#' @param cores Integer; number of workers for BERT. When both \code{cores} and \code{BPPARAM} are \code{NULL},
-#'   the wrapper uses \code{1L} (sequential) by default. Set to a higher value (and provide a matching
-#'   \code{BPPARAM}) to opt into parallel execution (see \code{?BiocParallel}).
-#' @param BPPARAM Optional \code{BiocParallelParam} object for BERT. When \code{NULL}, defaults to
-#'   \code{BiocParallel::SerialParam()} per Bioconductor guidelines (no implicit parallelism).
+#' @param combatmode Integer in \code{1:4} passed to BERT (parametric/non-parametric, mean.only).
+#'   If \code{NULL}, the wrapper does not pass it and BERT uses its own default.
+#'   Ignored if \code{bert_method != "ComBat"}.
+#' @param cores Integer; number of workers for BERT. If \code{NULL} and \code{BPPARAM} is also \code{NULL},
+#'   the wrapper leaves worker selection to \code{BERT::BERT()}. Provide \code{cores} (and optionally a matching
+#'   \code{BPPARAM}) to control parallel execution (see \code{?BiocParallel}).
+#' @param BPPARAM Optional \code{BiocParallelParam} object for BERT. When \code{NULL}, the wrapper does not
+#'   set a default and \code{BERT::BERT()} uses its own default.
+#' @param ... Additional arguments passed to \code{BERT::BERT()}. Note that by default the wrapper sets
+#'   \code{referencename = " "} (a single space) unless you override it via \code{...}.
 #' @param keep_all For long output, columns retained (as in other correct_* functions).
 #'
 #' @details
@@ -47,7 +50,7 @@ correct_with_BERT <- function(
   batch_col = "MS_batch",
   format = c("long", "wide"),
   bert_method = c("ComBat", "limma", "ref"),
-  combatmode = 1,
+  combatmode = NULL,
   covariates_cols = NULL,
   keep_all = "default",
   cores = NULL,
@@ -113,6 +116,33 @@ correct_with_BERT <- function(
     )
 }
 
+.coerce_covariate_to_numeric <- function(cov_values) {
+    if (is.null(cov_values)) {
+        return(cov_values)
+    }
+    if (is.logical(cov_values)) {
+        return(as.numeric(cov_values))
+    }
+    if (is.factor(cov_values)) {
+        return(as.numeric(cov_values))
+    }
+    if (inherits(cov_values, c("Date", "POSIXct", "POSIXlt"))) {
+        return(as.numeric(cov_values))
+    }
+    if (!is.numeric(cov_values)) {
+        fac <- factor(cov_values, exclude = NULL)
+        return(as.numeric(fac))
+    }
+    as.numeric(cov_values)
+}
+
+.coerce_batch_label_to_numeric <- function(values) {
+    if (is.null(values)) {
+        return(values)
+    }
+    as.numeric(as.factor(values))
+}
+
 .sanitize_covariates_for_BERT <- function(sample_annotation, covariates_cols) {
     if (is.null(covariates_cols) || !length(covariates_cols)) {
         return(list(
@@ -140,20 +170,7 @@ correct_with_BERT <- function(
             stop("Covariate '", covariate, "' unexpectedly NULL.")
         }
 
-        if (is.logical(cov_values)) {
-            cov_values <- as.numeric(cov_values)
-        } else if (is.factor(cov_values)) {
-            cov_values <- as.numeric(cov_values)
-        } else if (inherits(cov_values, c("Date", "POSIXct", "POSIXlt"))) {
-            cov_values <- as.numeric(cov_values)
-        } else if (!is.numeric(cov_values)) {
-            fac <- factor(cov_values, exclude = NULL)
-            cov_values <- as.numeric(fac)
-        } else {
-            cov_values <- as.numeric(cov_values)
-        }
-
-        sample_annotation[[covariate]] <- cov_values
+        sample_annotation[[covariate]] <- .coerce_covariate_to_numeric(cov_values)
     }
 
     list(
@@ -169,9 +186,10 @@ correct_with_BERT <- function(
   batch_col,
   covariates_cols = NULL,
   bert_method = c("ComBat", "limma", "ref"),
-  combatmode = 1,
+  combatmode = NULL,
   cores = NULL,
   BPPARAM = NULL,
+  reference_name = " ",
   ...
 ) {
     bert_method <- match.arg(bert_method)
@@ -192,6 +210,39 @@ correct_with_BERT <- function(
         sample_id_col = sample_id_col
     )
 
+    dots <- list(...)
+    if (!is.null(dots$referencename)) {
+        if (missing(reference_name) || identical(reference_name, " ")) {
+            reference_name <- dots$referencename
+        }
+        dots$referencename <- NULL
+    }
+    labelname <- dots$labelname
+    samplename <- dots$samplename
+    if (!is.null(dots$samplename)) {
+        dots$samplename <- NULL
+    }
+    if (is.null(samplename) || !nzchar(samplename)) {
+        samplename <- "Sample"
+    }
+    if (identical(samplename, "Sample")) {
+        sample_annotation[[samplename]] <- colnames(data_matrix)
+    }
+    if (!is.null(samplename) && !(samplename %in% names(sample_annotation))) {
+        stop("samplename column is not present in sample_annotation: ", samplename)
+    }
+    if (!is.null(labelname) && !(labelname %in% names(sample_annotation))) {
+        stop("labelname column is not present in sample_annotation: ", labelname)
+    }
+    sample_annotation[[batch_col]] <- .coerce_batch_label_to_numeric(
+        sample_annotation[[batch_col]]
+    )
+    if (!is.null(labelname)) {
+        sample_annotation[[labelname]] <- .coerce_batch_label_to_numeric(
+            sample_annotation[[labelname]]
+        )
+    }
+
     # Build samples×features df for BERT, appending SA columns
     # Keep a strict list of feature columns to extract back.
     feature_cols <- rownames(data_matrix) # features (rows of input matrix)
@@ -206,28 +257,46 @@ correct_with_BERT <- function(
         covariates_cols <- prepared$covariates_cols
     }
 
+    # Early guard: BERT requires >=2 samples per batch×covariate level
+    if (!is.null(covariates_cols) && length(covariates_cols) > 0L) {
+        check_df <- sample_annotation[, c(batch_col, covariates_cols), drop = FALSE]
+        # Treat NAs as an explicit level to avoid silent drops
+        for (nm in names(check_df)) {
+            if (anyNA(check_df[[nm]])) {
+                check_df[[nm]] <- as.character(check_df[[nm]])
+                check_df[[nm]][is.na(check_df[[nm]])] <- "<NA>"
+            }
+        }
+        tab <- table(check_df, useNA = "ifany")
+        if (any(tab < 2L)) {
+            bad_n <- sum(tab < 2L)
+            warning(
+                "BERT pre-check: found ", bad_n,
+                " batch×covariate strata with <2 samples; stopping early."
+            )
+            stop("Not enough samples at batch/covariate level.", call. = FALSE)
+        }
+    }
+
     # Minimal BERT metadata columns; rely on 'batchname', 'samplename', 'covariatename' args
-    meta_cols <- c(
-        sample_id_col, batch_col,
-        if (!is.null(covariates_cols)) covariates_cols else character(0)
-    )
+    meta_cols <- unique(c(
+        samplename,
+        batch_col,
+        if (!is.null(covariates_cols)) covariates_cols else character(0),
+        if (!is.null(labelname)) labelname else character(0)
+    ))
     meta_df <- as.data.frame(sample_annotation[, meta_cols, drop = FALSE])
 
     # Preserve row order (samples) and make a clean data.frame for BERT
     stopifnot(nrow(meta_df) == nrow(df_t))
     df_bert <- cbind(meta_df, as.data.frame(df_t, check.names = TRUE))
-    rownames(df_bert) <- df_bert[[sample_id_col]]
-    rownames_order <- rownames(df_bert)
-    df_bert[[sample_id_col]] <- NULL
+    sample_order <- df_bert[[samplename]]
+    rownames(df_bert) <- seq_len(nrow(df_bert))
 
-    need_biocparallel <- is.null(BPPARAM) || is.null(cores)
-    if (need_biocparallel) {
+    if (!is.null(BPPARAM) || !is.null(cores)) {
         .pb_requireNamespace("BiocParallel")
     }
-    if (is.null(BPPARAM)) {
-        BPPARAM <- BiocParallel::SerialParam()
-    }
-    if (is.null(cores)) {
+    if (!is.null(BPPARAM) && is.null(cores)) {
         cores <- BiocParallel::bpworkers(BPPARAM)
         if (is.null(cores) || is.na(cores) || cores < 1L) {
             cores <- 1L
@@ -235,22 +304,33 @@ correct_with_BERT <- function(
     }
 
     # Call BERT; allow user to pass parallel settings & extra args
-    res <- BERT::BERT(
+    bert_args <- list(
         data = df_bert,
         method = bert_method,
-        combatmode = combatmode,
         batchname = batch_col,
-        samplename = "Sample", # sample IDs were removed
-        covariatename = covariates_cols,
-        cores = cores,
-        BPPARAM = BPPARAM,
-        verify = TRUE,
-        ...
+        samplename = samplename,
+        covariatename = covariates_cols
     )
+    if (!is.null(combatmode)) {
+        bert_args$combatmode <- combatmode
+    }
+    if (!is.null(reference_name)) {
+        bert_args$referencename <- reference_name
+    }
+    if (!is.null(cores)) {
+        bert_args$cores <- cores
+    }
+    if (!is.null(BPPARAM)) {
+        bert_args$BPPARAM <- BPPARAM
+    }
+    res <- do.call(BERT::BERT, c(bert_args, dots))
+    if (!is.null(samplename) && (samplename %in% names(res))) {
+        res <- res[match(sample_order, res[[samplename]]), , drop = FALSE]
+    }
+    rownames(res) <- sample_order
     # Return the sample_id_col if it was removed
     if (!is.null(sample_id_col) && !(sample_id_col %in% names(res))) {
-        res[[sample_id_col]] <- rownames(res)
-        res <- res[rownames_order, , drop = FALSE]
+        res[[sample_id_col]] <- sample_order
     }
 
     # Result mirrors input: samples×features (+ meta); select only the original feature columns
@@ -270,9 +350,10 @@ correct_with_BERT <- function(
   sample_id_col, batch_col,
   covariates_cols = NULL,
   bert_method = c("ComBat", "limma", "ref"),
-  combatmode = 1,
+  combatmode = NULL,
   cores = NULL,
   BPPARAM = NULL,
+  reference_name = " ",
   ...
 ) {
     # Coerce to numeric matrix (do NOT impute; BERT tolerates NA)
@@ -298,6 +379,7 @@ correct_with_BERT <- function(
         combatmode        = combatmode,
         cores             = cores,
         BPPARAM           = BPPARAM,
+        reference_name    = reference_name,
         ...
     )
 }

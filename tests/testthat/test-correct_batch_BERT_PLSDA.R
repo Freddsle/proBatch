@@ -56,6 +56,80 @@ test_that("correct_with_BERT(wide): preserves dimnames and returns numeric matri
     expect_equal(out, m + 10, tolerance = 1e-12)
 })
 
+test_that(".run_BERT_core builds BERT input consistent with manual pipeline", {
+    testthat::skip_if_not_installed("BERT")
+
+    m <- matrix(
+        c(
+            1, 2, 3, 4,
+            5, 6, 7, 8
+        ),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s2", "s1", "s3", "s4"))
+    )
+
+    sa <- data.frame(
+        ric_id = c("s1", "s2", "s3", "s4"),
+        batch = c("B2", "B1", NA, "B10"),
+        label = c("L1", "L2", "L1", NA),
+        stringsAsFactors = FALSE
+    )
+
+    captured <- new.env(parent = emptyenv())
+    testthat::local_mocked_bindings(
+        BERT = function(data, method, combatmode = NULL, batchname, samplename,
+                        covariatename, referencename, verify = NULL, ...) {
+            captured$data <- data
+            captured$args <- list(
+                method = method,
+                combatmode = combatmode,
+                batchname = batchname,
+                samplename = samplename,
+                covariatename = covariatename,
+                referencename = referencename,
+                verify = verify
+            )
+            captured$dots <- list(...)
+            data
+        },
+        .package = "BERT"
+    )
+
+    out <- proBatch:::.run_BERT_core(
+        data_matrix = m,
+        sample_annotation = sa,
+        sample_id_col = "ric_id",
+        batch_col = "batch",
+        bert_method = "ComBat",
+        labelname = "label",
+        referencename = "REF"
+    )
+
+    sa_aligned <- proBatch:::.align_sample_annotation(
+        sa,
+        sample_ids = colnames(m),
+        sample_id_col = "ric_id"
+    )
+    sa_aligned$Sample <- colnames(m)
+    sa_aligned$batch <- as.numeric(as.factor(sa_aligned$batch))
+    sa_aligned$label <- as.numeric(as.factor(sa_aligned$label))
+
+    expected <- cbind(
+        sa_aligned[, c("Sample", "batch", "label"), drop = FALSE],
+        as.data.frame(t(m), check.names = TRUE)
+    )
+    rownames(expected) <- seq_len(nrow(expected))
+
+    expect_identical(captured$data, expected)
+    expect_false("ric_id" %in% names(captured$data))
+    expect_identical(captured$args$batchname, "batch")
+    expect_identical(captured$args$samplename, "Sample")
+    expect_identical(captured$args$referencename, "REF")
+    expect_identical(captured$dots$labelname, "label")
+    expect_null(captured$dots$referencename)
+    expect_identical(out, m)
+})
+
 
 # preBatchCorr_* must match the original measure by (feature, sample)
 

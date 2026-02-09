@@ -13,7 +13,7 @@ correct_with_BERT(
   batch_col = "MS_batch",
   format = c("long", "wide"),
   bert_method = c("ComBat", "limma", "ref"),
-  combatmode = 1,
+  combatmode = NULL,
   covariates_cols = NULL,
   keep_all = "default",
   cores = NULL,
@@ -50,20 +50,24 @@ batch comparison (or other, non-batch factor to be mapped to color in plots).}
 \item{bert_method}{Edge adjustment inside BERT: one of \code{"ComBat"}, \code{"limma"}, \code{"ref"}.
 Defaults to \code{"ComBat"}.}
 
-\item{combatmode}{Integer in \code{1:4} passed to BERT (parametric/non-parametric, mean.only). Default 1.
-See \code{?BERT::BERT}. Ignored if \code{bert_method != "ComBat"}.}
+\item{combatmode}{Integer in \code{1:4} passed to BERT (parametric/non-parametric, mean.only).
+If \code{NULL}, the wrapper does not pass it and BERT uses its own default.
+Ignored if \code{bert_method != "ComBat"}.}
 
 \item{covariates_cols}{Optional character vector of \code{sample_annotation} columns
 included in \code{mod} for ComBat (biological or nuisance covariates).}
 
 \item{keep_all}{For long output, columns retained (as in other correct_* functions).}
 
-\item{cores}{Integer; number of workers for BERT. When both \code{cores} and \code{BPPARAM} are \code{NULL},
-the wrapper uses \code{1L} (sequential) by default. Set to a higher value (and provide a matching
-\code{BPPARAM}) to opt into parallel execution (see \code{?BiocParallel}).}
+\item{cores}{Integer; number of workers for BERT. If \code{NULL} and \code{BPPARAM} is also \code{NULL},
+the wrapper leaves worker selection to \code{BERT::BERT()}. Provide \code{cores} (and optionally a matching
+\code{BPPARAM}) to control parallel execution (see \code{?BiocParallel}).}
 
-\item{BPPARAM}{Optional \code{BiocParallelParam} object for BERT. When \code{NULL}, defaults to
-\code{BiocParallel::SerialParam()} per Bioconductor guidelines (no implicit parallelism).}
+\item{BPPARAM}{Optional \code{BiocParallelParam} object for BERT. When \code{NULL}, the wrapper does not
+set a default and \code{BERT::BERT()} uses its own default.}
+
+\item{...}{Additional arguments passed to \code{BERT::BERT()}. Note that by default the wrapper sets
+\code{referencename = " "} (a single space) unless you override it via \code{...}.}
 }
 \value{
 If \code{format="wide"}, a corrected numeric matrix (features×samples).
