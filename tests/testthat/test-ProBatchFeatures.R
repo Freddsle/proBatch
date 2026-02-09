@@ -491,7 +491,7 @@ test_that("pb_assay_matrix and pb_as_long compute fast logged assays on demand",
         log_base = 2,
         offset = 1,
         pbf_name = "peptide::raw",
-        store_fast_steps = TRUE
+        store_fast_steps = FALSE
     )
 
     expect_false("peptide::log2_on_raw" %in% names(pbf))

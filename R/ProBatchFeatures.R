@@ -980,7 +980,13 @@ pb_transform <- function(
         step_label <- .pb_step_label(step, par)
         is_fast <- .pb_is_fast_step(step_label, fast_steps)
         is_final <- k == length(steps)
-        store_this <- if (store_intermediate || is_final) {
+        # Only "log"/"log2" are treated as ephemeral fast steps by default.
+        is_ephemeral_fast <- is_fast && step_label %in% c("log", "log2")
+        store_this <- if (store_intermediate) {
+            TRUE
+        } else if (is_ephemeral_fast) {
+            store_fast_steps
+        } else if (is_final) {
             TRUE
         } else if (is_fast) {
             store_fast_steps
