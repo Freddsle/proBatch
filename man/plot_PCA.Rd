@@ -24,7 +24,9 @@
   theme_name = "classic",
   base_size = 10,
   point_size = 3,
-  point_alpha = 0.8
+  point_alpha = 0.8,
+  x_nPC = NULL,
+  y_nPC = NULL
 )
 
 \method{plot_PCA}{ProBatchFeatures}(
@@ -62,7 +64,7 @@ where the filenames (colnames of the \code{data_matrix} are found).}
 
 \item{shape_by}{Optional column used for point shapes in the PCA plot.}
 
-\item{PC_to_plot}{principal component numbers for x and y axis}
+\item{PC_to_plot}{Integer vector of length 2 giving the PC indices for x and y axes.}
 
 \item{fill_the_missing}{numeric value determining how  missing values
 should be substituted. If \code{NULL}, features with missing values are
@@ -92,6 +94,12 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 \item{point_size}{Point size supplied to `ggplot2::geom_point()`.}
 
 \item{point_alpha}{Alpha transparency for plotted points.}
+
+\item{x_nPC}{Optional integer PC index for the x axis. Use together with `y_nPC`
+to override `PC_to_plot`.}
+
+\item{y_nPC}{Optional integer PC index for the y axis. Use together with `x_nPC`
+to override `PC_to_plot`.}
 
 \item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
 
@@ -124,6 +132,11 @@ color_list <- sample_annotation_to_colors(example_sample_annotation,
 )
 pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
     color_by = "DateTime", color_scheme = color_list[["DateTime"]]
+)
+
+pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
+    color_by = "MS_batch", x_nPC = 2, y_nPC = 3,
+    plot_title = "PCA (PC2 vs PC3)"
 )
 
 pca_file <- tempfile("pca_plot", fileext = ".png")

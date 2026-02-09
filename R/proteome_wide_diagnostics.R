@@ -685,7 +685,11 @@ plot_heatmap_generic <- function(data_matrix, ...) UseMethod("plot_heatmap_gener
 #'
 #' @inheritParams proBatch
 #' @param color_by column name (as in \code{sample_annotation}) to color by
-#' @param PC_to_plot principal component numbers for x and y axis
+#' @param PC_to_plot Integer vector of length 2 giving the PC indices for x and y axes.
+#' @param x_nPC Optional integer PC index for the x axis. Use together with `y_nPC`
+#'   to override `PC_to_plot`.
+#' @param y_nPC Optional integer PC index for the y axis. Use together with `x_nPC`
+#'   to override `PC_to_plot`.
 #' @param fill_the_missing numeric value determining how  missing values
 #' should be substituted. If \code{NULL}, features with missing values are
 #' excluded.
@@ -722,6 +726,11 @@ plot_heatmap_generic <- function(data_matrix, ...) UseMethod("plot_heatmap_gener
 #'     color_by = "DateTime", color_scheme = color_list[["DateTime"]]
 #' )
 #'
+#' pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
+#'     color_by = "MS_batch", x_nPC = 2, y_nPC = 3,
+#'     plot_title = "PCA (PC2 vs PC3)"
+#' )
+#'
 #' pca_file <- tempfile("pca_plot", fileext = ".png")
 #' pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
 #'     color_by = "DateTime", plot_title = "PCA colored by DateTime",
@@ -743,7 +752,8 @@ plot_PCA.default <- function(data_matrix,
                              units = c("cm", "in", "mm"),
                              plot_title = NULL,
                              theme_name = "classic",
-                             base_size = 10, point_size = 3, point_alpha = 0.8) {
+                             base_size = 10, point_size = 3, point_alpha = 0.8,
+                             x_nPC = NULL, y_nPC = NULL) {
     prep <- .pb_prepare_embedding_inputs(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
@@ -769,6 +779,26 @@ plot_PCA.default <- function(data_matrix,
         warning("Coloring by the first column specified")
         color_by <- color_by[1]
     }
+    if (!is.null(x_nPC) || !is.null(y_nPC)) {
+        if (is.null(x_nPC) || is.null(y_nPC)) {
+            stop("Both x_nPC and y_nPC must be supplied together.")
+        }
+        if (!missing(PC_to_plot)) {
+            warning("Both PC_to_plot and x_nPC/y_nPC supplied; using x_nPC/y_nPC.")
+        }
+        if (length(x_nPC) != 1L || length(y_nPC) != 1L) {
+            stop("x_nPC and y_nPC must be length 1.")
+        }
+        PC_to_plot <- c(x_nPC, y_nPC)
+    }
+    if (!is.numeric(PC_to_plot) || length(PC_to_plot) != 2L || anyNA(PC_to_plot)) {
+        stop("PC_to_plot must be a numeric vector of length 2.")
+    }
+    if (any(PC_to_plot %% 1 != 0)) {
+        stop("PC_to_plot must contain integer component numbers.")
+    }
+    PC_to_plot <- as.integer(PC_to_plot)
+
     # Compute PCA on samples (rows = samples); prcomp keeps rows order
     # NOTE: center/scale left at defaults to match previous behavior
     pr_comp_res <- prcomp(t(data_matrix))
