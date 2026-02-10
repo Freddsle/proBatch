@@ -51,9 +51,9 @@ test_that("detect_nested_batches identifies nesting in synthetic metadata", {
     res <- detect_nested_batches(df, batch_cols = c("site", "run", "plate"))
 
     expect_s3_class(res, "pb_nested_batches")
-    expect_true(res$adjacency["site", "run"])
-    expect_false(res$adjacency["run", "site"])
-    expect_true(is.null(res$ordering) || match("site", res$ordering) < match("run", res$ordering))
+    expect_true(res$adjacency["run", "site"])
+    expect_false(res$adjacency["site", "run"])
+    expect_true(is.null(res$ordering) || match("run", res$ordering) < match("site", res$ordering))
 })
 
 test_that("detect_outlier_samples flags an injected outlier", {

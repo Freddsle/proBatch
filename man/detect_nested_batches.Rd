@@ -12,9 +12,9 @@ detect_nested_batches(sample_annotation, batch_cols)
 \item{batch_cols}{character vector with two or more batch variables.}
 }
 \value{
-A list with adjacency matrix of nesting relations, edge list,
-  topological ordering (if acyclic), and suggestions. The object has class
-  \code{"pb_nested_batches"}.
+A list with adjacency matrix of nesting relations (parent -> child),
+  edge list, equivalent (bijective) partitions, topological ordering (if
+  acyclic), and suggestions. The object has class \code{"pb_nested_batches"}.
 }
 \description{
 Detect nested batch variables

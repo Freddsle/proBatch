@@ -70,14 +70,21 @@ validate_batch_design <- function(sample_annotation,
             }
         }
     } else if (!is.null(rownames(sample_annotation))) {
-        ids <- rownames(sample_annotation)
-        if (anyNA(ids) || any(!nzchar(as.character(ids)))) {
-            errors <- c(errors, "Sample annotation rownames contain NA/empty values.")
+        if (.pb_has_default_rownames(sample_annotation)) {
+            warnings <- c(
+                warnings,
+                "Sample annotation rownames look like defaults (1..n); provide sample_id_col for ID checks."
+            )
+        } else {
+            ids <- rownames(sample_annotation)
+            if (anyNA(ids) || any(!nzchar(as.character(ids)))) {
+                errors <- c(errors, "Sample annotation rownames contain NA/empty values.")
+            }
+            if (any(duplicated(ids))) {
+                errors <- c(errors, "Duplicated sample IDs detected in sample_annotation rownames.")
+            }
+            id_source <- "rownames"
         }
-        if (any(duplicated(ids))) {
-            errors <- c(errors, "Duplicated sample IDs detected in sample_annotation rownames.")
-        }
-        id_source <- "rownames"
     } else {
         warnings <- c(warnings, "No sample_id_col or rownames provided; skipping sample ID duplication checks.")
     }
@@ -94,6 +101,16 @@ validate_batch_design <- function(sample_annotation,
                 "Column '%s' is character; consider converting to factor for consistent coding.",
                 col
             ))
+        }
+
+        if (is.numeric(values)) {
+            n_unique <- length(unique(values[!is.na(values)]))
+            if (n_unique <= 10 || n_unique < 0.1 * nrow(sample_annotation)) {
+                warnings <- c(warnings, sprintf(
+                    "%s column has very few values, but is numeric-like; should it be treated as factor?",
+                    col
+                ))
+            }
         }
 
         if (is.factor(values)) {
@@ -139,12 +156,41 @@ validate_batch_design <- function(sample_annotation,
         if (!is.null(condition_col) && condition_col %in% names(sample_annotation)) {
             idx <- !is.na(batch_values) & !is.na(sample_annotation[[condition_col]])
             if (any(idx)) {
-                pairs <- split(sample_annotation[[condition_col]][idx], batch_values[idx])
+                condition_values <- sample_annotation[[condition_col]][idx]
+                batch_values_idx <- batch_values[idx]
+
+                pairs <- split(condition_values, batch_values_idx)
                 nested <- all(vapply(pairs, function(x) length(unique(x)) == 1, logical(1)))
                 if (nested) {
                     warnings <- c(warnings, sprintf(
                         "Batches appear nested within condition '%s'.",
                         condition_col
+                    ))
+                }
+
+                tab <- table(batch_values_idx, condition_values, useNA = "no")
+                batch_conditions <- rowSums(tab > 0)
+                condition_batches <- colSums(tab > 0)
+
+                if (any(condition_batches <= 1)) {
+                    warnings <- c(warnings, sprintf(
+                        "Some condition levels occur in only one batch (possible confounding of '%s' with '%s').",
+                        condition_col,
+                        batch_col
+                    ))
+                }
+                if (any(batch_conditions <= 1)) {
+                    warnings <- c(warnings, sprintf(
+                        "Some batches contain only one condition level (possible nesting of '%s' within '%s').",
+                        batch_col,
+                        condition_col
+                    ))
+                }
+                if (all(condition_batches == 1) && all(batch_conditions == 1)) {
+                    errors <- c(errors, sprintf(
+                        "Condition '%s' and batch '%s' are completely confounded (one-to-one mapping).",
+                        condition_col,
+                        batch_col
                     ))
                 }
             }
@@ -271,7 +317,7 @@ summarize_design <- function(sample_annotation,
     }
 
     kappa_value <- tryCatch(
-        stats::kappa(design_matrix),
+        base::kappa(design_matrix),
         error = function(e) NA_real_
     )
     if (!is.na(kappa_value) && is.finite(kappa_value) && kappa_value > 30) {
@@ -373,9 +419,9 @@ summarize_design <- function(sample_annotation,
 #' @param sample_annotation data frame with sample annotations.
 #' @param batch_cols character vector with two or more batch variables.
 #'
-#' @return A list with adjacency matrix of nesting relations, edge list,
-#'   topological ordering (if acyclic), and suggestions. The object has class
-#'   \code{"pb_nested_batches"}.
+#' @return A list with adjacency matrix of nesting relations (parent -> child),
+#'   edge list, equivalent (bijective) partitions, topological ordering (if
+#'   acyclic), and suggestions. The object has class \code{"pb_nested_batches"}.
 #' @export
 #'
 #' @examples
@@ -407,21 +453,40 @@ detect_nested_batches <- function(sample_annotation, batch_cols) {
     )
 
     edges <- data.frame(parent = character(), child = character(), stringsAsFactors = FALSE)
+    equivalent <- list()
 
-    for (i in seq_len(n)) {
-        for (j in seq_len(n)) {
-            if (i == j) {
-                next
-            }
+    for (i in seq_len(n - 1)) {
+        for (j in (i + 1):n) {
             col_a <- batch_cols[i]
             col_b <- batch_cols[j]
             idx <- !is.na(sample_annotation[[col_a]]) & !is.na(sample_annotation[[col_b]])
             if (!any(idx)) {
                 next
             }
-            pairs <- split(sample_annotation[[col_b]][idx], sample_annotation[[col_a]][idx])
-            nested <- all(vapply(pairs, function(x) length(unique(x)) == 1, logical(1)))
-            if (nested) {
+
+            a_in_b <- .pb_is_nested(
+                child = sample_annotation[[col_a]][idx],
+                parent = sample_annotation[[col_b]][idx]
+            )
+            b_in_a <- .pb_is_nested(
+                child = sample_annotation[[col_b]][idx],
+                parent = sample_annotation[[col_a]][idx]
+            )
+
+            if (a_in_b && b_in_a) {
+                equivalent[[length(equivalent) + 1]] <- c(col_a, col_b)
+                next
+            }
+
+            if (a_in_b) {
+                adjacency[col_b, col_a] <- TRUE
+                edges <- rbind(edges, data.frame(
+                    parent = col_b,
+                    child = col_a,
+                    stringsAsFactors = FALSE
+                ))
+            }
+            if (b_in_a) {
                 adjacency[col_a, col_b] <- TRUE
                 edges <- rbind(edges, data.frame(
                     parent = col_a,
@@ -433,11 +498,12 @@ detect_nested_batches <- function(sample_annotation, batch_cols) {
     }
 
     ordering <- .pb_toposort(adjacency)
-    suggestion <- .pb_nested_suggestion(adjacency)
+    suggestion <- .pb_nested_suggestion(adjacency, equivalent = equivalent)
 
     out <- list(
         adjacency = adjacency,
         edges = edges,
+        equivalent = equivalent,
         ordering = ordering,
         suggestion = suggestion
     )
@@ -732,6 +798,21 @@ subbatch_detection <- function(data_matrix,
     unique(cols)
 }
 
+.pb_has_default_rownames <- function(df) {
+    if (is.null(df) || !is.data.frame(df)) {
+        return(FALSE)
+    }
+    rn <- attr(df, "row.names")
+    n <- nrow(df)
+    is.integer(rn) && length(rn) == 2L &&
+        is.na(rn[1L]) && identical(rn[2L], -n)
+}
+
+.pb_is_nested <- function(child, parent) {
+    pairs <- split(parent, child)
+    all(vapply(pairs, function(x) length(unique(x)) == 1, logical(1)))
+}
+
 .pb_align_annotation_to_matrix <- function(sample_annotation, sample_ids) {
     if (is.null(sample_annotation)) {
         return(NULL)
@@ -897,8 +978,15 @@ subbatch_detection <- function(data_matrix,
     order
 }
 
-.pb_nested_suggestion <- function(adjacency) {
+.pb_nested_suggestion <- function(adjacency, equivalent = NULL) {
     if (is.null(adjacency) || !nrow(adjacency)) {
+        if (length(equivalent)) {
+            eq_text <- vapply(equivalent, function(x) paste(x, collapse = " <-> "), character(1))
+            return(sprintf(
+                "Equivalent partitions detected: %s",
+                paste(eq_text, collapse = "; ")
+            ))
+        }
         return("No nesting relations detected.")
     }
     incoming <- colSums(adjacency)
@@ -931,6 +1019,13 @@ subbatch_detection <- function(data_matrix,
         suggestions <- c(suggestions, sprintf(
             "No nesting detected for: %s",
             paste(standalone, collapse = ", ")
+        ))
+    }
+    if (length(equivalent)) {
+        eq_text <- vapply(equivalent, function(x) paste(x, collapse = " <-> "), character(1))
+        suggestions <- c(suggestions, sprintf(
+            "Equivalent partitions detected: %s",
+            paste(eq_text, collapse = "; ")
         ))
     }
     if (!length(suggestions)) {
