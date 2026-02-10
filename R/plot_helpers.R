@@ -560,12 +560,29 @@
 .pb_prepare_annotation_df <- function(annotation_df,
                                       id_col,
                                       columns,
-                                      auto_columns = NULL) {
+                                      auto_columns = NULL,
+                                      target_ids = NULL) {
     if (is.null(annotation_df)) {
-        return(list(df = NULL, columns = NULL))
+        return(list(df = NULL, columns = NULL, missing_ids = character()))
     }
+
+    annotation_df <- as.data.frame(annotation_df, stringsAsFactors = FALSE)
     if (is.null(id_col) || !id_col %in% names(annotation_df)) {
-        return(list(df = NULL, columns = NULL))
+        rn <- rownames(annotation_df)
+        if (!is.null(rn) && !anyNA(rn) && length(rn) == nrow(annotation_df)) {
+            id_col <- if (!is.null(id_col) && nzchar(id_col)) {
+                id_col
+            } else {
+                ".pb_annotation_id"
+            }
+            annotation_df[[id_col]] <- rn
+        } else {
+            return(list(
+                df = NULL,
+                columns = NULL,
+                missing_ids = if (is.null(target_ids)) character() else as.character(target_ids)
+            ))
+        }
     }
 
     target_columns <- columns
@@ -582,16 +599,39 @@
             select(all_of(c(id_col, target_columns)))
     }
 
+    ann_ids <- as.character(ann[[id_col]])
+    keep <- !is.na(ann_ids) & nzchar(ann_ids) & !duplicated(ann_ids)
+    ann <- ann[keep, , drop = FALSE]
+    ann_ids <- as.character(ann[[id_col]])
+
+    missing_ids <- character()
+    if (!is.null(target_ids)) {
+        target_ids <- as.character(target_ids)
+        idx <- match(target_ids, ann_ids)
+        missing_ids <- target_ids[is.na(idx)]
+        ann <- ann[idx[!is.na(idx)], , drop = FALSE]
+    }
+
     ann <- ann %>%
         mutate(across(where(is.POSIXct), as.numeric)) %>%
         remove_rownames() %>%
         column_to_rownames(var = id_col)
 
-    if (is.data.frame(ann) && ncol(ann) == 0) {
+    if (is.data.frame(ann)) {
+        ann[] <- lapply(ann, function(col) {
+            if (is.factor(col)) {
+                droplevels(col)
+            } else {
+                col
+            }
+        })
+    }
+
+    if (is.data.frame(ann) && (ncol(ann) == 0 || nrow(ann) == 0)) {
         ann <- NULL
     }
 
-    list(df = ann, columns = target_columns)
+    list(df = ann, columns = target_columns, missing_ids = unique(missing_ids))
 }
 
 .pb_filter_annotation_colors <- function(color_list, annotation_df) {
@@ -602,7 +642,31 @@
     if (!length(keep)) {
         return(list())
     }
-    color_list[keep]
+    aligned <- vector("list", length(keep))
+    names(aligned) <- keep
+
+    for (col in keep) {
+        colors <- color_list[[col]]
+        values <- annotation_df[[col]]
+        if (is.null(values)) {
+            next
+        }
+        if (is.character(values)) {
+            values <- factor(values)
+        }
+        if (is.factor(values) && !is.null(names(colors))) {
+            levels_needed <- levels(droplevels(values))
+            missing <- setdiff(levels_needed, names(colors))
+            if (length(missing)) {
+                extra_cols <- grDevices::hcl.colors(length(missing), "Set 3")
+                names(extra_cols) <- missing
+                colors <- c(colors, extra_cols)
+            }
+            colors <- colors[levels_needed]
+        }
+        aligned[[col]] <- colors
+    }
+    aligned
 }
 
 .pb_prepare_pheatmap_annotations <- function(data_matrix,
@@ -621,7 +685,8 @@
         auto_columns = intersect(
             c("MS_batch", "Diet", "DateTime", "order"),
             names(column_annotation_df)
-        )
+        ),
+        target_ids = colnames(data_matrix)
     )
     annotation_col <- col_info$df
     columns_for_cols <- col_info$columns
@@ -633,17 +698,26 @@
         auto_columns = intersect(
             c("KEGG_pathway", "WGCNA_module", "evolutionary_distance"),
             names(row_annotation_df)
-        )
+        ),
+        target_ids = rownames(data_matrix)
     )
     annotation_row <- row_info$df
     columns_for_rows <- row_info$columns
 
-    if (!is.null(annotation_col) && !setequal(rownames(annotation_col), colnames(data_matrix))) {
-        warning("coloring by column annotation will not work: annotation rownames do not match data matrix column names")
+    if (!is.null(annotation_col) && length(col_info$missing_ids)) {
+        warning(
+            "column annotation is missing entries for ",
+            length(col_info$missing_ids),
+            " matrix columns"
+        )
     }
 
-    if (!is.null(annotation_row) && !setequal(rownames(annotation_row), rownames(data_matrix))) {
-        warning("coloring by row annotation will not work: annotation rownames do not match data matrix column names")
+    if (!is.null(annotation_row) && length(row_info$missing_ids)) {
+        warning(
+            "row annotation is missing entries for ",
+            length(row_info$missing_ids),
+            " matrix rows"
+        )
     }
 
     annotation_color_cols <- .pb_filter_annotation_colors(annotation_color_cols, annotation_col)

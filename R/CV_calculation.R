@@ -34,6 +34,29 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
                                  measure_col = "Intensity", batch_col = NULL,
                                  biospecimen_id_col = NULL,
                                  unlog = TRUE, log_base = 2, offset = 0) {
+    if (is(df_long, "ProBatchFeatures")) {
+        if (is.null(sample_id_col)) {
+            message("sample_id_col is not specified, using FullRunName as default")
+            sample_id_col <- "FullRunName"
+        }
+
+        object <- df_long
+        assay_name <- .pb_resolve_assay_for_input(object)
+        df_long <- .pb_pbf_to_long(
+            object = object,
+            assay_name = assay_name,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col,
+            measure_col = measure_col
+        )
+        sample_annotation <- .pb_default_sample_annotation(
+            object = object,
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
+            sample_ids = unique(df_long[[sample_id_col]])
+        )
+    }
+
     # Handle sample_annotation and check for sample_id_col
     if (!is.null(sample_annotation) && is.null(sample_id_col)) {
         message("sample_id_col is not specified, using FullRunName as default")

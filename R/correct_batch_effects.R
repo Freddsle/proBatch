@@ -448,6 +448,24 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
                                   qual_col = NULL,
                                   qual_value = NULL,
                                   min_measurements = 8, ...) {
+    if (is(df_long, "ProBatchFeatures")) {
+        object <- df_long
+        assay_name <- .pb_resolve_assay_for_input(object)
+        df_long <- .pb_pbf_to_long(
+            object = object,
+            assay_name = assay_name,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col,
+            measure_col = measure_col
+        )
+        sample_annotation <- .pb_default_sample_annotation(
+            object = object,
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
+            sample_ids = unique(df_long[[sample_id_col]])
+        )
+    }
+
     original_cols <- names(df_long)
 
     df_long <- check_sample_consistency(

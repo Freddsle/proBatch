@@ -597,16 +597,39 @@ plot_heatmap_generic.default <- function(data_matrix,
     width <- units_adjusted$width
     height <- units_adjusted$height
 
-    p <- pheatmap(
-        data_matrix,
-        cluster_rows = cluster_rows, cluster_cols = cluster_cols,
+    extra_args <- list(...)
+    if (!("breaks" %in% names(extra_args))) {
+        finite_vals <- data_matrix[is.finite(data_matrix)]
+        if (length(finite_vals)) {
+            rng <- range(finite_vals)
+            if (isTRUE(rng[1] == rng[2])) {
+                center <- rng[1]
+                span <- if (isTRUE(center == 0)) 1 else abs(center) * 1e-3
+                if (!is.finite(span) || span == 0) {
+                    span <- 1
+                }
+                extra_args$breaks <- seq(
+                    center - span,
+                    center + span,
+                    length.out = length(heatmap_color) + 1
+                )
+            }
+        }
+    }
+
+    p <- do.call(pheatmap, c(list(
+        mat = data_matrix,
+        cluster_rows = cluster_rows,
+        cluster_cols = cluster_cols,
         color = heatmap_color,
         annotation_col = annotation_col,
         annotation_row = annotation_row,
         annotation_colors = annotation_color_list,
-        filename = filename, width = width, height = height,
-        main = plot_title, ...
-    )
+        filename = filename,
+        width = width,
+        height = height,
+        main = plot_title
+    ), extra_args))
     return(p)
 }
 

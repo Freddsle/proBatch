@@ -152,6 +152,34 @@ test_that("metadata_column_summary.ProBatchFeatures summarises object metadata",
     expect_identical(custom_summary$colname, c("u", "v"))
 })
 
+test_that("ProBatchFeatures metadata methods share rowData assay resolution rules", {
+    pb_test_load_example_data()
+
+    pbf <- ProBatchFeatures(
+        data_matrix = example_proteome_matrix,
+        sample_annotation = example_sample_annotation,
+        sample_id_col = "FullRunName",
+        name = "raw"
+    )
+
+    expect_no_error(find_duplicated_columns(pbf, component = "rowData"))
+    expect_no_error(metadata_column_summary(pbf, component = "rowData"))
+    expect_no_error(filter_metadata_columns(pbf, component = "rowData"))
+
+    bad_inputs <- list(
+        function() find_duplicated_columns(pbf, component = "rowData", assay = character(0)),
+        function() metadata_column_summary(pbf, component = "rowData", assay = character(0)),
+        function() filter_metadata_columns(pbf, component = "rowData", assay = character(0))
+    )
+
+    for (call in bad_inputs) {
+        expect_error(
+            call(),
+            "Provide an assay name via `assay` or ensure the object stores assays."
+        )
+    }
+})
+
 test_that("filter_metadata_columns handles duplicates by pattern", {
     df <- data.frame(
         check.names = FALSE,

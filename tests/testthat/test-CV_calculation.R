@@ -275,3 +275,23 @@ test_that("filename argument saves a file", {
     expect_true(file.exists(tmpfile))
     unlink(tmpfile)
 })
+
+test_that("CV diagnostics accept ProBatchFeatures inputs", {
+    pbf <- pb_test_make_pbf(n_rows = 80, n_cols = 16, add_log2 = TRUE)
+
+    cv_df <- suppressWarnings(calculate_feature_CV(
+        df_long = pbf,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE
+    ))
+    expect_true(all(c("CV_total", "CV_perBatch") %in% names(cv_df)))
+
+    cv_plot <- suppressWarnings(plot_CV_distr(
+        df_long = pbf,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE
+    ))
+    expect_s3_class(cv_plot, "ggplot")
+})

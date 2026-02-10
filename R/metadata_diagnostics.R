@@ -87,19 +87,7 @@ find_duplicated_columns.ProBatchFeatures <- function(
     if (component == "colData") {
         target <- SummarizedExperiment::colData(object)
     } else {
-        chosen_assay <- assay
-        if (is.null(chosen_assay)) {
-            chosen_assay <- pb_current_assay(object)
-        }
-        if (!length(chosen_assay)) {
-            stop("Provide an assay name via `assay` or ensure the object stores assays.")
-        }
-        if (length(chosen_assay) != 1L) {
-            stop("`assay` must be a single assay name.")
-        }
-        if (!chosen_assay %in% names(object)) {
-            stop("Assay '", chosen_assay, "' not found in object.")
-        }
+        chosen_assay <- .pb_resolve_metadata_rowdata_assay(object, assay = assay)
         target <- SummarizedExperiment::rowData(object[[chosen_assay]])
     }
 
@@ -213,19 +201,7 @@ metadata_column_summary.ProBatchFeatures <- function(
     if (component == "colData") {
         target <- SummarizedExperiment::colData(object)
     } else {
-        chosen_assay <- assay
-        if (is.null(chosen_assay)) {
-            chosen_assay <- pb_current_assay(object)
-        }
-        if (!length(chosen_assay)) {
-            stop("Provide an assay name via `assay` or ensure the object stores assays.")
-        }
-        if (length(chosen_assay) != 1L) {
-            stop("`assay` must be a single assay name.")
-        }
-        if (!chosen_assay %in% names(object)) {
-            stop("Assay '", chosen_assay, "' not found in object.")
-        }
+        chosen_assay <- .pb_resolve_metadata_rowdata_assay(object, assay = assay)
         target <- SummarizedExperiment::rowData(object[[chosen_assay]])
     }
 
@@ -459,19 +435,7 @@ filter_metadata_columns.ProBatchFeatures <- function(
         return(filtered_df)
     }
 
-    chosen_assay <- assay
-    if (is.null(chosen_assay)) {
-        chosen_assay <- pb_current_assay(object)
-    }
-    if (!length(chosen_assay)) {
-        stop("Provide an assay name via `assay` or ensure the object stores assays.")
-    }
-    if (length(chosen_assay) != 1L) {
-        stop("`assay` must be a single assay name.")
-    }
-    if (!chosen_assay %in% names(object)) {
-        stop("Assay '", chosen_assay, "' not found in object.")
-    }
+    chosen_assay <- .pb_resolve_metadata_rowdata_assay(object, assay = assay)
 
     target <- SummarizedExperiment::rowData(object[[chosen_assay]])
     base_target <- as.data.frame(target)
@@ -522,6 +486,23 @@ filter_metadata_columns.ProBatchFeatures <- function(
     signatures <- vapply(normalised, .pb_column_signature, character(1), USE.NAMES = FALSE)
     groups <- split(col_names, signatures)
     Filter(function(cols) length(cols) > 1L, groups)
+}
+
+.pb_resolve_metadata_rowdata_assay <- function(object, assay = NULL) {
+    chosen_assay <- assay
+    if (is.null(chosen_assay)) {
+        chosen_assay <- .pb_resolve_assay_for_input(object)
+    }
+    if (!length(chosen_assay)) {
+        stop("Provide an assay name via `assay` or ensure the object stores assays.")
+    }
+    if (length(chosen_assay) != 1L) {
+        stop("`assay` must be a single assay name.")
+    }
+    if (!chosen_assay %in% names(object)) {
+        stop("Assay '", chosen_assay, "' not found in object.")
+    }
+    chosen_assay
 }
 
 .pb_to_base_df <- function(x) {

@@ -152,3 +152,102 @@ test_that("fitting_trend_plots", {
     expect_equal(fit_plot$plot_env$order_col, "order")
     expect_equal(fit_plot$plot_env$vline_color, "grey")
 })
+
+make_feature_pbf_fixture <- function() {
+    pb_test_load_example_data()
+    data(example_peptide_annotation, package = "proBatch")
+
+    matrix_small <- example_proteome_matrix[1:100, 1:16]
+    sample_ann <- example_sample_annotation[
+        match(colnames(matrix_small), example_sample_annotation$FullRunName),
+    ]
+    peptide_ann <- example_peptide_annotation[
+        match(rownames(matrix_small), example_peptide_annotation$peptide_group_label),
+    ]
+    peptide_ann <- peptide_ann[!is.na(peptide_ann$peptide_group_label), , drop = FALSE]
+
+    pbf <- suppressMessages(ProBatchFeatures(
+        data_matrix = matrix_small,
+        sample_annotation = sample_ann,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    ))
+    pbf <- suppressMessages(pb_transform(
+        pbf,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    ))
+
+    list(
+        pbf = pbf,
+        matrix_small = matrix_small,
+        sample_ann = sample_ann,
+        peptide_ann = peptide_ann
+    )
+}
+
+test_that("feature-level diagnostics accept PBF and rowname-based annotation", {
+    fixture <- make_feature_pbf_fixture()
+    pbf <- fixture$pbf
+    matrix_small <- fixture$matrix_small
+    sample_ann <- fixture$sample_ann
+    peptide_ann <- fixture$peptide_ann
+
+    sample_ann_row <- sample_ann
+    rownames(sample_ann_row) <- sample_ann_row$FullRunName
+    sample_ann_row$FullRunName <- NULL
+
+    feature_id <- rownames(matrix_small)[1]
+    single_feature <- suppressWarnings(plot_single_feature(
+        feature_name = feature_id,
+        df_long = pbf,
+        sample_annotation = sample_ann_row
+    ))
+    expect_s3_class(single_feature, "ggplot")
+
+    gene_counts <- table(peptide_ann$Gene)
+    gene_target <- names(gene_counts[gene_counts >= 2])[1]
+    if (!length(gene_target) || is.na(gene_target)) {
+        skip("Need at least one protein with >=2 peptides for protein panel test.")
+    }
+
+    rownames(peptide_ann) <- peptide_ann$peptide_group_label
+    peptide_ann$peptide_group_label <- NULL
+
+    protein_plot <- suppressWarnings(plot_peptides_of_one_protein(
+        protein_name = gene_target,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene",
+        df_long = pbf,
+        sample_annotation = sample_ann_row
+    ))
+    expect_s3_class(protein_plot, "ggplot")
+})
+
+test_that("fitting diagnostics accept ProBatchFeatures inputs", {
+    fixture <- make_feature_pbf_fixture()
+    pbf <- fixture$pbf
+    matrix_small <- fixture$matrix_small
+    sample_ann <- fixture$sample_ann
+
+    expect_warning(
+        fit_df <- adjust_batch_trend_df(
+            pbf,
+            sample_annotation = sample_ann,
+            span = 0.7
+        ),
+        "`qual_col` is NULL, setting `no_fit_imputed = FALSE` so imputed flags are ignored."
+    )
+    expect_s3_class(fit_df, "data.frame")
+
+    feature_id <- rownames(matrix_small)[1]
+    fit_df <- fit_df[fit_df$peptide_group_label %in% feature_id, , drop = FALSE]
+    fit_plot <- suppressWarnings(plot_with_fitting_curve(
+        feature_name = feature_id,
+        fit_df = fit_df,
+        df_long = pbf,
+        sample_annotation = sample_ann
+    ))
+    expect_s3_class(fit_plot, "ggplot")
+})

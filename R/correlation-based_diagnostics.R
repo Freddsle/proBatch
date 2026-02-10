@@ -121,23 +121,79 @@ plot_protein_corrplot <- function(data_matrix,
                                   width = NA, height = NA,
                                   units = c("cm", "in", "mm"),
                                   plot_title = NULL, ...) {
+    if (is(data_matrix, "ProBatchFeatures")) {
+        object <- data_matrix
+        assay_name <- .pb_resolve_assay_for_input(object)
+        data_matrix <- pb_assay_matrix(object, assay = assay_name)
+        peptide_annotation <- .pb_default_feature_annotation(
+            object = object,
+            assay_name = assay_name,
+            feature_annotation = peptide_annotation,
+            feature_id_col = feature_id_col
+        )
+    }
+
+    if (is.null(peptide_annotation)) {
+        stop("`peptide_annotation` must be provided for protein correlation plots.")
+    }
+    if (!feature_id_col %in% names(peptide_annotation)) {
+        stop(sprintf("Feature ID column '%s' was not found in `peptide_annotation`.", feature_id_col))
+    }
+    if (!protein_col %in% names(peptide_annotation)) {
+        stop(sprintf("Protein column '%s' was not found in `peptide_annotation`.", protein_col))
+    }
+
     peptides <- peptide_annotation %>%
         filter(!!(sym(feature_id_col)) %in% rownames(data_matrix)) %>%
         filter(!!(sym(protein_col)) %in% protein_name) %>%
         pull(!!sym(feature_id_col)) %>%
         as.character()
 
-    data_matrix_sub <- data_matrix[peptides, ]
+    peptides <- unique(peptides[!is.na(peptides) & nzchar(peptides)])
+    if (!length(peptides)) {
+        stop(
+            "No peptides from the selected protein(s) were found in `data_matrix`.",
+            call. = FALSE
+        )
+    }
+
+    data_matrix_sub <- data_matrix[peptides, , drop = FALSE]
     corr_matrix <- cor(t(data_matrix_sub), use = "pairwise.complete.obs")
+    if (is.null(dim(corr_matrix))) {
+        corr_matrix <- matrix(
+            corr_matrix,
+            nrow = 1L,
+            ncol = 1L,
+            dimnames = list(peptides[[1]], peptides[[1]])
+        )
+    }
 
     peptide_annotation <- peptide_annotation %>%
         filter(!!(sym(protein_col)) %in% protein_name) %>%
+        filter(!!(sym(feature_id_col)) %in% rownames(corr_matrix)) %>%
         arrange(!!sym(protein_col))
 
+    ordered_peptides <- as.character(peptide_annotation[[feature_id_col]])
+    if (!length(ordered_peptides)) {
+        stop(
+            "No annotated peptides from the selected protein(s) could be aligned to the correlation matrix.",
+            call. = FALSE
+        )
+    }
+
     corr_matrix <- corr_matrix[
-        peptide_annotation[[feature_id_col]],
-        peptide_annotation[[feature_id_col]]
+        ordered_peptides,
+        ordered_peptides,
+        drop = FALSE
     ]
+
+    if (nrow(corr_matrix) < 2L || ncol(corr_matrix) < 2L) {
+        if (isTRUE(cluster_rows) || isTRUE(cluster_cols)) {
+            message("Only one peptide available; disabling clustering for correlation heatmap.")
+        }
+        cluster_rows <- FALSE
+        cluster_cols <- FALSE
+    }
 
     if (is.null(plot_title) && length(protein_name) == 1) {
         plot_title <- sprintf("Correlation matrix of peptides from %s", protein_name)
@@ -222,6 +278,18 @@ plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
                                          "Correlation matrix of%s samples",
                                          ifelse(is.null(samples_to_plot), "", " selected")
                                      ), ...) {
+    if (is(data_matrix, "ProBatchFeatures")) {
+        object <- data_matrix
+        assay_name <- .pb_resolve_assay_for_input(object)
+        data_matrix <- pb_assay_matrix(object, assay = assay_name)
+        sample_annotation <- .pb_default_sample_annotation(
+            object = object,
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
+            sample_ids = colnames(data_matrix)
+        )
+    }
+
     if (!is.null(samples_to_plot)) {
         if (!all(samples_to_plot %in% colnames(data_matrix))) {
             missing_samples <- setdiff(samples_to_plot, colnames(data_matrix))
@@ -371,6 +439,22 @@ calculate_sample_corr_distr <- function(data_matrix, sample_annotation,
                                         biospecimen_id_col = "EarTag",
                                         sample_id_col = "FullRunName",
                                         batch_col = "MS_batch") {
+    sample_annotation_missing <- missing(sample_annotation)
+
+    if (is(data_matrix, "ProBatchFeatures")) {
+        object <- data_matrix
+        assay_name <- .pb_resolve_assay_for_input(object)
+        data_matrix <- pb_assay_matrix(object, assay = assay_name)
+        sample_annotation <- .pb_default_sample_annotation(
+            object = object,
+            sample_annotation = if (sample_annotation_missing) NULL else sample_annotation,
+            sample_id_col = sample_id_col,
+            sample_ids = colnames(data_matrix)
+        )
+    } else if (sample_annotation_missing) {
+        stop("`sample_annotation` must be provided.")
+    }
+
     df_long <- matrix_to_long(data_matrix, sample_id_col = sample_id_col)
     df_long <- check_sample_consistency(
         sample_annotation,
@@ -459,6 +543,22 @@ plot_sample_corr_distribution <- function(data_matrix, sample_annotation,
                                           plot_title = "Sample correlation distribution",
                                           plot_param = "batch_replicate",
                                           theme = "classic") {
+    sample_annotation_missing <- missing(sample_annotation)
+
+    if (is(data_matrix, "ProBatchFeatures")) {
+        object <- data_matrix
+        assay_name <- .pb_resolve_assay_for_input(object)
+        data_matrix <- pb_assay_matrix(object, assay = assay_name)
+        sample_annotation <- .pb_default_sample_annotation(
+            object = object,
+            sample_annotation = if (sample_annotation_missing) NULL else sample_annotation,
+            sample_id_col = sample_id_col,
+            sample_ids = colnames(data_matrix)
+        )
+    } else if (sample_annotation_missing) {
+        stop("`sample_annotation` must be provided.")
+    }
+
     if (!is.list(data_matrix)) {
         corr_distribution <- calculate_sample_corr_distr(
             data_matrix = data_matrix,
@@ -637,6 +737,32 @@ get_peptide_corr_df <- function(peptide_cor, peptide_annotation,
 calculate_peptide_corr_distr <- function(data_matrix, peptide_annotation,
                                          protein_col = "ProteinName",
                                          feature_id_col = "peptide_group_label") {
+    peptide_annotation_missing <- missing(peptide_annotation)
+
+    if (is(data_matrix, "ProBatchFeatures")) {
+        object <- data_matrix
+        assay_name <- .pb_resolve_assay_for_input(object)
+        data_matrix <- pb_assay_matrix(object, assay = assay_name)
+        peptide_annotation <- .pb_default_feature_annotation(
+            object = object,
+            assay_name = assay_name,
+            feature_annotation = if (peptide_annotation_missing) NULL else peptide_annotation,
+            feature_id_col = feature_id_col
+        )
+    } else if (peptide_annotation_missing) {
+        stop("`peptide_annotation` must be provided.")
+    }
+
+    if (is.null(peptide_annotation)) {
+        stop("`peptide_annotation` must be provided.")
+    }
+    if (!feature_id_col %in% names(peptide_annotation)) {
+        stop(sprintf("Feature ID column '%s' was not found in `peptide_annotation`.", feature_id_col))
+    }
+    if (!protein_col %in% names(peptide_annotation)) {
+        stop(sprintf("Protein column '%s' was not found in `peptide_annotation`.", protein_col))
+    }
+
     corr_matrix <- cor(t(data_matrix), use = "pairwise.complete.obs")
     corr_distribution <- get_peptide_corr_df(
         peptide_cor = corr_matrix,
@@ -681,6 +807,22 @@ plot_peptide_corr_distribution <- function(data_matrix, peptide_annotation,
                                            units = c("cm", "in", "mm"),
                                            plot_title = "Distribution of peptide correlation",
                                            theme = "classic") {
+    peptide_annotation_missing <- missing(peptide_annotation)
+
+    if (is(data_matrix, "ProBatchFeatures")) {
+        object <- data_matrix
+        assay_name <- .pb_resolve_assay_for_input(object)
+        data_matrix <- pb_assay_matrix(object, assay = assay_name)
+        peptide_annotation <- .pb_default_feature_annotation(
+            object = object,
+            assay_name = assay_name,
+            feature_annotation = if (peptide_annotation_missing) NULL else peptide_annotation,
+            feature_id_col = feature_id_col
+        )
+    } else if (peptide_annotation_missing) {
+        stop("`peptide_annotation` must be provided.")
+    }
+
     if (!is.list(data_matrix)) {
         corr_distribution <- calculate_peptide_corr_distr(
             data_matrix,

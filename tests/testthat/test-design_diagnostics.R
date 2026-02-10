@@ -96,3 +96,62 @@ test_that("subbatch_detection splits a batch with two clusters", {
     expect_true(b1_row$k >= 2)
     expect_true(length(unique(res$assignments$subbatch)) >= 2)
 })
+
+test_that("design diagnostics accept ProBatchFeatures inputs", {
+    mat_outlier <- matrix(0, nrow = 2, ncol = 6)
+    colnames(mat_outlier) <- paste0("s", 1:6)
+    mat_outlier[, 6] <- 100
+    meta_outlier <- data.frame(
+        FullRunName = colnames(mat_outlier),
+        batch = "B1",
+        stringsAsFactors = FALSE
+    )
+
+    pbf_outlier <- suppressMessages(ProBatchFeatures(
+        data_matrix = mat_outlier,
+        sample_annotation = meta_outlier,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    ))
+
+    outliers <- detect_outlier_samples(
+        pbf_outlier,
+        batch_col = "batch",
+        n_pcs = 1,
+        robust = FALSE,
+        cutoff = 0.95
+    )
+    expect_s3_class(outliers, "pb_outliers")
+    expect_true(outliers$is_outlier[outliers$sample_id == "s6"])
+
+    set.seed(42)
+    n_features <- 40
+    cluster1 <- matrix(rnorm(n_features * 10, mean = 0), nrow = n_features)
+    cluster2 <- matrix(rnorm(n_features * 10, mean = 5), nrow = n_features)
+    mat_subbatch <- cbind(cluster1, cluster2)
+    colnames(mat_subbatch) <- paste0("s", 1:20)
+    meta_subbatch <- data.frame(
+        FullRunName = colnames(mat_subbatch),
+        batch = rep("B1", ncol(mat_subbatch)),
+        stringsAsFactors = FALSE
+    )
+
+    pbf_subbatch <- suppressMessages(ProBatchFeatures(
+        data_matrix = mat_subbatch,
+        sample_annotation = meta_subbatch,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    ))
+
+    subbatches <- subbatch_detection(
+        pbf_subbatch,
+        batch_col = "batch",
+        n_pcs = 5,
+        method = "kmeans",
+        k_max = 3
+    )
+    expect_s3_class(subbatches, "pb_subbatches")
+    b1_row <- subbatches$summary[subbatches$summary$batch == "B1", , drop = FALSE]
+    expect_true(nrow(b1_row) == 1)
+    expect_true(b1_row$k >= 2)
+})

@@ -546,6 +546,18 @@ detect_outlier_samples <- function(data_matrix,
                                    scale. = TRUE,
                                    robust = TRUE,
                                    cutoff = 0.99) {
+    if (is(data_matrix, "ProBatchFeatures")) {
+        object <- data_matrix
+        assay_name <- .pb_resolve_assay_for_input(object)
+        data_matrix <- pb_assay_matrix(object, assay = assay_name)
+        sample_annotation <- .pb_default_sample_annotation(
+            object = object,
+            sample_annotation = sample_annotation,
+            sample_id_col = "FullRunName",
+            sample_ids = colnames(data_matrix)
+        )
+    }
+
     if (is.null(data_matrix)) {
         stop("data_matrix must be provided.")
     }
@@ -653,6 +665,24 @@ subbatch_detection <- function(data_matrix,
                                n_pcs = 10,
                                method = c("hclust", "kmeans"),
                                k_max = 6) {
+    sample_annotation_missing <- missing(sample_annotation)
+
+    if (is(data_matrix, "ProBatchFeatures")) {
+        object <- data_matrix
+        assay_name <- .pb_resolve_assay_for_input(object)
+        data_matrix <- pb_assay_matrix(object, assay = assay_name)
+        if (sample_annotation_missing || is.null(sample_annotation)) {
+            sample_annotation <- .pb_default_sample_annotation(
+                object = object,
+                sample_annotation = NULL,
+                sample_id_col = "FullRunName",
+                sample_ids = colnames(data_matrix)
+            )
+        }
+    } else if (sample_annotation_missing) {
+        stop("sample_annotation must be a data.frame.")
+    }
+
     if (is.null(sample_annotation) || !is.data.frame(sample_annotation)) {
         stop("sample_annotation must be a data.frame.")
     }

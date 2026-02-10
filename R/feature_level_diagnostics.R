@@ -91,6 +91,67 @@
 #' @name feature_level_diagnostics
 NULL
 
+# Convert ProBatchFeatures inputs to long data and default sample metadata.
+.pb_feature_diag_prepare <- function(df_long,
+                                     sample_annotation,
+                                     sample_id_col,
+                                     feature_id_col,
+                                     measure_col) {
+    object <- NULL
+    assay_name <- NULL
+
+    if (is(df_long, "ProBatchFeatures")) {
+        object <- df_long
+        assay_name <- .pb_resolve_assay_for_input(object)
+        df_long <- .pb_pbf_to_long(
+            object = object,
+            assay_name = assay_name,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col,
+            measure_col = measure_col
+        )
+        sample_annotation <- .pb_default_sample_annotation(
+            object = object,
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
+            sample_ids = unique(df_long[[sample_id_col]])
+        )
+    }
+
+    list(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        object = object,
+        assay_name = assay_name
+    )
+}
+
+.pb_feature_diag_annotation_from_pbf <- function(prep,
+                                                 peptide_annotation,
+                                                 feature_id_col) {
+    if (!is.null(peptide_annotation)) {
+        annotation <- as.data.frame(peptide_annotation, stringsAsFactors = FALSE)
+        if (!feature_id_col %in% names(annotation)) {
+            rn <- rownames(annotation)
+            if (!is.null(rn) && !anyNA(rn) && length(rn) == nrow(annotation)) {
+                annotation[[feature_id_col]] <- rn
+            }
+        }
+        return(annotation)
+    }
+
+    if (is.null(prep$object) || is.null(prep$assay_name)) {
+        return(NULL)
+    }
+
+    .pb_default_feature_annotation(
+        object = prep$object,
+        assay_name = prep$assay_name,
+        feature_annotation = NULL,
+        feature_id_col = feature_id_col
+    )
+}
+
 #'
 #' @export
 #' @rdname feature_level_diagnostics
@@ -113,6 +174,16 @@ plot_single_feature <- function(feature_name, df_long,
                                 theme = "classic",
                                 ylimits = NULL,
                                 base_size = 20) {
+    prep <- .pb_feature_diag_prepare(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col
+    )
+    df_long <- prep$df_long
+    sample_annotation <- prep$sample_annotation
+
     # to ensure that missing measurements are NAs (to make them disconnected)
     # df_long = df_long %>% complete(!!!syms(c(feature_id_col, sample_id_col)))
 
@@ -327,6 +398,21 @@ plot_peptides_of_one_protein <- function(protein_name,
                                          ),
                                          theme = "classic",
                                          base_size = 20) {
+    prep <- .pb_feature_diag_prepare(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col
+    )
+    df_long <- prep$df_long
+    sample_annotation <- prep$sample_annotation
+    peptide_annotation <- .pb_feature_diag_annotation_from_pbf(
+        prep = prep,
+        peptide_annotation = peptide_annotation,
+        feature_id_col = feature_id_col
+    )
+
     if (!is.null(peptide_annotation)) {
         peptides <- peptide_annotation %>%
             filter((!!sym(protein_col)) == protein_name) %>%
@@ -387,6 +473,21 @@ plot_spike_in <- function(spike_ins = "BOVIN", peptide_annotation = NULL,
                           plot_title = sprintf("Spike-in %s plots", spike_ins),
                           theme = "classic",
                           base_size = 20) {
+    prep <- .pb_feature_diag_prepare(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col
+    )
+    df_long <- prep$df_long
+    sample_annotation <- prep$sample_annotation
+    peptide_annotation <- .pb_feature_diag_annotation_from_pbf(
+        prep = prep,
+        peptide_annotation = peptide_annotation,
+        feature_id_col = feature_id_col
+    )
+
     if (!is.null(protein_col)) {
         if (protein_col %in% names(df_long)) {
             spike_in_peptides <- df_long %>%
@@ -467,6 +568,21 @@ plot_iRT <- function(irt_pattern = "iRT",
                      plot_title = "iRT peptide profile",
                      theme = "classic",
                      base_size = 20) {
+    prep <- .pb_feature_diag_prepare(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col
+    )
+    df_long <- prep$df_long
+    sample_annotation <- prep$sample_annotation
+    peptide_annotation <- .pb_feature_diag_annotation_from_pbf(
+        prep = prep,
+        peptide_annotation = peptide_annotation,
+        feature_id_col = feature_id_col
+    )
+
     if (!is.null(peptide_annotation)) {
         df_long <- df_long %>%
             merge(peptide_annotation, by = feature_id_col)
@@ -528,6 +644,16 @@ plot_with_fitting_curve <- function(feature_name,
                                     ),
                                     theme = "classic",
                                     base_size = 20) {
+    prep <- .pb_feature_diag_prepare(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col
+    )
+    df_long <- prep$df_long
+    sample_annotation <- prep$sample_annotation
+
     if (length(feature_name) > 10) {
         warning("Visualisation of individual features can be suboptimal,
             consider exploring no more than 5 features at a time")

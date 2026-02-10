@@ -137,3 +137,115 @@ test_that("peptide_distribution_plots", {
     expect_s3_class(peptide_dist$plot_env$corr_distribution, "data.frame")
     expect_equal(peptide_dist$plot_env$median_same_prot, 0.7337642, tolerance = 1e-6)
 })
+
+make_corr_pbf_fixture <- function() {
+    pb_test_load_example_data()
+    data(example_peptide_annotation, package = "proBatch")
+
+    matrix_small <- example_proteome_matrix[1:120, 1:20]
+    sample_ann <- example_sample_annotation[
+        match(colnames(matrix_small), example_sample_annotation$FullRunName),
+    ]
+    pbf <- suppressMessages(ProBatchFeatures(
+        data_matrix = matrix_small,
+        sample_annotation = sample_ann,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    ))
+    pbf <- suppressMessages(pb_transform(
+        pbf,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    ))
+
+    assay_name <- pb_current_assay(pbf)
+    matrix_log <- suppressMessages(pb_assay_matrix(pbf, assay = assay_name))
+    peptide_ann <- example_peptide_annotation[
+        match(rownames(matrix_log), example_peptide_annotation$peptide_group_label),
+    ]
+    peptide_ann <- peptide_ann[!is.na(peptide_ann$peptide_group_label), , drop = FALSE]
+
+    list(
+        pbf = pbf,
+        matrix_small = matrix_small,
+        sample_ann = sample_ann,
+        peptide_ann = peptide_ann
+    )
+}
+
+test_that("sample correlation diagnostics accept PBF with rowname-only annotation", {
+    fixture <- make_corr_pbf_fixture()
+    pbf <- fixture$pbf
+    matrix_small <- fixture$matrix_small
+    sample_ann <- fixture$sample_ann
+
+    sample_ann_row <- sample_ann
+    rownames(sample_ann_row) <- sample_ann_row$FullRunName
+    sample_ann_row$FullRunName <- NULL
+
+    sample_corr_df <- calculate_sample_corr_distr(
+        pbf,
+        sample_annotation = sample_ann_row,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag"
+    )
+    expect_s3_class(sample_corr_df, "data.frame")
+    expect_true("correlation" %in% names(sample_corr_df))
+
+    sample_corr_plot <- plot_sample_corr_distribution(
+        pbf,
+        sample_annotation = sample_ann_row,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag",
+        plot_param = "batch_replicate"
+    )
+    expect_s3_class(sample_corr_plot, "ggplot")
+
+    sample_corr_heatmap <- plot_sample_corr_heatmap(
+        pbf,
+        sample_annotation = sample_ann_row,
+        samples_to_plot = colnames(matrix_small)[1:6],
+        sample_id_col = "FullRunName"
+    )
+    expect_s3_class(sample_corr_heatmap, "pheatmap")
+})
+
+test_that("peptide correlation diagnostics accept PBF with rowname-only annotation", {
+    fixture <- make_corr_pbf_fixture()
+    pbf <- fixture$pbf
+    peptide_ann <- fixture$peptide_ann
+    rownames(peptide_ann) <- peptide_ann$peptide_group_label
+    peptide_ann$peptide_group_label <- NULL
+
+    peptide_corr_df <- calculate_peptide_corr_distr(
+        pbf,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene"
+    )
+    expect_s3_class(peptide_corr_df, "data.frame")
+    expect_true("same_protein" %in% names(peptide_corr_df))
+
+    peptide_corr_plot <- plot_peptide_corr_distribution(
+        pbf,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene"
+    )
+    expect_s3_class(peptide_corr_plot, "ggplot")
+
+    gene_counts <- table(peptide_corr_df$Gene1)
+    gene_target <- names(gene_counts[gene_counts >= 2])[1]
+    if (!length(gene_target) || is.na(gene_target)) {
+        skip("Need at least one protein with >=2 peptides for correlation heatmap.")
+    }
+
+    protein_corrplot <- suppressWarnings(plot_protein_corrplot(
+        pbf,
+        protein_name = gene_target,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene",
+        cluster_rows = TRUE,
+        cluster_cols = TRUE
+    ))
+    expect_s3_class(protein_corrplot, "pheatmap")
+})
