@@ -179,11 +179,12 @@ plot_NA_heatmap.ProBatchFeatures <- function(
   ...
 ) {
     object <- x
-    assays <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
-
-    if (!length(assays)) {
-        stop("Provide at least one `pbf_name` to plot.")
-    }
+    assays <- .pb_resolve_assays_for_input(
+        object = object,
+        pbf_name = pbf_name,
+        default = "current",
+        deduplicate = FALSE
+    )
 
     sample_annotation <- as.data.frame(colData(object))
     if (!is.null(sample_id_col)) {
@@ -351,10 +352,12 @@ plot_NA_density.ProBatchFeatures <- function(
   ...
 ) {
     object <- x
-    assays <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
-    if (!length(assays)) {
-        stop("Provide at least one `pbf_name` to plot.")
-    }
+    assays <- .pb_resolve_assays_for_input(
+        object = object,
+        pbf_name = pbf_name,
+        default = "current",
+        deduplicate = FALSE
+    )
 
     df_list <- lapply(assays, function(assay_nm) {
         mat <- pb_assay_matrix(object, assay = assay_nm)
@@ -460,10 +463,12 @@ plot_NA_frequency.ProBatchFeatures <- function(
   ...
 ) {
     object <- x
-    assays <- if (is.null(pbf_name)) pb_current_assay(object) else pbf_name
-    if (!length(assays)) {
-        stop("Provide at least one `pbf_name` to plot.")
-    }
+    assays <- .pb_resolve_assays_for_input(
+        object = object,
+        pbf_name = pbf_name,
+        default = "current",
+        deduplicate = FALSE
+    )
 
     df_list <- lapply(assays, function(assay_nm) {
         mat <- pb_assay_matrix(object, assay = assay_nm)

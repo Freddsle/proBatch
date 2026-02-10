@@ -1,14 +1,10 @@
 .pb_assays_to_plot <- function(object, pbf_name) {
-    stopifnot(is(object, "ProBatchFeatures"))
-    if (is.null(pbf_name) || length(pbf_name) == 0L) {
-        assays <- names(object)
-    } else {
-        assays <- unique(pbf_name)
-    }
-    if (!length(assays)) {
-        stop("Provide at least one `pbf_name` to plot.")
-    }
-    assays
+    .pb_resolve_assays_for_input(
+        object = object,
+        pbf_name = pbf_name,
+        default = "all",
+        deduplicate = TRUE
+    )
 }
 
 .pb_split_arg_by_assay <- function(arg, assays) {

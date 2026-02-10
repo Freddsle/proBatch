@@ -427,9 +427,13 @@ plot_heatmap_diagnostic.ProBatchFeatures <- function(data_matrix, pbf_name = NUL
             sample_ann <- default_sample_annotation
         }
         peptide_ann <- peptide_ann_list[[i]]
-        if (is.null(peptide_ann) && assay_nm %in% names(object)) {
-            peptide_ann <- as.data.frame(rowData(object[[assay_nm]]))
-            peptide_ann[[feature_id_col]] <- rownames(peptide_ann)
+        if (is.null(peptide_ann)) {
+            peptide_ann <- .pb_default_feature_annotation(
+                object = object,
+                assay_name = assay_nm,
+                feature_annotation = NULL,
+                feature_id_col = feature_id_col
+            )
         }
 
         call_args <- .pb_per_assay_dots(dots, filename_list, i)
@@ -677,10 +681,14 @@ plot_heatmap_generic.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
         }
         row_ann <- row_ann_list[[i]]
 
-        if (is.null(row_ann) && assay_nm %in% names(object) && (!is.null(rowData(object[[assay_nm]])))) {
-            row_ann <- as.data.frame(rowData(object[[assay_nm]]))
+        if (is.null(row_ann)) {
             id_col <- if (is.null(row_ann_id_col)) "peptide_group_label" else row_ann_id_col
-            row_ann[[id_col]] <- rownames(row_ann)
+            row_ann <- .pb_default_feature_annotation(
+                object = object,
+                assay_name = assay_nm,
+                feature_annotation = NULL,
+                feature_id_col = id_col
+            )
         }
 
         call_args <- .pb_per_assay_dots(dots, filename_list, i)

@@ -92,10 +92,11 @@ log_transform_dm.default <- function(x, log_base = 2, offset = 1, ...) {
 log_transform_dm.ProBatchFeatures <- function(x, log_base = 2, offset = 1,
                                               pbf_name = NULL, final_name = NULL, ...) {
     object <- x
-    if (is.null(pbf_name)) {
-        pbf_name <- pb_current_assay(object)
-        message("`pbf_name` not provided, using the most recent assay: ", pbf_name)
-    }
+    pbf_name <- .pb_resolve_assay_for_input(
+        object = object,
+        pbf_name = pbf_name,
+        inform_if_default = TRUE
+    )
     step <- if (!is.null(log_base) && log_base == 2 && offset == 1) "log2" else "log"
     object <- pb_transform(
         object,
@@ -134,10 +135,11 @@ unlog_dm.default <- function(x, log_base = 2, offset = 1, ...) {
 unlog_dm.ProBatchFeatures <- function(x, log_base = 2, offset = 1,
                                       pbf_name = NULL, final_name = NULL, ...) {
     object <- x
-    if (is.null(pbf_name)) {
-        pbf_name <- pb_current_assay(object)
-        message("`pbf_name` not provided, using the most recent assay: ", pbf_name)
-    }
+    pbf_name <- .pb_resolve_assay_for_input(
+        object = object,
+        pbf_name = pbf_name,
+        inform_if_default = TRUE
+    )
     object <- pb_transform(
         object,
         from = pbf_name,

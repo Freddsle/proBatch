@@ -1,15 +1,52 @@
-.pb_resolve_assay_for_input <- function(object, pbf_name = NULL) {
+.pb_resolve_assay_for_input <- function(object,
+                                        pbf_name = NULL,
+                                        inform_if_default = FALSE) {
     stopifnot(is(object, "ProBatchFeatures"))
 
     if (is.null(pbf_name) || !length(pbf_name)) {
-        return(pb_current_assay(object))
+        assay_name <- pb_current_assay(object)
+        if (isTRUE(inform_if_default)) {
+            message("`pbf_name` not provided, using the most recent assay: ", assay_name)
+        }
+        return(assay_name)
     }
 
-    if (length(pbf_name) != 1L || !nzchar(as.character(pbf_name[[1]]))) {
+    if (length(pbf_name) != 1L) {
         stop("`pbf_name` must contain exactly one non-empty assay name.")
     }
 
-    as.character(pbf_name[[1]])
+    assay_name <- as.character(pbf_name[[1]])
+    if (length(assay_name) != 1L || is.na(assay_name) || !nzchar(assay_name)) {
+        stop("`pbf_name` must contain exactly one non-empty assay name.")
+    }
+
+    assay_name
+}
+
+.pb_resolve_assays_for_input <- function(object,
+                                         pbf_name = NULL,
+                                         default = c("current", "all"),
+                                         deduplicate = FALSE,
+                                         empty_message = "Provide at least one `pbf_name` to plot.") {
+    stopifnot(is(object, "ProBatchFeatures"))
+    default <- match.arg(default)
+
+    if (is.null(pbf_name) || !length(pbf_name)) {
+        assays <- if (identical(default, "all")) names(object) else pb_current_assay(object)
+    } else {
+        assays <- as.character(pbf_name)
+    }
+
+    assays <- assays[!is.na(assays) & nzchar(assays)]
+    if (isTRUE(deduplicate)) {
+        assays <- unique(assays)
+    }
+
+    if (!length(assays)) {
+        stop(empty_message)
+    }
+
+    assays
 }
 
 .pb_default_sample_annotation <- function(object,

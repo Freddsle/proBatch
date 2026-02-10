@@ -187,10 +187,11 @@ imputeMissForest.ProBatchFeatures <- function(
     object <- x
     .pb_requireNamespace("missForest")
 
-    if (is.null(pbf_name)) {
-        pbf_name <- pb_current_assay(object)
-        message("`pbf_name` not provided, using the most recent assay: ", pbf_name)
-    }
+    pbf_name <- .pb_resolve_assay_for_input(
+        object = object,
+        pbf_name = pbf_name,
+        inform_if_default = TRUE
+    )
 
     extra <- list(...)
     mf_args <- list()

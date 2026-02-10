@@ -429,10 +429,16 @@ plot_boxplot.default <- function(x, sample_annotation,
 plot_sample_mean.ProBatchFeatures <- function(x, pbf_name = NULL, plot_title = NULL, ...) {
     object <- x # Use 'x' as per convention
 
-    data_matrix <- pb_assay_matrix(object, pbf_name)
-    sample_annotation <- as.data.frame(colData(object))
+    assay_name <- .pb_resolve_assay_for_input(object = object, pbf_name = pbf_name)
+    data_matrix <- pb_assay_matrix(object, assay = assay_name)
+    sample_annotation <- .pb_default_sample_annotation(
+        object = object,
+        sample_annotation = NULL,
+        sample_id_col = "FullRunName",
+        sample_ids = colnames(data_matrix)
+    )
 
-    plot_title <- if (is.null(plot_title)) pbf_name else plot_title
+    plot_title <- if (is.null(plot_title)) assay_name else plot_title
 
     # Call the default method with the extracted data
     plot_sample_mean.default(

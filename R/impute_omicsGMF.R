@@ -228,10 +228,11 @@ impute_with_omicsGMF.ProBatchFeatures <- function(
         stop("`ncomponents` must be supplied. Run estimate_omicsGMF_rank() first.", call. = FALSE)
     }
 
-    if (is.null(pbf_name)) {
-        pbf_name <- pb_current_assay(object)
-        message("`pbf_name` not provided, using the most recent assay: ", pbf_name)
-    }
+    pbf_name <- .pb_resolve_assay_for_input(
+        object = object,
+        pbf_name = pbf_name,
+        inform_if_default = TRUE
+    )
 
     if (is.null(sample_annotation)) {
         sample_annotation <- as.data.frame(.pb_coldata_for_assay(object, pbf_name))
