@@ -1,3 +1,11 @@
+proBatch  v2.0.1
+==============
+* Added design diagnostics helpers for batch/design evaluation:
+  `validate_batch_design()`, `summarize_design()`, `detect_nested_batches()`,
+  `detect_outlier_samples()`, and `subbatch_detection()`.
+
+
+
 proBatch  v1.99.0
 ==============
 Changes:
@@ -51,4 +59,3 @@ old column as:
 * consistent handling of missing values by proteome-wide diagnostic functions;
 * renamed "plot_heatmap" into "plot_heatmap_diagnostic" as now "plot_heatmap_generic" is added for non-standard cases of heatmap plotting;
 * better legend for DateTime color mapping in meanplots, boxplots and feature-level plots.
-
