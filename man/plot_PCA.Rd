@@ -25,6 +25,7 @@
   base_size = 10,
   point_size = 3,
   point_alpha = 0.8,
+  marginal_density = FALSE,
   x_nPC = NULL,
   y_nPC = NULL
 )
@@ -95,6 +96,9 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{point_alpha}{Alpha transparency for plotted points.}
 
+\item{marginal_density}{Logical; if `TRUE`, add marginal density plots above
+and to the right of the PCA scatter plot.}
+
 \item{x_nPC}{Optional integer PC index for the x axis. Use together with `y_nPC`
 to override `PC_to_plot`.}
 
@@ -111,7 +115,9 @@ to override `PC_to_plot`.}
 }
 \value{
 ggplot scatterplot colored by factor levels of column specified in
-  \code{factor_to_color}
+  \code{factor_to_color}. When `marginal_density = TRUE`, returns a ggplot
+  object if `ggplotify` or `cowplot` is available; otherwise returns a grid
+  grob.
 }
 \description{
 plot PCA plot
@@ -124,6 +130,9 @@ pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
 )
 pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
     color_by = "DateTime", plot_title = "PCA colored by DateTime"
+)
+pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
+    color_by = "MS_batch", marginal_density = TRUE
 )
 
 color_list <- sample_annotation_to_colors(example_sample_annotation,

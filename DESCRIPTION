@@ -27,6 +27,7 @@ Imports:
     QFeatures,
     SummarizedExperiment,
     S4Vectors,
+    cluster,
     corrplot,
     dplyr,
     data.table,

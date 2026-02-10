@@ -84,7 +84,8 @@ calculate_classification_metrics.default <- function(data_matrix,
     known <- sample_annotation[[known_col]]
     keep <- !is.na(known)
     if (!all(keep)) {
-        warning("Removing samples with missing known labels: ",
+        warning(
+            "Removing samples with missing known labels: ",
             paste(sample_ids[!keep], collapse = ", ")
         )
         data_matrix <- data_matrix[, keep, drop = FALSE]
@@ -152,7 +153,8 @@ calculate_classification_metrics.default <- function(data_matrix,
         predicted <- sample_annotation[[cluster_col]]
         keep <- !is.na(predicted)
         if (!all(keep)) {
-            warning("Removing samples with missing cluster labels: ",
+            warning(
+                "Removing samples with missing cluster labels: ",
                 paste(sample_ids[!keep], collapse = ", ")
             )
             data_matrix <- data_matrix[, keep, drop = FALSE]
