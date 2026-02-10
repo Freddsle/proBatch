@@ -117,11 +117,16 @@ pb_filterNA <- function(
     stopifnot(is(object, "ProBatchFeatures"))
     stopifnot(is.logical(inplace), length(inplace) == 1L)
 
-    assays <- .pb_missing_assays_for_input(
+    assays <- .pb_require_materialised_assays(
         object = object,
-        pbf_name = pbf_name,
-        default = "all",
-        inform_if_default = TRUE
+        assays = .pb_resolve_assays_for_input(
+            object = object,
+            pbf_name = pbf_name,
+            default = "all",
+            deduplicate = TRUE,
+            inform_if_default = TRUE,
+            empty_message = "No assay names available. Provide `pbf_name` or ensure the object stores assays."
+        )
     )
     params <- .pb_collect_missing_params(list(...), forbidden = c("i", "name"))
 
@@ -205,11 +210,16 @@ pb_groupfilterNA <- function(
         stop("Provide at least one of `min_valid` or `pNA` to perform filtering.", call. = FALSE)
     }
 
-    assays <- .pb_missing_assays_for_input(
+    assays <- .pb_require_materialised_assays(
         object = object,
-        pbf_name = pbf_name,
-        default = "all",
-        inform_if_default = TRUE
+        assays = .pb_resolve_assays_for_input(
+            object = object,
+            pbf_name = pbf_name,
+            default = "all",
+            deduplicate = TRUE,
+            inform_if_default = TRUE,
+            empty_message = "No assay names available. Provide `pbf_name` or ensure the object stores assays."
+        )
     )
     params <- .pb_collect_missing_params(list(...), forbidden = c("i", "name", "min", "pNA"))
 
@@ -349,32 +359,6 @@ pb_groupfilterNA <- function(
     }
 
     object
-}
-
-.pb_missing_assays_for_input <- function(object,
-                                         pbf_name,
-                                         default = c("current", "all"),
-                                         inform_if_default = FALSE) {
-    default <- match.arg(default)
-    using_default <- is.null(pbf_name) || !length(pbf_name)
-
-    assays <- .pb_resolve_assays_for_input(
-        object = object,
-        pbf_name = pbf_name,
-        default = default,
-        deduplicate = TRUE,
-        empty_message = "No assay names available. Provide `pbf_name` or ensure the object stores assays."
-    )
-
-    if (using_default && isTRUE(inform_if_default)) {
-        if (identical(default, "all")) {
-            message("`pbf_name` not provided, using all assays: ", paste(assays, collapse = ", "))
-        } else {
-            message("`pbf_name` not provided, using the most recent assay: ", assays[[1]])
-        }
-    }
-
-    .pb_require_materialised_assays(object, assays)
 }
 
 # Internal helper to validate that assays are materialised in the object

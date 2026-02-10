@@ -27,11 +27,13 @@
                                          pbf_name = NULL,
                                          default = c("current", "all"),
                                          deduplicate = FALSE,
+                                         inform_if_default = FALSE,
                                          empty_message = "Provide at least one `pbf_name` to plot.") {
     stopifnot(is(object, "ProBatchFeatures"))
     default <- match.arg(default)
+    using_default <- is.null(pbf_name) || !length(pbf_name)
 
-    if (is.null(pbf_name) || !length(pbf_name)) {
+    if (using_default) {
         assays <- if (identical(default, "all")) names(object) else pb_current_assay(object)
     } else {
         assays <- as.character(pbf_name)
@@ -46,13 +48,22 @@
         stop(empty_message)
     }
 
+    if (using_default && isTRUE(inform_if_default)) {
+        if (identical(default, "all")) {
+            message("`pbf_name` not provided, using all assays: ", paste(assays, collapse = ", "))
+        } else {
+            message("`pbf_name` not provided, using the most recent assay: ", assays[[1]])
+        }
+    }
+
     assays
 }
 
 .pb_default_sample_annotation <- function(object,
                                           sample_annotation = NULL,
                                           sample_id_col = "FullRunName",
-                                          sample_ids = NULL) {
+                                          sample_ids = NULL,
+                                          drop_rownames = FALSE) {
     if (!is.null(sample_annotation)) {
         annotation <- as.data.frame(sample_annotation, stringsAsFactors = FALSE)
     } else {
@@ -66,6 +77,10 @@
         } else if (!is.null(sample_ids) && length(sample_ids) == nrow(annotation)) {
             annotation[[sample_id_col]] <- sample_ids
         }
+    }
+
+    if (isTRUE(drop_rownames)) {
+        rownames(annotation) <- NULL
     }
 
     annotation

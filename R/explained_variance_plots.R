@@ -167,7 +167,7 @@ calculate_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
     dots <- prep$dots
     split_arg <- prep$split_arg
 
-    default_sample_annotation <- as.data.frame(colData(object))
+    default_sample_annotation <- .pb_default_sample_annotation(object = object, sample_id_col = sample_id_col)
     sample_ann_list <- split_arg(sample_annotation)
 
     pvca_list <- vector("list", length(assays))
@@ -344,12 +344,10 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
     shared_title <- prep$shared_title
 
     if (is.null(sample_annotation)) {
-        sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
-        rownames(sample_annotation) <- NULL
+        sample_annotation <- .pb_default_sample_annotation(object = object, sample_id_col = sample_id_col, drop_rownames = TRUE)
     }
     sample_ann_list <- split_arg(sample_annotation)
-    default_sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
-    rownames(default_sample_annotation) <- NULL
+    default_sample_annotation <- .pb_default_sample_annotation(object = object, sample_id_col = sample_id_col, drop_rownames = TRUE)
 
     stacked_requested <- isTRUE(stacked_bar)
     use_stacked <- stacked_requested && length(assays) >= 2L
@@ -848,7 +846,7 @@ prepare_PVCA_df.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
     dots <- prep$dots
     split_arg <- prep$split_arg
 
-    default_sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
+    default_sample_annotation <- .pb_default_sample_annotation(object = object, sample_id_col = sample_id_col)
     sample_ann_list <- split_arg(sample_annotation)
 
     pvca_df_list <- vector("list", length(assays))
@@ -1050,8 +1048,7 @@ plot_PVCA.df.ProBatchFeatures <- function(df, pbf_name = NULL,
     }
     add_values_list <- split_arg(add_values_arg)
 
-    default_sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
-    rownames(default_sample_annotation) <- NULL
+    default_sample_annotation <- .pb_default_sample_annotation(object = object, sample_id_col = sample_id_col, drop_rownames = TRUE)
 
     if (is.null(sample_annotation)) {
         sample_annotation <- default_sample_annotation
@@ -1313,7 +1310,7 @@ calculate_variance_partition.ProBatchFeatures <- function(data_matrix, pbf_name 
     dots <- prep$dots
     split_arg <- prep$split_arg
 
-    default_sample_annotation <- as.data.frame(colData(object))
+    default_sample_annotation <- .pb_default_sample_annotation(object = object, sample_id_col = sample_id_col)
     sample_ann_list <- split_arg(sample_annotation)
 
     vp_list <- vector("list", length(assays))
@@ -1600,7 +1597,7 @@ prepare_variance_partition_df.ProBatchFeatures <- function(data_matrix, pbf_name
     dots <- prep$dots
     split_arg <- prep$split_arg
 
-    default_sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
+    default_sample_annotation <- .pb_default_sample_annotation(object = object, sample_id_col = sample_id_col)
     sample_ann_list <- split_arg(sample_annotation)
 
     vp_df_list <- vector("list", length(assays))
@@ -1820,8 +1817,7 @@ plot_variance_partition.ProBatchFeatures <- function(data_matrix, pbf_name = NUL
     }
     y_limits_list <- split_arg(y_limits_arg)
 
-    default_sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
-    rownames(default_sample_annotation) <- NULL
+    default_sample_annotation <- .pb_default_sample_annotation(object = object, sample_id_col = sample_id_col, drop_rownames = TRUE)
 
     if (is.null(sample_annotation)) {
         sample_annotation <- default_sample_annotation
@@ -2141,8 +2137,7 @@ plot_variance_partition.df.ProBatchFeatures <- function(df, pbf_name = NULL,
     }
     y_limits_list <- split_arg(y_limits_arg)
 
-    default_sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
-    rownames(default_sample_annotation) <- NULL
+    default_sample_annotation <- .pb_default_sample_annotation(object = object, sample_id_col = sample_id_col, drop_rownames = TRUE)
 
     if (is.null(sample_annotation)) {
         sample_annotation <- default_sample_annotation
