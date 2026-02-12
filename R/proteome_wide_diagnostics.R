@@ -1152,7 +1152,7 @@ plot_TSNE.ProBatchFeatures <- function(x, pbf_name = NULL,
                                        subplot_ncol = NULL,
                                        share_axes = TRUE,
                                        ...) {
-   .pb_plot_embedding_pbf(
+    .pb_plot_embedding_pbf(
         object = x,
         pbf_name = pbf_name,
         sample_annotation = sample_annotation,

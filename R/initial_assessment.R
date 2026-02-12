@@ -23,8 +23,6 @@
 #' @seealso \code{\link[ggplot2]{ggplot}}, \link{date_to_sample_order}
 #' @name plot_sample_mean_or_boxplot
 #'
-#' @export
-#'
 #' @examples
 #' data(list = c(
 #'     "example_proteome", "example_sample_annotation",
