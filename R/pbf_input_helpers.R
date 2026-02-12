@@ -124,3 +124,38 @@
         measure_col = measure_col
     )
 }
+
+.pb_prepare_long_inputs <- function(df_long,
+                                    sample_annotation,
+                                    sample_id_col,
+                                    feature_id_col,
+                                    measure_col,
+                                    pbf_name = NULL) {
+    object <- NULL
+    assay_name <- NULL
+
+    if (is(df_long, "ProBatchFeatures")) {
+        object <- df_long
+        assay_name <- .pb_resolve_assay_for_input(object, pbf_name = pbf_name)
+        df_long <- .pb_pbf_to_long(
+            object = object,
+            assay_name = assay_name,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col,
+            measure_col = measure_col
+        )
+        sample_annotation <- .pb_default_sample_annotation(
+            object = object,
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
+            sample_ids = unique(df_long[[sample_id_col]])
+        )
+    }
+
+    list(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        object = object,
+        assay_name = assay_name
+    )
+}

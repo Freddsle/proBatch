@@ -69,32 +69,24 @@
                                                    color_by_batch,
                                                    color_scheme,
                                                    facet_col) {
-    if (!is.null(batch_col)) {
-        if (!(batch_col %in% names(df_plot))) {
-            message("batches cannot be colored as the batch column or sample ID column
-                    is not defined, check sample_annotation and data matrix")
-            stop("Batch column '", batch_col, "' not found in data.")
-        }
-        if (color_by_batch && (batch_col %in% names(color_scheme))) {
-            color_scheme <- color_scheme[[batch_col]]
-        }
-    } else if (color_by_batch) {
-        message("batches cannot be colored as the batch column is defined as NULL,
-                continuing without colors")
-        warning("`batch_col` is NULL; disabling `color_by_batch`")
-        color_by_batch <- FALSE
-    }
-    if (!is.null(facet_col) && !(facet_col %in% names(df_plot))) {
-        message(sprintf(
+    .pb_validate_batch_facet_inputs(
+        df_plot = df_plot,
+        batch_col = batch_col,
+        color_by_batch = color_by_batch,
+        color_scheme = color_scheme,
+        facet_col = facet_col,
+        missing_batch_message = "batches cannot be colored as the batch column or sample ID column
+                    is not defined, check sample_annotation and data matrix",
+        missing_batch_stop = paste0("Batch column '", batch_col, "' not found in data."),
+        null_batch_message = "batches cannot be colored as the batch column is defined as NULL,
+                continuing without colors",
+        null_batch_warning = "`batch_col` is NULL; disabling `color_by_batch`",
+        missing_facet_message = sprintf(
             '"%s" is specified as column for faceting, but is not present
                     in the data, check sample annotation data frame',
             facet_col
-        ))
-        stop(sprintf("Faceting column '%s' not found in data.", facet_col))
-    }
-    list(
-        color_by_batch = color_by_batch,
-        color_scheme = color_scheme
+        ),
+        missing_facet_stop = sprintf("Faceting column '%s' not found in data.", facet_col)
     )
 }
 

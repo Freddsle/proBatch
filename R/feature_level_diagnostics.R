@@ -97,32 +97,12 @@ NULL
                                      sample_id_col,
                                      feature_id_col,
                                      measure_col) {
-    object <- NULL
-    assay_name <- NULL
-
-    if (is(df_long, "ProBatchFeatures")) {
-        object <- df_long
-        assay_name <- .pb_resolve_assay_for_input(object)
-        df_long <- .pb_pbf_to_long(
-            object = object,
-            assay_name = assay_name,
-            feature_id_col = feature_id_col,
-            sample_id_col = sample_id_col,
-            measure_col = measure_col
-        )
-        sample_annotation <- .pb_default_sample_annotation(
-            object = object,
-            sample_annotation = sample_annotation,
-            sample_id_col = sample_id_col,
-            sample_ids = unique(df_long[[sample_id_col]])
-        )
-    }
-
-    list(
+    .pb_prepare_long_inputs(
         df_long = df_long,
         sample_annotation = sample_annotation,
-        object = object,
-        assay_name = assay_name
+        sample_id_col = sample_id_col,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col
     )
 }
 
@@ -208,31 +188,25 @@ plot_single_feature <- function(feature_name, df_long,
     order_col <- sample_order$order_col
     plot_df <- sample_order$df_long
 
-    # Ensure that batch-coloring-related arguments are defined properly
-    if (!is.null(batch_col)) {
-        if (!(batch_col %in% names(plot_df))) {
-            stop("batches cannot be colored as the batch column or sample ID column
-           is not defined, check sample_annotation and data matrix")
-        }
-    } else {
-        if (color_by_batch) {
-            warning("batches cannot be colored as the batch column is defined as
-                NULL, continuing without colors")
-            color_by_batch <- FALSE
-        }
-    }
-
-    # For order definition and subsequent faceting, facet column has to be in the
-    # data frame
-    if (!is.null(facet_col)) {
-        if (!(facet_col %in% names(plot_df))) {
-            stop(sprintf(
-                '"%s" is specified as column for faceting, but is not present
+    validated <- .pb_validate_batch_facet_inputs(
+        df_plot = plot_df,
+        batch_col = batch_col,
+        color_by_batch = color_by_batch,
+        color_scheme = color_scheme,
+        facet_col = facet_col,
+        resolve_color_scheme = FALSE,
+        missing_batch_stop = "batches cannot be colored as the batch column or sample ID column
+           is not defined, check sample_annotation and data matrix",
+        null_batch_warning = "batches cannot be colored as the batch column is defined as
+                NULL, continuing without colors",
+        missing_facet_stop = sprintf(
+            '"%s" is specified as column for faceting, but is not present
                     in the data, check sample annotation data frame',
-                facet_col
-            ))
-        }
-    }
+            facet_col
+        )
+    )
+    color_by_batch <- validated$color_by_batch
+    color_scheme <- validated$color_scheme
 
     if (!is.null(batch_col)) {
         batch_vector <- sample_annotation[[batch_col]]

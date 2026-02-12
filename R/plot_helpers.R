@@ -338,6 +338,57 @@
     list(shape_by = shape_by, sample_annotation = sample_annotation)
 }
 
+.pb_validate_batch_facet_inputs <- function(df_plot,
+                                            batch_col,
+                                            color_by_batch,
+                                            color_scheme,
+                                            facet_col,
+                                            resolve_color_scheme = TRUE,
+                                            missing_batch_message = NULL,
+                                            missing_batch_stop = NULL,
+                                            null_batch_message = NULL,
+                                            null_batch_warning = NULL,
+                                            missing_facet_message = NULL,
+                                            missing_facet_stop = NULL) {
+    if (!is.null(batch_col)) {
+        if (!(batch_col %in% names(df_plot))) {
+            if (!is.null(missing_batch_message)) {
+                message(missing_batch_message)
+            }
+            if (is.null(missing_batch_stop)) {
+                stop("Batch column '", batch_col, "' not found in data.")
+            }
+            stop(missing_batch_stop)
+        }
+        if (isTRUE(resolve_color_scheme) && color_by_batch && (batch_col %in% names(color_scheme))) {
+            color_scheme <- color_scheme[[batch_col]]
+        }
+    } else if (isTRUE(color_by_batch)) {
+        if (!is.null(null_batch_message)) {
+            message(null_batch_message)
+        }
+        if (!is.null(null_batch_warning)) {
+            warning(null_batch_warning)
+        }
+        color_by_batch <- FALSE
+    }
+
+    if (!is.null(facet_col) && !(facet_col %in% names(df_plot))) {
+        if (!is.null(missing_facet_message)) {
+            message(missing_facet_message)
+        }
+        if (is.null(missing_facet_stop)) {
+            stop(sprintf("Faceting column '%s' not found in data.", facet_col))
+        }
+        stop(missing_facet_stop)
+    }
+
+    list(
+        color_by_batch = color_by_batch,
+        color_scheme = color_scheme
+    )
+}
+
 .pb_pop_use_plotlyrender <- function(dots) {
     if (is.null(dots)) {
         dots <- list()
