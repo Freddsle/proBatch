@@ -196,6 +196,12 @@ plot_NA_heatmap.ProBatchFeatures <- function(
     for (idx in seq_along(assays)) {
         assay_nm <- assays[[idx]]
         data_matrix <- pb_assay_matrix(object, assay = assay_nm)
+        extra_args <- list(...)
+        main_arg <- assay_nm
+        if ("main" %in% names(extra_args)) {
+            main_arg <- extra_args$main
+            extra_args$main <- NULL
+        }
 
         if (nrow(data_matrix) > 5000 && use_subset) {
             warning("Assay '", assay_nm, "' has more than 5000 rows; plotting a random subset of 5000 rows.")
@@ -208,23 +214,25 @@ plot_NA_heatmap.ProBatchFeatures <- function(
             warning("Assay '", assay_nm, "' has more than 5000 columns; plotting a random subset of 5000 columns.")
         }
 
-        res <- plot_NA_heatmap.default(
-            data_matrix,
-            sample_annotation = sample_annotation,
-            sample_id_col = NULL,
-            color_by = color_by,
-            label_by = label_by,
-            cluster_samples = cluster_samples,
-            cluster_features = cluster_features,
-            show_row_dend = show_row_dend,
-            show_column_dend = show_column_dend,
-            missing_color = missing_color,
-            valid_color = valid_color,
-            col_vector = col_vector,
-            drop_complete = drop_complete,
-            draw = draw && length(assays) == 1L,
-            main = assay_nm,
-            ...
+        res <- do.call(
+            plot_NA_heatmap.default,
+            c(list(
+                data_matrix,
+                sample_annotation = sample_annotation,
+                sample_id_col = NULL,
+                color_by = color_by,
+                label_by = label_by,
+                cluster_samples = cluster_samples,
+                cluster_features = cluster_features,
+                show_row_dend = show_row_dend,
+                show_column_dend = show_column_dend,
+                missing_color = missing_color,
+                valid_color = valid_color,
+                col_vector = col_vector,
+                drop_complete = drop_complete,
+                draw = draw && length(assays) == 1L,
+                main = main_arg
+            ), extra_args)
         )
         if (is.null(res)) {
             warning("Skipping assay '", assay_nm, "' because it has no rows with missing values after filtering.")

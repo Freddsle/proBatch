@@ -114,6 +114,25 @@ test_that("plot_NA_heatmap.ProBatchFeatures arranges multiple assays", {
     expect_true(all(vapply(res$heatmaps, inherits, logical(1), what = "pheatmap")))
 })
 
+test_that("plot_NA_heatmap.ProBatchFeatures accepts explicit main without collision", {
+    skip_if_not_installed("pheatmap")
+
+    res <- plot_NA_heatmap(
+        pbf_toy,
+        color_by = "Condition",
+        label_by = "FullRunName",
+        cluster_samples = FALSE,
+        cluster_features = FALSE,
+        show_row_dend = FALSE,
+        show_column_dend = FALSE,
+        drop_complete = FALSE,
+        draw = FALSE,
+        main = "Custom NA heatmap title"
+    )
+
+    expect_s3_class(res, "pheatmap")
+})
+
 
 test_that("plot_NA_density.default summarises intensity distribution", {
     density_plot <- plot_NA_density(toy_matrix)
