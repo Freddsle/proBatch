@@ -53,6 +53,42 @@
 #'     batch_col = "MS_batch"
 #' )
 #'
+.pb_apply_initial_assessment_theme <- function(gg, theme_name, base_size) {
+    theme_name <- match.arg(theme_name, choices = c("classic", "minimal", "bw", "light", "dark"))
+    if (identical(theme_name, "classic")) {
+        return(gg + theme_classic(base_size = base_size))
+    }
+    if (identical(theme_name, "minimal")) {
+        return(gg + theme_minimal(base_size = base_size))
+    }
+    if (identical(theme_name, "bw")) {
+        return(gg + theme_bw(base_size = base_size))
+    }
+    if (identical(theme_name, "light")) {
+        return(gg + theme_light(base_size = base_size))
+    }
+    gg + theme_dark(base_size = base_size)
+}
+
+.pb_finalize_initial_assessment_plot <- function(gg, order_values, ylimits = NULL,
+                                                 rotate_x = FALSE,
+                                                 color_by_batch = FALSE,
+                                                 is_factor = FALSE) {
+    if (!is.null(ylimits)) {
+        gg <- gg + coord_cartesian(ylim = ylimits)
+    }
+    if (isTRUE(rotate_x)) {
+        gg <- gg + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+    }
+    if (length(unique(order_values)) > 30 && color_by_batch && is_factor) {
+        gg <- gg + theme(legend.position = "top")
+    }
+    gg
+}
+
+#' @rdname plot_sample_mean_or_boxplot
+#' @method plot_sample_mean default
+#' @export
 plot_sample_mean.default <- function(x, sample_annotation,
                                      sample_id_col = "FullRunName",
                                      batch_col = "MS_batch",
@@ -187,59 +223,25 @@ plot_sample_mean.default <- function(x, sample_annotation,
         gg <- gg + ggtitle(plot_title) +
             theme(plot.title = element_text(face = "bold", hjust = 0.5))
     }
-    theme_name <- match.arg(theme_name)
-    if (identical(theme_name, "classic")) {
-        gg <- gg + theme_classic(base_size = base_size)
-    } else if (identical(theme_name, "minimal")) {
-        gg <- gg + theme_minimal(base_size = base_size)
-    } else if (identical(theme_name, "bw")) {
-        gg <- gg + theme_bw(base_size = base_size)
-    } else if (identical(theme_name, "light")) {
-        gg <- gg + theme_light(base_size = base_size)
-    } else if (identical(theme_name, "dark")) {
-        gg <- gg + theme_dark(base_size = base_size)
-    } else {
-        message("Using default ggplot2 theme;
-                please specify a valid theme name: 'classic', 'minimal', 'bw', 'light', or 'dark'")
-        gg <- gg + theme_classic(base_size = base_size)
-    }
+    gg <- .pb_apply_initial_assessment_theme(gg = gg, theme_name = theme_name, base_size = base_size)
+    gg <- .pb_finalize_initial_assessment_plot(
+        gg = gg,
+        order_values = df_ave[[order_col]],
+        ylimits = ylimits,
+        rotate_x = !is.numeric(df_ave[[order_col]]),
+        color_by_batch = color_by_batch,
+        is_factor = is_factor
+    )
 
-    # Axis limits and rotations
-    if (!is.null(ylimits)) {
-        gg <- gg +
-            # ylim(ylimits)
-            coord_cartesian(ylim = ylimits) # Use coord_cartesian to avoid removing data outside limits
-    }
-    # Rotate x axis tick labels if the filenames, not numeric order, is displayed
-    if (!is.numeric(df_ave[[order_col]])) {
-        gg <- gg + theme(axis.text.x = element_text(
-            angle = 90,
-            hjust = 1, vjust = 0.5
-        ))
-    }
-
-    # Legend repositioning
-    # Move the legend to the upper part of the plot to save the horizontal space
-    if (length(unique(df_ave[[order_col]])) > 30 && color_by_batch && is_factor) {
-        gg <- gg + theme(legend.position = "top")
-    }
-
-    # save the plot
     units <- match.arg(units)
-    if (!is.null(filename)) {
-        ggsave(
-            filename = filename, plot = gg,
-            width = width, height = height, units = units
-        )
-    }
-    return(gg)
+    save_ggplot(filename, units, width, height, gg)
+    gg
 }
 
 
-#' @name plot_sample_mean_or_boxplot
-#'
+#' @rdname plot_sample_mean_or_boxplot
+#' @method plot_boxplot default
 #' @export
-#'
 plot_boxplot.default <- function(x, sample_annotation,
                                  sample_id_col = "FullRunName",
                                  measure_col = "Intensity",
@@ -366,60 +368,23 @@ plot_boxplot.default <- function(x, sample_annotation,
             theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 16))
     }
 
-    theme_name <- match.arg(theme_name)
-    # Change the plot theme
-    if (is.null(theme_name) || theme_name == "classic") {
-        gg <- gg + theme_classic(base_size = base_size)
-    } else if (theme_name == "minimal") {
-        gg <- gg + theme_minimal(base_size = base_size)
-    } else if (theme_name == "bw") {
-        gg <- gg + theme_bw(base_size = base_size)
-    } else if (theme_name == "light") {
-        gg <- gg + theme_light(base_size = base_size)
-    } else if (theme_name == "dark") {
-        gg <- gg + theme_dark(base_size = base_size)
-    } else {
-        message("Using default ggplot2 theme;
-                please specify a valid theme name: 'classic', 'minimal', 'bw', 'light', or 'dark'")
-        gg <- gg + theme_classic(base_size = base_size)
-    }
-
-    # Change the limits of vertical axes
-    if (!is.null(ylimits)) {
-        gg <- gg +
-            # ylim(ylimits)
-            coord_cartesian(ylim = ylimits) # Use coord_cartesian to avoid removing data outside limits
-    }
-
-    # Rotate x axis tick labels if the filenames, not numeric order, is displayed
-    if (!is.numeric(df_long[[order_col]])) {
-        gg <- gg +
-            theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
-    }
-
     if (!is.null(batch_col)) {
         batch_vector <- df_long[[batch_col]]
         is_factor <- is_batch_factor(batch_vector, color_scheme)
     }
+    gg <- .pb_apply_initial_assessment_theme(gg = gg, theme_name = theme_name, base_size = base_size)
+    gg <- .pb_finalize_initial_assessment_plot(
+        gg = gg,
+        order_values = df_long[[order_col]],
+        ylimits = ylimits,
+        rotate_x = !is.numeric(df_long[[order_col]]),
+        color_by_batch = color_by_batch,
+        is_factor = is_factor
+    )
 
-    # Move the legend to the upper part of the plot to save the horizontal space
-    if (length(unique(df_long[[order_col]])) > 30 && color_by_batch && is_factor) {
-        gg <- gg + theme(legend.position = "top")
-    }
-
-    # save the plot
     units <- match.arg(units)
-    if (!is.null(filename)) {
-        ggsave(
-            filename = filename,
-            plot = gg,
-            width = width,
-            height = height,
-            units = units
-        )
-    }
-
-    return(gg)
+    save_ggplot(filename, units, width, height, gg)
+    gg
 }
 
 

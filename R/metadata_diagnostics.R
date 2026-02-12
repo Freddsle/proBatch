@@ -25,24 +25,29 @@ find_duplicated_columns <- function(x, ...) {
     UseMethod("find_duplicated_columns")
 }
 
-#' @rdname find_duplicated_columns
-#' @method find_duplicated_columns default
-#' @export
-find_duplicated_columns.default <- function(x, ...) {
+.pb_metadata_df <- function(x) {
     if (!is.data.frame(x)) {
         x <- as.data.frame(x)
     }
-
-    if (ncol(x) < 2L) {
-        return(list())
-    }
-
     col_names <- colnames(x)
     if (is.null(col_names)) {
         col_names <- paste0("V", seq_len(ncol(x)))
     }
+    list(df = x, col_names = col_names)
+}
 
-    groups <- .pb_duplicate_groups(x, col_names)
+#' @rdname find_duplicated_columns
+#' @method find_duplicated_columns default
+#' @export
+find_duplicated_columns.default <- function(x, ...) {
+    ##### changed: deduplicated with .pb_metadata_df()
+    info <- .pb_metadata_df(x)
+    x <- info$df
+    if (ncol(x) < 2L) {
+        return(list())
+    }
+
+    groups <- .pb_duplicate_groups(x, info$col_names)
 
     if (!length(groups)) {
         return(list())
@@ -130,10 +135,9 @@ metadata_column_summary <- function(x, ...) {
 #' @method metadata_column_summary default
 #' @export
 metadata_column_summary.default <- function(x, sort = TRUE, ...) {
-    if (!is.data.frame(x)) {
-        x <- as.data.frame(x)
-    }
-
+    ##### changed: deduplicated with .pb_metadata_df()
+    info <- .pb_metadata_df(x)
+    x <- info$df
     if (!ncol(x)) {
         return(data.frame(
             colname = character(),
@@ -144,17 +148,12 @@ metadata_column_summary.default <- function(x, sort = TRUE, ...) {
         ))
     }
 
-    col_names <- colnames(x)
-    if (is.null(col_names)) {
-        col_names <- paste0("V", seq_len(ncol(x)))
-    }
-
     n_unique <- vapply(x, function(col) length(unique(col[!is.na(col)])), integer(1))
     n_na <- vapply(x, function(col) sum(is.na(col)), integer(1))
     pct_na <- if (nrow(x)) (n_na / nrow(x)) * 100 else rep(NaN, length(n_na))
 
     summary_df <- data.frame(
-        colname = col_names,
+        colname = info$col_names,
         n_unique = n_unique,
         n_NA = n_na,
         pct_NA = pct_na,
@@ -276,9 +275,8 @@ filter_metadata_columns.default <- function(
   sort = FALSE,
   ...
 ) {
-    if (!is.data.frame(x)) {
-        x <- as.data.frame(x)
-    }
+    info <- .pb_metadata_df(x)
+    x <- info$df
 
     duplicate_keep <- match.arg(duplicate_keep)
     if (duplicate_keep == "pattern" && (is.null(duplicate_pattern) || !nzchar(duplicate_pattern))) {
@@ -303,14 +301,7 @@ filter_metadata_columns.default <- function(
         }
     }
 
-    original_colnames <- colnames(x)
-    if (is.null(original_colnames)) {
-        col_names <- paste0("V", seq_len(ncol(x)))
-    } else {
-        col_names <- original_colnames
-    }
-
-    groups <- if (ncol(x) >= 2L) .pb_duplicate_groups(x, col_names) else list()
+    groups <- if (ncol(x) >= 2L) .pb_duplicate_groups(x, info$col_names) else list()
     dropped_duplicates <- character(0)
 
     if (length(groups)) {
@@ -360,8 +351,8 @@ filter_metadata_columns.default <- function(
         return(x)
     }
 
-    keep_mask <- !(col_names %in% drop_candidates)
-    keep_cols <- col_names[keep_mask]
+    keep_mask <- !(info$col_names %in% drop_candidates)
+    keep_cols <- info$col_names[keep_mask]
     if (!length(keep_cols)) {
         stop("All columns would be removed; adjust filtering thresholds or duplicate strategy.")
     }
@@ -372,7 +363,7 @@ filter_metadata_columns.default <- function(
         x[, keep_cols, drop = FALSE]
     }
 
-    attr(filtered, "dropped_columns") <- col_names[!keep_mask]
+    attr(filtered, "dropped_columns") <- info$col_names[!keep_mask]
     attr(filtered, "dropped_duplicates") <- dropped_duplicates
     attr(filtered, "dropped_missing") <- dropped_missing
 

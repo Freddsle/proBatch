@@ -218,8 +218,11 @@ plot_intragroup_variation.ProBatchFeatures <- function(data_matrix,
         pev_diff = pev_diff_arg
     )
 
-    default_sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
-    rownames(default_sample_annotation) <- NULL
+    default_sample_annotation <- .pb_default_sample_annotation(
+        object = object,
+        sample_id_col = sample_id_col,
+        drop_rownames = TRUE
+    )
     sample_ann_list <- split_arg(sample_annotation)
 
     data_pieces <- vector("list", length(assays))

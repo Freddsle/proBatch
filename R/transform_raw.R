@@ -86,28 +86,41 @@ log_transform_dm.default <- function(x, log_base = 2, offset = 1, ...) {
     return(data_matrix_log)
 }
 
+.pb_run_single_step_transform <- function(object, pbf_name, step, fun, params,
+                                          final_name = NULL, dots = list()) {
+    assay_name <- .pb_resolve_assay_for_input(
+        object = object,
+        pbf_name = pbf_name,
+        inform_if_default = TRUE
+    )
+
+    call_args <- c(list(
+        object = object,
+        from = assay_name,
+        steps = step,
+        funs = list(fun),
+        params_list = list(params),
+        final_name = final_name
+    ), dots)
+
+    do.call(pb_transform, call_args)
+}
+
 #' @rdname transform_raw_data
 #' @method log_transform_dm ProBatchFeatures
 #' @export
 log_transform_dm.ProBatchFeatures <- function(x, log_base = 2, offset = 1,
                                               pbf_name = NULL, final_name = NULL, ...) {
-    object <- x
-    pbf_name <- .pb_resolve_assay_for_input(
-        object = object,
-        pbf_name = pbf_name,
-        inform_if_default = TRUE
-    )
     step <- if (!is.null(log_base) && log_base == 2 && offset == 1) "log2" else "log"
-    object <- pb_transform(
-        object,
-        from = pbf_name,
-        steps = step,
-        funs = list(log_transform_dm.default),
-        params_list = list(list(log_base = log_base, offset = offset)),
+    .pb_run_single_step_transform(
+        object = x,
+        pbf_name = pbf_name,
+        step = step,
+        fun = log_transform_dm.default,
+        params = list(log_base = log_base, offset = offset),
         final_name = final_name,
-        ...
+        dots = list(...)
     )
-    object
 }
 
 #' @export
@@ -134,19 +147,12 @@ unlog_dm.default <- function(x, log_base = 2, offset = 1, ...) {
 #' @export
 unlog_dm.ProBatchFeatures <- function(x, log_base = 2, offset = 1,
                                       pbf_name = NULL, final_name = NULL, ...) {
-    object <- x
-    pbf_name <- .pb_resolve_assay_for_input(
-        object = object,
+    .pb_run_single_step_transform(
+        object = x,
         pbf_name = pbf_name,
-        inform_if_default = TRUE
-    )
-    object <- pb_transform(
-        object,
-        from = pbf_name,
-        steps = "unlog",
-        funs = list(unlog_dm.default),
-        params_list = list(list(log_base = log_base, offset = offset)),
+        step = "unlog",
+        fun = unlog_dm.default,
+        params = list(log_base = log_base, offset = offset),
         final_name = final_name
     )
-    object
 }

@@ -191,7 +191,7 @@ plot_hierarchical_clustering.ProBatchFeatures <- function(data_matrix, pbf_name 
     titles <- prep$titles
     shared_title <- prep$shared_title
 
-    default_sample_annotation <- as.data.frame(colData(object))
+    default_sample_annotation <- .pb_default_sample_annotation(object = object, sample_id_col = sample_id_col)
     sample_ann_list <- split_arg(sample_annotation)
 
     plot_list <- vector("list", length(assays))
@@ -412,7 +412,7 @@ plot_heatmap_diagnostic.ProBatchFeatures <- function(data_matrix, pbf_name = NUL
     titles <- prep$titles
     shared_title <- prep$shared_title
 
-    default_sample_annotation <- as.data.frame(colData(object))
+    default_sample_annotation <- .pb_default_sample_annotation(object = object, sample_id_col = sample_id_col)
     sample_ann_list <- split_arg(sample_annotation)
     peptide_ann_list <- split_arg(peptide_annotation)
 
@@ -665,7 +665,10 @@ plot_heatmap_generic.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
     titles <- prep$titles
     shared_title <- prep$shared_title
 
-    default_col_ann <- as.data.frame(colData(object))
+    default_col_ann <- .pb_default_sample_annotation(
+        object = object,
+        sample_id_col = if (is.null(col_ann_id_col)) "FullRunName" else col_ann_id_col
+    )
     col_ann_list <- split_arg(column_annotation_df)
     row_ann_list <- split_arg(row_annotation_df)
 
@@ -926,7 +929,7 @@ plot_PCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
     titles <- prep$titles
     shared_title <- prep$shared_title
 
-    default_sample_annotation <- as.data.frame(colData(object))
+    default_sample_annotation <- .pb_default_sample_annotation(object = object, sample_id_col = sample_id_col)
     sample_ann_list <- split_arg(sample_annotation)
 
     plot_list <- vector("list", length(assays))
@@ -1149,59 +1152,20 @@ plot_TSNE.ProBatchFeatures <- function(x, pbf_name = NULL,
                                        subplot_ncol = NULL,
                                        share_axes = TRUE,
                                        ...) {
-    object <- x
-    prep <- .pb_prepare_multi_assay(
-        object = object,
+   .pb_plot_embedding_pbf(
+        object = x,
         pbf_name = pbf_name,
-        dots = list(...),
-        plot_title = plot_title
-    )
-    assays <- prep$assays
-    dots_info <- .pb_pop_use_plotlyrender(prep$dots)
-    dots <- dots_info$dots
-    use_plotlyrender <- dots_info$use_plotlyrender
-    filename_list <- prep$filename_list
-    split_arg <- prep$split_arg
-    titles <- prep$titles
-    shared_title <- prep$shared_title
-
-    default_sample_annotation <- as.data.frame(colData(object))
-    sample_ann_list <- split_arg(sample_annotation)
-
-    plot_list <- vector("list", length(assays))
-    names(plot_list) <- assays
-
-    for (i in seq_along(assays)) {
-        assay_nm <- assays[[i]]
-        data_matrix <- pb_assay_matrix(object, assay_nm)
-        sample_ann <- sample_ann_list[[i]]
-        if (is.null(sample_ann)) {
-            sample_ann <- default_sample_annotation
-        }
-
-        call_args <- .pb_per_assay_dots(dots, filename_list, i)
-        call_args <- c(list(
-            data_matrix = data_matrix,
-            sample_annotation = sample_ann,
-            sample_id_col = sample_id_col,
-            plot_title = titles[i]
-        ), call_args)
-        call_args$use_plotlyrender <- use_plotlyrender
-
-        plot_list[[i]] <- do.call(plot_TSNE.default, call_args)
-    }
-
-    plot_list <- .pb_attach_shared_title(plot_list, shared_title)
-
-    return(.pb_finalize_embedding_collection(
-        plot_list = plot_list,
-        use_plotlyrender = use_plotlyrender,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        plot_title = plot_title,
         return_gridExtra = return_gridExtra,
         plot_ncol = plot_ncol,
         return_subplots = return_subplots,
         subplot_ncol = subplot_ncol,
-        share_axes = share_axes
-    ))
+        share_axes = share_axes,
+        dots = list(...),
+        default_fun = plot_TSNE.default
+    )
 }
 
 #' @rdname plot_TSNE
@@ -1401,11 +1365,36 @@ plot_UMAP.ProBatchFeatures <- function(x, pbf_name = NULL,
                                        subplot_ncol = NULL,
                                        share_axes = TRUE,
                                        ...) {
-    object <- x
+    .pb_plot_embedding_pbf(
+        object = x,
+        pbf_name = pbf_name,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        plot_title = plot_title,
+        return_gridExtra = return_gridExtra,
+        plot_ncol = plot_ncol,
+        return_subplots = return_subplots,
+        subplot_ncol = subplot_ncol,
+        share_axes = share_axes,
+        dots = list(...),
+        default_fun = plot_UMAP.default
+    )
+}
+
+#' @rdname plot_UMAP
+#' @export
+plot_UMAP <- function(x, ...) UseMethod("plot_UMAP")
+
+# Internal helpers for embedding plots ---------------------------------------
+
+.pb_plot_embedding_pbf <- function(object, pbf_name, sample_annotation, sample_id_col,
+                                   plot_title, return_gridExtra, plot_ncol,
+                                   return_subplots, subplot_ncol, share_axes,
+                                   dots, default_fun) {
     prep <- .pb_prepare_multi_assay(
         object = object,
         pbf_name = pbf_name,
-        dots = list(...),
+        dots = dots,
         plot_title = plot_title
     )
     assays <- prep$assays
@@ -1417,7 +1406,7 @@ plot_UMAP.ProBatchFeatures <- function(x, pbf_name = NULL,
     titles <- prep$titles
     shared_title <- prep$shared_title
 
-    default_sample_annotation <- as.data.frame(colData(object))
+    default_sample_annotation <- .pb_default_sample_annotation(object = object, sample_id_col = sample_id_col)
     sample_ann_list <- split_arg(sample_annotation)
 
     plot_list <- vector("list", length(assays))
@@ -1439,13 +1428,12 @@ plot_UMAP.ProBatchFeatures <- function(x, pbf_name = NULL,
             plot_title = titles[i]
         ), call_args)
         call_args$use_plotlyrender <- use_plotlyrender
-
-        plot_list[[i]] <- do.call(plot_UMAP.default, call_args)
+        plot_list[[i]] <- do.call(default_fun, call_args)
     }
 
     plot_list <- .pb_attach_shared_title(plot_list, shared_title)
 
-    return(.pb_finalize_embedding_collection(
+    .pb_finalize_embedding_collection(
         plot_list = plot_list,
         use_plotlyrender = use_plotlyrender,
         return_gridExtra = return_gridExtra,
@@ -1453,14 +1441,8 @@ plot_UMAP.ProBatchFeatures <- function(x, pbf_name = NULL,
         return_subplots = return_subplots,
         subplot_ncol = subplot_ncol,
         share_axes = share_axes
-    ))
+    )
 }
-
-#' @rdname plot_UMAP
-#' @export
-plot_UMAP <- function(x, ...) UseMethod("plot_UMAP")
-
-# Internal helpers for embedding plots ---------------------------------------
 
 .pb_create_embedding_ggplot <- function(embedding_matrix, sample_ids, sample_annotation,
                                         sample_id_col, color_by, shape_by,

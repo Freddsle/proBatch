@@ -658,15 +658,39 @@ pb_current_assay <- function(object) {
     list(matrix = matrix, colData = base$colData)
 }
 
+.pb_assay_payload <- function(object, assay_name, name = "intensity") {
+    if (assay_name %in% names(object)) {
+        se <- object[[assay_name]]
+        return(list(
+            matrix = assay(se, i = name),
+            colData = colData(se),
+            stored = TRUE
+        ))
+    }
+
+    resolved <- .pb_resolve_assay_from_log(object, assay_name, name = name)
+    if (is.null(resolved)) {
+        return(NULL)
+    }
+
+    list(
+        matrix = resolved$matrix,
+        colData = resolved$colData,
+        stored = FALSE
+    )
+}
+
 .pb_coldata_for_assay <- function(object, assay) {
     if (assay %in% names(object)) {
-        return(colData(object[[assay]]))
+        se <- object[[assay]]
+        return(colData(se))
     }
-    resolved <- .pb_resolve_assay_from_log(object, assay, name = "intensity")
-    if (!is.null(resolved)) {
-        return(resolved$colData)
+
+    payload <- .pb_assay_payload(object, assay_name = assay, name = "intensity")
+    if (is.null(payload)) {
+        stop("Unable to retrieve colData for assay '", assay, "'.")
     }
-    stop("Unable to retrieve colData for assay '", assay, "'.")
+    payload$colData
 }
 
 .pb_enrich_step_params <- function(object, assay, fun, params) {
@@ -704,18 +728,14 @@ pb_assay_matrix <- function(object, assay = NULL, name = "intensity") {
     } else {
         message("Using assay: ", assay)
     }
-    if (assay %in% names(object)) {
-        se <- object[[assay]]
-        return(assay(se, i = name))
+    payload <- .pb_assay_payload(object, assay_name = assay, name = name)
+    if (is.null(payload)) {
+        stop("Assay '", assay, "' not found in object or operation log.")
     }
-
-    resolved <- .pb_resolve_assay_from_log(object, assay, name)
-    if (!is.null(resolved)) {
+    if (!isTRUE(payload$stored)) {
         message("Assay '", assay, "' not stored; computed from operation log.")
-        return(resolved$matrix)
     }
-
-    stop("Assay '", assay, "' not found in object or operation log.")
+    payload$matrix
 }
 
 #' Get current assay as LONG (via proBatch::matrix_to_long)
@@ -734,23 +754,18 @@ pb_as_long <- function(
   measure_col = "Intensity",
   pbf_name = pb_current_assay(object)
 ) {
-    if (pbf_name %in% names(object)) {
-        se <- object[[pbf_name]]
-        m <- assay(se, i = "intensity")
-        sa <- as.data.frame(colData(se))
+    payload <- .pb_assay_payload(object, assay_name = pbf_name, name = "intensity")
+    if (is.null(payload)) {
+        stop("Assay '", pbf_name, "' not found in object or operation log.")
+    }
+
+    if (isTRUE(payload$stored)) {
         message("Using stored assay '", pbf_name, "'.")
-    } else {
-        resolved <- .pb_resolve_assay_from_log(object, pbf_name, name = "intensity")
-        if (is.null(resolved)) {
-            stop("Assay '", pbf_name, "' not found in object or operation log.")
-        }
-        m <- resolved$matrix
-        sa <- as.data.frame(resolved$colData)
     }
 
     matrix_to_long(
-        data_matrix       = m,
-        sample_annotation = sa,
+        data_matrix       = payload$matrix,
+        sample_annotation = as.data.frame(payload$colData),
         feature_id_col    = feature_id_col,
         measure_col       = measure_col,
         sample_id_col     = sample_id_col

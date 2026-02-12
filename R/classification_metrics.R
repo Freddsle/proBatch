@@ -233,7 +233,10 @@ calculate_classification_metrics.ProBatchFeatures <- function(data_matrix,
     assays <- prep$assays
     split_arg <- prep$split_arg
 
-    default_sample_annotation <- as.data.frame(colData(object), stringsAsFactors = FALSE)
+    default_sample_annotation <- .pb_default_sample_annotation(
+        object = object,
+        sample_id_col = sample_id_col
+    )
     sample_ann_list <- split_arg(sample_annotation)
 
     metrics_list <- vector("list", length(assays))

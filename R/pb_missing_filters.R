@@ -41,20 +41,15 @@
 #' @name pb_missing_helpers
 NULL
 
-#' @rdname pb_missing_helpers
-#' @export
-pb_zeroIsNA <- function(object, pbf_name = names(object), ...) {
-    stopifnot(is(object, "ProBatchFeatures"))
-    assays <- .pb_require_materialised_assays(object, pbf_name)
-    params <- .pb_collect_missing_params(list(...), forbidden = "i")
+.pb_apply_missing_qf_step <- function(object, assays, fun, step, params, fun_name = step) {
     for (nm in assays) {
         prior <- object
-        object <- do.call(zeroIsNA, c(list(object, i = nm), params))
+        object <- do.call(fun, c(list(object, i = nm), params))
         object <- .as_ProBatchFeatures(object, from = prior)
         object <- .pb_add_log_entry(
             object,
-            step = "zeroIsNA",
-            fun = "zeroIsNA",
+            step = step,
+            fun = fun_name,
             from = nm,
             to = nm,
             params = params
@@ -65,24 +60,33 @@ pb_zeroIsNA <- function(object, pbf_name = names(object), ...) {
 
 #' @rdname pb_missing_helpers
 #' @export
+pb_zeroIsNA <- function(object, pbf_name = names(object), ...) {
+    stopifnot(is(object, "ProBatchFeatures"))
+    assays <- .pb_require_materialised_assays(object, pbf_name)
+    params <- .pb_collect_missing_params(list(...), forbidden = "i")
+    ##### changed: deduplicated with .pb_apply_missing_qf_step()
+    .pb_apply_missing_qf_step(
+        object = object,
+        assays = assays,
+        fun = zeroIsNA,
+        step = "zeroIsNA",
+        params = params
+    )
+}
+
+#' @rdname pb_missing_helpers
+#' @export
 pb_infIsNA <- function(object, pbf_name = names(object), ...) {
     stopifnot(is(object, "ProBatchFeatures"))
     assays <- .pb_require_materialised_assays(object, pbf_name)
     params <- .pb_collect_missing_params(list(...), forbidden = "i")
-    for (nm in assays) {
-        prior <- object
-        object <- do.call(infIsNA, c(list(object, i = nm), params))
-        object <- .as_ProBatchFeatures(object, from = prior)
-        object <- .pb_add_log_entry(
-            object,
-            step = "infIsNA",
-            fun = "infIsNA",
-            from = nm,
-            to = nm,
-            params = params
-        )
-    }
-    object
+    .pb_apply_missing_qf_step(
+        object = object,
+        assays = assays,
+        fun = infIsNA,
+        step = "infIsNA",
+        params = params
+    )
 }
 
 #' @rdname pb_missing_helpers

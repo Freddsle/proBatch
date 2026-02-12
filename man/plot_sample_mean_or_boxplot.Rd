@@ -2,6 +2,7 @@
 % Please edit documentation in R/initial_assessment.R
 \name{plot_sample_mean_or_boxplot}
 \alias{plot_sample_mean_or_boxplot}
+\alias{.pb_apply_initial_assessment_theme}
 \alias{plot_sample_mean.default}
 \alias{plot_boxplot.default}
 \alias{plot_sample_mean.ProBatchFeatures}
@@ -10,6 +11,8 @@
 \alias{plot_boxplot}
 \title{Plot per-sample mean or boxplots for initial assessment}
 \usage{
+.pb_apply_initial_assessment_theme(gg, theme_name, base_size)
+
 \method{plot_sample_mean}{default}(
   x,
   sample_annotation,
@@ -72,6 +75,10 @@ plot_sample_mean(x, ...)
 plot_boxplot(x, ...)
 }
 \arguments{
+\item{theme_name}{Name of the ggplot theme to apply to the resulting plot.}
+
+\item{base_size}{base font size}
+
 \item{x}{Input object supplied to the generics (matrix, long data frame, or `ProBatchFeatures`).}
 
 \item{sample_annotation}{data frame with:
@@ -124,10 +131,6 @@ pdf and png format is supported}
 
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
-
-\item{theme_name}{Name of the ggplot theme to apply to the resulting plot.}
-
-\item{base_size}{base font size}
 
 \item{ylimits}{range of y-axis to compare two plots side by side, if required.}
 

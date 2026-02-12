@@ -131,7 +131,7 @@ sample_annotation_to_colors.default <- function(sample_annotation,
 #' @export
 sample_annotation_to_colors.ProBatchFeatures <- function(sample_annotation, ...) {
     object <- sample_annotation # ProBatchFeatures instance
-    sample_annotation <- as.data.frame(colData(object))
+    sample_annotation <- .pb_default_sample_annotation(object = object)
     color_list <- sample_annotation_to_colors.default(
         sample_annotation = sample_annotation,
         ...
