@@ -1,0 +1,1670 @@
+---
+title: "Evaluating Batch Effects and Correction Quality with proBatch"
+author: |
+  | Yuliya Burankova, CoSyBio, University of Hamburg, Germany
+date: "`r Sys.Date()`"
+output:
+  BiocStyle::html_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+bibliography: "references.bib"
+csl: "nature-no-superscript.csl"
+vignette: >
+  %\VignetteIndexEntry{Evaluating Batch Effects and Correction Quality with proBatch}
+  %\VignetteEncoding{UTF-8}
+  %\usepackage[utf8]{inputenc}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r global-options, include=FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    warning = FALSE,
+    message = FALSE,
+    fig.pos = "H",
+    fig.align = "center",
+    fig.width = 9,
+    fig.height = 4.8,
+    fig.wide = TRUE,
+    out.width = "100%",
+    collapse = TRUE,
+    comment = "#>"
+)
+
+biocpkg <- function(pkg) {
+    if (requireNamespace("BiocStyle", quietly = TRUE)) {
+        as.character(BiocStyle::Biocpkg(pkg))
+    } else {
+        pkg
+    }
+}
+```
+
+# Introduction
+
+This vignette focuses on *evaluation metrics* for batch effects in
+`r biocpkg("proBatch")`, with an emphasis on interpreting diagnostics
+before and after correction.
+
+It complements:
+
+- the main workflow vignette (`proBatch.Rmd`) for end-to-end correction
+  strategy,
+- the `ProBatchFeatures` vignette (`proBatchFeatures.Rmd`) for
+  `QFeatures`-based data processing pipelines.
+
+Use this document when you need a diagnostic-first checklist to decide
+whether technical variation is present, whether correction is needed,
+and whether correction quality is acceptable.
+
+<div class="alert alert-info">
+**Note:** If you are new to the package, start with `proBatch.Rmd` and
+`proBatchFeatures.Rmd`, then return here for deeper diagnostic and
+quality-control interpretation.
+</div>
+
+# Installation
+
+Install the release version from Bioconductor:
+
+```{r install-probatch, eval=FALSE}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("proBatch")
+```
+
+To install the development version from GitHub:
+
+```{r install-probatch-devel, eval=FALSE}
+if (!require("remotes", quietly = TRUE))
+    install.packages("remotes")
+remotes::install_github("Freddsle/proBatch")
+```
+
+# Workflow Overview
+
+The workflow used in this vignette is summarized in the table below and
+follows the same high-level logic as the package overview vignette.
+
+```{r workflow-overview-figure, echo=FALSE, fig.cap="Batch-effect analysis workflow used across proBatch vignettes.", out.width="55%"}
+knitr::include_graphics("Batch_effects_workflow_staircase.png")
+```
+
+```{r workflow-overview-table, echo=FALSE}
+workflow_overview <- tibble::tibble(
+    Stage = c(
+        "1. Setup and data checks",
+        "2. Baseline diagnostics on raw/log data",
+        "3. Apply one correction method",
+        "4. Repeat diagnostics on corrected data",
+        "5. Summarize raw vs corrected outcomes"
+    ),
+    `Main functions` = c(
+        "`ProBatchFeatures()`, `pb_transform()`, metadata checks",
+        "Missingness, distributions, clustering, embeddings, PVCA, correlations, QC metrics",
+        "`pb_transform(steps = \"limmaRBE\")`",
+        "Same diagnostics to ensure apples-to-apples comparison",
+        "Correlation overlays, PVCA stack, summary metric table"
+    ),
+    `Main decision` = c(
+        "Is input design valid and analyzable?",
+        "How strong are technical effects before correction?",
+        "Which correction assumptions are being applied?",
+        "Did technical variation decrease without harming biology?",
+        "Is quality gain sufficient for downstream analysis?"
+    )
+)
+
+knitr::kable(
+    workflow_overview,
+    caption = "Five-stage diagnostic workflow for evaluating batch correction quality."
+)
+```
+
+# Data and Setup
+
+## Load required packages
+
+```{r load-packages, message=FALSE, warning=FALSE}
+library(proBatch)
+library(dplyr)
+library(tibble)
+library(ggplot2)
+library(gridExtra)
+```
+
+## Load example data with `data()`
+
+The package provides several example objects. Here we explicitly load
+three objects:
+
+- `example_proteome_matrix`: feature-by-sample intensity matrix,
+- `example_sample_annotation`: sample-level technical and biological
+  metadata,
+- `example_peptide_annotation`: feature-to-protein/gene annotations.
+
+```{r prepare-example-data}
+set.seed(1)
+
+# Explicitly load required example objects from proBatch.
+data(list = c(
+    "example_proteome_matrix",
+    "example_sample_annotation",
+    "example_peptide_annotation"
+), package = "proBatch")
+
+# Subset samples/features for computational efficiency.
+# This keeps the vignette fast while retaining representative structure.
+sample_ids <- example_sample_annotation$FullRunName[1:60]
+sample_annotation <- example_sample_annotation[
+    match(sample_ids, example_sample_annotation$FullRunName),
+]
+
+# Feature-level selectors for illustrative plots.
+protein_name <- if ("Haao" %in% example_peptide_annotation$Gene) {
+    "Haao"
+} else {
+    unique(example_peptide_annotation$Gene)[1]
+}
+
+spike_in_name <- if ("BOVINE_A1ag" %in% example_peptide_annotation$Gene) {
+    "BOVINE_A1ag"
+} else {
+    unique(example_peptide_annotation$Gene)[1]
+}
+
+irt_pattern <- if (any(grepl("iRT", example_peptide_annotation$ProteinName))) {
+    "iRT"
+} else {
+    example_peptide_annotation$ProteinName[1]
+}
+
+peptides_from_protein <- example_peptide_annotation$peptide_group_label[
+    example_peptide_annotation$Gene %in% protein_name
+]
+peptides_from_spike <- example_peptide_annotation$peptide_group_label[
+    example_peptide_annotation$Gene %in% spike_in_name
+]
+peptides_from_irt <- example_peptide_annotation$peptide_group_label[
+    grepl(irt_pattern, example_peptide_annotation$ProteinName)
+]
+
+feature_ids <- unique(c(
+    rownames(example_proteome_matrix)[1:200],
+    peptides_from_protein,
+    peptides_from_spike,
+    peptides_from_irt
+))
+feature_ids <- intersect(feature_ids, rownames(example_proteome_matrix))
+
+# Raw matrix and annotations.
+data_matrix_raw <- example_proteome_matrix[feature_ids, sample_ids]
+
+peptide_annotation <- example_peptide_annotation[
+    match(feature_ids, example_peptide_annotation$peptide_group_label),
+]
+peptide_annotation <- peptide_annotation[!is.na(peptide_annotation$peptide_group_label), ]
+rownames(peptide_annotation) <- peptide_annotation$peptide_group_label
+
+# Primary analysis container: ProBatchFeatures (QFeatures-based).
+pbf_raw <- ProBatchFeatures(
+    data_matrix = data_matrix_raw,
+    sample_annotation = sample_annotation,
+    sample_id_col = "FullRunName",
+    name = "feature::raw"
+)
+
+# Log-transform for diagnostics that assume approximate homoscedasticity.
+pbf_log <- pb_transform(
+    pbf_raw,
+    from = "feature::raw",
+    steps = "log2",
+    store_fast_steps = TRUE
+)
+
+# Matrix/long views derived from PBF for helpers requiring explicit formats.
+data_matrix_raw_log <- pb_assay_matrix(pbf_log)
+df_long_raw <- pb_as_long(
+    pbf_log,
+    feature_id_col = "peptide_group_label",
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity"
+)
+
+samples_for_corr <- sample_ids[1:12]
+
+pvca_dir <- file.path(tempdir(), "pvca_eval")
+pvca_raw_dir <- file.path(pvca_dir, "raw")
+pvca_corr_dir <- file.path(pvca_dir, "limmaRBE")
+
+# Consistent colors for sample annotations.
+color_list <- sample_annotation_to_colors(
+    pbf_log,
+    factor_columns = c("MS_batch", "Diet", "Sex", "Strain", "digestion_batch"),
+    numeric_columns = c("DateTime", "order")
+)
+
+feature_id <- "10231_QDVDVWLWQQEGSSK_2"
+if (!feature_id %in% feature_ids) {
+    feature_id <- feature_ids[1]
+}
+```
+
+<div class="alert alert-warning">
+**Warning:** This vignette intentionally subsets to 60 samples and ~200+
+selected features for speed. For real analyses, run diagnostics on all
+samples/features (or a principled stratified subset) before making
+correction decisions.
+</div>
+
+# Correction Methods Available in proBatch
+
+This vignette applies one reference method (`limmaRBE`) for a full
+before/after demonstration. The table below summarizes correction
+methods already available in `r biocpkg("proBatch")`.
+
+```{r correction-methods-table, echo=FALSE}
+correction_methods <- tibble::tibble(
+    `Method family` = c(
+        "limma removeBatchEffect",
+        "ComBat",
+        "mComBat",
+        "Feature-wise centering",
+        "Continuous drift + discrete step",
+        "BERT-based correction (optional)",
+        "(s)PLSDA-batch (optional)",
+        "RUV-III-C (optional)",
+        "NormAE (optional)",
+        "omicsGMF correction (optional)",
+        "Unified correction wrapper"
+    ),
+    `Function / step` = c(
+        "`correct_with_removeBatchEffect()` / `pb_transform(steps = \"limmaRBE\")`",
+        "`correct_with_ComBat()` / `pb_transform(steps = \"combat\")`",
+        "`correct_with_mComBat()` / `pb_transform(steps = \"mComBat\")`",
+        "`center_feature_batch()` or `correct_batch_effects(discrete_func = ...)`",
+        "`adjust_batch_trend_df()` or `adjust_batch_trend_dm()` then discrete correction",
+        "`correct_with_BERT()` / `pb_transform(steps = \"BERT\", params_list = list(list(bert_method = ...)))`",
+        "`correct_with_PLSDA_batch()` / `pb_transform(steps = \"PLSDAbatch\")` or `\"sPLSDAbatch\"`",
+        "`correct_with_RUVIII_C()` / `pb_transform(steps = \"RUVIIIC\")` (alias: `\"RUVIII_C\"`)",
+        "`correct_with_NormAE()` / `pb_transform(steps = \"NormAE\")` (alias: `\"normae\"`)",
+        "`correct_with_omicsGMF()` / `pb_transform(steps = \"omicsGMFcor\")` (alias: `\"omicsgmfcor\"`)",
+        "`correct_batch_effects()` / `correct_batch_effects_df()` / `correct_batch_effects_dm()`"
+    ),
+    `Missing-value behavior` = c(
+        "Matrix NAs are allowed; batch/covariate design columns must be complete",
+        "Requires NA-free matrix",
+        "Requires NA-free matrix and chosen reference center",
+        "Can work with missing values depending on method",
+        "Trend fitting can tolerate missingness; discrete step dictates final constraints",
+        "Designed to tolerate missing values",
+        "Requires NA handling or imputation policy as configured",
+        "Designed to handle missingness with feature-wise normalization strategy",
+        "Requires NA handling before correction (unless preprocessed)",
+        "Can model missingness internally within the omicsGMF workflow",
+        "Depends on selected continuous/discrete method(s)"
+    ),
+    `Typical use` = c(
+        "Linear discrete batch effects while preserving design covariates",
+        "Strong discrete batch offsets with empirical Bayes shrinkage",
+        "ComBat variant with explicit center batch",
+        "Simple robust per-feature shift alignment",
+        "Run-order drift plus discrete batch differences",
+        "Complex nonlinear effects; tree-based decomposition",
+        "Latent-component correction preserving treatment-associated structure",
+        "Control-feature and replicate-driven normalization for unwanted variation",
+        "Autoencoder-based nonlinear correction using external Python model",
+        "Latent factor model-based correction integrated with GMF workflow",
+        "Single-call orchestration of continuous and discrete correction steps"
+    ),
+    `Availability` = c(
+        "Core",
+        "Core",
+        "Core",
+        "Core",
+        "Core",
+        "Optional (BERT)",
+        "Optional (PLSDAbatch)",
+        "Optional (RUVIIIC)",
+        "Optional (reticulate + Python NormAE)",
+        "Optional (omicsGMF + sgdGMF)",
+        "Core"
+    )
+)
+
+knitr::kable(
+    correction_methods,
+    caption = "Batch-correction methods available in proBatch (core and optional)."
+)
+```
+
+See function documentation for method-specific details:
+`?correct_with_removeBatchEffect`, `?correct_with_ComBat`,
+`?correct_with_mComBat`, `?center_feature_batch`,
+`?adjust_batch_trend_df`, `?correct_with_BERT`,
+`?correct_with_PLSDA_batch`, `?correct_with_RUVIII_C`,
+`?correct_with_NormAE`, `?correct_with_omicsGMF`, and
+`?correct_batch_effects`.
+
+Imputation methods (for example `PRONEImpute`, `MFimpute`, and
+`omicsGMFImpute`) are available in `proBatch`, but are not correction
+methods and are therefore listed separately from this table.
+
+For `BERT` in `pb_transform()`, the stored assay names are tagged by
+`bert_method` (for example `BERTc`, `BERTl`, `BERTr`). Deprecated
+compatibility wrappers (for example `*_df`/`*_dm` legacy variants) are
+not listed separately because they map to the same correction families.
+
+# Baseline Diagnostics on Raw Data
+
+This section establishes a pre-correction baseline. Use it to identify
+whether technical effects dominate and which correction assumptions are
+reasonable.
+
+## Metadata and design checks
+
+- Purpose: verify metadata integrity, sample alignment, factor typing,
+  and design confounding.
+- Interpretation: design warnings, duplicated columns, or nested
+  structures indicate potential invalid modeling assumptions.
+- Expected patterns: complete sample mapping and non-confounded
+  `MS_batch`/biological factors.
+- Action items: fix metadata first; do not run correction on inconsistent
+  annotation.
+
+```{r raw-metadata-design-checks}
+# Metadata quality and design checks.
+meta_summary_raw <- metadata_column_summary(pbf_log)
+dup_cols_raw <- find_duplicated_columns(pbf_log)
+
+# Example duplicated column handling.
+sample_annotation_dups <- sample_annotation %>%
+    mutate(Diet_copy = Diet)
+
+dup_cols_dups <- find_duplicated_columns(sample_annotation_dups)
+filtered_meta <- filter_metadata_columns(
+    sample_annotation_dups,
+    duplicate_keep = "pattern",
+    duplicate_pattern = "_copy$"
+)
+
+warn_unmapped_columns(sample_annotation, c("MS_batch", "Diet"), "FullRunName")
+
+# Factor/numeric overlap and automatic type guessing.
+overlap_factors <- handle_factor_numeric_overlap(
+    factor_columns = c("MS_batch", "Diet", "order"),
+    numeric_columns = c("order")
+)
+
+guessed_cols <- guess_factor_columns_if_needed(
+    factor_columns = c("MS_batch", "order"),
+    sample_annotation = sample_annotation,
+    guess_factors = TRUE
+)
+
+converted_meta <- convert_annotation_classes(
+    sample_annotation,
+    factor_columns = c("MS_batch", "Diet", "Sex"),
+    numeric_columns = c("DateTime", "order")
+)
+
+# Collapse rare factor levels.
+merged_strain <- merge_rare_levels(sample_annotation$Strain, rare_thr = 2)
+
+# Ensure sample IDs match between annotation and data.
+df_long_checked_raw <- check_sample_consistency(
+    sample_annotation,
+    sample_id_col = "FullRunName",
+    df_long = df_long_raw,
+    batch_col = "MS_batch",
+    order_col = "order"
+)
+
+design_check_raw <- validate_batch_design(
+    sample_annotation,
+    batch_col = "MS_batch",
+    condition_col = "Diet",
+    covariates = c("Sex", "Strain"),
+    sample_id_col = "FullRunName",
+    strict = FALSE
+)
+
+design_summary_raw <- summarize_design(
+    sample_annotation,
+    batch_col = "MS_batch",
+    condition_col = "Diet",
+    covariates = c("Sex", "Strain")
+)
+
+# Identify nested batch structures.
+nested_raw <- detect_nested_batches(
+    sample_annotation,
+    batch_cols = c("MS_batch", "digestion_batch", "Diet")
+)
+
+# Inspect metadata summaries and flags.
+meta_summary_raw
+dup_cols_raw
+dup_cols_dups
+head(filtered_meta)
+overlap_factors
+guessed_cols
+head(converted_meta)
+head(merged_strain)
+head(df_long_checked_raw)
+design_check_raw
+design_summary_raw
+nested_raw
+```
+
+## Missingness patterns
+
+- Purpose: quantify NA structure across samples/features and identify
+  batch-associated missingness.
+- Interpretation: horizontal/vertical NA bands linked to `MS_batch`
+  often indicate technical causes.
+- Expected patterns: missingness may exist, but should not be strongly
+  batch-structured after correction.
+- Action items: consider missing-value handling strategy before methods
+  that require complete matrices (for example ComBat).
+
+```{r raw-missingness-diagnostics, fig.cap="Raw-data missingness diagnostics across samples and features (heatmap, density, and frequency summaries).", fig.height=4.5}
+# Missing-value diagnostics.
+plot_NA_heatmap(
+    pbf_raw,
+    color_by = "MS_batch",
+    label_by = "FullRunName",
+    cluster_samples = FALSE,
+    cluster_features = TRUE,
+    main = "Raw data: missing-value heatmap"
+)
+
+plot_NA_density(pbf_raw) +
+    ggtitle("Raw data: intensity density by missingness")
+
+plot_NA_frequency(pbf_raw) +
+    ggtitle("Raw data: missing-value frequency")
+```
+
+## Sample distributions
+
+- Purpose: assess global abundance shifts and spread differences between
+  samples/batches.
+- Interpretation: consistent vertical offsets by batch suggest
+  systematic technical bias.
+- Expected patterns: correction should reduce batch-specific offsets
+  without flattening biological structure.
+- Action items: if global offsets dominate, include normalization and/or
+  discrete batch adjustment.
+
+```{r raw-sample-distributions, fig.cap="Raw-data sample distributions: sample means over run order and per-sample boxplots colored by batch.", fig.height=5.2}
+plot_sample_mean(
+    pbf_log,
+    order_col = "order",
+    batch_col = "MS_batch",
+    color_by_batch = TRUE,
+    color_scheme = color_list,
+    plot_title = "Raw data: sample mean over run order"
+)
+
+plot_boxplot(
+    pbf_log,
+    sample_id_col = "FullRunName",
+    batch_col = "MS_batch",
+    color_by_batch = TRUE,
+    color_scheme = color_list,
+    plot_title = "Raw data: per-sample intensity distributions"
+)
+```
+
+## Heatmaps and clustering
+
+- Purpose: evaluate whether samples cluster by technical or biological
+  factors.
+- Interpretation: dominant clustering by `MS_batch` indicates batch
+  structure likely driving downstream analyses.
+- Expected patterns: after successful correction, batch-driven grouping
+  weakens and biological grouping becomes more apparent.
+- Action items: if clustering is overwhelmingly technical, prioritize
+  correction before differential analyses.
+
+```{r raw-heatmap-clustering, fig.cap="Raw-data structure diagnostics via heatmaps and hierarchical clustering with sample annotations.", fig.height=5.2}
+plot_heatmap_diagnostic(
+    pbf_log,
+    factors_to_plot = c("MS_batch", "Diet", "Sex"),
+    color_list = color_list,
+    show_rownames = FALSE,
+    show_colnames = FALSE
+)
+
+plot_heatmap_generic(
+    pbf_log,
+    column_annotation_df = sample_annotation,
+    row_annotation_df = peptide_annotation,
+    col_ann_id_col = "FullRunName",
+    row_ann_id_col = "peptide_group_label",
+    columns_for_cols = c("MS_batch", "Diet"),
+    columns_for_rows = c("Gene"),
+    annotation_color_cols = color_list,
+    plot_title = "Raw data: generic heatmap"
+)
+
+plot_hierarchical_clustering(
+    pbf_log,
+    factors_to_plot = c("MS_batch", "Diet", "Sex"),
+    color_list = color_list,
+    label_samples = FALSE,
+    plot_title = "Raw data: hierarchical clustering"
+)
+```
+
+## Embeddings (PCA, t-SNE, UMAP)
+
+- Purpose: visualize sample structure in reduced dimensions.
+- Interpretation: separation dominated by `MS_batch` in low-dimensional
+  space indicates unresolved technical variance.
+- Expected patterns: correction should reduce batch separation while
+  preserving biologically meaningful separation.
+- Action items: adjust correction covariates and reassess if technical
+  axes still dominate.
+
+```{r raw-embeddings, cache=TRUE, fig.cap="Raw-data low-dimensional embeddings (PCA, t-SNE, UMAP) colored by MS batch.", fig.height=4.8}
+pca_raw <- plot_PCA(
+    pbf_log,
+    color_by = "MS_batch",
+    shape_by = "Diet",
+    plot_title = "PCA (raw)"
+)
+pca_raw
+
+tsne_raw <- plot_TSNE(
+    pbf_log,
+    color_by = "MS_batch",
+    perplexity = 10,
+    max_iter = 300,
+    initial_dims = 10,
+    plot_title = "t-SNE (raw)"
+)
+tsne_raw
+
+umap_raw <- plot_UMAP(
+    pbf_log,
+    color_by = "MS_batch",
+    n_neighbors = 10,
+    min_dist = 0.3,
+    random_state = 1,
+    plot_title = "UMAP (raw)"
+)
+umap_raw
+```
+
+## Variance decomposition (PVCA and variance partition)
+
+- Purpose: quantify explained variance attributable to technical and
+  biological factors.
+- Interpretation: high technical contributions (for example `MS_batch`)
+  indicate substantial residual batch effects.
+- Expected patterns: technical variance should decrease after correction;
+  key biological factors should remain interpretable.
+- Action items: compare both PVCA and per-feature variance partition to
+  avoid over-reliance on one summary.
+
+```{r raw-pvca, fig.cap="Raw-data PVCA summaries showing weighted variance contributions across technical and biological factors.", fig.height=4.8}
+pvca_raw <- calculate_PVCA(
+    pbf_log,
+    factors_for_PVCA = c("MS_batch", "Diet", "Sex", "Strain"),
+    fill_the_missing = -1
+)
+
+plot_PVCA(
+    pbf_log,
+    technical_factors = c("MS_batch", "digestion_batch"),
+    biological_factors = c("Diet", "Sex", "Strain"),
+    fill_the_missing = -1,
+    plot_title = "PVCA (raw)"
+)
+
+pvca_df_raw <- prepare_PVCA_df(
+    pbf_log,
+    technical_factors = c("MS_batch", "digestion_batch"),
+    biological_factors = c("Diet", "Sex", "Strain"),
+    fill_the_missing = -1,
+    variance_threshold = 0.05,
+    path_to_save_results = pvca_raw_dir
+)
+
+plot_PVCA.df(pvca_df_raw, plot_title = "PVCA (raw, prepared)")
+
+pvca_raw
+```
+
+```{r raw-variance-partition, cache=TRUE, fig.cap="Raw-data variance partitioning across modeled factors, including per-feature variance summaries.", fig.height=4.8}
+vp_raw <- calculate_variance_partition(
+    pbf_log,
+    model_variables = c("MS_batch", "Diet", "Sex"),
+    fill_the_missing = -1
+)
+
+plot_variance_partition(
+    pbf_log,
+    technical_factors = "MS_batch",
+    biological_factors = c("Diet", "Sex"),
+    variance_threshold = 0.05,
+    summary_stat = "median",
+    plot_title = "Variance partition (raw)"
+)
+
+vp_df_raw <- prepare_variance_partition_df(
+    pbf_log,
+    technical_factors = "MS_batch",
+    biological_factors = c("Diet", "Sex"),
+    variance_threshold = 0.05,
+    abundance_top_n = 20,
+    abundance_direction = "most"
+)
+
+plot_variance_partition.df(vp_df_raw, plot_title = "Variance partition (raw, prepared)")
+
+head(vp_raw)
+```
+
+## Correlation analyses
+
+- Purpose: assess sample reproducibility and peptide/protein coherence.
+- Interpretation: if within-batch similarity dominates over within-
+  biospecimen similarity, technical bias is likely inflating
+  correlations.
+- Expected patterns: post-correction, within-biospecimen correlations
+  should improve relative to technical groupings.
+- Action items: inspect both matrix heatmaps and distribution summaries.
+
+```{r raw-corr-heatmaps, fig.cap="Raw-data correlation heatmaps for selected samples and protein-specific peptide sets.", fig.height=5.2}
+corr_matrix_raw <- cor(
+    data_matrix_raw_log[, samples_for_corr, drop = FALSE],
+    use = "pairwise.complete.obs"
+)
+
+plot_corr_matrix(
+    corr_matrix_raw,
+    annotation = sample_annotation,
+    annotation_id_col = "FullRunName",
+    factors_to_plot = c("MS_batch", "Diet"),
+    plot_title = "Raw data: sample correlation matrix"
+)
+
+plot_sample_corr_heatmap(
+    pbf_log,
+    sample_annotation = sample_annotation,
+    samples_to_plot = samples_for_corr,
+    factors_to_plot = c("MS_batch", "Diet"),
+    cluster_rows = TRUE,
+    cluster_cols = TRUE,
+    plot_title = "Raw data: sample correlation heatmap"
+)
+
+plot_protein_corrplot(
+    pbf_log,
+    protein_name = protein_name,
+    peptide_annotation = peptide_annotation,
+    protein_col = "Gene",
+    cluster_rows = TRUE,
+    cluster_cols = TRUE,
+    plot_title = sprintf("Raw data: peptide correlation for %s", protein_name)
+)
+```
+
+```{r raw-corr-distributions, fig.cap="Raw-data correlation distributions for sample pairs and peptide pairs.", fig.height=4.8}
+sample_corr_df_raw <- calculate_sample_corr_distr(
+    pbf_log,
+    sample_annotation,
+    batch_col = "MS_batch",
+    biospecimen_id_col = "EarTag"
+)
+
+plot_sample_corr_distribution(
+    pbf_log,
+    sample_annotation,
+    batch_col = "MS_batch",
+    biospecimen_id_col = "EarTag",
+    plot_param = "batch_replicate",
+    plot_title = "Raw data: sample correlation by pair type"
+)
+
+plot_sample_corr_distribution.corrDF(
+    sample_corr_df_raw,
+    plot_param = "batch_replicate",
+    plot_title = "Raw data: sample correlation (from precomputed table)"
+)
+
+peptide_corr_df_raw <- calculate_peptide_corr_distr(
+    pbf_log,
+    peptide_annotation,
+    protein_col = "Gene"
+)
+
+plot_peptide_corr_distribution(
+    pbf_log,
+    peptide_annotation,
+    protein_col = "Gene",
+    plot_title = "Raw data: peptide correlation distribution"
+)
+
+plot_peptide_corr_distribution.corrDF(
+    peptide_corr_df_raw,
+    plot_title = "Raw data: peptide correlation (from precomputed table)"
+)
+
+head(sample_corr_df_raw)
+head(peptide_corr_df_raw)
+```
+
+## Feature-level diagnostics
+
+- Purpose: inspect specific peptides/proteins/spike-ins/iRT traces for
+  local artifacts and drift.
+- Interpretation: strong run-order trends or batch jumps in controls
+  imply technical drift not addressed by global summaries.
+- Expected patterns: spike-in/iRT profiles should be stable across runs;
+  fitted drift curves should flatten after correction.
+- Action items: include trend correction (`adjust_batch_trend_*`) when
+  run-order artifacts are substantial.
+
+```{r raw-feature-diagnostics, fig.cap="Raw-data feature-level diagnostics for selected peptides/proteins, controls, and fitted drift curves.", fig.height=5.2}
+plot_single_feature(
+    feature_name = feature_id,
+    df_long = pbf_log,
+    sample_annotation = sample_annotation,
+    batch_col = "MS_batch",
+    plot_title = sprintf("Raw data: feature profile (%s)", feature_id)
+)
+
+plot_peptides_of_one_protein(
+    protein_name = protein_name,
+    peptide_annotation = peptide_annotation,
+    protein_col = "Gene",
+    df_long = pbf_log,
+    sample_annotation = sample_annotation,
+    batch_col = "MS_batch",
+    plot_title = sprintf("Raw data: peptides from %s", protein_name)
+)
+
+plot_spike_in(
+    spike_ins = spike_in_name,
+    peptide_annotation = peptide_annotation,
+    protein_col = "Gene",
+    df_long = pbf_log,
+    sample_annotation = sample_annotation,
+    plot_title = sprintf("Raw data: spike-in profile (%s)", spike_in_name)
+)
+
+plot_iRT(
+    irt_pattern = irt_pattern,
+    peptide_annotation = peptide_annotation,
+    protein_col = "ProteinName",
+    df_long = pbf_log,
+    sample_annotation = sample_annotation,
+    plot_title = sprintf("Raw data: iRT profile (%s)", irt_pattern)
+)
+
+fit_df_raw <- adjust_batch_trend_df(
+    pbf_log,
+    sample_annotation = sample_annotation,
+    span = 0.7
+)
+fit_df_raw <- fit_df_raw[fit_df_raw$peptide_group_label %in% feature_id, ]
+
+plot_with_fitting_curve(
+    feature_name = feature_id,
+    df_long = pbf_log,
+    sample_annotation = sample_annotation,
+    fit_df = fit_df_raw,
+    plot_title = sprintf("Raw data: fitted trend (%s)", feature_id)
+)
+```
+
+## QC summaries
+
+- Purpose: aggregate correction-relevant quality metrics (CV,
+  clustering-agreement, intragroup stability, outliers, and sub-batches).
+- Interpretation: lower feature CVs, fewer outliers, weaker batch
+  clustering scores, and reduced sub-batch artifacts are generally
+  favorable.
+- Expected patterns: post-correction metrics should improve or remain
+  stable without biological collapse.
+- Action items: use these metrics jointly; no single threshold should be
+  used in isolation.
+
+```{r raw-qc-summaries, cache=TRUE, fig.cap="Raw-data QC summaries: CV distributions, clustering metrics, intragroup variation, and outlier/sub-batch diagnostics.", fig.height=4.8}
+cv_df_raw <- calculate_feature_CV(
+    pbf_log,
+    sample_annotation = sample_annotation,
+    batch_col = "MS_batch",
+    biospecimen_id_col = "EarTag",
+    unlog = FALSE
+)
+
+plot_CV_distr(
+    pbf_log,
+    sample_annotation = sample_annotation,
+    batch_col = "MS_batch",
+    biospecimen_id_col = "EarTag",
+    unlog = FALSE,
+    plot_title = "Raw data: CV distribution"
+)
+
+plot_CV_distr.df(cv_df_raw, plot_title = "CV distribution (raw)")
+
+class_metrics_raw <- calculate_classification_metrics(
+    pbf_log,
+    known_col = "MS_batch"
+)
+
+intragroup_raw <- plot_intragroup_variation(
+    pbf_log,
+    group_col = "Diet",
+    fill_the_missing = -1,
+    metrics = c("correlation", "PCV", "PMAD", "PEV")
+)
+
+outliers_raw <- detect_outlier_samples(
+    pbf_log,
+    sample_annotation = sample_annotation,
+    batch_col = "MS_batch",
+    n_pcs = 5
+)
+
+subbatches_raw <- subbatch_detection(
+    pbf_log,
+    sample_annotation = sample_annotation,
+    batch_col = "MS_batch",
+    n_pcs = 5,
+    method = "kmeans",
+    k_max = 4
+)
+
+head(cv_df_raw)
+class_metrics_raw
+outliers_raw
+subbatches_raw$summary
+```
+
+# Apply a Reference Correction Method
+
+We now apply one correction method (`limma::removeBatchEffect`) through
+`pb_transform()` using step `"limmaRBE"`.
+
+This section demonstrates a single method in depth; see
+[Correction Methods Available in proBatch](#correction-methods-available-in-probatch)
+for alternatives.
+
+```{r apply-limma-rbe}
+pbf_corr <- pb_transform(
+    pbf_log,
+    from = pb_current_assay(pbf_log),
+    steps = "limmaRBE",
+    params_list = list(list(
+        batch_col = "MS_batch",
+        covariates_cols = c("Diet", "Sex")
+    ))
+)
+
+data_matrix_corrected <- pb_assay_matrix(pbf_corr)
+
+# Long-format table for functions that explicitly consume long data.
+df_long_corrected <- pb_as_long(
+    pbf_corr,
+    feature_id_col = "peptide_group_label",
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity"
+)
+```
+
+# Diagnostics After Correction
+
+The same diagnostics are repeated after correction to support direct
+comparison with the raw baseline.
+
+## Metadata and design checks
+
+Metadata and experimental design do not change after correction, but we
+rerun checks for complete reporting and pipeline traceability.
+
+```{r corr-metadata-design-checks}
+meta_summary_corr <- metadata_column_summary(pbf_corr)
+dup_cols_corr <- find_duplicated_columns(pbf_corr)
+
+dup_cols_dups_corr <- find_duplicated_columns(sample_annotation_dups)
+filtered_meta_corr <- filter_metadata_columns(
+    sample_annotation_dups,
+    duplicate_keep = "pattern",
+    duplicate_pattern = "_copy$"
+)
+
+warn_unmapped_columns(sample_annotation, c("MS_batch", "Diet"), "FullRunName")
+
+overlap_factors_corr <- handle_factor_numeric_overlap(
+    factor_columns = c("MS_batch", "Diet", "order"),
+    numeric_columns = c("order")
+)
+
+guessed_cols_corr <- guess_factor_columns_if_needed(
+    factor_columns = c("MS_batch", "order"),
+    sample_annotation = sample_annotation,
+    guess_factors = TRUE
+)
+
+converted_meta_corr <- convert_annotation_classes(
+    sample_annotation,
+    factor_columns = c("MS_batch", "Diet", "Sex"),
+    numeric_columns = c("DateTime", "order")
+)
+
+merged_strain_corr <- merge_rare_levels(sample_annotation$Strain, rare_thr = 2)
+
+df_long_checked_corr <- check_sample_consistency(
+    sample_annotation,
+    sample_id_col = "FullRunName",
+    df_long = df_long_corrected,
+    batch_col = "MS_batch",
+    order_col = "order"
+)
+
+design_check_corr <- validate_batch_design(
+    sample_annotation,
+    batch_col = "MS_batch",
+    condition_col = "Diet",
+    covariates = c("Sex", "Strain"),
+    sample_id_col = "FullRunName",
+    strict = FALSE
+)
+
+design_summary_corr <- summarize_design(
+    sample_annotation,
+    batch_col = "MS_batch",
+    condition_col = "Diet",
+    covariates = c("Sex", "Strain")
+)
+
+nested_corr <- detect_nested_batches(
+    sample_annotation,
+    batch_cols = c("MS_batch", "digestion_batch", "Diet")
+)
+
+meta_summary_corr
+dup_cols_corr
+dup_cols_dups_corr
+head(filtered_meta_corr)
+overlap_factors_corr
+guessed_cols_corr
+head(converted_meta_corr)
+head(merged_strain_corr)
+head(df_long_checked_corr)
+design_check_corr
+design_summary_corr
+nested_corr
+```
+
+## Missingness patterns
+
+Interpretation follows the raw-data section: correction should generally
+not create new missingness artifacts.
+
+```{r corr-missingness-diagnostics, fig.cap="Post-correction missingness diagnostics to verify that NA structure remains stable after limmaRBE.", fig.height=4.5}
+plot_NA_heatmap(
+    pbf_corr,
+    color_by = "MS_batch",
+    label_by = "FullRunName",
+    cluster_samples = FALSE,
+    cluster_features = TRUE,
+    main = "Corrected data: missing-value heatmap"
+)
+
+plot_NA_density(pbf_corr) +
+    ggtitle("Corrected data: intensity density by missingness")
+
+plot_NA_frequency(pbf_corr) +
+    ggtitle("Corrected data: missing-value frequency")
+```
+
+## Sample distributions
+
+Expectation: global batch offsets should be reduced compared with
+Section [Sample distributions](#sample-distributions).
+
+```{r corr-sample-distributions, fig.cap="Post-correction sample means and boxplots used to assess reduction of batch-driven global shifts.", fig.height=5.2}
+plot_sample_mean(
+    pbf_corr,
+    order_col = "order",
+    batch_col = "MS_batch",
+    color_by_batch = TRUE,
+    color_scheme = color_list,
+    plot_title = "Corrected data: sample mean over run order"
+)
+
+plot_boxplot(
+    pbf_corr,
+    sample_id_col = "FullRunName",
+    batch_col = "MS_batch",
+    color_by_batch = TRUE,
+    color_scheme = color_list,
+    plot_title = "Corrected data: per-sample intensity distributions"
+)
+```
+
+## Heatmaps and clustering
+
+Expectation: clustering should shift away from technical factor dominance.
+
+```{r corr-heatmap-clustering, fig.cap="Post-correction heatmaps and hierarchical clustering for residual batch-structure assessment.", fig.height=5.2}
+plot_heatmap_diagnostic(
+    pbf_corr,
+    factors_to_plot = c("MS_batch", "Diet", "Sex"),
+    color_list = color_list,
+    show_rownames = FALSE,
+    show_colnames = FALSE
+)
+
+plot_heatmap_generic(
+    pbf_corr,
+    column_annotation_df = sample_annotation,
+    row_annotation_df = peptide_annotation,
+    col_ann_id_col = "FullRunName",
+    row_ann_id_col = "peptide_group_label",
+    columns_for_cols = c("MS_batch", "Diet"),
+    columns_for_rows = c("Gene"),
+    annotation_color_cols = color_list,
+    plot_title = "Generic heatmap (limmaRBE)"
+)
+
+plot_hierarchical_clustering(
+    pbf_corr,
+    factors_to_plot = c("MS_batch", "Diet", "Sex"),
+    color_list = color_list,
+    label_samples = FALSE,
+    plot_title = "Corrected data: hierarchical clustering"
+)
+```
+
+## Embeddings (PCA, t-SNE, UMAP)
+
+Expectation: batch-separation structure should be weaker than in raw
+embeddings.
+
+```{r corr-embeddings, cache=TRUE, fig.cap="Post-correction low-dimensional embeddings for visual comparison against raw structure.", fig.height=4.8}
+pca_corr <- plot_PCA(
+    pbf_corr,
+    color_by = "MS_batch",
+    shape_by = "Diet",
+    plot_title = "PCA (limmaRBE)"
+)
+pca_corr
+
+tsne_corr <- plot_TSNE(
+    pbf_corr,
+    color_by = "MS_batch",
+    perplexity = 10,
+    max_iter = 300,
+    initial_dims = 10,
+    plot_title = "t-SNE (limmaRBE)"
+)
+tsne_corr
+
+umap_corr <- plot_UMAP(
+    pbf_corr,
+    color_by = "MS_batch",
+    n_neighbors = 10,
+    min_dist = 0.3,
+    random_state = 1,
+    plot_title = "UMAP (limmaRBE)"
+)
+umap_corr
+```
+
+## Variance decomposition (PVCA and variance partition)
+
+Expectation: technical variance (especially `MS_batch`) should decrease.
+
+```{r corr-pvca, fig.cap="Post-correction PVCA summaries showing remaining technical and biological variance contributions.", fig.height=4.8}
+pvca_corr <- calculate_PVCA(
+    pbf_corr,
+    factors_for_PVCA = c("MS_batch", "Diet", "Sex", "Strain"),
+    fill_the_missing = -1
+)
+
+plot_PVCA(
+    pbf_corr,
+    technical_factors = c("MS_batch", "digestion_batch"),
+    biological_factors = c("Diet", "Sex", "Strain"),
+    fill_the_missing = -1,
+    plot_title = "PVCA (limmaRBE)"
+)
+
+pvca_df_corr <- prepare_PVCA_df(
+    pbf_corr,
+    technical_factors = c("MS_batch", "digestion_batch"),
+    biological_factors = c("Diet", "Sex", "Strain"),
+    fill_the_missing = -1,
+    variance_threshold = 0.05,
+    path_to_save_results = pvca_corr_dir
+)
+
+plot_PVCA.df(pvca_df_corr, plot_title = "PVCA (limmaRBE, prepared)")
+
+pvca_corr
+```
+
+```{r corr-variance-partition, cache=TRUE, fig.cap="Post-correction variance partitioning used to compare per-feature explained variance before and after correction.", fig.height=4.8}
+vp_corr <- calculate_variance_partition(
+    pbf_corr,
+    model_variables = c("MS_batch", "Diet", "Sex"),
+    fill_the_missing = -1
+)
+
+plot_variance_partition(
+    pbf_corr,
+    technical_factors = "MS_batch",
+    biological_factors = c("Diet", "Sex"),
+    variance_threshold = 0.05,
+    summary_stat = "median",
+    plot_title = "Variance partition (limmaRBE)"
+)
+
+vp_df_corr <- prepare_variance_partition_df(
+    pbf_corr,
+    technical_factors = "MS_batch",
+    biological_factors = c("Diet", "Sex"),
+    variance_threshold = 0.05,
+    abundance_top_n = 20,
+    abundance_direction = "most"
+)
+
+plot_variance_partition.df(vp_df_corr, plot_title = "Variance partition (limmaRBE, prepared)")
+
+head(vp_corr)
+```
+
+## Correlation analyses
+
+Expectation: sample correlations should better reflect biospecimen
+consistency than batch identity.
+
+```{r corr-corr-heatmaps, fig.cap="Post-correction correlation heatmaps for sample and peptide/protein-level structure checks.", fig.height=5.2}
+corr_matrix_corr <- cor(
+    data_matrix_corrected[, samples_for_corr, drop = FALSE],
+    use = "pairwise.complete.obs"
+)
+
+plot_corr_matrix(
+    corr_matrix_corr,
+    annotation = sample_annotation,
+    annotation_id_col = "FullRunName",
+    factors_to_plot = c("MS_batch", "Diet"),
+    plot_title = "Corrected data: sample correlation matrix"
+)
+
+plot_sample_corr_heatmap(
+    pbf_corr,
+    sample_annotation = sample_annotation,
+    samples_to_plot = samples_for_corr,
+    factors_to_plot = c("MS_batch", "Diet"),
+    cluster_rows = TRUE,
+    cluster_cols = TRUE,
+    plot_title = "Corrected data: sample correlation heatmap"
+)
+
+plot_protein_corrplot(
+    pbf_corr,
+    protein_name = protein_name,
+    peptide_annotation = peptide_annotation,
+    protein_col = "Gene",
+    cluster_rows = TRUE,
+    cluster_cols = TRUE,
+    plot_title = sprintf("Corrected data: peptide correlation for %s", protein_name)
+)
+```
+
+```{r corr-corr-distributions, fig.cap="Post-correction correlation distributions across sample-pair and peptide-pair categories.", fig.height=4.8}
+sample_corr_df_corr <- calculate_sample_corr_distr(
+    pbf_corr,
+    sample_annotation,
+    batch_col = "MS_batch",
+    biospecimen_id_col = "EarTag"
+)
+
+plot_sample_corr_distribution(
+    pbf_corr,
+    sample_annotation,
+    batch_col = "MS_batch",
+    biospecimen_id_col = "EarTag",
+    plot_param = "batch_replicate",
+    plot_title = "Corrected data: sample correlation by pair type"
+)
+
+plot_sample_corr_distribution.corrDF(
+    sample_corr_df_corr,
+    plot_param = "batch_replicate",
+    plot_title = "Corrected data: sample correlation (from precomputed table)"
+)
+
+peptide_corr_df_corr <- calculate_peptide_corr_distr(
+    pbf_corr,
+    peptide_annotation,
+    protein_col = "Gene"
+)
+
+plot_peptide_corr_distribution(
+    pbf_corr,
+    peptide_annotation,
+    protein_col = "Gene",
+    plot_title = "Corrected data: peptide correlation distribution"
+)
+
+plot_peptide_corr_distribution.corrDF(
+    peptide_corr_df_corr,
+    plot_title = "Corrected data: peptide correlation (from precomputed table)"
+)
+
+head(sample_corr_df_corr)
+head(peptide_corr_df_corr)
+```
+
+## Feature-level diagnostics
+
+Expectation: local run-order trends and batch jumps should flatten while
+biological trajectories remain plausible.
+
+```{r corr-feature-diagnostics, fig.cap="Post-correction feature-level diagnostics for selected peptides/proteins and control features.", fig.height=5.2}
+plot_single_feature(
+    feature_name = feature_id,
+    df_long = pbf_corr,
+    sample_annotation = sample_annotation,
+    batch_col = "MS_batch",
+    plot_title = sprintf("Corrected data: feature profile (%s)", feature_id)
+)
+
+plot_peptides_of_one_protein(
+    protein_name = protein_name,
+    peptide_annotation = peptide_annotation,
+    protein_col = "Gene",
+    df_long = pbf_corr,
+    sample_annotation = sample_annotation,
+    batch_col = "MS_batch",
+    plot_title = sprintf("Corrected data: peptides from %s", protein_name)
+)
+
+plot_spike_in(
+    spike_ins = spike_in_name,
+    peptide_annotation = peptide_annotation,
+    protein_col = "Gene",
+    df_long = pbf_corr,
+    sample_annotation = sample_annotation,
+    plot_title = sprintf("Corrected data: spike-in profile (%s)", spike_in_name)
+)
+
+plot_iRT(
+    irt_pattern = irt_pattern,
+    peptide_annotation = peptide_annotation,
+    protein_col = "ProteinName",
+    df_long = pbf_corr,
+    sample_annotation = sample_annotation,
+    plot_title = sprintf("Corrected data: iRT profile (%s)", irt_pattern)
+)
+
+fit_df_corr <- adjust_batch_trend_df(
+    pbf_corr,
+    sample_annotation = sample_annotation,
+    span = 0.7
+)
+fit_df_corr <- fit_df_corr[fit_df_corr$peptide_group_label %in% feature_id, ]
+
+plot_with_fitting_curve(
+    feature_name = feature_id,
+    df_long = pbf_corr,
+    sample_annotation = sample_annotation,
+    fit_df = fit_df_corr,
+    plot_title = sprintf("Corrected data: fitted trend (%s)", feature_id)
+)
+```
+
+## QC summaries
+
+Expectation: correction quality should be reflected jointly by CV,
+classification metrics, intragroup variation, and outlier diagnostics.
+
+```{r corr-qc-summaries, cache=TRUE, fig.cap="Post-correction QC summaries for variability, clustering agreement, intragroup consistency, and outlier/sub-batch detection.", fig.height=4.8}
+cv_df_corr <- calculate_feature_CV(
+    pbf_corr,
+    sample_annotation = sample_annotation,
+    batch_col = "MS_batch",
+    biospecimen_id_col = "EarTag",
+    unlog = FALSE
+)
+
+plot_CV_distr(
+    pbf_corr,
+    sample_annotation = sample_annotation,
+    batch_col = "MS_batch",
+    biospecimen_id_col = "EarTag",
+    unlog = FALSE,
+    plot_title = "Corrected data: CV distribution"
+)
+
+plot_CV_distr.df(cv_df_corr, plot_title = "CV distribution (limmaRBE)")
+
+class_metrics_corr <- calculate_classification_metrics(
+    pbf_corr,
+    known_col = "MS_batch"
+)
+
+intragroup_corr <- plot_intragroup_variation(
+    pbf_corr,
+    group_col = "Diet",
+    fill_the_missing = -1,
+    metrics = c("correlation", "PCV", "PMAD", "PEV")
+)
+
+outliers_corr <- detect_outlier_samples(
+    pbf_corr,
+    sample_annotation = sample_annotation,
+    batch_col = "MS_batch",
+    n_pcs = 5
+)
+
+subbatches_corr <- subbatch_detection(
+    pbf_corr,
+    sample_annotation = sample_annotation,
+    batch_col = "MS_batch",
+    n_pcs = 5,
+    method = "kmeans",
+    k_max = 4
+)
+
+head(cv_df_corr)
+class_metrics_corr
+outliers_corr
+subbatches_corr$summary
+```
+
+# Raw vs Corrected: Comparative Interpretation
+
+This section focuses on direct before/after comparisons and practical
+interpretation.
+
+## Correlation distribution overlays
+
+```{r compare-overlays, fig.cap="Overlay comparison of raw vs limmaRBE sample/peptide correlation distributions.", fig.height=4.8}
+plot_sample_corr_distribution(
+    list(raw = data_matrix_raw_log, limmaRBE = data_matrix_corrected),
+    sample_annotation,
+    batch_col = "MS_batch",
+    biospecimen_id_col = "EarTag",
+    plot_param = "batch_replicate",
+    plot_title = "Sample correlation (raw vs limmaRBE)"
+)
+
+plot_peptide_corr_distribution(
+    list(raw = data_matrix_raw_log, limmaRBE = data_matrix_corrected),
+    peptide_annotation,
+    protein_col = "Gene",
+    plot_title = "Peptide correlation (raw vs limmaRBE)"
+)
+```
+
+Interpretation guideline:
+
+- Higher within-biospecimen correlation across different batches is a
+  positive sign.
+- Reduced separation of purely batch-based pair types suggests technical
+  correction success.
+
+## Global structure comparison (PCA and stacked PVCA)
+
+```{r compare-pca-pvca, fig.cap="Global before/after structure comparison via PCA and stacked PVCA summaries.", fig.height=4.8}
+grid.arrange(pca_raw, pca_corr, ncol = 2)
+
+plot_PVCA_stacked_from_saved(
+    pvca_dir,
+    plot_title = "PVCA stacked summary (raw vs limmaRBE)"
+)
+```
+
+Interpretation guideline:
+
+- PCA should show less separation by `MS_batch`.
+- Stacked PVCA should show reduced technical contribution relative to
+  raw.
+
+## Key summary metrics table
+
+```{r compare-key-metrics}
+# Helpers to robustly summarize key diagnostics.
+first_num <- function(x) {
+    if (is.null(x) || !length(x)) {
+        return(NA_real_)
+    }
+    suppressWarnings(as.numeric(x[[1]]))
+}
+
+pvca_share <- function(pvca_df, patterns) {
+    if (is.null(pvca_df) || !all(c("label", "weights") %in% names(pvca_df))) {
+        return(NA_real_)
+    }
+    hits <- Reduce(
+        `|`,
+        lapply(patterns, function(pat) grepl(pat, pvca_df$label, fixed = TRUE))
+    )
+    sum(pvca_df$weights[hits], na.rm = TRUE)
+}
+
+median_corr_by_group <- function(corr_df, group_label) {
+    if (is.null(corr_df) || !all(c("batch_replicate", "correlation") %in% names(corr_df))) {
+        return(NA_real_)
+    }
+    median(corr_df$correlation[corr_df$batch_replicate == group_label], na.rm = TRUE)
+}
+
+count_outliers <- function(x) {
+    if (is.null(x)) {
+        return(NA_real_)
+    }
+    if (is.data.frame(x)) {
+        return(nrow(x))
+    }
+    if (is.list(x) && !is.null(x$outliers) && is.data.frame(x$outliers)) {
+        return(nrow(x$outliers))
+    }
+    suppressWarnings(as.numeric(length(x)))
+}
+
+summary_metrics <- tibble::tibble(
+    Metric = c(
+        "PVCA technical share (MS_batch + digestion_batch)",
+        "Median feature CV_total",
+        "Median corr: same biospecimen / different batch",
+        "Median corr: same batch / different biospecimen",
+        "ARI for MS_batch labels (lower after correction is better)",
+        "MCC for MS_batch labels (lower after correction is better)",
+        "Silhouette for MS_batch labels (lower after correction is better)",
+        "Detected outlier sample count"
+    ),
+    Raw = c(
+        pvca_share(pvca_raw, c("MS_batch", "digestion_batch")),
+        median(cv_df_raw$CV_total, na.rm = TRUE),
+        median_corr_by_group(sample_corr_df_raw, "same_biospecimen\ndiff_batch"),
+        median_corr_by_group(sample_corr_df_raw, "same_batch\ndiff_biospecimen"),
+        first_num(class_metrics_raw$ARI),
+        first_num(class_metrics_raw$MCC),
+        first_num(class_metrics_raw$silhouette),
+        count_outliers(outliers_raw)
+    ),
+    limmaRBE = c(
+        pvca_share(pvca_corr, c("MS_batch", "digestion_batch")),
+        median(cv_df_corr$CV_total, na.rm = TRUE),
+        median_corr_by_group(sample_corr_df_corr, "same_biospecimen\ndiff_batch"),
+        median_corr_by_group(sample_corr_df_corr, "same_batch\ndiff_biospecimen"),
+        first_num(class_metrics_corr$ARI),
+        first_num(class_metrics_corr$MCC),
+        first_num(class_metrics_corr$silhouette),
+        count_outliers(outliers_corr)
+    )
+) %>%
+    mutate(Change = limmaRBE - Raw)
+
+knitr::kable(
+    summary_metrics,
+    digits = 3,
+    caption = "Key before/after metrics summarizing correction impact (raw vs limmaRBE)."
+)
+```
+
+## Classification and distribution summaries
+
+```{r compare-summaries, fig.cap="Tabular and split-violin summaries of classification and sample-correlation metrics before and after correction.", fig.height=4.8}
+class_metrics_compare <- bind_rows(
+    transform(class_metrics_raw, Step = "raw"),
+    transform(class_metrics_corr, Step = "limmaRBE")
+)
+class_metrics_compare
+
+corr_compare <- bind_rows(
+    transform(sample_corr_df_raw, Step = "raw"),
+    transform(sample_corr_df_corr, Step = "limmaRBE")
+)
+
+plot_split_violin_with_boxplot(
+    corr_compare,
+    y_col = "correlation",
+    col_for_color = "Step",
+    col_for_box = "batch_replicate",
+    plot_title = "Sample correlation by replicate/batch (raw vs limmaRBE)"
+)
+```
+
+# Best Practices and Recommendations
+
+```{r best-practices-table, echo=FALSE}
+best_practices <- tibble::tibble(
+    Topic = c(
+        "Recommended diagnostic order",
+        "When to apply each diagnostic",
+        "Selecting correction methods",
+        "Computational considerations",
+        "QC thresholds/guidelines",
+        "Common pitfalls"
+    ),
+    Recommendation = c(
+        "Start with metadata/design checks, then missingness/distributions, then structure (PCA/heatmap), then variance/correlation/QC metrics.",
+        "Use missingness and distribution diagnostics early; use PVCA/variance partition for quantified attribution; use feature-level and QC metrics before final sign-off.",
+        "Use limmaRBE for linear discrete effects with covariate control; use ComBat/mComBat for discrete offsets in complete matrices; use trend + discrete for run-order drift.",
+        "Use `ProBatchFeatures` assays, subset for exploratory runs, cache expensive embedding/variance chunks, and only materialize heavy intermediate steps when needed.",
+        "Prefer dataset-specific thresholds. Typical practical targets: lower technical PVCA share, lower batch-label ARI/MCC, improved replicate correlations, and stable/acceptable CV distributions.",
+        "Do not correct before validating design; avoid interpreting a single metric in isolation; avoid aggressive correction that erases known biology; ensure covariates are encoded correctly."
+    )
+)
+
+knitr::kable(
+    best_practices,
+    caption = "Practical recommendations for robust batch-effect diagnostics and correction selection."
+)
+```
+
+<div class="alert alert-warning">
+**Warning:** Lower batch-separability metrics are desirable only when
+batch is technical. If batch is partly confounded with biology, combine
+design checks with sensitivity analyses before deciding on correction
+strength.
+</div>
+
+# Try It Yourself
+
+## Adapt the workflow to your own data
+
+```{r try-yourself-own-data, eval=FALSE}
+# Replace example objects with your own data matrix and metadata.
+pbf_user <- ProBatchFeatures(
+    data_matrix = your_data_matrix,
+    sample_annotation = your_sample_annotation,
+    sample_id_col = "YourSampleIDColumn",
+    name = "feature::raw"
+)
+
+# Typical first step: log-transform.
+pbf_user <- pb_transform(
+    pbf_user,
+    from = "feature::raw",
+    steps = "log2",
+    store_fast_steps = TRUE
+)
+```
+
+## Explore parameter variations
+
+```{r try-yourself-parameter-variations, eval=FALSE}
+# Compare embedding sensitivity.
+plot_TSNE(pbf_log, color_by = "MS_batch", perplexity = 10, max_iter = 300)
+plot_TSNE(pbf_log, color_by = "MS_batch", perplexity = 20, max_iter = 500)
+
+# Compare UMAP settings.
+plot_UMAP(pbf_log, color_by = "MS_batch", n_neighbors = 10, min_dist = 0.3)
+plot_UMAP(pbf_log, color_by = "MS_batch", n_neighbors = 20, min_dist = 0.1)
+
+# Evaluate alternative correction method (ComBat) when matrix is NA-free.
+pbf_combat <- pb_transform(
+    pbf_log,
+    from = pb_current_assay(pbf_log),
+    steps = "combat",
+    params_list = list(list(batch_col = "MS_batch", covariates_cols = c("Diet", "Sex")))
+)
+```
+
+## Customize plots and save outputs
+
+```{r try-yourself-customize-save, eval=FALSE}
+# Example: custom color scheme.
+custom_colors <- sample_annotation_to_colors(
+    pbf_log,
+    factor_columns = c("MS_batch", "Diet"),
+    numeric_columns = c("order")
+)
+
+plot_sample_mean(
+    pbf_log,
+    order_col = "order",
+    batch_col = "MS_batch",
+    color_by_batch = TRUE,
+    color_scheme = custom_colors,
+    plot_title = "Custom sample-mean plot"
+)
+
+# Save summary tables.
+write.csv(summary_metrics, file = "batch_correction_summary_metrics.csv", row.names = FALSE)
+
+# Save a key figure.
+ggsave("pca_raw_vs_limmaRBE.png", grid.arrange(pca_raw, pca_corr, ncol = 2), width = 10, height = 4)
+```
+
+# See Also
+
+- Main package workflow vignette: `proBatch.Rmd`
+- `ProBatchFeatures` vignette: `proBatchFeatures.Rmd`
+- Correction APIs: `?pb_transform`, `?correct_batch_effects`,
+  `?correct_with_removeBatchEffect`, `?correct_with_ComBat`,
+  `?correct_with_mComBat`, `?center_feature_batch`,
+  `?correct_with_BERT`, `?correct_with_PLSDA_batch`,
+  `?correct_with_RUVIII_C`, `?correct_with_NormAE`,
+  `?correct_with_omicsGMF`
+- Design and QC diagnostics: `?validate_batch_design`,
+  `?summarize_design`, `?calculate_classification_metrics`,
+  `?detect_outlier_samples`, `?subbatch_detection`
+- Related Bioconductor infrastructure: `QFeatures`,
+  `SummarizedExperiment`, `limma`, `sva`, `variancePartition`, `pvca`
+
+# Session Info
+
+```{r session-info}
+sessionInfo()
+```
