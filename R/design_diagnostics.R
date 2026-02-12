@@ -299,11 +299,42 @@ summarize_design <- function(sample_annotation,
         stop("No samples remain after removing missing values from design variables.")
     }
 
-    design_formula <- stats::reformulate(
-        termlabels = design_cols,
-        response = NULL,
-        intercept = isTRUE(add_intercept)
-    )
+    # Drop non-informative terms (single observed level/value), which would
+    # otherwise trigger model.matrix contrast errors for factors.
+    n_observed_levels <- vapply(design_df, function(x) {
+        x <- x[!is.na(x)]
+        if (!length(x)) {
+            return(0L)
+        }
+        if (is.factor(x)) {
+            x <- droplevels(x)
+        }
+        length(unique(x))
+    }, integer(1))
+
+    dropped_terms <- names(n_observed_levels)[n_observed_levels < 2L]
+    if (length(dropped_terms)) {
+        notes <- c(notes, sprintf(
+            "Dropped non-informative design terms (<2 observed levels/values): %s.",
+            paste(dropped_terms, collapse = ", ")
+        ))
+        design_df <- design_df[, setdiff(names(design_df), dropped_terms), drop = FALSE]
+    }
+
+    if (!ncol(design_df)) {
+        if (!isTRUE(add_intercept)) {
+            stop(
+                "No informative design terms remain after filtering (<2 observed levels/values) and add_intercept = FALSE."
+            )
+        }
+        design_formula <- stats::as.formula("~ 1")
+    } else {
+        design_formula <- stats::reformulate(
+            termlabels = names(design_df),
+            response = NULL,
+            intercept = isTRUE(add_intercept)
+        )
+    }
     design_matrix <- stats::model.matrix(design_formula, data = design_df)
 
     qr_obj <- base::qr(design_matrix)

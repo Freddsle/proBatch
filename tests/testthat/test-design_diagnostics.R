@@ -40,6 +40,26 @@ test_that("summarize_design detects rank deficiency with confounded factors", {
     expect_true(length(summary$aliased_terms) > 0)
 })
 
+test_that("summarize_design drops non-informative one-level terms", {
+    df <- data.frame(
+        batch = factor(rep("b1", 6)),
+        condition = factor(rep(c("A", "B"), each = 3)),
+        covariate = factor(rep("only_level", 6)),
+        stringsAsFactors = FALSE
+    )
+
+    summary <- summarize_design(
+        df,
+        batch_col = "batch",
+        condition_col = "condition",
+        covariates = "covariate"
+    )
+
+    expect_s3_class(summary, "pb_design_summary")
+    expect_equal(summary$design_matrix_dim[["n_terms"]], 2)
+    expect_true(any(grepl("Dropped non-informative design terms", summary$notes)))
+})
+
 test_that("detect_nested_batches identifies nesting in synthetic metadata", {
     df <- data.frame(
         site = c("S1", "S1", "S2", "S2", "S3", "S3"),
