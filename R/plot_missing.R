@@ -316,18 +316,12 @@ plot_NA_density.default <- function(
         return(ggplot())
     }
 
-    row_means <- rowMeans(data_matrix[has_observation, , drop = FALSE], na.rm = TRUE)
-    missing_flag <- apply(data_matrix[has_observation, , drop = FALSE], 1, function(v) any(is.na(v)))
-    df <- data.frame(
-        mean = row_means,
-        Type = ifelse(missing_flag, missing_label, valid_label),
-        stringsAsFactors = FALSE
-    )
-    df <- df[is.finite(df$mean), , drop = FALSE]
-    if (!nrow(df)) {
+    df <- .pb_missing_density_df(data_matrix, "", missing_label, valid_label)
+    if (is.null(df) || !nrow(df)) {
         warning("No finite mean intensities available for plotting.")
         return(ggplot())
     }
+    df <- df[, c("mean", "Type"), drop = FALSE]
 
     palette <- .pb_match_palette(palette, c(missing_label, valid_label))
 
@@ -359,11 +353,12 @@ plot_NA_density.ProBatchFeatures <- function(
         deduplicate = FALSE
     )
 
-    df_list <- lapply(assays, function(assay_nm) {
-        mat <- pb_assay_matrix(object, assay = assay_nm)
-        .pb_missing_density_df(mat, assay_nm, missing_label, valid_label)
-    })
-    keep <- vapply(df_list, function(df) !is.null(df) && nrow(df) > 0, logical(1))
+    collected <- .pb_collect_missing_assay_data(
+        object, assays,
+        function(mat, assay_nm) .pb_missing_density_df(mat, assay_nm, missing_label, valid_label)
+    )
+    df_list <- collected$df_list
+    keep <- collected$keep
     if (!any(keep)) {
         warning("No finite mean intensities available across the requested assays.")
         return(ggplot())
@@ -421,13 +416,13 @@ plot_NA_frequency.default <- function(
         return(ggplot())
     }
 
-    valid_counts <- rowSums(!is.na(data_matrix))
-    freq_df <- as.data.frame(table(valid_counts), stringsAsFactors = FALSE)
-    if (!nrow(freq_df)) {
+    freq_df <- .pb_missing_frequency_df(data_matrix, "")
+    if (is.null(freq_df) || !nrow(freq_df)) {
         warning("No frequency data available.")
         return(ggplot())
     }
-    freq_df$valid_counts <- as.integer(as.character(freq_df$valid_counts))
+    freq_df <- freq_df[, c("valid_counts", "count"), drop = FALSE]
+    names(freq_df)[names(freq_df) == "count"] <- "Freq"
 
     if (show_percent) {
         total <- sum(freq_df$Freq)
@@ -470,11 +465,9 @@ plot_NA_frequency.ProBatchFeatures <- function(
         deduplicate = FALSE
     )
 
-    df_list <- lapply(assays, function(assay_nm) {
-        mat <- pb_assay_matrix(object, assay = assay_nm)
-        .pb_missing_frequency_df(mat, assay_nm)
-    })
-    keep <- vapply(df_list, function(df) !is.null(df) && nrow(df) > 0, logical(1))
+    collected <- .pb_collect_missing_assay_data(object, assays, .pb_missing_frequency_df)
+    df_list <- collected$df_list
+    keep <- collected$keep
     if (!any(keep)) {
         warning("No frequency data available for the requested assays.")
         return(ggplot())
@@ -651,6 +644,15 @@ plot_NA_frequency.ProBatchFeatures <- function(
         ncol <- ceiling(k / nrow)
     }
     list(nrow = max(1L, as.integer(nrow)), ncol = max(1L, as.integer(ncol)))
+}
+
+.pb_collect_missing_assay_data <- function(object, assays, builder) {
+    df_list <- lapply(assays, function(assay_nm) {
+        mat <- pb_assay_matrix(object, assay = assay_nm)
+        builder(mat, assay_nm)
+    })
+    keep <- vapply(df_list, function(df) !is.null(df) && nrow(df) > 0, logical(1))
+    list(df_list = df_list, keep = keep)
 }
 
 .pb_missing_density_df <- function(data_matrix, assay_nm, missing_label, valid_label) {

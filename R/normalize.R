@@ -62,6 +62,28 @@ quantile_normalize_dm <- function(data_matrix) {
     return(q_norm_proteome)
 }
 
+.pb_subset_normalized_output <- function(df,
+                                         keep_all,
+                                         sample_id_col,
+                                         feature_id_col,
+                                         measure_col,
+                                         old_measure_col,
+                                         qual_col = NULL) {
+    default_cols <- names(df)
+    minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
+
+    if (!is.null(qual_col) && qual_col %in% names(df)) {
+        minimal_cols <- c(minimal_cols, qual_col)
+    }
+
+    subset_keep_cols(
+        df,
+        keep_all,
+        default_cols = default_cols,
+        minimal_cols = minimal_cols
+    )
+}
+
 #'
 #' @export
 #' @rdname normalize
@@ -130,17 +152,9 @@ quantile_normalize_df <- function(df_long,
             by = c(feature_id_col, sample_id_col)
         )
 
-    default_cols <- names(normalized_df)
-    minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
-
-    if (!is.null(qual_col) && qual_col %in% names(normalized_df)) {
-        minimal_cols <- c(minimal_cols, qual_col)
-    }
-    normalized_df <- subset_keep_cols(
-        normalized_df,
-        keep_all,
-        default_cols = default_cols,
-        minimal_cols = minimal_cols
+    normalized_df <- .pb_subset_normalized_output(
+        normalized_df, keep_all, sample_id_col,
+        feature_id_col, measure_col, old_measure_col, qual_col
     )
 
     return(normalized_df)
@@ -302,17 +316,9 @@ normalize_sample_medians_df <- function(df_long,
             mutate(diff_norm = median_global - median_run) %>%
             mutate(!!(sym(measure_col)) := !!(sym(measure_col)) + diff_norm)
 
-        default_cols <- names(normalized_df)
-        minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
-
-        if (!is.null(qual_col) && qual_col %in% names(normalized_df)) {
-            minimal_cols <- c(minimal_cols, qual_col)
-        }
-        normalized_df <- subset_keep_cols(
-            normalized_df,
-            keep_all,
-            default_cols = default_cols,
-            minimal_cols = minimal_cols
+        normalized_df <- .pb_subset_normalized_output(
+            normalized_df, keep_all, sample_id_col,
+            feature_id_col, measure_col, old_measure_col, qual_col
         )
 
         return(normalized_df)
@@ -391,17 +397,9 @@ normalize_sample_medians_df <- function(df_long,
             )
     }
 
-    default_cols <- names(normalized_df)
-    minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
-
-    if (!is.null(qual_col) && qual_col %in% names(normalized_df)) {
-        minimal_cols <- c(minimal_cols, qual_col)
-    }
-    normalized_df <- subset_keep_cols(
-        normalized_df,
-        keep_all,
-        default_cols = default_cols,
-        minimal_cols = minimal_cols
+    normalized_df <- .pb_subset_normalized_output(
+        normalized_df, keep_all, sample_id_col,
+        feature_id_col, measure_col, old_measure_col, qual_col
     )
 
     return(normalized_df)

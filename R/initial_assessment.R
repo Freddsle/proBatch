@@ -421,17 +421,17 @@ plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = NU
     if (is.null(sample_id_col)) {
         stop("`sample_id_col` must be provided.")
     }
-    assays <- .pb_assays_to_plot(object, pbf_name)
-    dots <- list(...)
-
-    filename_list <- NULL
-    if ("filename" %in% names(dots)) {
-        filename_list <- .pb_split_arg_by_assay(dots$filename, assays)
-        dots$filename <- NULL
-    }
+    prep <- .pb_prepare_multi_assay(
+        object, pbf_name, list(...), plot_title,
+        default_title_fun = function(x) x,
+        refactor_titles = FALSE
+    )
+    assays <- prep$assays
+    dots <- prep$dots
+    titles <- prep$titles
+    filename_list <- prep$filename_list
 
     sample_annotation <- as.data.frame(colData(object))
-    titles <- .pb_resolve_titles(assays, plot_title, default_fun = function(x) x)
 
     plot_list <- vector("list", length(assays))
     names(plot_list) <- assays
@@ -454,13 +454,7 @@ plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = NU
             df_long <- df_long[, !names(df_long) %in% overlap_cols, drop = FALSE]
         }
 
-        call_args <- dots
-        if (!is.null(filename_list)) {
-            fn <- filename_list[[i]]
-            if (!is.null(fn)) {
-                call_args$filename <- fn
-            }
-        }
+        call_args <- .pb_per_assay_dots(dots, filename_list, i)
 
         call_args <- c(list(
             x = df_long,

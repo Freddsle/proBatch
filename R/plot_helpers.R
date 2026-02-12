@@ -262,7 +262,8 @@
 
 .pb_prepare_multi_assay <- function(object, pbf_name, dots, plot_title,
                                     default_title_fun = .pb_default_title,
-                                    set_silent = FALSE) {
+                                    set_silent = FALSE,
+                                    refactor_titles = TRUE) {
     assays <- .pb_assays_to_plot(object, pbf_name)
 
     filename_list <- NULL
@@ -276,10 +277,14 @@
     }
 
     resolved_titles <- .pb_resolve_titles(assays, plot_title, default_fun = default_title_fun)
-    title_info <- .pb_refactor_assay_titles(
-        titles = resolved_titles,
-        use_shared_title = is.null(plot_title)
-    )
+    if (isTRUE(refactor_titles)) {
+        title_info <- .pb_refactor_assay_titles(
+            titles = resolved_titles,
+            use_shared_title = is.null(plot_title)
+        )
+    } else {
+        title_info <- list(titles = resolved_titles, shared_title = NULL)
+    }
 
     list(
         assays = assays,
