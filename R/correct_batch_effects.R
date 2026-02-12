@@ -623,43 +623,25 @@ correct_with_ComBat <- function(
         return(corrected_matrix)
     }
 
-    # LONG format
-    if (!is.data.frame(x)) stop("format='long' requires a data.frame.")
-    df_long <- x
-    original_cols <- names(df_long)
-
-    df_long <- check_sample_consistency(
-        sample_annotation, sample_id_col, df_long,
-        batch_col,
-        order_col = NULL, facet_col = NULL, merge = FALSE
-    )
-
-    # Handle missingness first; trim df_long / sample_annotation consistently
     qual_for_matrix <- if (no_fit_imputed) qual_col else NULL
     qual_val_for_matrix <- if (no_fit_imputed) qual_value else NULL
-    handled <- .handle_missing_for_batch_df(
-        df_long = df_long,
+    prep <- .pb_prepare_long_matrix(
+        df_long = x,
         sample_annotation = sample_annotation,
-        feature_id_col = feature_id_col,
         sample_id_col = sample_id_col,
+        feature_id_col = feature_id_col,
         measure_col = measure_col,
+        batch_col = batch_col,
         fill_the_missing = fill_the_missing,
         warning_message = "ComBat cannot operate with missing values in the matrix",
         qual_col = qual_for_matrix,
-        qual_value = qual_val_for_matrix
+        qual_value = qual_val_for_matrix,
+        error_message = "format='long' requires a data.frame."
     )
-    df_long <- handled$df_long
-    sample_annotation <- handled$sample_annotation
-
-    # Build matrix AFTER trimming/masking; ComBat on synchronized matrix
-    data_matrix <- long_to_matrix(
-        df_long,
-        feature_id_col = feature_id_col,
-        measure_col    = measure_col,
-        sample_id_col  = sample_id_col,
-        qual_col       = qual_for_matrix,
-        qual_value     = qual_val_for_matrix
-    )
+    df_long <- prep$df_long
+    sample_annotation <- prep$sample_annotation
+    data_matrix <- prep$data_matrix
+    original_cols <- prep$original_cols
 
     # ComBat on matrix (method ensures numeric & SA alignment)
     corrected_matrix <- .combat_matrix_step(
@@ -674,29 +656,14 @@ correct_with_ComBat <- function(
         use_mComBat = use_mComBat
     )
 
-    corrected_df <- matrix_to_long(
-        corrected_matrix,
+    .post_correction_to_long(
+        corrected_matrix = corrected_matrix,
+        df_long = df_long,
         feature_id_col = feature_id_col,
-        measure_col    = measure_col,
-        sample_id_col  = sample_id_col
-    )
-
-    old_measure_col <- .make_pre_col("preBatchCorr", measure_col)
-    df_long <- rename(df_long, !!old_measure_col := !!measure_col)
-
-    corrected_df <- left_join(
-        corrected_df,
-        df_long,
-        by = setNames(c(feature_id_col, sample_id_col), c(feature_id_col, sample_id_col))
-    )
-
-    default_cols <- c(original_cols, old_measure_col)
-    minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
-
-    subset_keep_cols(
-        corrected_df, keep_all,
-        default_cols = default_cols,
-        minimal_cols = minimal_cols
+        measure_col = measure_col,
+        sample_id_col = sample_id_col,
+        original_cols = original_cols,
+        keep_all = keep_all
     )
 }
 
@@ -756,36 +723,28 @@ correct_with_removeBatchEffect <- function(
     }
 
     # LONG
-    if (!is.data.frame(x)) stop("format='long' requires a data.frame.")
-    df_long <- x
-    original_cols <- names(df_long)
+    warning_message <- if (is.null(fill_the_missing) || !fill_the_missing) {
+        "removeBatchEffect will leave NA as-is in the matrix; design matrix (batch/covariates) must be free of NA."
+    } else {
+        "removeBatchEffect can operate with missing values; applying requested NA handling before modeling."
+    }
 
-    # Pre-handle missingness the same way as ComBat
-    handled <- .handle_missing_for_batch_df(
-        df_long = df_long,
+    prep <- .pb_prepare_long_matrix(
+        df_long = x,
         sample_annotation = sample_annotation,
-        feature_id_col = feature_id_col,
         sample_id_col = sample_id_col,
-        measure_col = measure_col,
-        fill_the_missing = fill_the_missing,
-        warning_message = if (is.null(fill_the_missing) || !fill_the_missing) {
-            "removeBatchEffect will leave NA as-is in the matrix; design matrix (batch/covariates) must be free of NA."
-        } else {
-            "removeBatchEffect can operate with missing values; applying requested NA handling before modeling."
-        },
-        qual_col = NULL,
-        qual_value = NULL
-    )
-
-    df_long <- handled$df_long
-    sample_annotation <- handled$sample_annotation
-
-    data_matrix <- long_to_matrix(
-        df_long,
         feature_id_col = feature_id_col,
-        measure_col    = measure_col,
-        sample_id_col  = sample_id_col
+        measure_col = measure_col,
+        batch_col = batch_col,
+        fill_the_missing = fill_the_missing,
+        warning_message = warning_message,
+        check_samples = FALSE,
+        error_message = "format='long' requires a data.frame."
     )
+    df_long <- prep$df_long
+    sample_annotation <- prep$sample_annotation
+    data_matrix <- prep$data_matrix
+    original_cols <- prep$original_cols
 
     corrected_matrix <- .removeBatchEffect_matrix_step(
         data_matrix       = data_matrix,
@@ -797,24 +756,15 @@ correct_with_removeBatchEffect <- function(
         ...
     )
 
-    corrected_df <- matrix_to_long(
-        corrected_matrix,
+    .post_correction_to_long(
+        corrected_matrix = corrected_matrix,
+        df_long = df_long,
         feature_id_col = feature_id_col,
-        measure_col    = measure_col,
-        sample_id_col  = sample_id_col
-    )
-
-    old_measure_col <- .make_pre_col("preBatchCorr", measure_col)
-    df_long <- rename(df_long, !!old_measure_col := !!measure_col)
-    corrected_df <- merge(corrected_df, df_long, by = c(feature_id_col, sample_id_col))
-
-    default_cols <- c(original_cols, old_measure_col)
-    minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
-
-    subset_keep_cols(
-        corrected_df, keep_all,
-        default_cols = default_cols,
-        minimal_cols = minimal_cols
+        measure_col = measure_col,
+        sample_id_col = sample_id_col,
+        original_cols = original_cols,
+        keep_all = keep_all,
+        join_method = "merge"
     )
 }
 

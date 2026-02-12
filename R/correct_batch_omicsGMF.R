@@ -82,25 +82,20 @@ correct_with_omicsGMF <- function(
         return(do.call(.omicsgmf_correct_matrix_step, matrix_args))
     }
 
-    if (!is.data.frame(x)) {
-        stop("format = 'long' requires a data.frame.", call. = FALSE)
-    }
-    df_long <- x
-    original_cols <- names(df_long)
-
-    df_long <- check_sample_consistency(
-        sample_annotation, sample_id_col, df_long,
-        batch_col = NULL,
-        order_col = NULL, facet_col = NULL, merge = FALSE
-    )
-
-    data_matrix <- long_to_matrix(
-        df_long,
+    prep <- .pb_prepare_long_matrix(
+        df_long = x,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
         feature_id_col = feature_id_col,
         measure_col = measure_col,
-        sample_id_col = sample_id_col,
-        qual_col = NULL
+        batch_col = NULL,
+        error_message = "format = 'long' requires a data.frame.",
+        error_call = FALSE
     )
+    df_long <- prep$df_long
+    sample_annotation <- prep$sample_annotation
+    data_matrix <- prep$data_matrix
+    original_cols <- prep$original_cols
 
     aligned_sa <- .align_sample_annotation(
         sample_annotation = sample_annotation,

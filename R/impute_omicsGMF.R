@@ -138,25 +138,20 @@ impute_with_omicsGMF <- function(
         ))
     }
 
-    if (!is.data.frame(x)) {
-        stop("format = 'long' requires a data.frame.", call. = FALSE)
-    }
-    df_long <- x
-    original_cols <- names(df_long)
-
-    df_long <- check_sample_consistency(
-        sample_annotation, sample_id_col, df_long,
-        batch_col,
-        order_col = NULL, facet_col = NULL, merge = FALSE
-    )
-
-    data_matrix <- long_to_matrix(
-        df_long,
+    prep <- .pb_prepare_long_matrix(
+        df_long = x,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
         feature_id_col = feature_id_col,
         measure_col = measure_col,
-        sample_id_col = sample_id_col,
-        qual_col = NULL
+        batch_col = batch_col,
+        error_message = "format = 'long' requires a data.frame.",
+        error_call = FALSE
     )
+    df_long <- prep$df_long
+    sample_annotation <- prep$sample_annotation
+    data_matrix <- prep$data_matrix
+    original_cols <- prep$original_cols
 
     if (!is.null(sample_annotation)) {
         sample_annotation <- .align_sample_annotation(
@@ -176,33 +171,15 @@ impute_with_omicsGMF <- function(
         ...
     )
 
-    imputed_df <- matrix_to_long(
-        imputed_matrix,
+    .post_correction_to_long(
+        corrected_matrix = imputed_matrix,
+        df_long = df_long,
         feature_id_col = feature_id_col,
         measure_col = measure_col,
-        sample_id_col = sample_id_col
-    )
-
-    old_measure_col <- .make_pre_col("preImpute", measure_col)
-    df_long <- rename(df_long, !!old_measure_col := !!sym(measure_col))
-
-    imputed_df <- left_join(
-        imputed_df,
-        df_long,
-        by = setNames(
-            c(feature_id_col, sample_id_col),
-            c(feature_id_col, sample_id_col)
-        )
-    )
-
-    default_cols <- unique(c(original_cols, old_measure_col))
-    minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
-
-    subset_keep_cols(
-        imputed_df,
-        keep_all,
-        default_cols = default_cols,
-        minimal_cols = minimal_cols
+        sample_id_col = sample_id_col,
+        original_cols = original_cols,
+        keep_all = keep_all,
+        prefix = "preImpute"
     )
 }
 
@@ -312,24 +289,18 @@ estimate_omicsGMF_rank <- function(
         ))
     }
 
-    if (!is.data.frame(x)) {
-        stop("format = 'long' requires a data.frame.", call. = FALSE)
-    }
-    df_long <- x
-
-    df_long <- check_sample_consistency(
-        sample_annotation, sample_id_col, df_long,
-        batch_col = batch_col,
-        order_col = NULL, facet_col = NULL, merge = FALSE
-    )
-
-    data_matrix <- long_to_matrix(
-        df_long,
+    prep <- .pb_prepare_long_matrix(
+        df_long = x,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
         feature_id_col = feature_id_col,
         measure_col = measure_col,
-        sample_id_col = sample_id_col,
-        qual_col = NULL
+        batch_col = batch_col,
+        error_message = "format = 'long' requires a data.frame.",
+        error_call = FALSE
     )
+    data_matrix <- prep$data_matrix
+    sample_annotation <- prep$sample_annotation
 
     rank_args <- list(...)
     .omicsgmf_rank_matrix_step(

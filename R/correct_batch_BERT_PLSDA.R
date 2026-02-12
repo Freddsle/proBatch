@@ -79,22 +79,19 @@ correct_with_BERT <- function(
     }
 
     # LONG -> matrix
-    if (!is.data.frame(x)) stop("format='long' requires a data.frame.")
-    df_long <- x
-    original_cols <- names(df_long)
-
-    df_long <- check_sample_consistency(
-        sample_annotation, sample_id_col, df_long,
-        batch_col,
-        order_col = NULL, facet_col = NULL, merge = FALSE
-    )
-
-    data_matrix <- long_to_matrix(
-        df_long,
+    prep <- .pb_prepare_long_matrix(
+        df_long = x,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
         feature_id_col = feature_id_col,
-        measure_col    = measure_col,
-        sample_id_col  = sample_id_col
+        measure_col = measure_col,
+        batch_col = batch_col,
+        error_message = "format='long' requires a data.frame."
     )
+    df_long <- prep$df_long
+    sample_annotation <- prep$sample_annotation
+    data_matrix <- prep$data_matrix
+    original_cols <- prep$original_cols
 
     corrected_matrix <- .bert_matrix_step(
         data_matrix       = data_matrix,
@@ -477,36 +474,21 @@ correct_with_PLSDA_batch <- function(x,
     }
 
     # LONG -> matrix
-    if (!is.data.frame(x)) stop("format='long' requires a data.frame.")
-    df_long <- x
-    original_cols <- names(df_long)
-
-    df_long <- check_sample_consistency(
-        sample_annotation, sample_id_col, df_long,
-        batch_col,
-        order_col = NULL, facet_col = NULL, merge = FALSE
-    )
-
-    handled <- .handle_missing_for_batch_df(
-        df_long = df_long,
+    prep <- .pb_prepare_long_matrix(
+        df_long = x,
         sample_annotation = sample_annotation,
-        feature_id_col = feature_id_col,
         sample_id_col = sample_id_col,
+        feature_id_col = feature_id_col,
         measure_col = measure_col,
+        batch_col = batch_col,
         fill_the_missing = fill_the_missing,
         warning_message = "PLSDA-batch cannot operate with missing values in the matrix",
-        qual_col = NULL,
-        qual_value = NULL
+        error_message = "format='long' requires a data.frame."
     )
-    df_long <- handled$df_long
-    sample_annotation <- handled$sample_annotation
-
-    data_matrix <- long_to_matrix(
-        df_long,
-        feature_id_col = feature_id_col,
-        measure_col    = measure_col,
-        sample_id_col  = sample_id_col
-    )
+    df_long <- prep$df_long
+    sample_annotation <- prep$sample_annotation
+    data_matrix <- prep$data_matrix
+    original_cols <- prep$original_cols
 
     corrected_matrix <- .plsda_matrix_step(
         data_matrix = data_matrix,
