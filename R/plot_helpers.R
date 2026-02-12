@@ -457,18 +457,55 @@
     if (isTRUE(return_gridExtra)) {
         return(invisible(list(grob = arranged, plots = plot_list)))
     } else {
-        if (requireNamespace("ggplotify", quietly = TRUE)) {
-            out <- ggplotify::as.ggplot(arranged) # true ggplot object
-            return(invisible(out))
-        } else if (requireNamespace("cowplot", quietly = TRUE)) {
-            out <- cowplot::ggdraw(arranged) # ggplot object wrapper
-            return(invisible(out))
-        } else {
-            # Last-resort: return the TableGrob (user can grid.draw() it or ggsave() still works)
-            message("Returning a grid TableGrob object instead. Use grid.draw() it or ggsave() to plot or save. \nInstall the `ggplotify` or `cowplot` package to get a ggplot object instead.")
-            return(invisible(arranged))
-        }
+        return(.pb_convert_arranged_grob(arranged, invisible_out = TRUE))
     }
+}
+
+.pb_convert_arranged_grob <- function(arranged, invisible_out = FALSE) {
+    if (requireNamespace("ggplotify", quietly = TRUE)) {
+        out <- ggplotify::as.ggplot(arranged)
+    } else if (requireNamespace("cowplot", quietly = TRUE)) {
+        out <- cowplot::ggdraw(arranged)
+    } else {
+        message("Returning a grid TableGrob object instead. Use grid.draw() it or ggsave() to plot or save. \nInstall the `ggplotify` or `cowplot` package to get a ggplot object instead.")
+        out <- arranged
+    }
+
+    if (isTRUE(invisible_out)) {
+        return(invisible(out))
+    }
+    out
+}
+
+.pb_prepare_annotation_for_samples <- function(sample_annotation, sample_id_col, sample_ids, allow_partial = FALSE) {
+    if (is.null(sample_annotation)) {
+        stop("sample_annotation must be provided to colour or shape embeddings.")
+    }
+    if (!sample_id_col %in% names(sample_annotation)) {
+        stop(sprintf("Sample ID column '%s' not found in sample_annotation.", sample_id_col))
+    }
+
+    sample_annotation <- sample_annotation[!duplicated(sample_annotation[[sample_id_col]]), , drop = FALSE]
+    match_idx <- match(sample_ids, sample_annotation[[sample_id_col]])
+    if (any(is.na(match_idx))) {
+        missing_ids <- sample_ids[is.na(match_idx)]
+        if (!isTRUE(allow_partial)) {
+            stop(sprintf(
+                "Sample annotation is missing entries for the following samples: %s",
+                paste(missing_ids, collapse = ", ")
+            ))
+        }
+        warning(sprintf(
+            "Sample annotation is missing entries for the following samples: %s",
+            paste(missing_ids, collapse = ", ")
+        ))
+        keep <- !is.na(match_idx)
+        match_idx <- match_idx[keep]
+        sample_annotation <- sample_annotation[match_idx, , drop = FALSE]
+        return(sample_annotation)
+    }
+
+    sample_annotation[match_idx, , drop = FALSE]
 }
 
 .pb_align_matrix_and_annotation <- function(data_matrix,
