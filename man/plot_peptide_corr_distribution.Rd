@@ -82,24 +82,12 @@ peptide_corr_distribution <- plot_peptide_corr_distribution(
 )
 
 data(list = c("example_peptide_annotation", "example_proteome_matrix"), package = "proBatch")
-selected_genes <- c("BOVINE_A1ag", "BOVINE_FetuinB", "Cyfip1")
-gene_filter <- example_peptide_annotation$Gene \%in\% selected_genes
-peptides_ann <- example_peptide_annotation$peptide_group_label
-selected_peptides <- peptides_ann[gene_filter]
-matrix_test <- example_proteome_matrix[selected_peptides, ]
-pep_annotation_sel <- example_peptide_annotation[gene_filter, ]
-corr_distribution <- calculate_peptide_corr_distr(matrix_test,
-    pep_annotation_sel,
+corr_distribution <- calculate_peptide_corr_distr(
+    example_proteome_matrix,
+    example_peptide_annotation,
     protein_col = "Gene"
 )
 peptide_corr_distribution <- plot_peptide_corr_distribution.corrDF(corr_distribution)
-
-peptide_corr_file <- tempfile("peptide_corr", fileext = ".png")
-peptide_corr_distribution <- plot_peptide_corr_distribution.corrDF(corr_distribution,
-    filename = peptide_corr_file,
-    width = 28, height = 28, units = "cm"
-)
-unlink(peptide_corr_file)
 
 }
 \seealso{

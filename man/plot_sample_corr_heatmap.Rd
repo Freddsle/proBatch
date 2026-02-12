@@ -92,21 +92,6 @@ sample_corr_heatmap <- plot_sample_corr_heatmap(example_proteome_matrix,
     show_colnames = FALSE
 )
 
-color_list <- sample_annotation_to_colors(example_sample_annotation,
-    factor_columns = c(
-        "MS_batch", "EarTag", "Strain",
-        "Diet", "digestion_batch", "Sex"
-    ),
-    numeric_columns = c("DateTime", "order")
-)
-sample_corr_heatmap_annotated <- plot_sample_corr_heatmap(log_transform_dm(example_proteome_matrix),
-    sample_annotation = example_sample_annotation,
-    factors_to_plot = c("MS_batch", "Diet", "DateTime", "digestion_batch"),
-    cluster_rows = FALSE, cluster_cols = FALSE,
-    annotation_names_col = TRUE,
-    show_colnames = FALSE, color_list = color_list
-)
-
 }
 \seealso{
 \code{\link[pheatmap]{pheatmap}}

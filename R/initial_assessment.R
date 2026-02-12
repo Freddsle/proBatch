@@ -24,30 +24,10 @@
 #' @name plot_sample_mean_or_boxplot
 #'
 #' @examples
-#' data(list = c(
-#'     "example_proteome", "example_sample_annotation",
-#'     "example_proteome_matrix"
-#' ), package = "proBatch")
-#'
-#' demo_ids <- colnames(example_proteome_matrix)[1:6]
-#' demo_matrix <- example_proteome_matrix[, demo_ids]
-#' demo_annotation <- example_sample_annotation[
-#'     example_sample_annotation$FullRunName %in% demo_ids,
-#' ]
-#'
-#' plot_sample_mean(
-#'     demo_matrix,
-#'     demo_annotation,
-#'     order_col = "order",
-#'     batch_col = "MS_batch"
-#' )
-#'
-#' demo_proteome <- example_proteome[
-#'     example_proteome$FullRunName %in% demo_ids,
-#' ]
+#' data(list = c("example_proteome", "example_sample_annotation"), package = "proBatch")
 #' plot_boxplot(
-#'     demo_proteome,
-#'     sample_annotation = demo_annotation,
+#'     example_proteome,
+#'     sample_annotation = example_sample_annotation,
 #'     batch_col = "MS_batch"
 #' )
 #'
@@ -84,6 +64,85 @@
     gg
 }
 
+.pb_validate_initial_assessment_inputs <- function(df_plot,
+                                                   batch_col,
+                                                   color_by_batch,
+                                                   color_scheme,
+                                                   facet_col) {
+    if (!is.null(batch_col)) {
+        if (!(batch_col %in% names(df_plot))) {
+            message("batches cannot be colored as the batch column or sample ID column
+                    is not defined, check sample_annotation and data matrix")
+            stop("Batch column '", batch_col, "' not found in data.")
+        }
+        if (color_by_batch && (batch_col %in% names(color_scheme))) {
+            color_scheme <- color_scheme[[batch_col]]
+        }
+    } else if (color_by_batch) {
+        message("batches cannot be colored as the batch column is defined as NULL,
+                continuing without colors")
+        warning("`batch_col` is NULL; disabling `color_by_batch`")
+        color_by_batch <- FALSE
+    }
+    if (!is.null(facet_col) && !(facet_col %in% names(df_plot))) {
+        message(sprintf(
+            '"%s" is specified as column for faceting, but is not present
+                    in the data, check sample annotation data frame',
+            facet_col
+        ))
+        stop(sprintf("Faceting column '%s' not found in data.", facet_col))
+    }
+    list(
+        color_by_batch = color_by_batch,
+        color_scheme = color_scheme
+    )
+}
+
+.pb_prepare_initial_assessment_order <- function(df_plot,
+                                                 order_col,
+                                                 sample_annotation,
+                                                 facet_col,
+                                                 batch_col,
+                                                 sample_id_col,
+                                                 color_by_batch) {
+    sample_order <- define_sample_order(
+        order_col, sample_annotation, facet_col,
+        batch_col, df_plot,
+        sample_id_col, color_by_batch
+    )
+    order_col <- sample_order$order_col
+    df_plot <- sample_order$df_long
+    if (!is.numeric(df_plot[[order_col]]) && is.character(df_plot[[order_col]])) {
+        df_plot[[order_col]] <- factor(df_plot[[order_col]], levels = unique(df_plot[[order_col]]))
+    }
+    list(order_col = order_col, df_plot = df_plot)
+}
+
+.pb_finalize_initial_assessment_output <- function(gg,
+                                                   theme_name,
+                                                   base_size,
+                                                   order_values,
+                                                   ylimits,
+                                                   color_by_batch,
+                                                   is_factor,
+                                                   units,
+                                                   width,
+                                                   height,
+                                                   filename) {
+    gg <- .pb_apply_initial_assessment_theme(gg = gg, theme_name = theme_name, base_size = base_size)
+    gg <- .pb_finalize_initial_assessment_plot(
+        gg = gg,
+        order_values = order_values,
+        ylimits = ylimits,
+        rotate_x = !is.numeric(order_values),
+        color_by_batch = color_by_batch,
+        is_factor = is_factor
+    )
+    units <- match.arg(units, choices = c("cm", "in", "mm"))
+    save_ggplot(filename, units, width, height, gg)
+    gg
+}
+
 #' @rdname plot_sample_mean_or_boxplot
 #' @method plot_sample_mean default
 #' @export
@@ -104,16 +163,13 @@ plot_sample_mean.default <- function(x, sample_annotation,
                                      pbf_name = NULL,
                                      ...) {
     data_matrix <- x
-    # stop early if sample_annotation missing
     if (is.null(sample_annotation)) {
         stop("`sample_annotation` must be provided.")
     }
-    # require data_matrix column names
     if (is.null(colnames(data_matrix))) {
         stop("`data_matrix` must have column names representing samples.")
     }
 
-    # Create a data frame with sample averages
     sample_average <- colMeans(data_matrix, na.rm = TRUE)
     df_ave <- data.frame(
         Mean_Intensity = sample_average,
@@ -122,7 +178,6 @@ plot_sample_mean.default <- function(x, sample_annotation,
     )
     names(df_ave)[names(df_ave) == "temp_id"] <- sample_id_col
 
-    # Check the consistency of sample ann. sample IDs and measur. table sample IDs
     df_ave <- check_sample_consistency(
         sample_annotation, sample_id_col, df_ave,
         batch_col, order_col, facet_col
@@ -130,57 +185,32 @@ plot_sample_mean.default <- function(x, sample_annotation,
     message("Sample ID is kept only if they have a match in annotation data frame,
             otherwise the sample ID is removed from the plot")
 
-    # initialize is_factor to avoid undefined variable
     is_factor <- FALSE
-    # Ensure that batch-coloring-related arguments are defined properly
-    # validate batch_col existence, disable coloring if NULL
-    if (!is.null(batch_col)) {
-        if (!(batch_col %in% names(df_ave))) {
-            message("batches cannot be colored as the batch column or sample ID column
-                    is not defined, check sample_annotation and data matrix")
-            stop("Batch column '", batch_col, "' not found in data.")
-        }
-        # if coloring by batch is true and color scheme is df and contains column with name of batch_col, keep only this column
-        if (color_by_batch && (batch_col %in% names(color_scheme))) {
-            color_scheme <- color_scheme[[batch_col]]
-        }
-    } else if (color_by_batch) {
-        message("batches cannot be colored as the batch column is defined as NULL,
-                continuing without colors")
-        warning("`batch_col` is NULL; disabling `color_by_batch`")
-        color_by_batch <- FALSE
-    }
-
-    # For order definition and subsequent faceting, facet column has to be in the df
-    if (!is.null(facet_col) && !(facet_col %in% names(df_ave))) {
-        message(sprintf(
-            '"%s" is specified as column for faceting, but is not present
-                    in the data, check sample annotation data frame',
-            facet_col
-        ))
-        stop(sprintf("Faceting column '%s' not found in data.", facet_col))
-    }
-
-    # Defining sample order for plotting
-    sample_order <- define_sample_order(
-        order_col, sample_annotation, facet_col,
-        batch_col, df_ave,
-        sample_id_col, color_by_batch
+    validated <- .pb_validate_initial_assessment_inputs(
+        df_plot = df_ave,
+        batch_col = batch_col,
+        color_by_batch = color_by_batch,
+        color_scheme = color_scheme,
+        facet_col = facet_col
     )
-    order_col <- sample_order$order_col
-    df_ave <- sample_order$df_long
+    color_by_batch <- validated$color_by_batch
+    color_scheme <- validated$color_scheme
 
-    # Convert order to factor if not numeric
-    if (!is.numeric(df_ave[[order_col]]) && is.character(df_ave[[order_col]])) {
-        df_ave[[order_col]] <- factor(df_ave[[order_col]], levels = unique(df_ave[[order_col]]))
-    }
+    order_info <- .pb_prepare_initial_assessment_order(
+        df_plot = df_ave,
+        order_col = order_col,
+        sample_annotation = sample_annotation,
+        facet_col = facet_col,
+        batch_col = batch_col,
+        sample_id_col = sample_id_col,
+        color_by_batch = color_by_batch
+    )
+    order_col <- order_info$order_col
+    df_ave <- order_info$df_plot
 
-    # Create plot
-    # Main plotting of intensity means:
     gg <- ggplot(df_ave, aes(x = !!sym(order_col), y = .data$Mean_Intensity)) +
         geom_point()
 
-    # add colors
     gg <- color_by_factor(
         color_by_batch = color_by_batch,
         batch_col = batch_col, gg = gg,
@@ -196,7 +226,6 @@ plot_sample_mean.default <- function(x, sample_annotation,
     }
     gg <- gg + labs(x = axis_x_label, y = "Mean_Intensity")
 
-    # add vertical lines, if required (for order-related effects)
     if (!is.null(batch_col)) {
         batch_vector <- df_ave[[batch_col]]
         is_factor <- is_batch_factor(batch_vector, color_scheme)
@@ -209,31 +238,29 @@ plot_sample_mean.default <- function(x, sample_annotation,
         )
     }
 
-    # Faceting - plot each "facet factor" in it's own subplot
     if (!is.null(facet_col)) {
         gg <- gg + facet_wrap(as.formula(paste("~", facet_col)),
             dir = "v", scales = "free_x"
         )
     }
 
-    # Add the title and theme
     if (!is.null(plot_title)) {
         gg <- gg + ggtitle(plot_title) +
             theme(plot.title = element_text(face = "bold", hjust = 0.5))
     }
-    gg <- .pb_apply_initial_assessment_theme(gg = gg, theme_name = theme_name, base_size = base_size)
-    gg <- .pb_finalize_initial_assessment_plot(
+    .pb_finalize_initial_assessment_output(
         gg = gg,
+        theme_name = theme_name,
+        base_size = base_size,
         order_values = df_ave[[order_col]],
         ylimits = ylimits,
-        rotate_x = !is.numeric(df_ave[[order_col]]),
         color_by_batch = color_by_batch,
-        is_factor = is_factor
+        is_factor = is_factor,
+        units = units,
+        width = width,
+        height = height,
+        filename = filename
     )
-
-    units <- match.arg(units)
-    save_ggplot(filename, units, width, height, gg)
-    gg
 }
 
 
@@ -257,7 +284,6 @@ plot_boxplot.default <- function(x, sample_annotation,
                                  pbf_name = NULL,
                                  ...) {
     df_long <- x
-    # Validate inputs
     if (is.null(sample_annotation)) {
         stop("`sample_annotation` must be provided.")
     }
@@ -265,61 +291,35 @@ plot_boxplot.default <- function(x, sample_annotation,
         stop("`measure_col` '", measure_col, "' not found in data.")
     }
 
-    # Check the consistency of sample ann. sample IDs and measur. table sample IDs
     df_long <- check_sample_consistency(
         sample_annotation, sample_id_col, df_long,
         batch_col, order_col, facet_col
     )
 
-    # Ensure that batch-coloring-related arguments are defined properly
     is_factor <- FALSE
-    if (!is.null(batch_col)) {
-        if (!(batch_col %in% names(df_long))) {
-            message("batches cannot be colored as the batch column or sample ID column
-                    is not defined, check sample_annotation and data matrix")
-            stop("Batch column '", batch_col, "' not found in data.")
-        }
-        # if coloring by batch is true and color scheme is df and contains column with name of batch_col, keep only this column
-        if (color_by_batch && (batch_col %in% names(color_scheme))) {
-            color_scheme <- color_scheme[[batch_col]]
-        }
-    } else if (color_by_batch) {
-        message("batches cannot be colored as the batch column is defined as NULL,
-            continuing without colors")
-        warning("`batch_col` is NULL; disabling `color_by_batch`")
-        color_by_batch <- FALSE
-    }
-
-    # For order definition and subsequent faceting, facet column has to be in the df
-    if (!is.null(facet_col) && !(facet_col %in% names(df_long))) {
-        message(sprintf(
-            '"%s" is specified as column for faceting, but is not present
-                    in the data, check sample annotation data frame',
-            facet_col
-        ))
-        stop(sprintf("Faceting column '%s' not found in data.", facet_col))
-    }
+    validated <- .pb_validate_initial_assessment_inputs(
+        df_plot = df_long,
+        batch_col = batch_col,
+        color_by_batch = color_by_batch,
+        color_scheme = color_scheme,
+        facet_col = facet_col
+    )
+    color_by_batch <- validated$color_by_batch
+    color_scheme <- validated$color_scheme
 
     order_col_name <- order_col
-    # Defining sample order for plotting (even if order_col NULL,
-    # it will re-arrange df_long levels as required for plotting)
-    # Defining sample order for plotting
-    sample_order <- define_sample_order(
-        order_col, sample_annotation, facet_col,
-        batch_col, df_long,
-        sample_id_col, color_by_batch
+    order_info <- .pb_prepare_initial_assessment_order(
+        df_plot = df_long,
+        order_col = order_col,
+        sample_annotation = sample_annotation,
+        facet_col = facet_col,
+        batch_col = batch_col,
+        sample_id_col = sample_id_col,
+        color_by_batch = color_by_batch
     )
-    order_col <- sample_order$order_col
-    df_long <- sample_order$df_long
+    order_col <- order_info$order_col
+    df_long <- order_info$df_plot
 
-    # Convert order to factor if appropriate
-    if (!is.numeric(df_long[[order_col]]) && is.character(df_long[[order_col]])) {
-        df_long[[order_col]] <- factor(df_long[[order_col]],
-            levels = unique(df_long[[order_col]])
-        )
-    }
-
-    # Main plotting of intensity distribution boxplots
     gg <- ggplot(df_long, aes(
         x = !!sym(order_col), y = !!sym(measure_col),
         group = !!sym(order_col)
@@ -331,7 +331,6 @@ plot_boxplot.default <- function(x, sample_annotation,
         gg <- gg + geom_boxplot(outlier.shape = NA)
     }
 
-    # Define the color scheme, Apply fill colors
     gg <- color_by_factor(
         color_by_batch = color_by_batch,
         batch_col = batch_col,
@@ -350,14 +349,12 @@ plot_boxplot.default <- function(x, sample_annotation,
     }
     gg <- gg + labs(x = axis_x_label, y = measure_col)
 
-    # Plot each "facet factor" in it's own subplot
     if (!is.null(facet_col)) {
         gg <- gg + facet_wrap(as.formula(paste("~", facet_col)),
             dir = "v", scales = "free_x"
         )
     }
 
-    # Add the title
     if (!is.null(plot_title)) {
         gg <- gg + ggtitle(plot_title) +
             theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 16))
@@ -370,19 +367,19 @@ plot_boxplot.default <- function(x, sample_annotation,
         batch_vector <- df_long[[batch_col]]
         is_factor <- is_batch_factor(batch_vector, color_scheme)
     }
-    gg <- .pb_apply_initial_assessment_theme(gg = gg, theme_name = theme_name, base_size = base_size)
-    gg <- .pb_finalize_initial_assessment_plot(
+    .pb_finalize_initial_assessment_output(
         gg = gg,
+        theme_name = theme_name,
+        base_size = base_size,
         order_values = df_long[[order_col]],
         ylimits = ylimits,
-        rotate_x = !is.numeric(df_long[[order_col]]),
         color_by_batch = color_by_batch,
-        is_factor = is_factor
+        is_factor = is_factor,
+        units = units,
+        width = width,
+        height = height,
+        filename = filename
     )
-
-    units <- match.arg(units)
-    save_ggplot(filename, units, width, height, gg)
-    gg
 }
 
 
@@ -403,7 +400,6 @@ plot_sample_mean.ProBatchFeatures <- function(x, pbf_name = NULL, plot_title = N
 
     plot_title <- if (is.null(plot_title)) assay_name else plot_title
 
-    # Call the default method with the extracted data
     plot_sample_mean.default(
         x = data_matrix,
         sample_annotation = sample_annotation,
@@ -448,7 +444,6 @@ plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = NU
         )
         df_long <- df_long[!is.na(df_long$Intensity), ]
 
-        # Drop sample_annotation columns from df_long if they exist to avoid duplication, except sample_id_col
         overlap_cols <- setdiff(intersect(names(sample_annotation), names(df_long)), sample_id_col)
         if (length(overlap_cols) > 0) {
             df_long <- df_long[, !names(df_long) %in% overlap_cols, drop = FALSE]

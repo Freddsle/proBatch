@@ -160,30 +160,10 @@ functions for quick visual assessment of trends associated, overall
   or specific covariate-associated (see \code{batch_col} and \code{facet_col})
 }
 \examples{
-data(list = c(
-    "example_proteome", "example_sample_annotation",
-    "example_proteome_matrix"
-), package = "proBatch")
-
-demo_ids <- colnames(example_proteome_matrix)[1:6]
-demo_matrix <- example_proteome_matrix[, demo_ids]
-demo_annotation <- example_sample_annotation[
-    example_sample_annotation$FullRunName \%in\% demo_ids,
-]
-
-plot_sample_mean(
-    demo_matrix,
-    demo_annotation,
-    order_col = "order",
-    batch_col = "MS_batch"
-)
-
-demo_proteome <- example_proteome[
-    example_proteome$FullRunName \%in\% demo_ids,
-]
+data(list = c("example_proteome", "example_sample_annotation"), package = "proBatch")
 plot_boxplot(
-    demo_proteome,
-    sample_annotation = demo_annotation,
+    example_proteome,
+    sample_annotation = example_sample_annotation,
     batch_col = "MS_batch"
 )
 

@@ -84,12 +84,8 @@ plot_NA_heatmap.default <- function(
         data_matrix <- assay(data_matrix)
     }
 
-    if (!is.matrix(data_matrix)) {
-        data_matrix <- as.matrix(data_matrix)
-    }
-
-    if (!nrow(data_matrix) || !ncol(data_matrix)) {
-        warning("Input matrix has zero rows or columns; nothing to plot.")
+    data_matrix <- .pb_coerce_missing_plot_matrix(data_matrix)
+    if (is.null(data_matrix)) {
         return(NULL)
     }
 
@@ -179,12 +175,7 @@ plot_NA_heatmap.ProBatchFeatures <- function(
   ...
 ) {
     object <- x
-    assays <- .pb_resolve_assays_for_input(
-        object = object,
-        pbf_name = pbf_name,
-        default = "current",
-        deduplicate = FALSE
-    )
+    assays <- .pb_missing_requested_assays(object, pbf_name)
 
     sample_annotation <- as.data.frame(colData(object))
     if (!is.null(sample_id_col)) {
@@ -206,7 +197,6 @@ plot_NA_heatmap.ProBatchFeatures <- function(
         assay_nm <- assays[[idx]]
         data_matrix <- pb_assay_matrix(object, assay = assay_nm)
 
-        # if number of rows or columns is bigger than 5000, select a random subset of 5000
         if (nrow(data_matrix) > 5000 && use_subset) {
             warning("Assay '", assay_nm, "' has more than 5000 rows; plotting a random subset of 5000 rows.")
             row_idx <- sort(sample(seq_len(nrow(data_matrix)), 5000))
@@ -298,15 +288,8 @@ plot_NA_density.default <- function(
   palette = c(`Missing Value` = "#A92C23", `Valid Value` = "#345995"),
   ...
 ) {
-    data_matrix <- x
-    if (is(data_matrix, "SummarizedExperiment")) {
-        data_matrix <- assay(data_matrix)
-    }
-    if (!is.matrix(data_matrix)) {
-        data_matrix <- as.matrix(data_matrix)
-    }
-    if (!nrow(data_matrix) || !ncol(data_matrix)) {
-        warning("Input matrix has zero rows or columns; nothing to plot.")
+    data_matrix <- .pb_coerce_missing_plot_matrix(x)
+    if (is.null(data_matrix)) {
         return(ggplot())
     }
 
@@ -324,11 +307,12 @@ plot_NA_density.default <- function(
     df <- df[, c("mean", "Type"), drop = FALSE]
 
     palette <- .pb_match_palette(palette, c(missing_label, valid_label))
-
-    ggplot(df, aes(x = .data$mean, colour = .data$Type)) +
-        geom_density(na.rm = TRUE) +
-        labs(x = "Intensity", y = "Density", colour = "Value Type") +
-        scale_colour_manual(values = palette, breaks = c(missing_label, valid_label))
+    .pb_plot_missing_density(
+        df = df,
+        palette = palette,
+        missing_label = missing_label,
+        valid_label = valid_label
+    )
 }
 
 #' @rdname plot_NA_density
@@ -346,12 +330,7 @@ plot_NA_density.ProBatchFeatures <- function(
   ...
 ) {
     object <- x
-    assays <- .pb_resolve_assays_for_input(
-        object = object,
-        pbf_name = pbf_name,
-        default = "current",
-        deduplicate = FALSE
-    )
+    assays <- .pb_missing_requested_assays(object, pbf_name)
 
     collected <- .pb_collect_missing_assay_data(
         object, assays,
@@ -368,17 +347,15 @@ plot_NA_density.ProBatchFeatures <- function(
     combined$pbf_name <- factor(combined$pbf_name, levels = assays[keep])
 
     palette <- .pb_match_palette(palette, c(missing_label, valid_label))
-    p <- ggplot(combined, aes(x = .data$mean, colour = .data$Type)) +
-        geom_density(na.rm = TRUE) +
-        labs(x = "Intensity", y = "Density", colour = "Value Type") +
-        scale_colour_manual(values = palette, breaks = c(missing_label, valid_label))
-
-    if (length(unique(combined$pbf_name)) > 1L) {
-        layout <- .pb_missing_layout(length(unique(combined$pbf_name)), nrow = nrow, ncol = ncol)
-        p <- p + facet_wrap(~pbf_name, nrow = layout$nrow, ncol = layout$ncol, scales = facet_scales)
-    }
-
-    p
+    .pb_plot_missing_density(
+        df = combined,
+        palette = palette,
+        missing_label = missing_label,
+        valid_label = valid_label,
+        nrow = nrow,
+        ncol = ncol,
+        facet_scales = facet_scales
+    )
 }
 
 #' Plot missing-value frequency distribution
@@ -404,15 +381,8 @@ plot_NA_frequency.default <- function(
   fill = "#345995",
   ...
 ) {
-    data_matrix <- x
-    if (is(data_matrix, "SummarizedExperiment")) {
-        data_matrix <- assay(data_matrix)
-    }
-    if (!is.matrix(data_matrix)) {
-        data_matrix <- as.matrix(data_matrix)
-    }
-    if (!nrow(data_matrix) || !ncol(data_matrix)) {
-        warning("Input matrix has zero rows or columns; nothing to plot.")
+    data_matrix <- .pb_coerce_missing_plot_matrix(x)
+    if (is.null(data_matrix)) {
         return(ggplot())
     }
 
@@ -422,26 +392,22 @@ plot_NA_frequency.default <- function(
         return(ggplot())
     }
     freq_df <- freq_df[, c("valid_counts", "count"), drop = FALSE]
-    names(freq_df)[names(freq_df) == "count"] <- "Freq"
 
     if (show_percent) {
-        total <- sum(freq_df$Freq)
+        total <- sum(freq_df$count)
         if (total == 0) {
             warning("Total count is zero; cannot compute percentages.")
             return(ggplot())
         }
-        freq_df$Percent <- as.numeric(freq_df$Freq) / total * 100
+        freq_df$Percent <- as.numeric(freq_df$count) / total * 100
     }
 
-    y_col <- if (show_percent) "Percent" else "Freq"
-    ggplot(
-        freq_df, aes(x = .data$valid_counts, y = .data[[y_col]])
-    ) +
-        geom_col(fill = fill) +
-        labs(
-            x = "Identified in Number of Samples",
-            y = if (show_percent) "Percent of Features" else "Number of Features"
-        )
+    .pb_plot_missing_frequency(
+        freq_df = freq_df,
+        fill = fill,
+        show_percent = show_percent,
+        percent_label = "Percent of Features"
+    )
 }
 
 #' @rdname plot_NA_frequency
@@ -458,12 +424,7 @@ plot_NA_frequency.ProBatchFeatures <- function(
   ...
 ) {
     object <- x
-    assays <- .pb_resolve_assays_for_input(
-        object = object,
-        pbf_name = pbf_name,
-        default = "current",
-        deduplicate = FALSE
-    )
+    assays <- .pb_missing_requested_assays(object, pbf_name)
 
     collected <- .pb_collect_missing_assay_data(object, assays, .pb_missing_frequency_df)
     df_list <- collected$df_list
@@ -485,7 +446,6 @@ plot_NA_frequency.ProBatchFeatures <- function(
             df$Percent <- as.numeric(df$count) / total * 100
             df
         })
-        # Recompute which assays still have valid data after percent conversion
         keep <- vapply(df_list, function(df) !is.null(df) && nrow(df) > 0, logical(1))
         if (!any(keep)) {
             warning("No frequency data available for the requested assays.")
@@ -496,28 +456,40 @@ plot_NA_frequency.ProBatchFeatures <- function(
     combined <- do.call(rbind, df_list[keep])
     combined$pbf_name <- factor(combined$pbf_name, levels = assays[keep])
 
-    y_col <- if (show_percent) "Percent" else "count"
-    p <- ggplot(combined, aes(
-        x = .data$valid_counts,
-        y = .data[[y_col]]
-    )) +
-        geom_col(fill = fill) +
-        labs(
-            x = "Identified in Number of Samples",
-            y = if (show_percent) "Percent" else "Number of Features"
-        )
-
-    if (length(unique(combined$pbf_name)) > 1L) {
-        layout <- .pb_missing_layout(length(unique(combined$pbf_name)), nrow = nrow, ncol = ncol)
-        p <- p + facet_wrap(~pbf_name, nrow = layout$nrow, ncol = layout$ncol, scales = facet_scales)
-    }
-
-    p
+    .pb_plot_missing_frequency(
+        freq_df = combined,
+        fill = fill,
+        show_percent = show_percent,
+        nrow = nrow,
+        ncol = ncol,
+        facet_scales = facet_scales,
+        percent_label = "Percent"
+    )
 }
 
-# -----------------------------------------------------------------------------
-# Internal helpers
-# -----------------------------------------------------------------------------
+.pb_missing_requested_assays <- function(object, pbf_name = NULL) {
+    .pb_resolve_assays_for_input(
+        object = object,
+        pbf_name = pbf_name,
+        default = "current",
+        deduplicate = FALSE
+    )
+}
+
+.pb_coerce_missing_plot_matrix <- function(x) {
+    data_matrix <- x
+    if (is(data_matrix, "SummarizedExperiment")) {
+        data_matrix <- assay(data_matrix)
+    }
+    if (!is.matrix(data_matrix)) {
+        data_matrix <- as.matrix(data_matrix)
+    }
+    if (!nrow(data_matrix) || !ncol(data_matrix)) {
+        warning("Input matrix has zero rows or columns; nothing to plot.")
+        return(NULL)
+    }
+    data_matrix
+}
 
 .pb_binary_missing_matrix <- function(data_matrix, drop_complete = TRUE) {
     binary <- ifelse(is.na(data_matrix), 0, 1)
@@ -653,6 +625,52 @@ plot_NA_frequency.ProBatchFeatures <- function(
     })
     keep <- vapply(df_list, function(df) !is.null(df) && nrow(df) > 0, logical(1))
     list(df_list = df_list, keep = keep)
+}
+
+.pb_plot_missing_density <- function(df,
+                                     palette,
+                                     missing_label,
+                                     valid_label,
+                                     nrow = NULL,
+                                     ncol = NULL,
+                                     facet_scales = "free_y") {
+    p <- ggplot(df, aes(x = .data$mean, colour = .data$Type)) +
+        geom_density(na.rm = TRUE) +
+        labs(x = "Intensity", y = "Density", colour = "Value Type") +
+        scale_colour_manual(values = palette, breaks = c(missing_label, valid_label))
+
+    if ("pbf_name" %in% names(df) && length(unique(df$pbf_name)) > 1L) {
+        layout <- .pb_missing_layout(length(unique(df$pbf_name)), nrow = nrow, ncol = ncol)
+        p <- p + facet_wrap(~pbf_name, nrow = layout$nrow, ncol = layout$ncol, scales = facet_scales)
+    }
+
+    p
+}
+
+.pb_plot_missing_frequency <- function(freq_df,
+                                       fill,
+                                       show_percent = FALSE,
+                                       nrow = NULL,
+                                       ncol = NULL,
+                                       facet_scales = "free_y",
+                                       percent_label = "Percent of Features") {
+    y_col <- if (show_percent) "Percent" else "count"
+    p <- ggplot(freq_df, aes(
+        x = .data$valid_counts,
+        y = .data[[y_col]]
+    )) +
+        geom_col(fill = fill) +
+        labs(
+            x = "Identified in Number of Samples",
+            y = if (show_percent) percent_label else "Number of Features"
+        )
+
+    if ("pbf_name" %in% names(freq_df) && length(unique(freq_df$pbf_name)) > 1L) {
+        layout <- .pb_missing_layout(length(unique(freq_df$pbf_name)), nrow = nrow, ncol = ncol)
+        p <- p + facet_wrap(~pbf_name, nrow = layout$nrow, ncol = layout$ncol, scales = facet_scales)
+    }
+
+    p
 }
 
 .pb_missing_density_df <- function(data_matrix, assay_nm, missing_label, valid_label) {

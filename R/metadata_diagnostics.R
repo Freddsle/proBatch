@@ -36,6 +36,19 @@ find_duplicated_columns <- function(x, ...) {
     list(df = x, col_names = col_names)
 }
 
+.pb_metadata_component_df <- function(object,
+                                      component = c("colData", "rowData"),
+                                      assay = NULL) {
+    component <- match.arg(component)
+    if (component == "colData") {
+        target <- SummarizedExperiment::colData(object)
+    } else {
+        chosen_assay <- .pb_resolve_metadata_rowdata_assay(object, assay = assay)
+        target <- SummarizedExperiment::rowData(object[[chosen_assay]])
+    }
+    .pb_to_base_df(target)
+}
+
 #' @rdname find_duplicated_columns
 #' @method find_duplicated_columns default
 #' @export
@@ -88,15 +101,11 @@ find_duplicated_columns.ProBatchFeatures <- function(
         return(find_duplicated_columns.default(df, ...))
     }
 
-    component <- match.arg(component)
-    if (component == "colData") {
-        target <- SummarizedExperiment::colData(object)
-    } else {
-        chosen_assay <- .pb_resolve_metadata_rowdata_assay(object, assay = assay)
-        target <- SummarizedExperiment::rowData(object[[chosen_assay]])
-    }
-
-    target_df <- .pb_to_base_df(target)
+    target_df <- .pb_metadata_component_df(
+        object = object,
+        component = component,
+        assay = assay
+    )
     find_duplicated_columns.default(target_df, ...)
 }
 
@@ -196,15 +205,11 @@ metadata_column_summary.ProBatchFeatures <- function(
         return(metadata_column_summary.default(df, sort = sort, ...))
     }
 
-    component <- match.arg(component)
-    if (component == "colData") {
-        target <- SummarizedExperiment::colData(object)
-    } else {
-        chosen_assay <- .pb_resolve_metadata_rowdata_assay(object, assay = assay)
-        target <- SummarizedExperiment::rowData(object[[chosen_assay]])
-    }
-
-    target_df <- .pb_to_base_df(target)
+    target_df <- .pb_metadata_component_df(
+        object = object,
+        component = component,
+        assay = assay
+    )
     metadata_column_summary.default(target_df, sort = sort, ...)
 }
 
@@ -401,34 +406,22 @@ filter_metadata_columns.ProBatchFeatures <- function(
     }
 
     component <- match.arg(component)
+    chosen_assay <- NA_character_
     if (component == "colData") {
-        target <- colData(object)
-        base_target <- as.data.frame(target)
-        row_ids <- rownames(base_target)
-        filtered_df <- filter_metadata_columns.default(base_target, ...)
-        kept <- colnames(filtered_df)
-        if (inplace) {
-            filtered_target <- target[, kept, drop = FALSE]
-            colData(object) <- filtered_target
-            info <- list(
-                component = "colData",
-                assay = NA_character_,
-                dropped_columns = attr(filtered_df, "dropped_columns"),
-                dropped_duplicates = attr(filtered_df, "dropped_duplicates"),
-                dropped_missing = attr(filtered_df, "dropped_missing")
-            )
-            meta <- metadata(object)
-            meta$filter_metadata_columns <- info
-            metadata(object) <- meta
-            return(object)
+        target <- SummarizedExperiment::colData(object)
+        set_target <- function(obj, value) {
+            SummarizedExperiment::colData(obj) <- value
+            obj
         }
-        rownames(filtered_df) <- row_ids
-        return(filtered_df)
+    } else {
+        chosen_assay <- .pb_resolve_metadata_rowdata_assay(object, assay = assay)
+        target <- SummarizedExperiment::rowData(object[[chosen_assay]])
+        set_target <- function(obj, value) {
+            SummarizedExperiment::rowData(obj[[chosen_assay]]) <- value
+            obj
+        }
     }
 
-    chosen_assay <- .pb_resolve_metadata_rowdata_assay(object, assay = assay)
-
-    target <- SummarizedExperiment::rowData(object[[chosen_assay]])
     base_target <- as.data.frame(target)
     row_ids <- rownames(base_target)
     filtered_df <- filter_metadata_columns.default(base_target, ...)
@@ -436,17 +429,17 @@ filter_metadata_columns.ProBatchFeatures <- function(
 
     if (inplace) {
         filtered_target <- target[, kept, drop = FALSE]
-        SummarizedExperiment::rowData(object[[chosen_assay]]) <- filtered_target
+        object <- set_target(object, filtered_target)
         info <- list(
-            component = "rowData",
+            component = component,
             assay = chosen_assay,
             dropped_columns = attr(filtered_df, "dropped_columns"),
             dropped_duplicates = attr(filtered_df, "dropped_duplicates"),
             dropped_missing = attr(filtered_df, "dropped_missing")
         )
-        meta <- metadata(object)
+        meta <- S4Vectors::metadata(object)
         meta$filter_metadata_columns <- info
-        metadata(object) <- meta
+        S4Vectors::metadata(object) <- meta
         return(object)
     }
 

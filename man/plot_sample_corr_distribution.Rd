@@ -116,14 +116,6 @@ sample_corr_distribution_plot <- plot_sample_corr_distribution.corrDF(corr_distr
     plot_param = "batch_replicate"
 )
 
-sample_corr_file <- tempfile("sample_corr", fileext = ".png")
-sample_corr_distribution_plot <- plot_sample_corr_distribution.corrDF(corr_distribution,
-    plot_param = "batch_replicate",
-    filename = sample_corr_file,
-    width = 28, height = 28, units = "cm"
-)
-unlink(sample_corr_file)
-
 }
 \seealso{
 \code{\link{calculate_sample_corr_distr}},
