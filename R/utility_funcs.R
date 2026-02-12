@@ -161,6 +161,42 @@ check_sample_consistency <- function(sample_annotation, sample_id_col, df_long,
     )
 }
 
+.pb_is_long_df_input <- function(x, feature_id_col, sample_id_col, measure_col) {
+    is.data.frame(x) && all(c(feature_id_col, sample_id_col, measure_col) %in% names(x))
+}
+
+.pb_transform_long_via_matrix <- function(df_long, feature_id_col, sample_id_col,
+                                          measure_col, matrix_fun, sample_annotation = NULL) {
+    data_matrix <- long_to_matrix(
+        df_long = df_long,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        measure_col = measure_col
+    )
+    transformed_matrix <- matrix_fun(data_matrix)
+    matrix_to_long(
+        data_matrix = transformed_matrix,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col,
+        sample_id_col = sample_id_col
+    )
+}
+
+.pb_require_omicsgmf_stack <- function() {
+    .pb_requireNamespace("omicsGMF")
+    .pb_requireNamespace("sgdGMF")
+    .pb_requireNamespace("SingleCellExperiment")
+}
+
+.pb_positive_integer <- function(value, arg_name) {
+    value <- as.integer(value)
+    if (length(value) != 1L || is.na(value) || value < 1L) {
+        stop("`", arg_name, "` must be a positive integer.", call. = FALSE)
+    }
+    value
+}
+
 #' Defining sample order internally
 #'
 #' @inheritParams proBatch

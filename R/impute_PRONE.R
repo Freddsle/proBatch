@@ -46,9 +46,7 @@ imputePRONE <- function(x,
     }
 
     if (is.data.frame(x)) {
-        cols <- names(x)
-        looks_long <- all(c(feature_id_col, sample_id_col, measure_col) %in% cols)
-        if (looks_long) {
+        if (.pb_is_long_df_input(x, feature_id_col, sample_id_col, measure_col)) {
             return(imputePRONE_df(
                 x = x,
                 sample_annotation = sample_annotation,
@@ -91,27 +89,21 @@ imputePRONE_df <- function(x,
                            assay_in = "raw") {
     .pb_requireNamespace("PRONE")
 
-    data_matrix <- long_to_matrix(
+    .pb_transform_long_via_matrix(
         df_long = x,
         feature_id_col = feature_id_col,
         sample_id_col = sample_id_col,
-        measure_col = measure_col
-    )
-
-    imputed_matrix <- .prone_matrix_step(
-        data_matrix = data_matrix,
-        sample_annotation = sample_annotation,
-        sample_id_col = sample_id_col,
-        condition_col = condition_col,
-        assay_in = assay_in
-    )
-
-    matrix_to_long(
-        data_matrix = imputed_matrix,
-        sample_annotation = sample_annotation,
-        feature_id_col = feature_id_col,
         measure_col = measure_col,
-        sample_id_col = sample_id_col
+        matrix_fun = function(data_matrix) {
+            .prone_matrix_step(
+                data_matrix = data_matrix,
+                sample_annotation = sample_annotation,
+                sample_id_col = sample_id_col,
+                condition_col = condition_col,
+                assay_in = assay_in
+            )
+        },
+        sample_annotation = sample_annotation
     )
 }
 

@@ -53,9 +53,7 @@ correct_with_omicsGMF <- function(
         stop('argument "sample_annotation" is missing, with no default', call. = FALSE)
     }
 
-    .pb_requireNamespace("omicsGMF")
-    .pb_requireNamespace("sgdGMF")
-    .pb_requireNamespace("SingleCellExperiment")
+    .pb_require_omicsgmf_stack()
 
     format <- match.arg(format)
     dots <- list(...)
@@ -137,14 +135,9 @@ correct_with_omicsGMF <- function(
   gmf_args = list(),
   impute_args = list()
 ) {
-    .pb_requireNamespace("SingleCellExperiment")
-    .pb_requireNamespace("omicsGMF")
-    .pb_requireNamespace("sgdGMF")
+    .pb_require_omicsgmf_stack()
 
-    ncomponents <- as.integer(ncomponents)
-    if (is.na(ncomponents) || ncomponents < 1L) {
-        stop("`ncomponents` must be a positive integer.", call. = FALSE)
-    }
+    ncomponents <- .pb_positive_integer(ncomponents, "ncomponents")
 
     .run_matrix_method(
         data_matrix = data_matrix,

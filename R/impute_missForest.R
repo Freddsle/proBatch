@@ -67,10 +67,7 @@ imputeMissForest <- function(x,
     }
 
     if (is.data.frame(x)) {
-        cols <- names(x)
-        looks_long <- all(c(feature_id_col, sample_id_col, measure_col) %in% cols)
-
-        if (looks_long) {
+        if (.pb_is_long_df_input(x, feature_id_col, sample_id_col, measure_col)) {
             return(imputeMissForest_df(
                 x = x,
                 sample_annotation = sample_annotation,
@@ -127,27 +124,18 @@ imputeMissForest_df <- function(x,
                                 ...) {
     .pb_requireNamespace("missForest")
 
-    ## 1) long -> wide matrix (features x samples)
-    data_matrix <- long_to_matrix(
-        df_long        = x,
+    .pb_transform_long_via_matrix(
+        df_long = x,
         feature_id_col = feature_id_col,
-        sample_id_col  = sample_id_col,
-        measure_col    = measure_col
-    )
-
-    ## 2) run missForest on matrix
-    imputed_matrix <- .missforest_matrix_step(
-        data_matrix     = data_matrix,
-        missforest_args = list(...)
-    )
-
-    ## 3) wide -> long again
-    matrix_to_long(
-        data_matrix = imputed_matrix,
-        sample_annotation = sample_annotation,
-        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
         measure_col = measure_col,
-        sample_id_col = sample_id_col
+        matrix_fun = function(data_matrix) {
+            .missforest_matrix_step(
+                data_matrix     = data_matrix,
+                missforest_args = list(...)
+            )
+        },
+        sample_annotation = sample_annotation
     )
 }
 
