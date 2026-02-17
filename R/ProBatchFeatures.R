@@ -597,10 +597,26 @@ pb_current_assay <- function(object) {
     params <- params %||% list()
 
     if (step %in% c("log", "log2")) {
-        return(do.call(log_transform_dm.default, c(list(base_matrix), params)))
+        log_base <- if (identical(step, "log2")) {
+            params$log_base %||% 2
+        } else {
+            params$log_base %||% params$base %||% exp(1)
+        }
+        offset <- params$offset %||% params$pseudo %||% 1
+        return(log_transform_dm.default(
+            x = base_matrix,
+            log_base = log_base,
+            offset = offset
+        ))
     }
     if (identical(step, "unlog")) {
-        return(do.call(unlog_dm.default, c(list(base_matrix), params)))
+        log_base <- params$log_base %||% params$base %||% 2
+        offset <- params$offset %||% 1
+        return(unlog_dm.default(
+            x = base_matrix,
+            log_base = log_base,
+            offset = offset
+        ))
     }
 
     fun_candidate <- NULL
@@ -880,7 +896,8 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
   object, from, step, fun, params = list(),
   store = TRUE, new_level = NULL, to_override = NULL,
   backend = c("auto", "memory", "hdf5"),
-  hdf5_path = NULL, .base_m = NULL
+  hdf5_path = NULL, .base_m = NULL,
+  from_data = from
 ) {
     backend <- match.arg(backend)
     stopifnot(is(object, "ProBatchFeatures"))
@@ -902,7 +919,12 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
             object@oplog$to == to &
             vapply(object@oplog$params, function(p) identical(p, params), logical(1))
         if (any(dup)) {
-            return(list(object = object, assay = to, matrix = pb_assay_matrix(object, to)))
+            return(list(
+                object = object,
+                assay = to,
+                matrix = pb_assay_matrix(object, to),
+                to = to
+            ))
         }
     }
 
@@ -910,23 +932,23 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
         .base_m
     } else {
         suppressMessages(
-            pb_assay_matrix(object, assay = from)
+            pb_assay_matrix(object, assay = from_data)
         )
     }
 
     f <- .pb_get_step_fun(fun)
-    params <- .pb_enrich_step_params(object, from, f, params)
+    params <- .pb_enrich_step_params(object, from_data, f, params)
     res_m <- do.call(f, c(list(base_m), params))
 
     saved_assay <- NULL
     if (store) {
         mat <- .pb_materialize_matrix(res_m, backend = backend, hdf5_path = hdf5_path)
-        cd_from <- .pb_coldata_for_assay(object, from)
+        cd_from <- .pb_coldata_for_assay(object, from_data)
         se <- SummarizedExperiment(
             assays  = list(intensity = mat),
             colData = cd_from
         )
-        object <- .pb_add_assay_with_link(object, se, to = to, from = from)
+        object <- .pb_add_assay_with_link(object, se, to = to, from = from_data)
         saved_assay <- to
     }
 
@@ -937,7 +959,7 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
         from = from, to = to, params = params
     )
 
-    list(object = object, assay = saved_assay, matrix = res_m)
+    list(object = object, assay = saved_assay, matrix = res_m, to = to)
 }
 
 # ---------------------------
@@ -975,8 +997,6 @@ pb_transform <- function(
   backend = c("auto", "memory", "hdf5"),
   hdf5_path = NULL
 ) {
-    # TODO: Sequential supply of methods and parameters does not work as expected, especially when
-    # some steps are not stored. TBD FIX!
     backend <- match.arg(backend)
     stopifnot(is(object, "ProBatchFeatures"))
     if (is.null(funs)) funs <- steps
@@ -984,6 +1004,7 @@ pb_transform <- function(
     stopifnot(length(steps) == length(funs), length(steps) == length(params_list))
 
     cur_from <- from
+    cur_from_data <- from
     base_m <- NULL
     last_assay <- NULL
 
@@ -1016,12 +1037,18 @@ pb_transform <- function(
             store = store_this, new_level = if (k == length(steps)) level else level,
             to_override = if (use_final_name) final_name else NULL,
             backend = backend, hdf5_path = hdf5_path,
-            .base_m = base_m
+            .base_m = base_m,
+            from_data = cur_from_data
         )
         object <- out$object
         base_m <- out$matrix
-        last_assay <- out$assay %||% cur_from
-        if (store_this) cur_from <- last_assay
+        cur_from <- out$to %||% cur_from
+        if (store_this) {
+            cur_from_data <- out$assay %||% cur_from_data
+            last_assay <- cur_from_data
+        } else {
+            last_assay <- cur_from_data
+        }
     }
     # Rename final assay if requested and it exists
     if (!is.null(final_name) && !is.null(last_assay) && last_assay %in% names(object) &&
