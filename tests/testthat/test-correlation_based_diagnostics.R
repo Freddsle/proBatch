@@ -211,6 +211,94 @@ test_that("sample correlation diagnostics accept PBF with rowname-only annotatio
     expect_s3_class(sample_corr_heatmap, "pheatmap")
 })
 
+test_that("calculate_sample_corr_distr() supports explicit PBF assay selection", {
+    fixture <- make_corr_pbf_fixture()
+    pbf <- fixture$pbf
+    sample_ann <- fixture$sample_ann
+
+    current_assay <- pb_current_assay(pbf)
+    raw_assay <- names(pbf)[1]
+
+    corr_default <- calculate_sample_corr_distr(
+        pbf,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag"
+    )
+    corr_current <- calculate_sample_corr_distr(
+        pbf,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag",
+        pbf_name = current_assay
+    )
+    expect_equal(corr_default$correlation, corr_current$correlation)
+
+    corr_raw <- calculate_sample_corr_distr(
+        pbf,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag",
+        pbf_name = raw_assay
+    )
+    corr_raw_expected <- calculate_sample_corr_distr(
+        pb_assay_matrix(pbf, assay = raw_assay),
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag"
+    )
+    expect_equal(corr_raw$correlation, corr_raw_expected$correlation)
+})
+
+test_that("plot_sample_corr_distribution() supports explicit PBF assay selection", {
+    fixture <- make_corr_pbf_fixture()
+    pbf <- fixture$pbf
+    sample_ann <- fixture$sample_ann
+
+    current_assay <- pb_current_assay(pbf)
+    raw_assay <- names(pbf)[1]
+
+    plot_default <- plot_sample_corr_distribution(
+        pbf,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag",
+        plot_param = "batch_replicate"
+    )
+    plot_current <- plot_sample_corr_distribution(
+        pbf,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag",
+        plot_param = "batch_replicate",
+        pbf_name = current_assay
+    )
+    expect_equal(
+        plot_default$plot_env$corr_distribution$correlation,
+        plot_current$plot_env$corr_distribution$correlation
+    )
+
+    plot_raw <- plot_sample_corr_distribution(
+        pbf,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag",
+        plot_param = "batch_replicate",
+        pbf_name = raw_assay
+    )
+    plot_raw_expected <- plot_sample_corr_distribution(
+        pb_assay_matrix(pbf, assay = raw_assay),
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag",
+        plot_param = "batch_replicate"
+    )
+    expect_equal(
+        plot_raw$plot_env$corr_distribution$correlation,
+        plot_raw_expected$plot_env$corr_distribution$correlation
+    )
+})
+
 test_that("peptide correlation diagnostics accept PBF with rowname-only annotation", {
     fixture <- make_corr_pbf_fixture()
     pbf <- fixture$pbf

@@ -82,11 +82,15 @@ plot_corr_matrix <- function(corr_matrix,
 .pb_corr_resolve_sample_input <- function(data_matrix,
                                           sample_annotation,
                                           sample_id_col,
+                                          pbf_name = NULL,
                                           sample_annotation_missing = FALSE,
                                           require_annotation = FALSE) {
     if (is(data_matrix, "ProBatchFeatures")) {
         object <- data_matrix
-        assay_name <- .pb_resolve_assay_for_input(object)
+        assay_name <- .pb_resolve_assay_for_input(
+            object = object,
+            pbf_name = pbf_name
+        )
         data_matrix <- pb_assay_matrix(object, assay = assay_name)
         sample_annotation <- .pb_default_sample_annotation(
             object = object,
@@ -464,12 +468,15 @@ get_sample_corr_df <- function(cor_proteome, sample_annotation,
 #' @param data_matrix features (in rows) vs samples (in columns) matrix, with
 #'   feature IDs in rownames and file/sample names as colnames, or a
 #'   `ProBatchFeatures` object. When `data_matrix` is a
-#'   `ProBatchFeatures` object, the current assay is used.
+#'   `ProBatchFeatures` object, `pbf_name` is used (or the current assay when
+#'   `pbf_name = NULL`).
 #' @param sample_annotation data frame with sample-level metadata. When
 #'   `data_matrix` is a matrix, this argument is required. When
 #'   `data_matrix` is a `ProBatchFeatures` object and
 #'   `sample_annotation` is not provided, `as.data.frame(colData(data_matrix))`
 #'   is used.
+#' @param pbf_name Assay name used when `data_matrix` is a `ProBatchFeatures`
+#'   object. If `NULL`, [pb_current_assay()] is used.
 #' @param repeated_samples vector of sample IDs to evaluate, if \code{NULL},
 #' all samples are taken into account for plotting
 #' @param biospecimen_id_col column in \code{sample_annotation}
@@ -509,13 +516,15 @@ calculate_sample_corr_distr <- function(data_matrix, sample_annotation,
                                         repeated_samples = NULL,
                                         biospecimen_id_col = "EarTag",
                                         sample_id_col = "FullRunName",
-                                        batch_col = "MS_batch") {
+                                        batch_col = "MS_batch",
+                                        pbf_name = NULL) {
     sample_annotation_missing <- missing(sample_annotation)
 
     resolved <- .pb_corr_resolve_sample_input(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
+        pbf_name = pbf_name,
         sample_annotation_missing = sample_annotation_missing,
         require_annotation = TRUE
     )
@@ -563,12 +572,15 @@ calculate_sample_corr_distr <- function(data_matrix, sample_annotation,
 #' @param data_matrix features (in rows) vs samples (in columns) matrix, with
 #'   feature IDs in rownames and file/sample names as colnames, or a
 #'   `ProBatchFeatures` object. When `data_matrix` is a
-#'   `ProBatchFeatures` object, the current assay is used.
+#'   `ProBatchFeatures` object, `pbf_name` is used (or the current assay when
+#'   `pbf_name = NULL`).
 #' @param sample_annotation data frame with sample-level metadata. When
 #'   `data_matrix` is a matrix, this argument is required. When
 #'   `data_matrix` is a `ProBatchFeatures` object and
 #'   `sample_annotation` is not provided, `as.data.frame(colData(data_matrix))`
 #'   is used.
+#' @param pbf_name Assay name used when `data_matrix` is a `ProBatchFeatures`
+#'   object. If `NULL`, [pb_current_assay()] is used.
 #' @param repeated_samples if \code{NULL}, correlation of all samples is plotted
 #' @param biospecimen_id_col column in \code{sample_annotation}
 #' that captures the biological sample,
@@ -618,13 +630,15 @@ plot_sample_corr_distribution <- function(data_matrix, sample_annotation,
                                           units = c("cm", "in", "mm"),
                                           plot_title = "Sample correlation distribution",
                                           plot_param = "batch_replicate",
-                                          theme = "classic") {
+                                          theme = "classic",
+                                          pbf_name = NULL) {
     sample_annotation_missing <- missing(sample_annotation)
 
     resolved <- .pb_corr_resolve_sample_input(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
+        pbf_name = pbf_name,
         sample_annotation_missing = sample_annotation_missing,
         require_annotation = TRUE
     )

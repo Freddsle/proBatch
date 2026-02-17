@@ -11,14 +11,16 @@ calculate_sample_corr_distr(
   repeated_samples = NULL,
   biospecimen_id_col = "EarTag",
   sample_id_col = "FullRunName",
-  batch_col = "MS_batch"
+  batch_col = "MS_batch",
+  pbf_name = NULL
 )
 }
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
 feature IDs in rownames and file/sample names as colnames, or a
 `ProBatchFeatures` object. When `data_matrix` is a
-`ProBatchFeatures` object, the current assay is used.}
+`ProBatchFeatures` object, `pbf_name` is used (or the current assay when
+`pbf_name = NULL`).}
 
 \item{sample_annotation}{data frame with sample-level metadata. When
 `data_matrix` is a matrix, this argument is required. When
@@ -40,6 +42,9 @@ where the filenames (colnames of the \code{data_matrix} are found).}
 
 \item{batch_col}{column in \code{sample_annotation} that should be used for
 batch comparison (or other, non-batch factor to be mapped to color in plots).}
+
+\item{pbf_name}{Assay name used when `data_matrix` is a `ProBatchFeatures`
+object. If `NULL`, [pb_current_assay()] is used.}
 }
 \value{
 dataframe with the following columns, that

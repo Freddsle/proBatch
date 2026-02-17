@@ -18,7 +18,8 @@ plot_sample_corr_distribution(
   units = c("cm", "in", "mm"),
   plot_title = "Sample correlation distribution",
   plot_param = "batch_replicate",
-  theme = "classic"
+  theme = "classic",
+  pbf_name = NULL
 )
 
 plot_sample_corr_distribution.corrDF(
@@ -37,7 +38,8 @@ plot_sample_corr_distribution.corrDF(
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
 feature IDs in rownames and file/sample names as colnames, or a
 `ProBatchFeatures` object. When `data_matrix` is a
-`ProBatchFeatures` object, the current assay is used.}
+`ProBatchFeatures` object, `pbf_name` is used (or the current assay when
+`pbf_name = NULL`).}
 
 \item{sample_annotation}{data frame with sample-level metadata. When
 `data_matrix` is a matrix, this argument is required. When
@@ -82,6 +84,9 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 }}
 
 \item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
+
+\item{pbf_name}{Assay name used when `data_matrix` is a `ProBatchFeatures`
+object. If `NULL`, [pb_current_assay()] is used.}
 
 \item{corr_distribution}{data frame with correlation distribution,
 as returned by \code{calculate_sample_corr_distr}}
