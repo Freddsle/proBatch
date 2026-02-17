@@ -9,7 +9,9 @@ plot_CV_distr.df(
   plot_title = NULL,
   filename = NULL,
   theme = "classic",
-  log_y_scale = TRUE
+  log_y_scale = TRUE,
+  batch_col = NULL,
+  value_col = c("auto", "CV_total", "CV_perBatch")
 )
 }
 \arguments{
@@ -26,6 +28,12 @@ pdf and png format is supported}
 \item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
 
 \item{log_y_scale}{(logical) whether to display the CV on log-scale}
+
+\item{batch_col}{optional batch column in \code{CV_df}; used when plotting
+\code{CV_perBatch}.}
+
+\item{value_col}{which CV column to plot: \code{"auto"} (default),
+\code{"CV_total"}, or \code{"CV_perBatch"}.}
 }
 \value{
 ggplot object

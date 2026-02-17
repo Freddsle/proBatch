@@ -26,7 +26,7 @@ test_that("basic output structure without batch, default args", {
         cv_df <- calc_cv(),
         "only total CV will be calculated"
     )
-    expect_equal(names(cv_df), c("peptide_group_label", "CV_total"))
+    expect_true(all(c("peptide_group_label", "EarTag", "CV_total") %in% names(cv_df)))
     expect_type(cv_df$CV_total, "double")
     expect_true(all(cv_df$CV_total >= 0))
 })
@@ -182,10 +182,14 @@ test_that("per-batch CV matches manual calculation", {
         unlog              = FALSE
     )
     manual <- df %>%
-        group_by(MS_batch) %>%
-        summarise(cv = 100 * sd(Intensity) / mean(Intensity))
-    expect_equal(cv$CV_perBatch[1], manual$cv[1])
-    expect_equal(cv$CV_perBatch[2], manual$cv[2])
+        group_by(MS_batch, biospec) %>%
+        summarise(cv = 100 * sd(Intensity) / mean(Intensity), .groups = "drop") %>%
+        arrange(MS_batch, biospec)
+    cv_cmp <- cv %>%
+        select(MS_batch, biospec, CV_perBatch) %>%
+        distinct() %>%
+        arrange(MS_batch, biospec)
+    expect_equal(cv_cmp$CV_perBatch, manual$cv)
 })
 
 test_that("missing biospecimen column triggers warning", {
@@ -253,6 +257,7 @@ test_that("full pipeline returns ggplot", {
     expect_s3_class(ggp, "ggplot")
     # title must match
     expect_equal(ggp$labels$title, "Full CV Test")
+    expect_equal(as_label(ggp$mapping$x), "MS_batch")
 })
 
 test_that("filename argument saves a file", {

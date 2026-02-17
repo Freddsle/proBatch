@@ -20,20 +20,13 @@ calculate_feature_CV(
 }
 \arguments{
 \item{df_long}{data frame where each row is a single feature in a single
-sample. It minimally has a \code{sample_id_col}, a \code{feature_id_col}
-and a \code{measure_col}, but usually also an \code{m_score} (in OpenSWATH
-output result file). See \code{help("example_proteome")} for more details.
-`ProBatchFeatures` objects are also accepted.}
+sample, or a `ProBatchFeatures` object.}
 
-\item{sample_annotation}{data frame with:
-\enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
-  \item biological covariates
-  \item technical covariates (batches etc) }.
-  See \code{help("example_sample_annotation")}.
-  When `df_long` is a data frame, this argument is optional but required for
-  batch/replicate-aware calculations. When `df_long` is a
-  `ProBatchFeatures` object and `sample_annotation` is not provided,
-  `as.data.frame(colData(df_long))` is used.}
+\item{sample_annotation}{data frame with sample-level metadata. When
+`df_long` is a data frame, this argument is optional but required for
+batch/replicate-aware calculations. When `df_long` is a
+`ProBatchFeatures` object and `sample_annotation` is not provided,
+`as.data.frame(colData(df_long))` is used.}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
@@ -63,10 +56,16 @@ combination of conditions or groups.
 \item{offset}{small positive number to prevent 0 conversion to \code{-Inf}}
 
 \item{pbf_name}{Assay name used when `df_long` is a `ProBatchFeatures`
-object. If `NULL`, \code{\link{pb_current_assay}} is used.}
+object. If `NULL`, [pb_current_assay()] is used.}
 }
 \value{
-data frame with Total CV for each feature & (optionally) per-batch CV
+data frame with replicate-level CV values:
+  \itemize{
+  \item \code{CV_total}: per \code{feature_id_col} and \code{biospecimen_id_col}
+  (and per \code{Step}, if present),
+  \item \code{CV_perBatch}: additionally stratified by \code{batch_col}
+  when provided.
+  }
 }
 \description{
 Calculate CV distribution for each feature

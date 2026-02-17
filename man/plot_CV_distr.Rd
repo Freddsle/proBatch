@@ -25,18 +25,13 @@ plot_CV_distr(
 \item{df_long}{as in \code{df_long} for the rest of the package, but, when it
 has entries for intensity, represented in \code{measure_col} for several steps,
 e.g. raw, normalized, batch corrected data, as seen in column \code{Step}, then
-multi-step CV comparison can be carried out.
-`ProBatchFeatures` objects are also accepted.}
+multi-step CV comparison can be carried out.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
   \item biological covariates
   \item technical covariates (batches etc) }.
-  See \code{help("example_sample_annotation")}.
-  When `df_long` is a data frame, this argument is optional but required for
-  batch/replicate-aware calculations. When `df_long` is a
-  `ProBatchFeatures` object and `sample_annotation` is not provided,
-  `as.data.frame(colData(df_long))` is used.}
+  See \code{help("example_sample_annotation")}}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
@@ -75,14 +70,17 @@ pdf and png format is supported}
 
 \item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
 
-\item{pbf_name}{Assay name used when `df_long` is a `ProBatchFeatures`
-object. If `NULL`, \code{\link{pb_current_assay}} is used.}
+\item{pbf_name}{Assay name to transform when `x` is a `ProBatchFeatures`.}
 }
 \value{
 \code{ggplot} object with the boxplot of CVs on one or several steps
 }
 \description{
 Plot CV distribution to compare various steps of the analysis
+}
+\details{
+If `batch_col` is supplied and per-batch CV is available, `plot_CV_distr()`
+plots `CV_perBatch` across batches. Otherwise it plots `CV_total`.
 }
 \examples{
 data(list = c("example_sample_annotation", "example_proteome"), package = "proBatch")
