@@ -11,6 +11,15 @@ compute_cv <- function(data, measure_col, group_vars, cv_name) {
 #'
 #' @inheritParams proBatch
 #' @inheritParams transform_raw_data
+#' @param df_long data frame where each row is a single feature in a single
+#'   sample, or a `ProBatchFeatures` object.
+#' @param sample_annotation data frame with sample-level metadata. When
+#'   `df_long` is a data frame, this argument is optional but required for
+#'   batch/replicate-aware calculations. When `df_long` is a
+#'   `ProBatchFeatures` object and `sample_annotation` is not provided,
+#'   `as.data.frame(colData(df_long))` is used.
+#' @param pbf_name Assay name used when `df_long` is a `ProBatchFeatures`
+#'   object. If `NULL`, [pb_current_assay()] is used.
 #' @param biospecimen_id_col column in \code{sample_annotation}
 #' that defines a unique bio ID, which is usually a
 #' combination of conditions or groups.
@@ -33,7 +42,8 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
                                  sample_id_col = "FullRunName",
                                  measure_col = "Intensity", batch_col = NULL,
                                  biospecimen_id_col = NULL,
-                                 unlog = TRUE, log_base = 2, offset = 0) {
+                                 unlog = TRUE, log_base = 2, offset = 0,
+                                 pbf_name = NULL) {
     if (is(df_long, "ProBatchFeatures")) {
         if (is.null(sample_id_col)) {
             message("sample_id_col is not specified, using FullRunName as default")
@@ -44,7 +54,8 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
             sample_annotation = sample_annotation,
             sample_id_col = sample_id_col,
             feature_id_col = feature_id_col,
-            measure_col = measure_col
+            measure_col = measure_col,
+            pbf_name = pbf_name
         )
         df_long <- prep$df_long
         sample_annotation <- prep$sample_annotation
@@ -204,7 +215,8 @@ plot_CV_distr <- function(df_long, sample_annotation = NULL,
                           log_base = 2,
                           offset = 1,
                           plot_title = NULL,
-                          filename = NULL, theme = "classic") {
+                          filename = NULL, theme = "classic",
+                          pbf_name = NULL) {
     CV_df <- calculate_feature_CV(
         df_long = df_long,
         sample_annotation = sample_annotation,
@@ -215,7 +227,8 @@ plot_CV_distr <- function(df_long, sample_annotation = NULL,
         biospecimen_id_col = biospecimen_id_col,
         unlog = unlog,
         log_base = log_base,
-        offset = offset
+        offset = offset,
+        pbf_name = pbf_name
     )
     # keep only finite CV values - check, message, and filter
     if (any(!is.finite(CV_df$CV_total))) {

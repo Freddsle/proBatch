@@ -263,6 +263,58 @@ test_that("plot_intragroup_variation.ProBatchFeatures facets per grouping column
     expect_equal(gg$labels$title, "Intragroup correlation")
 })
 
+test_that("plot_intragroup_variation.ProBatchFeatures honors explicit pbf_name", {
+    testthat::skip_if_not_installed("PRONE")
+
+    dm <- matrix(
+        seq_len(12),
+        nrow = 3,
+        dimnames = list(
+            paste0("feat", 1:3),
+            paste0("sample", 1:4)
+        )
+    )
+    sample_ann <- data.frame(
+        FullRunName = paste0("sample", 1:4),
+        Condition = rep(c("A", "B"), each = 2),
+        stringsAsFactors = FALSE
+    )
+    pbf <- suppressMessages(ProBatchFeatures(
+        data_matrix = dm,
+        sample_annotation = sample_ann,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    ))
+    pbf <- suppressMessages(pb_transform(
+        pbf,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    ))
+
+    selected_assay <- "feature::raw"
+
+    captured <- new.env(parent = emptyenv())
+    testthat::local_mocked_bindings(
+        plot_intragroup_correlation = function(se, ain, condition, method) {
+            captured$ain <- c(captured$ain, ain)
+            mock_intragroup_plot("cor")
+        },
+        .package = "PRONE"
+    )
+
+    gg <- plot_intragroup_variation(
+        pbf,
+        pbf_name = selected_assay,
+        group_col = "Condition",
+        metrics = "correlation"
+    )
+
+    expect_s3_class(gg, "ggplot")
+    expect_equal(unique(captured$ain), selected_assay)
+    expect_equal(unique(as.character(gg$data$assay_display)), selected_assay)
+})
+
 test_that("plot_intragroup_variation.default validates intragroup column", {
     testthat::skip_if_not_installed("PRONE")
 

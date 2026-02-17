@@ -13,6 +13,7 @@ plot_single_feature(
   feature_name,
   df_long,
   sample_annotation = NULL,
+  pbf_name = NULL,
   sample_id_col = "FullRunName",
   measure_col = "Intensity",
   feature_id_col = "peptide_group_label",
@@ -41,6 +42,7 @@ plot_peptides_of_one_protein(
   protein_col = "ProteinName",
   df_long,
   sample_annotation = NULL,
+  pbf_name = NULL,
   sample_id_col = "FullRunName",
   measure_col = "Intensity",
   feature_id_col = "peptide_group_label",
@@ -151,13 +153,21 @@ diagnostic profiling}
 \item{df_long}{data frame where each row is a single feature in a single
 sample. It minimally has a \code{sample_id_col}, a \code{feature_id_col}
 and a \code{measure_col}, but usually also an \code{m_score} (in OpenSWATH
-output result file). See \code{help("example_proteome")} for more details.}
+output result file). See \code{help("example_proteome")} for more details.
+`ProBatchFeatures` objects are also accepted.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
   \item biological covariates
   \item technical covariates (batches etc) }.
-  See \code{help("example_sample_annotation")}}
+  See \code{help("example_sample_annotation")}.
+  When `df_long` is a `ProBatchFeatures` object and `sample_annotation` is not
+  provided, `as.data.frame(colData(df_long))` is used.}
+
+\item{pbf_name}{Assay name used when `df_long` is a `ProBatchFeatures`
+object (used by `plot_single_feature()` and
+`plot_peptides_of_one_protein()`). If `NULL`, \code{\link{pb_current_assay}}
+is used.}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}

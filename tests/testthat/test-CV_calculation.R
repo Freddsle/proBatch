@@ -295,3 +295,80 @@ test_that("CV diagnostics accept ProBatchFeatures inputs", {
     ))
     expect_s3_class(cv_plot, "ggplot")
 })
+
+test_that("CV diagnostics support explicit PBF assay selection", {
+    pbf <- pb_test_make_pbf(n_rows = 80, n_cols = 16, add_log2 = TRUE)
+    sample_ann <- as.data.frame(SummarizedExperiment::colData(pbf))
+    current_assay <- pb_current_assay(pbf)
+    raw_assay <- names(pbf)[1]
+
+    cv_default <- suppressWarnings(calculate_feature_CV(
+        df_long = pbf,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE
+    ))
+    cv_current <- suppressWarnings(calculate_feature_CV(
+        df_long = pbf,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE,
+        pbf_name = current_assay
+    ))
+    expect_equal(cv_default$CV_total, cv_current$CV_total)
+
+    raw_long <- matrix_to_long(
+        data_matrix = pb_assay_matrix(pbf, assay = raw_assay),
+        feature_id_col = "peptide_group_label",
+        sample_id_col = "FullRunName",
+        measure_col = "Intensity"
+    )
+    cv_raw <- suppressWarnings(calculate_feature_CV(
+        df_long = pbf,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE,
+        pbf_name = raw_assay
+    ))
+    cv_raw_expected <- suppressWarnings(calculate_feature_CV(
+        df_long = raw_long,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE
+    ))
+    expect_equal(cv_raw$CV_total, cv_raw_expected$CV_total)
+
+    plot_default <- suppressWarnings(plot_CV_distr(
+        df_long = pbf,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE
+    ))
+    plot_current <- suppressWarnings(plot_CV_distr(
+        df_long = pbf,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE,
+        pbf_name = current_assay
+    ))
+    expect_equal(plot_default$data$CV_total, plot_current$data$CV_total)
+
+    plot_raw <- suppressWarnings(plot_CV_distr(
+        df_long = pbf,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE,
+        pbf_name = raw_assay
+    ))
+    plot_raw_expected <- suppressWarnings(plot_CV_distr(
+        df_long = raw_long,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE
+    ))
+    expect_equal(plot_raw$data$CV_total, plot_raw_expected$data$CV_total)
+})

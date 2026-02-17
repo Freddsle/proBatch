@@ -10,6 +10,12 @@
 #'  functions specific to each case below
 #'
 #' @inheritParams proBatch
+#' @param df_long data frame where each row is a single feature in a single
+#'   sample, or a `ProBatchFeatures` object.
+#' @param pbf_name Assay name used when `df_long` is a `ProBatchFeatures`
+#'   object (used by `plot_single_feature()` and
+#'   `plot_peptides_of_one_protein()`). If `NULL`, [pb_current_assay()] is
+#'   used.
 #' @param feature_name name of the selected feature (e.g. peptide) for
 #' diagnostic profiling
 #' @param geom whether to show the feature as points and/or connect by lines
@@ -96,13 +102,15 @@ NULL
                                      sample_annotation,
                                      sample_id_col,
                                      feature_id_col,
-                                     measure_col) {
+                                     measure_col,
+                                     pbf_name = NULL) {
     .pb_prepare_long_inputs(
         df_long = df_long,
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
         feature_id_col = feature_id_col,
-        measure_col = measure_col
+        measure_col = measure_col,
+        pbf_name = pbf_name
     )
 }
 
@@ -137,6 +145,7 @@ NULL
 #' @rdname feature_level_diagnostics
 plot_single_feature <- function(feature_name, df_long,
                                 sample_annotation = NULL,
+                                pbf_name = NULL,
                                 sample_id_col = "FullRunName",
                                 measure_col = "Intensity",
                                 feature_id_col = "peptide_group_label",
@@ -159,7 +168,8 @@ plot_single_feature <- function(feature_name, df_long,
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
         feature_id_col = feature_id_col,
-        measure_col = measure_col
+        measure_col = measure_col,
+        pbf_name = pbf_name
     )
     df_long <- prep$df_long
     sample_annotation <- prep$sample_annotation
@@ -352,6 +362,7 @@ plot_peptides_of_one_protein <- function(protein_name,
                                          peptide_annotation = NULL,
                                          protein_col = "ProteinName",
                                          df_long, sample_annotation = NULL,
+                                         pbf_name = NULL,
                                          sample_id_col = "FullRunName",
                                          measure_col = "Intensity",
                                          feature_id_col = "peptide_group_label",
@@ -377,7 +388,8 @@ plot_peptides_of_one_protein <- function(protein_name,
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
         feature_id_col = feature_id_col,
-        measure_col = measure_col
+        measure_col = measure_col,
+        pbf_name = pbf_name
     )
     df_long <- prep$df_long
     sample_annotation <- prep$sample_annotation

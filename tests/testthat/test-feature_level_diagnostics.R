@@ -225,6 +225,89 @@ test_that("feature-level diagnostics accept PBF and rowname-based annotation", {
     expect_s3_class(protein_plot, "ggplot")
 })
 
+test_that("feature-level single/protein plots support explicit PBF assay selection", {
+    fixture <- make_feature_pbf_fixture()
+    pbf <- fixture$pbf
+    sample_ann <- fixture$sample_ann
+    peptide_ann <- fixture$peptide_ann
+
+    current_assay <- pb_current_assay(pbf)
+    raw_assay <- names(pbf)[1]
+    feature_id <- rownames(fixture$matrix_small)[1]
+
+    single_default <- suppressWarnings(plot_single_feature(
+        feature_name = feature_id,
+        df_long = pbf,
+        sample_annotation = sample_ann
+    ))
+    single_current <- suppressWarnings(plot_single_feature(
+        feature_name = feature_id,
+        df_long = pbf,
+        sample_annotation = sample_ann,
+        pbf_name = current_assay
+    ))
+    expect_equal(single_default$data$Intensity, single_current$data$Intensity)
+
+    raw_long <- matrix_to_long(
+        data_matrix = pb_assay_matrix(pbf, assay = raw_assay),
+        feature_id_col = "peptide_group_label",
+        sample_id_col = "FullRunName",
+        measure_col = "Intensity"
+    )
+    single_raw <- suppressWarnings(plot_single_feature(
+        feature_name = feature_id,
+        df_long = pbf,
+        sample_annotation = sample_ann,
+        pbf_name = raw_assay
+    ))
+    single_raw_expected <- suppressWarnings(plot_single_feature(
+        feature_name = feature_id,
+        df_long = raw_long,
+        sample_annotation = sample_ann
+    ))
+    expect_equal(single_raw$data$Intensity, single_raw_expected$data$Intensity)
+
+    gene_counts <- table(peptide_ann$Gene)
+    gene_target <- names(gene_counts[gene_counts >= 2])[1]
+    if (!length(gene_target) || is.na(gene_target)) {
+        skip("Need at least one protein with >=2 peptides for assay selection test.")
+    }
+
+    protein_default <- suppressWarnings(plot_peptides_of_one_protein(
+        protein_name = gene_target,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene",
+        df_long = pbf,
+        sample_annotation = sample_ann
+    ))
+    protein_current <- suppressWarnings(plot_peptides_of_one_protein(
+        protein_name = gene_target,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene",
+        df_long = pbf,
+        sample_annotation = sample_ann,
+        pbf_name = current_assay
+    ))
+    expect_equal(protein_default$data$Intensity, protein_current$data$Intensity)
+
+    protein_raw <- suppressWarnings(plot_peptides_of_one_protein(
+        protein_name = gene_target,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene",
+        df_long = pbf,
+        sample_annotation = sample_ann,
+        pbf_name = raw_assay
+    ))
+    protein_raw_expected <- suppressWarnings(plot_peptides_of_one_protein(
+        protein_name = gene_target,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene",
+        df_long = raw_long,
+        sample_annotation = sample_ann
+    ))
+    expect_equal(protein_raw$data$Intensity, protein_raw_expected$data$Intensity)
+})
+
 test_that("fitting diagnostics accept ProBatchFeatures inputs", {
     fixture <- make_feature_pbf_fixture()
     pbf <- fixture$pbf
