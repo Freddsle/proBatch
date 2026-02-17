@@ -23,6 +23,10 @@
 #' @param format One of `"long"` or `"wide"`.
 #' @param design_formula Formula (or character string coercible to one) used to
 #'   build the omicsGMF design matrix from `sample_annotation`.
+#' @param batch_col Optional batch variable name present in `design_formula`.
+#'   If provided and omicsGMF stores design attributes (`X`, `Beta`) on the
+#'   reduced dimension, reconstruction preserves non-batch fixed effects by
+#'   adding `X_no_batch %*% Beta` to the latent component.
 #' @param family GLM family passed to omicsGMF (default: `gaussian()`).
 #' @param keep_all Columns retained in the long-format output; passed to [subset_keep_cols()].
 #' @param ... Optional named arguments. Use `gmf_args` and `impute_args` lists to
@@ -42,6 +46,7 @@ correct_with_omicsGMF <- function(
   sample_id_col = "FullRunName",
   format = c("long", "wide"),
   design_formula = ~1,
+  batch_col = NULL,
   family = gaussian(),
   keep_all = "default",
   ...
@@ -56,6 +61,7 @@ correct_with_omicsGMF <- function(
     .pb_require_omicsgmf_stack()
 
     format <- match.arg(format)
+    batch_col <- .omicsgmf_normalize_batch_col(batch_col)
     dots <- list(...)
     if ("ntop" %in% names(dots)) {
         warning("forcing ntop = NULL for omicsGMF correction")
@@ -72,6 +78,7 @@ correct_with_omicsGMF <- function(
                 sample_annotation = sample_annotation,
                 sample_id_col = sample_id_col,
                 design_formula = design_formula,
+                batch_col = batch_col,
                 family = family,
                 ncomponents = ncomponents
             ),
@@ -107,6 +114,7 @@ correct_with_omicsGMF <- function(
             sample_annotation = aligned_sa,
             sample_id_col = sample_id_col,
             design_formula = design_formula,
+            batch_col = batch_col,
             family = family,
             ncomponents = ncomponents
         ),
@@ -130,6 +138,7 @@ correct_with_omicsGMF <- function(
   sample_annotation,
   sample_id_col = "FullRunName",
   design_formula = ~1,
+  batch_col = NULL,
   family = gaussian(),
   ncomponents,
   gmf_args = list(),
@@ -163,13 +172,11 @@ correct_with_omicsGMF <- function(
                     call. = FALSE
                 )
             }
-            rotation_matrix <- attr(gmf_results, "rotation")
-            if (is.null(rotation_matrix)) {
-                stop("Rotation matrix attribute missing from GMF results; cannot compute corrected intensities.", call. = FALSE)
-            }
-
-            reconstructed <- gmf_results %*% t(rotation_matrix)
-            reconstructed <- t(reconstructed)
+            reconstructed <- .omicsgmf_reconstruct_corrected_matrix(
+                gmf_results = gmf_results,
+                data_matrix = data_matrix,
+                batch_col = batch_col
+            )
 
             if (!is.null(rownames(data_matrix))) {
                 rownames(reconstructed) <- rownames(data_matrix)
@@ -181,4 +188,120 @@ correct_with_omicsGMF <- function(
             reconstructed
         }
     )
+}
+
+.omicsgmf_reconstruct_corrected_matrix <- function(gmf_results, data_matrix, batch_col = NULL) {
+    rotation_matrix <- attr(gmf_results, "rotation")
+    if (is.null(rotation_matrix)) {
+        stop(
+            "Rotation matrix attribute missing from GMF results; cannot compute corrected intensities.",
+            call. = FALSE
+        )
+    }
+
+    latent_component <- t(gmf_results %*% t(rotation_matrix))
+    reconstructed <- latent_component
+
+    # If batch_col is supplied, preserve non-batch fixed-effect terms from X %*% Beta.
+    if (!is.null(batch_col)) {
+        design_terms <- .omicsgmf_extract_design_terms(gmf_results)
+        if (is.null(design_terms)) {
+            warning(
+                "Could not access omicsGMF design attributes (X/Beta); returning latent-only reconstruction."
+            )
+        } else {
+            X <- design_terms$X
+            Beta <- design_terms$Beta
+
+            dims_ok <- nrow(X) == ncol(latent_component) &&
+                ncol(Beta) == nrow(latent_component)
+            if (!dims_ok) {
+                warning(
+                    "omicsGMF design attributes are incompatible with latent dimensions; returning latent-only reconstruction."
+                )
+            } else {
+                batch_idx <- .omicsgmf_match_batch_columns(colnames(X), batch_col)
+                if (!length(batch_idx)) {
+                    warning(
+                        "`batch_col` was not found among omicsGMF design columns; returning latent-only reconstruction."
+                    )
+                } else {
+                    X_keep <- X
+                    X_keep[, batch_idx] <- 0
+                    reconstructed <- latent_component + t(X_keep %*% Beta)
+                }
+            }
+        }
+    }
+
+    storage.mode(reconstructed) <- "double"
+    reconstructed
+}
+
+.omicsgmf_extract_design_terms <- function(gmf_results) {
+    X <- attr(gmf_results, "X")
+    Beta <- attr(gmf_results, "Beta")
+    if (is.null(X) || is.null(Beta)) {
+        return(NULL)
+    }
+    X <- as.matrix(X)
+    Beta <- as.matrix(Beta)
+    if (!nrow(X) || !ncol(X) || !nrow(Beta) || !ncol(Beta)) {
+        return(NULL)
+    }
+    if (ncol(X) != nrow(Beta)) {
+        return(NULL)
+    }
+    list(X = X, Beta = Beta)
+}
+
+.omicsgmf_normalize_batch_col <- function(batch_col) {
+    if (is.null(batch_col)) {
+        return(NULL)
+    }
+
+    if (length(batch_col) != 1L) {
+        stop("`batch_col` must be NULL or a single non-empty column name.", call. = FALSE)
+    }
+
+    batch_col <- as.character(batch_col[[1]])
+    if (is.na(batch_col) || !nzchar(batch_col)) {
+        stop("`batch_col` must be NULL or a single non-empty column name.", call. = FALSE)
+    }
+
+    batch_col
+}
+
+.omicsgmf_match_batch_columns <- function(design_columns, batch_col) {
+    if (
+        is.null(design_columns) || !length(design_columns) ||
+            is.null(batch_col)
+    ) {
+        return(integer())
+    }
+
+    batch_col <- .omicsgmf_normalize_batch_col(batch_col)
+    batch_col <- gsub("`", "", batch_col, fixed = TRUE)
+    design_columns <- as.character(design_columns)
+    design_columns <- gsub("`", "", design_columns, fixed = TRUE)
+
+    # Also match interaction/function terms such as DietB:MS_batchb2 or factor(MS_batch)b2.
+    split_terms <- strsplit(design_columns, ":", fixed = TRUE)
+    has_batch <- vapply(
+        split_terms,
+        function(parts) {
+            any(vapply(
+                parts,
+                function(part) {
+                    part <- trimws(part)
+                    startsWith(part, batch_col) ||
+                        grepl(paste0("(", batch_col, ")"), part, fixed = TRUE)
+                },
+                logical(1)
+            ))
+        },
+        logical(1)
+    )
+
+    which(has_batch)
 }

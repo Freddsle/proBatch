@@ -38,6 +38,7 @@ test_that("correct_with_omicsGMF(wide): forwards parameters and preserves dimnam
                           sample_annotation,
                           sample_id_col,
                           design_formula,
+                          batch_col = NULL,
                           family,
                           ncomponents,
                           gmf_args = list(),
@@ -47,6 +48,7 @@ test_that("correct_with_omicsGMF(wide): forwards parameters and preserves dimnam
         captured$args <- list(
             sample_id_col  = sample_id_col,
             design_formula = design_formula,
+            batch_col      = batch_col,
             family         = family,
             ncomponents    = ncomponents,
             gmf_args       = gmf_args,
@@ -80,6 +82,7 @@ test_that("correct_with_omicsGMF(wide): forwards parameters and preserves dimnam
     )
     expect_identical(captured$args$sample_id_col, "FullRunName")
     expect_identical(captured$args$design_formula, stats::as.formula("~Condition"))
+    expect_null(captured$args$batch_col)
     expect_identical(captured$args$family$family, poisson()$family)
     expect_identical(captured$args$ncomponents, 3L)
     expect_identical(captured$args$gmf_args, list(name = "custom_dimred"))
@@ -112,6 +115,7 @@ test_that("correct_with_omicsGMF(long): adds preBatchCorr_* and respects keep_al
                           sample_annotation,
                           sample_id_col,
                           design_formula,
+                          batch_col = NULL,
                           family,
                           ncomponents,
                           gmf_args = list(),
@@ -121,6 +125,7 @@ test_that("correct_with_omicsGMF(long): adds preBatchCorr_* and respects keep_al
         captured$args <- list(
             sample_id_col  = sample_id_col,
             design_formula = design_formula,
+            batch_col      = batch_col,
             family         = family,
             ncomponents    = ncomponents,
             gmf_args       = gmf_args,
@@ -166,6 +171,7 @@ test_that("correct_with_omicsGMF(long): adds preBatchCorr_* and respects keep_al
         captured$sample_annotation$FullRunName,
         colnames(expected_matrix)
     )
+    expect_null(captured$args$batch_col)
     expect_identical(captured$args$gmf_args, list(name = "gmf_name"))
     expect_identical(captured$args$impute_args, list(name = "imputed_name"))
 })
@@ -278,6 +284,123 @@ test_that(".omicsgmf_correct_matrix_step reconstructs from GMF components (mocke
     expect_identical(captured$args$ncomponents, 2L)
     expect_identical(captured$args$gmf_args, list())
     expect_identical(captured$args$impute_args, list())
+})
+
+test_that(".omicsgmf_correct_matrix_step preserves non-batch design terms when batch_col is provided", {
+    testthat::skip_if_not_installed("SingleCellExperiment")
+    testthat::skip_if_not_installed("SummarizedExperiment")
+    testthat::skip_if_not_installed("S4Vectors")
+
+    m <- matrix(
+        c(1, 4, 2, 5, 3, 6),
+        nrow = 2,
+        dimnames = list(
+            c("f1", "f2"),
+            c("s1", "s2", "s3")
+        )
+    )
+
+    sa <- data.frame(
+        FullRunName = c("s2", "s1", "s3"),
+        MS_batch = c("b2", "b1", "b2"),
+        Diet = c("A", "A", "B"),
+        stringsAsFactors = FALSE
+    )
+
+    gmf_results <- matrix(
+        c(
+            1, 2,
+            3, 4,
+            5, 6
+        ),
+        nrow = 3,
+        byrow = TRUE,
+        dimnames = list(NULL, c("comp1", "comp2"))
+    )
+    rotation <- matrix(
+        c(
+            0.5, 0.1,
+            0.2, 0.4
+        ),
+        nrow = 2,
+        byrow = TRUE,
+        dimnames = list(c("f1", "f2"), c("comp1", "comp2"))
+    )
+    attr(gmf_results, "rotation") <- rotation
+
+    X <- cbind(
+        "(Intercept)" = c(1, 1, 1),
+        "DietB" = c(0, 0, 1),
+        "MS_batchb2" = c(1, 0, 1),
+        "DietB:MS_batchb2" = c(0, 0, 1)
+    )
+    Beta <- matrix(
+        c(
+            1.0, 0.5,
+            0.1, 0.2,
+            -0.3, 0.4,
+            0.7, -0.6
+        ),
+        nrow = 4,
+        byrow = TRUE
+    )
+    attr(gmf_results, "X") <- X
+    attr(gmf_results, "Beta") <- Beta
+
+    fake_sce <- SingleCellExperiment::SingleCellExperiment(
+        assays = list(dummy = matrix(0, nrow = nrow(m), ncol = ncol(m))),
+        colData = S4Vectors::DataFrame(
+            FullRunName = colnames(m)
+        )
+    )
+    SingleCellExperiment::reducedDim(fake_sce, "GMF") <- gmf_results
+
+    fake_fit <- function(data_matrix,
+                         sample_annotation,
+                         design_formula,
+                         family,
+                         ncomponents,
+                         gmf_args,
+                         impute_args) {
+        list(
+            sce = fake_sce,
+            dimred_name = "GMF",
+            imputed = matrix(NA_real_, nrow = nrow(m), ncol = ncol(m)),
+            imputed_assay = "omicsGMF_imputed"
+        )
+    }
+
+    caller_env <- parent.frame()
+    testthat::local_mocked_bindings(
+        .pb_requireNamespace = function(...) invisible(TRUE),
+        .omicsgmf_fit_and_impute = fake_fit,
+        .package = "proBatch",
+        .env = caller_env
+    )
+
+    out <- proBatch:::`.omicsgmf_correct_matrix_step`(
+        data_matrix = m,
+        sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        design_formula = ~ MS_batch + Diet,
+        batch_col = "MS_batch",
+        family = gaussian(),
+        ncomponents = 2L,
+        gmf_args = list(),
+        impute_args = list()
+    )
+
+    expect_matrix_like(out, m)
+
+    latent <- t(gmf_results %*% t(rotation))
+    X_no_batch <- X
+    X_no_batch[, "MS_batchb2"] <- 0
+    X_no_batch[, "DietB:MS_batchb2"] <- 0
+    expected <- latent + t(X_no_batch %*% Beta)
+    rownames(expected) <- rownames(m)
+    colnames(expected) <- colnames(m)
+
+    expect_equal(out, expected, tolerance = 1e-12)
 })
 
 test_that("correct_with_omicsGMF validates format argument before dispatch (mocked)", {

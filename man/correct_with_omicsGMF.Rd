@@ -13,6 +13,7 @@ correct_with_omicsGMF(
   sample_id_col = "FullRunName",
   format = c("long", "wide"),
   design_formula = ~1,
+  batch_col = NULL,
   family = gaussian(),
   keep_all = "default",
   ...
@@ -38,6 +39,11 @@ matrix in wide format.}
 
 \item{design_formula}{Formula (or character string coercible to one) used to
 build the omicsGMF design matrix from `sample_annotation`.}
+
+\item{batch_col}{Optional batch variable name present in `design_formula`.
+If provided and omicsGMF stores design attributes (`X`, `Beta`) on the
+reduced dimension, reconstruction preserves non-batch fixed effects by
+adding `X_no_batch %*% Beta` to the latent component.}
 
 \item{family}{GLM family passed to omicsGMF (default: `gaussian()`).}
 

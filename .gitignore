@@ -19,3 +19,7 @@ tmp.R
 /prep_code
 /tmp/
 data/FlashLFQData
+
+
+vignettes/batch_evaluation_metrics_files/*
+vignettes/batch_evaluation_metrics_cache/*

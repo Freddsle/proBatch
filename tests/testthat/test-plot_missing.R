@@ -50,6 +50,21 @@ pbf_multi <- proBatch:::.pb_add_assay_with_link(
     from = toy_assay
 )
 
+test_that(".pb_truncate_heatmap_labels shortens long labels by default", {
+    labels <- c(
+        "short_label",
+        "123456789012345",
+        "1234567890123456",
+        NA_character_
+    )
+
+    expect_equal(
+        .pb_truncate_heatmap_labels(labels),
+        c("short_label", "123456789012345", "1234567890...", NA_character_)
+    )
+    expect_null(.pb_truncate_heatmap_labels(NULL))
+})
+
 
 test_that("plot_NA_heatmap.default returns pheatmap", {
     skip_if_not_installed("pheatmap")
