@@ -308,6 +308,18 @@ plot_protein_corrplot <- function(data_matrix,
 #' Plot correlation of selected samples
 #'
 #' @inheritParams proBatch
+#' @param data_matrix features (in rows) vs samples (in columns) matrix, with
+#'   feature IDs in rownames and file/sample names as colnames, or a
+#'   `ProBatchFeatures` object. When `data_matrix` is a
+#'   `ProBatchFeatures` object, `pbf_name` is used (or the current assay when
+#'   `pbf_name = NULL`).
+#' @param sample_annotation data frame with sample-level metadata. When
+#'   `data_matrix` is a matrix, this argument is required. When
+#'   `data_matrix` is a `ProBatchFeatures` object and
+#'   `sample_annotation` is not provided, `as.data.frame(colData(data_matrix))`
+#'   is used.
+#' @param pbf_name Assay name used when `data_matrix` is a `ProBatchFeatures`
+#'   object. If `NULL`, [pb_current_assay()] is used.
 #' @param samples_to_plot string vector of samples in
 #' \code{data_matrix} to be used in the plot
 #' @param cluster_rows boolean values determining if rows should be clustered or \code{hclust} object
@@ -351,11 +363,13 @@ plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
                                      plot_title = sprintf(
                                          "Correlation matrix of%s samples",
                                          ifelse(is.null(samples_to_plot), "", " selected")
-                                     ), ...) {
+                                     ),
+                                     pbf_name = NULL, ...) {
     resolved <- .pb_corr_resolve_sample_input(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
-        sample_id_col = sample_id_col
+        sample_id_col = sample_id_col,
+        pbf_name = pbf_name
     )
     data_matrix <- resolved$data_matrix
     sample_annotation <- resolved$sample_annotation

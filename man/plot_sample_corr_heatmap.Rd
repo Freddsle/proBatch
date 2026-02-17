@@ -20,23 +20,25 @@ plot_sample_corr_heatmap(
   units = c("cm", "in", "mm"),
   plot_title = sprintf("Correlation matrix of\%s samples",
     ifelse(is.null(samples_to_plot), "", " selected")),
+  pbf_name = NULL,
   ...
 )
 }
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+feature IDs in rownames and file/sample names as colnames, or a
+`ProBatchFeatures` object. When `data_matrix` is a
+`ProBatchFeatures` object, `pbf_name` is used (or the current assay when
+`pbf_name = NULL`).}
 
 \item{samples_to_plot}{string vector of samples in
 \code{data_matrix} to be used in the plot}
 
-\item{sample_annotation}{data frame with:
-\enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
-  \item biological covariates
-  \item technical covariates (batches etc) }.
-  See \code{help("example_sample_annotation")}}
+\item{sample_annotation}{data frame with sample-level metadata. When
+`data_matrix` is a matrix, this argument is required. When
+`data_matrix` is a `ProBatchFeatures` object and
+`sample_annotation` is not provided, `as.data.frame(colData(data_matrix))`
+is used.}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
@@ -68,6 +70,9 @@ pdf and png format is supported}
 
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
+
+\item{pbf_name}{Assay name used when `data_matrix` is a `ProBatchFeatures`
+object. If `NULL`, [pb_current_assay()] is used.}
 
 \item{...}{parameters for the \code{\link[pheatmap]{pheatmap}} visualisation, for details see
 examples and help to corresponding functions}

@@ -299,6 +299,56 @@ test_that("plot_sample_corr_distribution() supports explicit PBF assay selection
     )
 })
 
+test_that("plot_sample_corr_heatmap() supports explicit PBF assay selection", {
+    fixture <- make_corr_pbf_fixture()
+    pbf <- fixture$pbf
+    sample_ann <- fixture$sample_ann
+
+    current_assay <- pb_current_assay(pbf)
+    raw_assay <- names(pbf)[1]
+    samples_subset <- sample_ann$FullRunName[1:6]
+
+    heatmap_default <- plot_sample_corr_heatmap(
+        pbf,
+        sample_annotation = sample_ann,
+        samples_to_plot = samples_subset,
+        sample_id_col = "FullRunName",
+        cluster_rows = TRUE,
+        cluster_cols = TRUE
+    )
+    heatmap_current <- plot_sample_corr_heatmap(
+        pbf,
+        sample_annotation = sample_ann,
+        samples_to_plot = samples_subset,
+        sample_id_col = "FullRunName",
+        cluster_rows = TRUE,
+        cluster_cols = TRUE,
+        pbf_name = current_assay
+    )
+    expect_equal(heatmap_default$tree_row$height, heatmap_current$tree_row$height)
+    expect_equal(heatmap_default$tree_col$height, heatmap_current$tree_col$height)
+
+    heatmap_raw <- plot_sample_corr_heatmap(
+        pbf,
+        sample_annotation = sample_ann,
+        samples_to_plot = samples_subset,
+        sample_id_col = "FullRunName",
+        cluster_rows = TRUE,
+        cluster_cols = TRUE,
+        pbf_name = raw_assay
+    )
+    heatmap_raw_expected <- plot_sample_corr_heatmap(
+        pb_assay_matrix(pbf, assay = raw_assay),
+        sample_annotation = sample_ann,
+        samples_to_plot = samples_subset,
+        sample_id_col = "FullRunName",
+        cluster_rows = TRUE,
+        cluster_cols = TRUE
+    )
+    expect_equal(heatmap_raw$tree_row$height, heatmap_raw_expected$tree_row$height)
+    expect_equal(heatmap_raw$tree_col$height, heatmap_raw_expected$tree_col$height)
+})
+
 test_that("calculate_peptide_corr_distr() supports explicit PBF assay selection", {
     fixture <- make_corr_pbf_fixture()
     pbf <- fixture$pbf
