@@ -122,6 +122,13 @@ plot_NA_heatmap.default <- function(
     if (!"fontsize" %in% names(plot_params)) plot_params$fontsize <- 10
     if (!"fontsize_row" %in% names(plot_params)) plot_params$fontsize_row <- 0.6 * plot_params$fontsize
     if (!"fontsize_col" %in% names(plot_params)) plot_params$fontsize_col <- 0.6 * plot_params$fontsize
+    if (!"labels_row" %in% names(plot_params)) {
+        plot_params$labels_row <- .pb_truncate_heatmap_labels(rownames(binary_matrix))
+    }
+    if (!"labels_col" %in% names(plot_params) && show_column_names) {
+        default_col_labels <- if (is.null(labels_col)) colnames(binary_matrix) else labels_col
+        plot_params$labels_col <- .pb_truncate_heatmap_labels(default_col_labels)
+    }
 
     res <- do.call(pheatmap, c(
         list(
@@ -129,7 +136,6 @@ plot_NA_heatmap.default <- function(
             cluster_rows = cluster_features,
             cluster_cols = cluster_samples,
             show_colnames = show_column_names,
-            labels_col = labels_col,
             color = c(missing_color, valid_color),
             breaks = c(-0.5, 0.5, 1.5),
             legend_breaks = c(0, 1),
@@ -506,6 +512,22 @@ plot_NA_frequency.ProBatchFeatures <- function(
         binary <- binary[keep, , drop = FALSE]
     }
     binary
+}
+
+.pb_truncate_heatmap_labels <- function(labels,
+                                        max_chars = 15L,
+                                        keep_chars = 10L) {
+    if (is.null(labels)) {
+        return(NULL)
+    }
+
+    labels <- as.character(labels)
+    is_long <- !is.na(labels) & nchar(labels, type = "chars") > max_chars
+    if (any(is_long)) {
+        labels[is_long] <- paste0(substr(labels[is_long], 1L, keep_chars), "...")
+    }
+
+    labels
 }
 
 .pb_prepare_sample_annotation <- function(sample_annotation,
