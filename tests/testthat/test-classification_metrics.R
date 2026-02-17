@@ -68,6 +68,59 @@ test_that("classification metrics uses kmeans fallback when no clusters supplied
     expect_true(is.finite(metrics$silhouette))
 })
 
+test_that("classification metrics MCC is invariant to factor level order", {
+    sample_ids <- paste0("S", 1:6)
+    data_matrix <- matrix(
+        rnorm(24),
+        nrow = 4,
+        dimnames = list(paste0("F", 1:4), sample_ids)
+    )
+    data_matrix[, 1:3] <- data_matrix[, 1:3] + 2
+
+    known_vals <- rep(c("A", "B"), each = 3)
+    sample_annotation <- data.frame(
+        FullRunName = sample_ids,
+        known = factor(known_vals, levels = c("A", "B")),
+        cluster = factor(known_vals, levels = c("B", "A"))
+    )
+
+    metrics <- calculate_classification_metrics(
+        data_matrix,
+        sample_annotation,
+        known_col = "known",
+        cluster_col = "cluster"
+    )
+
+    expect_equal(metrics$ARI, 1)
+    expect_equal(metrics$MCC, 1)
+})
+
+test_that("classification metrics MCC handles non-square confusion tables", {
+    sample_ids <- paste0("S", 1:6)
+    data_matrix <- matrix(
+        rnorm(24),
+        nrow = 4,
+        dimnames = list(paste0("F", 1:4), sample_ids)
+    )
+
+    sample_annotation <- data.frame(
+        FullRunName = sample_ids,
+        known = rep(c("A", "B"), each = 3),
+        cluster = c("C1", "C2", "C3", "C1", "C2", "C3"),
+        stringsAsFactors = FALSE
+    )
+
+    expect_no_warning({
+        metrics <- calculate_classification_metrics(
+            data_matrix,
+            sample_annotation,
+            known_col = "known",
+            cluster_col = "cluster"
+        )
+    })
+    expect_true(is.finite(metrics$MCC) || is.na(metrics$MCC))
+})
+
 test_that("classification metrics supports multiple known columns", {
     sample_ids <- paste0("S", 1:6)
     data_matrix <- matrix(

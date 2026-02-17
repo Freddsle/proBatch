@@ -390,8 +390,25 @@ calculate_classification_metrics.ProBatchFeatures <- function(data_matrix,
     if (length(confusion) == 0L) {
         return(NA_real_)
     }
+
+    row_nms <- rownames(confusion)
+    col_nms <- colnames(confusion)
+    if (!is.null(row_nms) &&
+        !is.null(col_nms) &&
+        length(row_nms) == length(col_nms) &&
+        setequal(row_nms, col_nms) &&
+        !identical(row_nms, col_nms)) {
+        confusion <- confusion[, row_nms, drop = FALSE]
+    }
+
     t_k <- rowSums(confusion)
     p_k <- colSums(confusion)
+    if (length(t_k) < length(p_k)) {
+        t_k <- c(t_k, rep(0, length(p_k) - length(t_k)))
+    } else if (length(p_k) < length(t_k)) {
+        p_k <- c(p_k, rep(0, length(t_k) - length(p_k)))
+    }
+
     c <- sum(diag(confusion))
     s <- sum(confusion)
     numerator <- (c * s) - sum(p_k * t_k)
