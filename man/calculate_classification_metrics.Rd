@@ -42,7 +42,8 @@ clustering is used.}
 \item{sample_annotation}{Data frame with sample-level metadata. Must include
 `known_col` (and optionally `cluster_col`).}
 
-\item{known_col}{Column in `sample_annotation` with known class labels.}
+\item{known_col}{Column name(s) in `sample_annotation` with known class
+labels.}
 
 \item{cluster_col}{Optional column in `sample_annotation` with provided
 cluster labels. When `NULL`, k-means is used to derive clusters.}
@@ -62,15 +63,17 @@ computation.}
 \item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
 }
 \value{
-A one-row data frame with `ARI`, `MCC`, and `silhouette` columns.
-  The result carries the `pb_assignments` attribute, a data frame with
-  `sample_id`, `known`, and `predicted` labels.
+A data frame with one row per evaluated `known_col`, including
+  classification summary metrics and metadata. The result carries the
+  `pb_assignments` attribute: a data frame for a single `known_col`, or a
+  named list of data frames when multiple `known_col` values are evaluated.
 }
 \description{
 Compute clustering agreement metrics using known class labels and either
 provided cluster labels or k-means clustering when no cluster column is
-supplied. The function returns a one-row data frame with ARI, MCC, and the
-mean silhouette width. Sample-level assignments are attached as an attribute.
+supplied. The function returns one row per requested `known_col` with ARI,
+MCC, and mean silhouette width. Sample-level assignments are attached as an
+attribute.
 }
 \examples{
 data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")

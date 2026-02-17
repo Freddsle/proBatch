@@ -2,14 +2,16 @@
 #'
 #' Compute clustering agreement metrics using known class labels and either
 #' provided cluster labels or k-means clustering when no cluster column is
-#' supplied. The function returns a one-row data frame with ARI, MCC, and the
-#' mean silhouette width. Sample-level assignments are attached as an attribute.
+#' supplied. The function returns one row per requested `known_col` with ARI,
+#' MCC, and mean silhouette width. Sample-level assignments are attached as an
+#' attribute.
 #'
 #' @inheritParams proBatch
 #' @param data_matrix Input object: matrix-like data or a `ProBatchFeatures` instance.
 #' @param sample_annotation Data frame with sample-level metadata. Must include
 #'   `known_col` (and optionally `cluster_col`).
-#' @param known_col Column in `sample_annotation` with known class labels.
+#' @param known_col Column name(s) in `sample_annotation` with known class
+#'   labels.
 #' @param cluster_col Optional column in `sample_annotation` with provided
 #'   cluster labels. When `NULL`, k-means is used to derive clusters.
 #' @param k Integer; number of clusters for k-means. If `NULL`, the number of
@@ -22,9 +24,10 @@
 #' @param ... Additional arguments forwarded to [stats::kmeans()] when k-means
 #'   clustering is used.
 #'
-#' @return A one-row data frame with `ARI`, `MCC`, and `silhouette` columns.
-#'   The result carries the `pb_assignments` attribute, a data frame with
-#'   `sample_id`, `known`, and `predicted` labels.
+#' @return A data frame with one row per evaluated `known_col`, including
+#'   classification summary metrics and metadata. The result carries the
+#'   `pb_assignments` attribute: a data frame for a single `known_col`, or a
+#'   named list of data frames when multiple `known_col` values are evaluated.
 #' @export
 #'
 #' @examples
@@ -51,9 +54,10 @@ calculate_classification_metrics.default <- function(data_matrix,
                                                      fill_the_missing = -1,
                                                      dist_method = "euclidean",
                                                      ...) {
-    if (missing(known_col) || is.null(known_col) || !nzchar(known_col)) {
+    if (missing(known_col) || is.null(known_col)) {
         stop("`known_col` must be provided.")
     }
+    known_cols <- .pb_normalize_known_cols(known_col)
 
     if (is(data_matrix, "SummarizedExperiment")) {
         data_matrix <- assay(data_matrix)
@@ -77,6 +81,143 @@ calculate_classification_metrics.default <- function(data_matrix,
         stop("`sample_annotation` must be provided.")
     }
 
+    if (length(known_cols) > 1L) {
+        missing_cols <- setdiff(known_cols, names(sample_annotation))
+        if (length(missing_cols)) {
+            stop(
+                "Known label column(s) not found in sample_annotation: ",
+                paste(missing_cols, collapse = ", "),
+                "."
+            )
+        }
+
+        metrics_list <- vector("list", length(known_cols))
+        assignments_list <- vector("list", length(known_cols))
+        names(metrics_list) <- known_cols
+        names(assignments_list) <- known_cols
+
+        for (i in seq_along(known_cols)) {
+            known_col_i <- known_cols[[i]]
+            res <- .pb_calculate_classification_metrics_single(
+                data_matrix = data_matrix,
+                sample_annotation = sample_annotation,
+                sample_ids = sample_ids,
+                known_col = known_col_i,
+                cluster_col = cluster_col,
+                k = k,
+                fill_the_missing = fill_the_missing,
+                dist_method = dist_method,
+                ...
+            )
+            metrics_list[[i]] <- res
+            assignments_list[[i]] <- attr(res, "pb_assignments")
+        }
+
+        metrics <- do.call(rbind, metrics_list)
+        rownames(metrics) <- NULL
+        attr(metrics, "pb_assignments") <- assignments_list
+        return(metrics)
+    }
+
+    .pb_calculate_classification_metrics_single(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        sample_ids = sample_ids,
+        known_col = known_cols[[1]],
+        cluster_col = cluster_col,
+        k = k,
+        fill_the_missing = fill_the_missing,
+        dist_method = dist_method,
+        ...
+    )
+}
+
+#' @rdname calculate_classification_metrics
+#' @method calculate_classification_metrics ProBatchFeatures
+#' @export
+calculate_classification_metrics.ProBatchFeatures <- function(data_matrix,
+                                                              pbf_name = NULL,
+                                                              sample_annotation = NULL,
+                                                              known_col,
+                                                              cluster_col = NULL,
+                                                              sample_id_col = "FullRunName",
+                                                              k = NULL,
+                                                              fill_the_missing = -1,
+                                                              dist_method = "euclidean",
+                                                              ...) {
+    object <- data_matrix
+    prep <- .pb_prepare_multi_assay(
+        object = object,
+        pbf_name = pbf_name,
+        dots = list(...),
+        plot_title = NULL,
+        default_title_fun = function(x) x
+    )
+    assays <- prep$assays
+    split_arg <- prep$split_arg
+
+    default_sample_annotation <- .pb_default_sample_annotation(
+        object = object,
+        sample_id_col = sample_id_col
+    )
+    sample_ann_list <- split_arg(sample_annotation)
+
+    metrics_list <- vector("list", length(assays))
+    assignments_list <- vector("list", length(assays))
+    names(metrics_list) <- assays
+    names(assignments_list) <- assays
+
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        dm <- pb_assay_matrix(object, assay_nm)
+        sample_ann <- sample_ann_list[[i]]
+        if (is.null(sample_ann)) {
+            sample_ann <- default_sample_annotation
+        }
+
+        res <- calculate_classification_metrics.default(
+            data_matrix = dm,
+            sample_annotation = sample_ann,
+            known_col = known_col,
+            cluster_col = cluster_col,
+            sample_id_col = sample_id_col,
+            k = k,
+            fill_the_missing = fill_the_missing,
+            dist_method = dist_method,
+            ...
+        )
+        res$assay <- assay_nm
+        metrics_list[[i]] <- res
+        assignments_list[[i]] <- attr(res, "pb_assignments")
+    }
+
+    metrics <- do.call(rbind, metrics_list)
+    rownames(metrics) <- NULL
+    attr(metrics, "pb_assignments") <- assignments_list
+
+    metrics
+}
+
+.pb_normalize_known_cols <- function(known_col) {
+    vals <- unique(as.character(known_col))
+    vals <- vals[!is.na(vals)]
+    vals <- trimws(vals)
+    vals <- vals[nzchar(vals)]
+    if (!length(vals)) {
+        stop("`known_col` must be provided.")
+    }
+    vals
+}
+
+.pb_calculate_classification_metrics_single <- function(data_matrix,
+                                                        sample_annotation,
+                                                        sample_ids,
+                                                        known_col,
+                                                        cluster_col = NULL,
+                                                        k = NULL,
+                                                        fill_the_missing = -1,
+                                                        dist_method = "euclidean",
+                                                        ...) {
     if (!known_col %in% names(sample_annotation)) {
         stop("Known label column '", known_col, "' not found in sample_annotation.")
     }
@@ -187,6 +328,7 @@ calculate_classification_metrics.default <- function(data_matrix,
     )
 
     metrics <- data.frame(
+        known_col = known_col,
         ARI = ari,
         MCC = mcc,
         silhouette = silhouette_mean,
@@ -205,72 +347,6 @@ calculate_classification_metrics.default <- function(data_matrix,
         stringsAsFactors = FALSE
     )
     attr(metrics, "pb_assignments") <- assignments
-
-    metrics
-}
-
-#' @rdname calculate_classification_metrics
-#' @method calculate_classification_metrics ProBatchFeatures
-#' @export
-calculate_classification_metrics.ProBatchFeatures <- function(data_matrix,
-                                                              pbf_name = NULL,
-                                                              sample_annotation = NULL,
-                                                              known_col,
-                                                              cluster_col = NULL,
-                                                              sample_id_col = "FullRunName",
-                                                              k = NULL,
-                                                              fill_the_missing = -1,
-                                                              dist_method = "euclidean",
-                                                              ...) {
-    object <- data_matrix
-    prep <- .pb_prepare_multi_assay(
-        object = object,
-        pbf_name = pbf_name,
-        dots = list(...),
-        plot_title = NULL,
-        default_title_fun = function(x) x
-    )
-    assays <- prep$assays
-    split_arg <- prep$split_arg
-
-    default_sample_annotation <- .pb_default_sample_annotation(
-        object = object,
-        sample_id_col = sample_id_col
-    )
-    sample_ann_list <- split_arg(sample_annotation)
-
-    metrics_list <- vector("list", length(assays))
-    assignments_list <- vector("list", length(assays))
-    names(metrics_list) <- assays
-    names(assignments_list) <- assays
-
-    for (i in seq_along(assays)) {
-        assay_nm <- assays[[i]]
-        dm <- pb_assay_matrix(object, assay_nm)
-        sample_ann <- sample_ann_list[[i]]
-        if (is.null(sample_ann)) {
-            sample_ann <- default_sample_annotation
-        }
-
-        res <- calculate_classification_metrics.default(
-            data_matrix = dm,
-            sample_annotation = sample_ann,
-            known_col = known_col,
-            cluster_col = cluster_col,
-            sample_id_col = sample_id_col,
-            k = k,
-            fill_the_missing = fill_the_missing,
-            dist_method = dist_method,
-            ...
-        )
-        res$assay <- assay_nm
-        metrics_list[[i]] <- res
-        assignments_list[[i]] <- attr(res, "pb_assignments")
-    }
-
-    metrics <- do.call(rbind, metrics_list)
-    rownames(metrics) <- NULL
-    attr(metrics, "pb_assignments") <- assignments_list
 
     metrics
 }
