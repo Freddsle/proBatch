@@ -107,11 +107,15 @@ plot_corr_matrix <- function(corr_matrix,
 .pb_corr_resolve_feature_input <- function(data_matrix,
                                            peptide_annotation,
                                            feature_id_col,
+                                           pbf_name = NULL,
                                            peptide_annotation_missing = FALSE,
                                            require_annotation = FALSE) {
     if (is(data_matrix, "ProBatchFeatures")) {
         object <- data_matrix
-        assay_name <- .pb_resolve_assay_for_input(object)
+        assay_name <- .pb_resolve_assay_for_input(
+            object = object,
+            pbf_name = pbf_name
+        )
         data_matrix <- pb_assay_matrix(object, assay = assay_name)
         peptide_annotation <- .pb_default_feature_annotation(
             object = object,
@@ -769,6 +773,18 @@ get_peptide_corr_df <- function(peptide_cor, peptide_annotation,
 #' Calculate peptide correlation between and within peptides of one protein
 #'
 #' @inheritParams proBatch
+#' @param data_matrix features (in rows) vs samples (in columns) matrix, with
+#'   feature IDs in rownames and file/sample names as colnames, or a
+#'   `ProBatchFeatures` object. When `data_matrix` is a
+#'   `ProBatchFeatures` object, `pbf_name` is used (or the current assay when
+#'   `pbf_name = NULL`).
+#' @param peptide_annotation long format data frame with peptide ID and their
+#'   corresponding protein and/or gene annotations. When `data_matrix` is a
+#'   matrix, this argument is required. When `data_matrix` is a
+#'   `ProBatchFeatures` object and `peptide_annotation` is not provided,
+#'   rowData from the selected assay is used.
+#' @param pbf_name Assay name used when `data_matrix` is a `ProBatchFeatures`
+#'   object. If `NULL`, [pb_current_assay()] is used.
 #'
 #' @return dataframe with peptide correlation coefficients
 #' that are suggested to use for plotting in
@@ -791,13 +807,15 @@ get_peptide_corr_df <- function(peptide_cor, peptide_annotation,
 #'
 calculate_peptide_corr_distr <- function(data_matrix, peptide_annotation,
                                          protein_col = "ProteinName",
-                                         feature_id_col = "peptide_group_label") {
+                                         feature_id_col = "peptide_group_label",
+                                         pbf_name = NULL) {
     peptide_annotation_missing <- missing(peptide_annotation)
 
     resolved <- .pb_corr_resolve_feature_input(
         data_matrix = data_matrix,
         peptide_annotation = peptide_annotation,
         feature_id_col = feature_id_col,
+        pbf_name = pbf_name,
         peptide_annotation_missing = peptide_annotation_missing,
         require_annotation = TRUE
     )
@@ -832,6 +850,18 @@ calculate_peptide_corr_distr <- function(data_matrix, peptide_annotation,
 #' protein and between proteins
 #'
 #' @inheritParams proBatch
+#' @param data_matrix features (in rows) vs samples (in columns) matrix, with
+#'   feature IDs in rownames and file/sample names as colnames, or a
+#'   `ProBatchFeatures` object. When `data_matrix` is a
+#'   `ProBatchFeatures` object, `pbf_name` is used (or the current assay when
+#'   `pbf_name = NULL`).
+#' @param peptide_annotation long format data frame with peptide ID and their
+#'   corresponding protein and/or gene annotations. When `data_matrix` is a
+#'   matrix, this argument is required. When `data_matrix` is a
+#'   `ProBatchFeatures` object and `peptide_annotation` is not provided,
+#'   rowData from the selected assay is used.
+#' @param pbf_name Assay name used when `data_matrix` is a `ProBatchFeatures`
+#'   object. If `NULL`, [pb_current_assay()] is used.
 #' @param corr_distribution data frame with peptide correlation distribution
 #'
 #' @return \code{ggplot} object (violin plot of peptide correlation)
@@ -857,13 +887,15 @@ plot_peptide_corr_distribution <- function(data_matrix, peptide_annotation,
                                            filename = NULL, width = NA, height = NA,
                                            units = c("cm", "in", "mm"),
                                            plot_title = "Distribution of peptide correlation",
-                                           theme = "classic") {
+                                           theme = "classic",
+                                           pbf_name = NULL) {
     peptide_annotation_missing <- missing(peptide_annotation)
 
     resolved <- .pb_corr_resolve_feature_input(
         data_matrix = data_matrix,
         peptide_annotation = peptide_annotation,
         feature_id_col = feature_id_col,
+        pbf_name = pbf_name,
         peptide_annotation_missing = peptide_annotation_missing,
         require_annotation = TRUE
     )

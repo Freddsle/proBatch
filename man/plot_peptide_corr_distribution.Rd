@@ -15,7 +15,8 @@ plot_peptide_corr_distribution(
   height = NA,
   units = c("cm", "in", "mm"),
   plot_title = "Distribution of peptide correlation",
-  theme = "classic"
+  theme = "classic",
+  pbf_name = NULL
 )
 
 plot_peptide_corr_distribution.corrDF(
@@ -31,13 +32,16 @@ plot_peptide_corr_distribution.corrDF(
 }
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+feature IDs in rownames and file/sample names as colnames, or a
+`ProBatchFeatures` object. When `data_matrix` is a
+`ProBatchFeatures` object, `pbf_name` is used (or the current assay when
+`pbf_name = NULL`).}
 
 \item{peptide_annotation}{long format data frame with peptide ID and their
-corresponding protein and/or gene annotations.
-See \code{help("example_peptide_annotation")}.}
+corresponding protein and/or gene annotations. When `data_matrix` is a
+matrix, this argument is required. When `data_matrix` is a
+`ProBatchFeatures` object and `peptide_annotation` is not provided,
+rowData from the selected assay is used.}
 
 \item{protein_col}{column where protein names are specified}
 
@@ -61,6 +65,9 @@ pdf and png format is supported}
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
+
+\item{pbf_name}{Assay name used when `data_matrix` is a `ProBatchFeatures`
+object. If `NULL`, [pb_current_assay()] is used.}
 
 \item{corr_distribution}{data frame with peptide correlation distribution}
 

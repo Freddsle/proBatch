@@ -299,6 +299,82 @@ test_that("plot_sample_corr_distribution() supports explicit PBF assay selection
     )
 })
 
+test_that("calculate_peptide_corr_distr() supports explicit PBF assay selection", {
+    fixture <- make_corr_pbf_fixture()
+    pbf <- fixture$pbf
+    peptide_ann <- fixture$peptide_ann
+
+    current_assay <- pb_current_assay(pbf)
+    raw_assay <- names(pbf)[1]
+
+    corr_default <- calculate_peptide_corr_distr(
+        pbf,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene"
+    )
+    corr_current <- calculate_peptide_corr_distr(
+        pbf,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene",
+        pbf_name = current_assay
+    )
+    expect_equal(corr_default$correlation, corr_current$correlation)
+
+    corr_raw <- calculate_peptide_corr_distr(
+        pbf,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene",
+        pbf_name = raw_assay
+    )
+    corr_raw_expected <- calculate_peptide_corr_distr(
+        pb_assay_matrix(pbf, assay = raw_assay),
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene"
+    )
+    expect_equal(corr_raw$correlation, corr_raw_expected$correlation)
+})
+
+test_that("plot_peptide_corr_distribution() supports explicit PBF assay selection", {
+    fixture <- make_corr_pbf_fixture()
+    pbf <- fixture$pbf
+    peptide_ann <- fixture$peptide_ann
+
+    current_assay <- pb_current_assay(pbf)
+    raw_assay <- names(pbf)[1]
+
+    plot_default <- plot_peptide_corr_distribution(
+        pbf,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene"
+    )
+    plot_current <- plot_peptide_corr_distribution(
+        pbf,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene",
+        pbf_name = current_assay
+    )
+    expect_equal(
+        plot_default$plot_env$corr_distribution$correlation,
+        plot_current$plot_env$corr_distribution$correlation
+    )
+
+    plot_raw <- plot_peptide_corr_distribution(
+        pbf,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene",
+        pbf_name = raw_assay
+    )
+    plot_raw_expected <- plot_peptide_corr_distribution(
+        pb_assay_matrix(pbf, assay = raw_assay),
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene"
+    )
+    expect_equal(
+        plot_raw$plot_env$corr_distribution$correlation,
+        plot_raw_expected$plot_env$corr_distribution$correlation
+    )
+})
+
 test_that("peptide correlation diagnostics accept PBF with rowname-only annotation", {
     fixture <- make_corr_pbf_fixture()
     pbf <- fixture$pbf

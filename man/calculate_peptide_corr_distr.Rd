@@ -8,18 +8,22 @@ calculate_peptide_corr_distr(
   data_matrix,
   peptide_annotation,
   protein_col = "ProteinName",
-  feature_id_col = "peptide_group_label"
+  feature_id_col = "peptide_group_label",
+  pbf_name = NULL
 )
 }
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+feature IDs in rownames and file/sample names as colnames, or a
+`ProBatchFeatures` object. When `data_matrix` is a
+`ProBatchFeatures` object, `pbf_name` is used (or the current assay when
+`pbf_name = NULL`).}
 
 \item{peptide_annotation}{long format data frame with peptide ID and their
-corresponding protein and/or gene annotations.
-See \code{help("example_peptide_annotation")}.}
+corresponding protein and/or gene annotations. When `data_matrix` is a
+matrix, this argument is required. When `data_matrix` is a
+`ProBatchFeatures` object and `peptide_annotation` is not provided,
+rowData from the selected assay is used.}
 
 \item{protein_col}{column where protein names are specified}
 
@@ -27,6 +31,9 @@ See \code{help("example_peptide_annotation")}.}
 ID used in the long format representation \code{df_long}. In the wide
 formatted representation \code{data_matrix} this corresponds to the row
 names.}
+
+\item{pbf_name}{Assay name used when `data_matrix` is a `ProBatchFeatures`
+object. If `NULL`, [pb_current_assay()] is used.}
 }
 \value{
 dataframe with peptide correlation coefficients
