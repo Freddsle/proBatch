@@ -461,6 +461,15 @@ get_sample_corr_df <- function(cor_proteome, sample_annotation,
 #' as replicated/same_batch/unrelated in output columns (see "Value").
 #'
 #' @inheritParams proBatch
+#' @param data_matrix features (in rows) vs samples (in columns) matrix, with
+#'   feature IDs in rownames and file/sample names as colnames, or a
+#'   `ProBatchFeatures` object. When `data_matrix` is a
+#'   `ProBatchFeatures` object, the current assay is used.
+#' @param sample_annotation data frame with sample-level metadata. When
+#'   `data_matrix` is a matrix, this argument is required. When
+#'   `data_matrix` is a `ProBatchFeatures` object and
+#'   `sample_annotation` is not provided, `as.data.frame(colData(data_matrix))`
+#'   is used.
 #' @param repeated_samples vector of sample IDs to evaluate, if \code{NULL},
 #' all samples are taken into account for plotting
 #' @param biospecimen_id_col column in \code{sample_annotation}
@@ -551,6 +560,15 @@ calculate_sample_corr_distr <- function(data_matrix, sample_annotation,
 #' vs non-related sample correlation
 #'
 #' @inheritParams proBatch
+#' @param data_matrix features (in rows) vs samples (in columns) matrix, with
+#'   feature IDs in rownames and file/sample names as colnames, or a
+#'   `ProBatchFeatures` object. When `data_matrix` is a
+#'   `ProBatchFeatures` object, the current assay is used.
+#' @param sample_annotation data frame with sample-level metadata. When
+#'   `data_matrix` is a matrix, this argument is required. When
+#'   `data_matrix` is a `ProBatchFeatures` object and
+#'   `sample_annotation` is not provided, `as.data.frame(colData(data_matrix))`
+#'   is used.
 #' @param repeated_samples if \code{NULL}, correlation of all samples is plotted
 #' @param biospecimen_id_col column in \code{sample_annotation}
 #' that captures the biological sample,

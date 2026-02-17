@@ -16,15 +16,15 @@ calculate_sample_corr_distr(
 }
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+feature IDs in rownames and file/sample names as colnames, or a
+`ProBatchFeatures` object. When `data_matrix` is a
+`ProBatchFeatures` object, the current assay is used.}
 
-\item{sample_annotation}{data frame with:
-\enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
-  \item biological covariates
-  \item technical covariates (batches etc) }.
-  See \code{help("example_sample_annotation")}}
+\item{sample_annotation}{data frame with sample-level metadata. When
+`data_matrix` is a matrix, this argument is required. When
+`data_matrix` is a `ProBatchFeatures` object and
+`sample_annotation` is not provided, `as.data.frame(colData(data_matrix))`
+is used.}
 
 \item{repeated_samples}{vector of sample IDs to evaluate, if \code{NULL},
 all samples are taken into account for plotting}
