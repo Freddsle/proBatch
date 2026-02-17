@@ -91,14 +91,8 @@ plot_intragroup_variation.default <- function(data_matrix,
         pmad_diff = pmad_diff,
         pev_diff = pev_diff
     )
-    if (identical(metric_info$name, "correlation") && isTRUE(pcv_diff)) {
-        pcv_info <- .pb_intragroup_metric_setup(
-            metrics = "PCV",
-            correlation_method = correlation_method,
-            pcv_diff = pcv_diff,
-            pmad_diff = pmad_diff,
-            pev_diff = pev_diff
-        )
+    metric_names <- metric_info$names
+    if ("correlation" %in% metric_names && isTRUE(pcv_diff) && !("PCV" %in% metric_names)) {
         suppressWarnings(
             suppressMessages(
                 try(
@@ -112,8 +106,8 @@ plot_intragroup_variation.default <- function(data_matrix,
                         assay_label = assay_label,
                         assay_display = plot_title,
                         plot_title = plot_title,
-                        call_info = pcv_info$call,
-                        metric_name = pcv_info$name,
+                        call_info = metric_info$calls[["PCV"]],
+                        metric_name = "PCV",
                         path_to_save_results = NULL
                     ),
                     silent = TRUE
@@ -122,31 +116,51 @@ plot_intragroup_variation.default <- function(data_matrix,
         )
     }
 
-    collect <- .pb_intragroup_process_matrix(
-        data_matrix = data_matrix,
-        sample_annotation = sample_annotation,
-        sample_id_col = sample_id_col,
-        feature_id_col = feature_id_col,
-        fill_the_missing = fill_the_missing,
-        group_cols = group_cols,
-        assay_label = assay_label,
-        assay_display = plot_title,
-        plot_title = plot_title,
-        call_info = metric_info$call,
-        metric_name = metric_info$name,
-        path_to_save_results = path_to_save_results
-    )
+    metric_plots <- list()
+    metrics_export <- list()
+    saved_paths <- list()
+    for (metric_nm in metric_names) {
+        collect <- .pb_intragroup_process_matrix(
+            data_matrix = data_matrix,
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
+            feature_id_col = feature_id_col,
+            fill_the_missing = fill_the_missing,
+            group_cols = group_cols,
+            assay_label = assay_label,
+            assay_display = plot_title,
+            plot_title = plot_title,
+            call_info = metric_info$calls[[metric_nm]],
+            metric_name = metric_nm,
+            path_to_save_results = path_to_save_results
+        )
 
-    intragroup_plot <- .pb_build_intragroup_plot(
-        data = collect$data,
-        metric_label = metric_info$title,
-        group_levels = group_cols,
-        base_size = base_size,
-        facet_ncol = metric_plot_ncol
-    )
+        metric_plots[[metric_nm]] <- .pb_build_intragroup_plot(
+            data = collect$data,
+            metric_label = metric_info$titles[[metric_nm]],
+            group_levels = group_cols,
+            base_size = base_size,
+            facet_ncol = metric_plot_ncol
+        )
+        metrics_export[[metric_nm]] <- collect$metrics[[metric_nm]]
+        if (!is.null(collect$saved_files) && metric_nm %in% names(collect$saved_files)) {
+            saved_paths[[metric_nm]] <- collect$saved_files[[metric_nm]]
+        }
+    }
 
-    attr(intragroup_plot, "pb_intragroup_metrics") <- collect$metrics
-    attr(intragroup_plot, "pb_intragroup_saved_files") <- collect$saved_files
+    intragroup_plot <- .pb_arrange_plot_list(
+        plot_list = metric_plots,
+        convert_fun = ggplot2::ggplotGrob,
+        draw = FALSE,
+        plot_ncol = metric_plot_ncol,
+        return_gridExtra = FALSE
+    )
+    if (!length(saved_paths)) {
+        saved_paths <- NULL
+    }
+
+    attr(intragroup_plot, "pb_intragroup_metrics") <- metrics_export
+    attr(intragroup_plot, "pb_intragroup_saved_files") <- saved_paths
 
     save_ggplot(filename, units, width, height, intragroup_plot)
 
@@ -217,6 +231,7 @@ plot_intragroup_variation.ProBatchFeatures <- function(data_matrix,
         pmad_diff = pmad_diff_arg,
         pev_diff = pev_diff_arg
     )
+    metric_names <- metric_info$names
 
     default_sample_annotation <- .pb_default_sample_annotation(
         object = object,
@@ -225,74 +240,95 @@ plot_intragroup_variation.ProBatchFeatures <- function(data_matrix,
     )
     sample_ann_list <- split_arg(sample_annotation)
 
-    data_pieces <- vector("list", length(assays))
     metrics_export <- vector("list", length(assays))
     names(metrics_export) <- assays
     saved_paths <- vector("list", length(assays))
     names(saved_paths) <- assays
-
-    for (i in seq_along(assays)) {
-        assay_nm <- assays[[i]]
-        dm <- pb_assay_matrix(object, assay_nm)
-        sample_ann <- sample_ann_list[[i]]
-        if (is.null(sample_ann)) {
-            sample_ann <- default_sample_annotation
-        }
-        sample_ann <- as.data.frame(sample_ann, stringsAsFactors = FALSE)
-
-        display_label <- titles[[i]]
-        if (is.null(display_label) || !length(display_label)) {
-            display_label <- assay_nm
-        } else {
-            display_label <- as.character(display_label)[1]
-            if (!nzchar(display_label)) {
-                display_label <- assay_nm
-            }
-        }
-
-        assay_path <- NULL
-        if (!is.null(path_to_save_results)) {
-            assay_path <- file.path(path_to_save_results, assay_nm)
-        }
-
-        collect <- .pb_intragroup_process_matrix(
-            data_matrix = dm,
-            sample_annotation = sample_ann,
-            sample_id_col = sample_id_col,
-            feature_id_col = feature_id_col,
-            fill_the_missing = fill_the_missing,
-            group_cols = group_cols,
-            assay_label = assay_nm,
-            assay_display = display_label,
-            plot_title = titles[[i]],
-            call_info = metric_info$call,
-            metric_name = metric_info$name,
-            path_to_save_results = assay_path
-        )
-
-        data_pieces[[i]] <- collect$data
-        metrics_export[[i]] <- collect$metrics
-        saved_paths[[i]] <- collect$saved_files
-    }
-
-    combined_df <- dplyr::bind_rows(data_pieces)
-    if (!nrow(combined_df)) {
-        stop("No data available to plot intragroup variation.")
-    }
+    metric_plots <- list()
 
     facet_cols <- plot_ncol
     if (is.null(facet_cols)) {
         facet_cols <- metric_plot_ncol
     }
 
-    combined_plot <- .pb_build_intragroup_plot(
-        data = combined_df,
-        metric_label = metric_info$title,
-        group_levels = group_cols,
-        base_size = base_size,
-        facet_ncol = facet_cols,
-        shared_title = shared_title
+    for (metric_nm in metric_names) {
+        data_pieces <- vector("list", length(assays))
+
+        for (i in seq_along(assays)) {
+            assay_nm <- assays[[i]]
+            dm <- pb_assay_matrix(object, assay_nm)
+            sample_ann <- sample_ann_list[[i]]
+            if (is.null(sample_ann)) {
+                sample_ann <- default_sample_annotation
+            }
+            sample_ann <- as.data.frame(sample_ann, stringsAsFactors = FALSE)
+
+            display_label <- titles[[i]]
+            if (is.null(display_label) || !length(display_label)) {
+                display_label <- assay_nm
+            } else {
+                display_label <- as.character(display_label)[1]
+                if (!nzchar(display_label)) {
+                    display_label <- assay_nm
+                }
+            }
+
+            assay_path <- NULL
+            if (!is.null(path_to_save_results)) {
+                assay_path <- file.path(path_to_save_results, assay_nm)
+            }
+
+            collect <- .pb_intragroup_process_matrix(
+                data_matrix = dm,
+                sample_annotation = sample_ann,
+                sample_id_col = sample_id_col,
+                feature_id_col = feature_id_col,
+                fill_the_missing = fill_the_missing,
+                group_cols = group_cols,
+                assay_label = assay_nm,
+                assay_display = display_label,
+                plot_title = titles[[i]],
+                call_info = metric_info$calls[[metric_nm]],
+                metric_name = metric_nm,
+                path_to_save_results = assay_path
+            )
+
+            data_pieces[[i]] <- collect$data
+            metrics_export[[i]][[metric_nm]] <- collect$metrics[[metric_nm]]
+            if (!is.null(collect$saved_files) && metric_nm %in% names(collect$saved_files)) {
+                saved_paths[[i]][[metric_nm]] <- collect$saved_files[[metric_nm]]
+            }
+        }
+
+        combined_df <- dplyr::bind_rows(data_pieces)
+        if (!nrow(combined_df)) {
+            stop("No data available to plot intragroup variation.")
+        }
+
+        metric_plots[[metric_nm]] <- .pb_build_intragroup_plot(
+            data = combined_df,
+            metric_label = metric_info$titles[[metric_nm]],
+            group_levels = group_cols,
+            base_size = base_size,
+            facet_ncol = facet_cols,
+            shared_title = shared_title
+        )
+    }
+
+    combined_plot <- .pb_arrange_plot_list(
+        plot_list = metric_plots,
+        convert_fun = ggplot2::ggplotGrob,
+        draw = FALSE,
+        plot_ncol = metric_plot_ncol,
+        return_gridExtra = FALSE
     )
+    saved_paths <- lapply(saved_paths, function(x) {
+        if (length(x)) {
+            x
+        } else {
+            NULL
+        }
+    })
 
     attr(combined_plot, "pb_intragroup_metrics") <- metrics_export
     attr(combined_plot, "pb_intragroup_saved_files") <- saved_paths
@@ -446,10 +482,7 @@ plot_intragroup_variation <- function(data_matrix, ...) UseMethod("plot_intragro
                                         pev_diff) {
     allowed_metrics <- c("correlation", "PCV", "PMAD", "PEV")
     metric_choice <- match.arg(metrics, allowed_metrics, several.ok = TRUE)
-    if (length(metric_choice) != 1L) {
-        stop("Provide exactly one metric per call when plotting intragroup variation.")
-    }
-    metric_choice <- metric_choice[[1]]
+    metric_choice <- unique(metric_choice)
     correlation_method <- match.arg(correlation_method, c("pearson", "spearman", "kendall"))
 
     metric_titles <- c(
@@ -466,9 +499,9 @@ plot_intragroup_variation <- function(data_matrix, ...) UseMethod("plot_intragro
     )
 
     list(
-        name = metric_choice,
-        title = metric_titles[[metric_choice]],
-        call = metric_calls[[metric_choice]]
+        names = metric_choice,
+        titles = metric_titles[metric_choice],
+        calls = metric_calls[metric_choice]
     )
 }
 

@@ -203,6 +203,56 @@ test_that("plot_intragroup_variation.ProBatchFeatures iterates across assays", {
     expect_equal(unique(captured$ain), "feature::raw")
 })
 
+test_that("plot_intragroup_variation.ProBatchFeatures supports multiple metrics", {
+    testthat::skip_if_not_installed("PRONE")
+
+    dm <- matrix(
+        seq_len(8),
+        nrow = 2,
+        dimnames = list(
+            c("feat1", "feat2"),
+            paste0("sample", 1:4)
+        )
+    )
+    sample_ann <- data.frame(
+        FullRunName = paste0("sample", 1:4),
+        Condition = rep(c("A", "B"), each = 2),
+        stringsAsFactors = FALSE
+    )
+    pbf <- ProBatchFeatures(
+        data_matrix = dm,
+        sample_annotation = sample_ann,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    )
+
+    captured <- new.env(parent = emptyenv())
+    captured$calls <- character()
+    testthat::local_mocked_bindings(
+        plot_intragroup_correlation = function(se, ain, condition, method) {
+            captured$calls <- c(captured$calls, sprintf("correlation:%s", condition))
+            mock_intragroup_plot("cor_multi")
+        },
+        plot_intragroup_PCV = function(se, ain, condition, diff) {
+            captured$calls <- c(captured$calls, sprintf("PCV:%s", condition))
+            mock_intragroup_plot("pcv_multi")
+        },
+        .package = "PRONE"
+    )
+
+    res <- plot_intragroup_variation(
+        pbf,
+        group_col = "Condition",
+        metrics = c("correlation", "PCV")
+    )
+
+    expect_true(inherits(res, "ggplot") || grid::is.grob(res))
+    expect_setequal(captured$calls, c("correlation:Condition", "PCV:Condition"))
+    metrics_attr <- attr(res, "pb_intragroup_metrics")
+    expect_true("feature::raw" %in% names(metrics_attr))
+    expect_setequal(names(metrics_attr[["feature::raw"]]), c("correlation", "PCV"))
+})
+
 test_that("plot_intragroup_variation.ProBatchFeatures facets per grouping column", {
     testthat::skip_if_not_installed("PRONE")
 
@@ -402,7 +452,7 @@ test_that("plot_intragroup_variation saves sanitized metric tables", {
     expect_equal(captured$last_ain, "peptide::raw/Normalized Step")
 })
 
-test_that("plot_intragroup_variation rejects multiple metrics", {
+test_that("plot_intragroup_variation supports multiple metrics", {
     testthat::skip_if_not_installed("PRONE")
 
     dm <- matrix(
@@ -419,16 +469,78 @@ test_that("plot_intragroup_variation rejects multiple metrics", {
         stringsAsFactors = FALSE
     )
 
-    expect_error(
+    captured <- new.env(parent = emptyenv())
+    captured$calls <- character()
+    testthat::local_mocked_bindings(
+        plot_intragroup_correlation = function(se, ain, condition, method) {
+            captured$calls <- c(captured$calls, sprintf("correlation:%s", condition))
+            mock_intragroup_plot("cor_multi")
+        },
+        plot_intragroup_PCV = function(se, ain, condition, diff) {
+            captured$calls <- c(captured$calls, sprintf("PCV:%s", condition))
+            mock_intragroup_plot("pcv_multi")
+        },
+        .package = "PRONE"
+    )
+
+    res <- plot_intragroup_variation(
+        dm,
+        sample_annotation = sample_ann,
+        group_col = "Condition",
+        metrics = c("correlation", "PCV")
+    )
+
+    expect_true(inherits(res, "ggplot") || grid::is.grob(res))
+    metrics_attr <- attr(res, "pb_intragroup_metrics")
+    expect_setequal(names(metrics_attr), c("correlation", "PCV"))
+    expect_setequal(captured$calls, c("correlation:Condition", "PCV:Condition"))
+    expect_null(attr(res, "pb_intragroup_saved_files"))
+})
+
+test_that("plot_intragroup_variation retries diff metrics with diff = FALSE when needed", {
+    testthat::skip_if_not_installed("PRONE")
+
+    dm <- matrix(
+        c(1:6),
+        nrow = 2,
+        dimnames = list(
+            paste0("f", 1:2),
+            paste0("s", 1:3)
+        )
+    )
+    sample_ann <- data.frame(
+        FullRunName = paste0("s", c(3, 1, 2)),
+        Condition = c("A", "B", "A"),
+        stringsAsFactors = FALSE
+    )
+
+    captured <- new.env(parent = emptyenv())
+    captured$diff <- logical()
+    testthat::local_mocked_bindings(
+        plot_intragroup_PCV = function(se, ain, condition, diff) {
+            captured$diff <- c(captured$diff, diff)
+            if (isTRUE(diff)) {
+                stop("Log2 data not in SummarizedExperiment! Difference not applicable.")
+            }
+            mock_intragroup_plot("pcv_retry")
+        },
+        .package = "PRONE"
+    )
+
+    res <- expect_warning(
         plot_intragroup_variation(
             dm,
             sample_annotation = sample_ann,
             group_col = "Condition",
-            metrics = c("correlation", "PCV")
+            metrics = "PCV",
+            pcv_diff = TRUE
         ),
-        "Provide exactly one metric",
-        fixed = FALSE
+        "retrying with diff = FALSE",
+        fixed = TRUE
     )
+
+    expect_true(inherits(res, "ggplot") || grid::is.grob(res))
+    expect_identical(captured$diff, c(TRUE, FALSE))
 })
 
 test_that("plot_intragroup_variation requires non-empty grouping columns", {
