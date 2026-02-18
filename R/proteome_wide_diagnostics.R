@@ -732,8 +732,10 @@ plot_heatmap_generic <- function(data_matrix, ...) UseMethod("plot_heatmap_gener
 #' @param shape_by Optional column used for point shapes in the PCA plot.
 #' @param point_size Point size supplied to `ggplot2::geom_point()`.
 #' @param point_alpha Alpha transparency for plotted points.
-#' @param marginal_density Logical; if `TRUE`, add marginal density plots above
-#'   and to the right of the PCA scatter plot.
+#' @param marginal_density Logical or a single column name. If `TRUE`, add
+#'   marginal density plots grouped by `color_by`. If a column name is
+#'   provided, densities are grouped by that column. Numeric-like grouping
+#'   columns fall back to pooled marginals.
 #' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
 #' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
@@ -757,6 +759,9 @@ plot_heatmap_generic <- function(data_matrix, ...) UseMethod("plot_heatmap_gener
 #' )
 #' pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
 #'     color_by = "MS_batch", marginal_density = TRUE
+#' )
+#' pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
+#'     color_by = "MS_batch", marginal_density = "digestion_batch"
 #' )
 #'
 #' color_list <- sample_annotation_to_colors(example_sample_annotation,
@@ -882,6 +887,9 @@ plot_PCA.default <- function(data_matrix,
         axis_labels = axis_labels,
         theme_name = theme_name
     )
+    if (!is.null(theme_name) && theme_name == "classic") {
+        gg <- gg + theme_classic(base_size = base_size)
+    }
 
     # Add the title
     if (!is.null(plot_title)) {
@@ -889,10 +897,28 @@ plot_PCA.default <- function(data_matrix,
             theme(plot.title = element_text(face = "bold", hjust = .5))
     }
 
+    marginal_density_by <- NULL
     if (isTRUE(marginal_density)) {
+        marginal_density_by <- color_by
+    } else if (isFALSE(marginal_density)) {
+        marginal_density_by <- NULL
+    } else if (is.character(marginal_density) &&
+        length(marginal_density) == 1L &&
+        nzchar(marginal_density)) {
+        marginal_density_by <- marginal_density
+    } else {
+        stop("marginal_density must be TRUE, FALSE, or a single column name.")
+    }
+
+    if (!is.null(marginal_density_by)) {
         gg <- .pb_add_marginal_density(
             base_plot = gg,
             embedding_matrix = embedding_matrix,
+            sample_annotation = sample_annotation,
+            sample_ids = sample_ids,
+            sample_id_col = sample_id_col,
+            density_by = marginal_density_by,
+            color_scheme = color_scheme,
             base_size = base_size,
             theme_name = theme_name
         )
@@ -1536,10 +1562,16 @@ plot_UMAP <- function(x, ...) UseMethod("plot_UMAP")
     gg
 }
 
-.pb_add_marginal_density <- function(base_plot, embedding_matrix, base_size, theme_name,
+.pb_add_marginal_density <- function(base_plot, embedding_matrix,
+                                     sample_annotation = NULL,
+                                     sample_ids = NULL,
+                                     sample_id_col = NULL,
+                                     density_by = NULL,
+                                     color_scheme = "brewer",
+                                     base_size, theme_name,
                                      density_fill = "grey85",
                                      density_color = "grey40",
-                                     density_alpha = 0.7) {
+                                     density_alpha = 0.35) {
     if (!requireNamespace("gridExtra", quietly = TRUE)) {
         stop("Install the `gridExtra` package to arrange marginal densities: install.packages(\"gridExtra\").")
     }
@@ -1574,6 +1606,82 @@ plot_UMAP <- function(x, ...) UseMethod("plot_UMAP")
         stringsAsFactors = FALSE
     )
 
+    if (!is.null(sample_annotation) && is.data.frame(sample_annotation) &&
+        nrow(sample_annotation)) {
+        density_ann <- sample_annotation
+        if (!is.null(sample_ids) &&
+            !is.null(sample_id_col) &&
+            sample_id_col %in% colnames(sample_annotation)) {
+            ann_idx <- match(sample_ids, as.character(sample_annotation[[sample_id_col]]))
+            density_ann <- sample_annotation[ann_idx, , drop = FALSE]
+        } else if (nrow(sample_annotation) != length(dim1)) {
+            density_ann <- NULL
+        }
+
+        if (!is.null(density_ann)) {
+            density_ann <- density_ann[finite_idx, , drop = FALSE]
+            duplicated_cols <- intersect(colnames(density_ann), colnames(density_df))
+            if (length(duplicated_cols)) {
+                density_ann <- density_ann[, setdiff(colnames(density_ann), duplicated_cols), drop = FALSE]
+            }
+            if (ncol(density_ann)) {
+                density_df <- cbind(density_df, density_ann)
+            }
+        }
+    }
+
+    density_group_col <- NULL
+    density_colors <- NULL
+    density_group_label <- NULL
+    if (!is.null(density_by)) {
+        if (length(density_by) > 1L) {
+            warning("Using the first marginal density grouping column specified.")
+            density_by <- density_by[1]
+        }
+        if (density_by %in% colnames(density_df)) {
+            density_scheme <- color_scheme
+            if (is.list(density_scheme)) {
+                if (!is.null(names(density_scheme)) && density_by %in% names(density_scheme)) {
+                    density_scheme <- density_scheme[[density_by]]
+                } else {
+                    density_scheme <- "brewer"
+                }
+            }
+
+            density_info <- tryCatch(
+                .pb_resolve_plotly_color_mapping(
+                    plot_df = density_df,
+                    color_by = density_by,
+                    color_scheme = density_scheme
+                ),
+                error = function(e) {
+                    warning(sprintf(
+                        "Cannot group marginal densities by '%s': %s. Plotting pooled marginals.",
+                        density_by, e$message
+                    ))
+                    NULL
+                }
+            )
+
+            if (!is.null(density_info) && identical(density_info$type, "discrete")) {
+                density_group_col <- ".pb_density_group"
+                density_df[[density_group_col]] <- density_info$aes_column
+                density_colors <- density_info$palette
+                density_group_label <- density_by
+            } else if (!is.null(density_info) && identical(density_info$type, "numeric")) {
+                warning(sprintf(
+                    "marginal_density grouping column '%s' is numeric-like; plotting pooled marginals.",
+                    density_by
+                ))
+            }
+        } else {
+            warning(sprintf(
+                "marginal_density grouping column '%s' not found; plotting pooled marginals.",
+                density_by
+            ))
+        }
+    }
+
     density_theme <- if (!is.null(theme_name) && theme_name == "classic") {
         theme_classic(base_size = base_size)
     } else {
@@ -1589,37 +1697,80 @@ plot_UMAP <- function(x, ...) UseMethod("plot_UMAP")
         plot.margin = margin(0, 0, 0, 0)
     )
 
-    top_density <- ggplot(density_df, aes(x = Dim1)) +
-        geom_density(
-            fill = density_fill,
-            color = density_color,
-            alpha = density_alpha,
-            na.rm = TRUE
-        ) +
-        scale_x_continuous(limits = range_dim1, expand = ggplot2::expansion(mult = 0)) +
-        density_theme
+    if (!is.null(density_group_col) && !is.null(density_colors)) {
+        density_group_sym <- sym(density_group_col)
+        top_density <- ggplot(density_df, aes(x = Dim1)) +
+            geom_density(
+                aes(fill = !!density_group_sym, color = !!density_group_sym),
+                alpha = density_alpha,
+                na.rm = TRUE
+            ) +
+            scale_fill_manual(values = density_colors, drop = FALSE) +
+            scale_color_manual(values = density_colors, drop = FALSE) +
+            labs(fill = density_group_label, color = density_group_label) +
+            scale_x_continuous(limits = range_dim1, expand = ggplot2::expansion(mult = 0)) +
+            density_theme
 
-    right_density <- ggplot(density_df, aes(x = Dim2)) +
-        geom_density(
-            fill = density_fill,
-            color = density_color,
-            alpha = density_alpha,
-            na.rm = TRUE
-        ) +
-        scale_x_continuous(limits = range_dim2, expand = ggplot2::expansion(mult = 0)) +
-        coord_flip() +
-        density_theme
+        right_density <- ggplot(density_df, aes(x = Dim2)) +
+            geom_density(
+                aes(fill = !!density_group_sym, color = !!density_group_sym),
+                alpha = density_alpha,
+                na.rm = TRUE
+            ) +
+            scale_fill_manual(values = density_colors, drop = FALSE) +
+            scale_color_manual(values = density_colors, drop = FALSE) +
+            labs(fill = density_group_label, color = density_group_label) +
+            scale_x_continuous(limits = range_dim2, expand = ggplot2::expansion(mult = 0)) +
+            coord_flip() +
+            density_theme
+    } else {
+        top_density <- ggplot(density_df, aes(x = Dim1)) +
+            geom_density(
+                fill = density_fill,
+                color = density_color,
+                alpha = density_alpha,
+                na.rm = TRUE
+            ) +
+            scale_x_continuous(limits = range_dim1, expand = ggplot2::expansion(mult = 0)) +
+            density_theme
+
+        right_density <- ggplot(density_df, aes(x = Dim2)) +
+            geom_density(
+                fill = density_fill,
+                color = density_color,
+                alpha = density_alpha,
+                na.rm = TRUE
+            ) +
+            scale_x_continuous(limits = range_dim2, expand = ggplot2::expansion(mult = 0)) +
+            coord_flip() +
+            density_theme
+    }
 
     base_plot <- base_plot +
         scale_x_continuous(limits = range_dim1, expand = ggplot2::expansion(mult = 0)) +
         scale_y_continuous(limits = range_dim2, expand = ggplot2::expansion(mult = 0)) +
         theme(legend.position = "bottom")
 
+    top_density_grob <- ggplotGrob(top_density)
+    right_density_grob <- ggplotGrob(right_density)
+    base_plot_grob <- ggplotGrob(base_plot)
+
+    if (length(top_density_grob$widths) == length(base_plot_grob$widths)) {
+        shared_widths <- grid::unit.pmax(top_density_grob$widths, base_plot_grob$widths)
+        top_density_grob$widths <- shared_widths
+        base_plot_grob$widths <- shared_widths
+    }
+    if (length(right_density_grob$heights) == length(base_plot_grob$heights)) {
+        shared_heights <- grid::unit.pmax(right_density_grob$heights, base_plot_grob$heights)
+        right_density_grob$heights <- shared_heights
+        base_plot_grob$heights <- shared_heights
+    }
+
     arranged <- gridExtra::arrangeGrob(
-        top_density,
+        top_density_grob,
         grid::nullGrob(),
-        base_plot,
-        right_density,
+        base_plot_grob,
+        right_density_grob,
         nrow = 2,
         ncol = 2,
         widths = c(4, 1),
