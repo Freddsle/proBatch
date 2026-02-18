@@ -12,6 +12,10 @@ plot_sample_corr_heatmap(
   factors_to_plot = NULL,
   cluster_rows = FALSE,
   cluster_cols = FALSE,
+  show_row_dend = TRUE,
+  show_column_dend = TRUE,
+  x_axis_label_size = NULL,
+  y_axis_label_size = NULL,
   heatmap_color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(100),
   color_list = NULL,
   filename = NULL,
@@ -50,6 +54,12 @@ plotted in this diagnostic plot (assumed to be present in
 \item{cluster_rows}{boolean values determining if rows should be clustered or \code{hclust} object}
 
 \item{cluster_cols}{boolean values determining if columns should be clustered or \code{hclust} object}
+
+\item{show_row_dend, show_column_dend}{Logical, whether row/column dendrograms
+should be shown when clustering is enabled.}
+
+\item{x_axis_label_size, y_axis_label_size}{Optional numeric font sizes for
+x-axis (column) and y-axis (row) labels in the heatmap.}
 
 \item{heatmap_color}{vector of colors used in heatmap.}
 

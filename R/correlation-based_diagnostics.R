@@ -324,6 +324,10 @@ plot_protein_corrplot <- function(data_matrix,
 #' \code{data_matrix} to be used in the plot
 #' @param cluster_rows boolean values determining if rows should be clustered or \code{hclust} object
 #' @param cluster_cols boolean values determining if columns should be clustered or \code{hclust} object
+#' @param show_row_dend,show_column_dend Logical, whether row/column dendrograms
+#'   should be shown when clustering is enabled.
+#' @param x_axis_label_size,y_axis_label_size Optional numeric font sizes for
+#'   x-axis (column) and y-axis (row) labels in the heatmap.
 #' @param heatmap_color vector of colors used in heatmap.
 #' @param ... parameters for the \code{\link[pheatmap]{pheatmap}} visualisation, for details see
 #'   examples and help to corresponding functions
@@ -355,6 +359,10 @@ plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
                                      sample_id_col = "FullRunName",
                                      factors_to_plot = NULL,
                                      cluster_rows = FALSE, cluster_cols = FALSE,
+                                     show_row_dend = TRUE,
+                                     show_column_dend = TRUE,
+                                     x_axis_label_size = NULL,
+                                     y_axis_label_size = NULL,
                                      heatmap_color = colorRampPalette(
                                          rev(brewer.pal(n = 7, name = "RdYlBu"))
                                      )(100),
@@ -412,6 +420,10 @@ plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
                 factors_to_plot = factors_to_plot,
                 cluster_rows = cluster_rows,
                 cluster_cols = cluster_cols,
+                show_row_dend = show_row_dend,
+                show_column_dend = show_column_dend,
+                x_axis_label_size = x_axis_label_size,
+                y_axis_label_size = y_axis_label_size,
                 heatmap_color = heatmap_color,
                 color_list = color_list,
                 width = width,
@@ -446,6 +458,10 @@ plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
         factors_to_plot = factors_to_plot,
         cluster_rows = cluster_rows,
         cluster_cols = cluster_cols,
+        show_row_dend = show_row_dend,
+        show_column_dend = show_column_dend,
+        x_axis_label_size = x_axis_label_size,
+        y_axis_label_size = y_axis_label_size,
         heatmap_color = heatmap_color,
         color_list = color_list,
         plot_title = plot_title,
@@ -464,6 +480,10 @@ plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
                                                 factors_to_plot,
                                                 cluster_rows,
                                                 cluster_cols,
+                                                show_row_dend,
+                                                show_column_dend,
+                                                x_axis_label_size,
+                                                y_axis_label_size,
                                                 heatmap_color,
                                                 color_list = NULL,
                                                 filename = NULL,
@@ -486,14 +506,34 @@ plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
         corr_matrix <- cor(data_matrix, use = "complete.obs")
     }
 
-    if (!is.null(sample_annotation)) {
-        if (!all(samples_to_plot %in% sample_annotation[[sample_id_col]])) {
+    if (!is.null(sample_annotation) && !is.null(samples_to_plot)) {
+        annotation_ids <- if (sample_id_col %in% names(sample_annotation)) {
+            sample_annotation[[sample_id_col]]
+        } else {
+            rownames(sample_annotation)
+        }
+        if (is.null(annotation_ids) || !all(samples_to_plot %in% annotation_ids)) {
             warning("some of the samples are not in annotation, this may lead to problems in color annotation")
         }
     }
+    plot_params <- list(...)
+    row_clustered <- isTRUE(cluster_rows) || inherits(cluster_rows, "hclust")
+    col_clustered <- isTRUE(cluster_cols) || inherits(cluster_cols, "hclust")
+    if (!"treeheight_row" %in% names(plot_params)) {
+        plot_params$treeheight_row <- if (row_clustered && isTRUE(show_row_dend)) 50 else 0
+    }
+    if (!"treeheight_col" %in% names(plot_params)) {
+        plot_params$treeheight_col <- if (col_clustered && isTRUE(show_column_dend)) 50 else 0
+    }
+    if (!is.null(x_axis_label_size) && !"fontsize_col" %in% names(plot_params)) {
+        plot_params$fontsize_col <- x_axis_label_size
+    }
+    if (!is.null(y_axis_label_size) && !"fontsize_row" %in% names(plot_params)) {
+        plot_params$fontsize_row <- y_axis_label_size
+    }
 
-    plot_corr_matrix(
-        corr_matrix,
+    do.call(plot_corr_matrix, c(list(
+        corr_matrix = corr_matrix,
         annotation = sample_annotation,
         annotation_id_col = sample_id_col,
         factors_to_plot = factors_to_plot,
@@ -505,9 +545,8 @@ plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
         filename = filename,
         width = width,
         height = height,
-        units = units,
-        ...
-    )
+        units = units
+    ), plot_params))
 }
 
 get_sample_corr_df <- function(cor_proteome, sample_annotation,
