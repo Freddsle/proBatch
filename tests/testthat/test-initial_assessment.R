@@ -137,6 +137,7 @@ test_that("plot_sample_mean with ProBatchFeatures", {
     )
     expect_equal(meanplot$labels$x, "order")
     expect_equal(meanplot$labels$y, "Mean_Intensity")
+    expect_equal(meanplot$labels$title, "feature, raw")
     expect_equal(meanplot$plot_env$color_by_batch, FALSE)
     expect_equal(meanplot$plot_env$facet_col, NULL)
 })
@@ -155,6 +156,10 @@ test_that("plot_boxplot ProBatchFeatures arranges assays and preserves subset or
     expect_type(res, "list")
     expect_equal(length(res$plots), length(names(pbf)))
     expect_true(all(vapply(res$plots, inherits, logical(1), "ggplot")))
+    expect_equal(
+        vapply(res$plots, function(x) x$labels$title, character(1)),
+        c("feature, raw", "feature, log2-raw")
+    )
 
     subset_assays <- names(pbf)[2:1]
     res_subset <- suppressWarnings(plot_boxplot(
@@ -167,6 +172,10 @@ test_that("plot_boxplot ProBatchFeatures arranges assays and preserves subset or
     expect_type(res_subset, "list")
     expect_equal(names(res_subset$plots), subset_assays)
     expect_true(all(vapply(res_subset$plots, inherits, logical(1), "ggplot")))
+    expect_equal(
+        vapply(res_subset$plots, function(x) x$labels$title, character(1)),
+        c("feature, log2-raw", "feature, raw")
+    )
 })
 
 test_that("plot_boxplot ProBatchFeatures returns ggplot for single assay", {

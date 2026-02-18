@@ -350,9 +350,20 @@ plot_boxplot.default <- function(x, sample_annotation,
     if (!is.null(plot_title)) {
         gg <- gg + ggtitle(plot_title) +
             theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 16))
-    } else if (!is.null(pbf_name)) {
-        gg <- gg + ggtitle(pbf_name) +
-            theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 16))
+    } else {
+        pbf_title <- .pb_first_plot_title(pbf_name)
+        if (!is.null(pbf_title)) {
+            resolved_title <- .pb_resolve_titles(
+                assays = pbf_title,
+                plot_title = NULL
+            )
+            title_info <- .pb_refactor_assay_titles(
+                titles = resolved_title,
+                use_shared_title = FALSE
+            )
+            gg <- gg + ggtitle(title_info$titles[[1L]]) +
+                theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 16))
+        }
     }
 
     if (!is.null(batch_col)) {
@@ -390,12 +401,19 @@ plot_sample_mean.ProBatchFeatures <- function(x, pbf_name = NULL, plot_title = N
         sample_ids = colnames(data_matrix)
     )
 
-    plot_title <- if (is.null(plot_title)) assay_name else plot_title
+    resolved_title <- .pb_resolve_titles(
+        assays = assay_name,
+        plot_title = plot_title
+    )
+    title_info <- .pb_refactor_assay_titles(
+        titles = resolved_title,
+        use_shared_title = FALSE
+    )
 
     plot_sample_mean.default(
         x = data_matrix,
         sample_annotation = sample_annotation,
-        plot_title = plot_title,
+        plot_title = title_info$titles[[1L]],
         ...
     )
 }
@@ -410,13 +428,15 @@ plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = NU
         stop("`sample_id_col` must be provided.")
     }
     prep <- .pb_prepare_multi_assay(
-        object, pbf_name, list(...), plot_title,
-        default_title_fun = function(x) x,
-        refactor_titles = FALSE
+        object = object,
+        pbf_name = pbf_name,
+        dots = list(...),
+        plot_title = plot_title
     )
     assays <- prep$assays
     dots <- prep$dots
     titles <- prep$titles
+    shared_title <- prep$shared_title
     filename_list <- prep$filename_list
 
     sample_annotation <- as.data.frame(colData(object))
@@ -454,6 +474,8 @@ plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = NU
 
         plot_list[[i]] <- do.call(plot_boxplot.default, call_args)
     }
+
+    plot_list <- .pb_attach_shared_title(plot_list, shared_title)
 
     .pb_arrange_plot_list(plot_list, plot_ncol = plot_ncol, convert_fun = ggplotGrob, return_gridExtra = return_gridExtra)
 }
