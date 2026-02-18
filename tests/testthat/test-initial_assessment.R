@@ -157,7 +157,7 @@ test_that("plot_boxplot ProBatchFeatures arranges assays and preserves subset or
     expect_equal(length(res$plots), length(names(pbf)))
     expect_true(all(vapply(res$plots, inherits, logical(1), "ggplot")))
     expect_equal(
-        vapply(res$plots, function(x) x$labels$title, character(1)),
+        vapply(res$plots, function(x) x$labels$title, character(1), USE.NAMES = FALSE),
         c("feature, raw", "feature, log2-raw")
     )
 
@@ -173,7 +173,7 @@ test_that("plot_boxplot ProBatchFeatures arranges assays and preserves subset or
     expect_equal(names(res_subset$plots), subset_assays)
     expect_true(all(vapply(res_subset$plots, inherits, logical(1), "ggplot")))
     expect_equal(
-        vapply(res_subset$plots, function(x) x$labels$title, character(1)),
+        vapply(res_subset$plots, function(x) x$labels$title, character(1), USE.NAMES = FALSE),
         c("feature, log2-raw", "feature, raw")
     )
 })

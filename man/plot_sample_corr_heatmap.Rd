@@ -28,7 +28,7 @@ plot_sample_corr_heatmap(
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
 feature IDs in rownames and file/sample names as colnames, or a
 `ProBatchFeatures` object. When `data_matrix` is a
-`ProBatchFeatures` object, `pbf_name` is used (or the current assay when
+`ProBatchFeatures` object, `pbf_name` is used (or all assays when
 `pbf_name = NULL`).}
 
 \item{samples_to_plot}{string vector of samples in
@@ -71,14 +71,15 @@ pdf and png format is supported}
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
-\item{pbf_name}{Assay name used when `data_matrix` is a `ProBatchFeatures`
-object. If `NULL`, [pb_current_assay()] is used.}
+\item{pbf_name}{Assay name(s) used when `data_matrix` is a
+`ProBatchFeatures` object. If `NULL`, all assays are plotted.}
 
 \item{...}{parameters for the \code{\link[pheatmap]{pheatmap}} visualisation, for details see
 examples and help to corresponding functions}
 }
 \value{
-\code{pheatmap} object
+\code{pheatmap} object for a single assay, or an arranged plot object
+  when multiple assays are plotted.
 }
 \description{
 Plot correlation of selected samples

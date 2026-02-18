@@ -206,7 +206,8 @@ test_that("sample correlation diagnostics accept PBF with rowname-only annotatio
         pbf,
         sample_annotation = sample_ann_row,
         samples_to_plot = colnames(matrix_small)[1:6],
-        sample_id_col = "FullRunName"
+        sample_id_col = "FullRunName",
+        pbf_name = pb_current_assay(pbf)
     )
     expect_s3_class(sample_corr_heatmap, "pheatmap")
 })
@@ -300,6 +301,7 @@ test_that("plot_sample_corr_distribution() supports explicit PBF assay selection
 })
 
 test_that("plot_sample_corr_heatmap() supports explicit PBF assay selection", {
+    skip_if_not_installed("gridExtra")
     fixture <- make_corr_pbf_fixture()
     pbf <- fixture$pbf
     sample_ann <- fixture$sample_ann
@@ -308,15 +310,17 @@ test_that("plot_sample_corr_heatmap() supports explicit PBF assay selection", {
     raw_assay <- names(pbf)[1]
     samples_subset <- sample_ann$FullRunName[1:6]
 
-    heatmap_default <- plot_sample_corr_heatmap(
+    heatmap_default <- suppressWarnings(plot_sample_corr_heatmap(
         pbf,
         sample_annotation = sample_ann,
         samples_to_plot = samples_subset,
         sample_id_col = "FullRunName",
         cluster_rows = TRUE,
         cluster_cols = TRUE
-    )
-    heatmap_current <- plot_sample_corr_heatmap(
+    ))
+    expect_false(inherits(heatmap_default, "pheatmap"))
+
+    heatmap_current <- suppressWarnings(plot_sample_corr_heatmap(
         pbf,
         sample_annotation = sample_ann,
         samples_to_plot = samples_subset,
@@ -324,9 +328,8 @@ test_that("plot_sample_corr_heatmap() supports explicit PBF assay selection", {
         cluster_rows = TRUE,
         cluster_cols = TRUE,
         pbf_name = current_assay
-    )
-    expect_equal(heatmap_default$tree_row$height, heatmap_current$tree_row$height)
-    expect_equal(heatmap_default$tree_col$height, heatmap_current$tree_col$height)
+    ))
+    expect_s3_class(heatmap_current, "pheatmap")
 
     heatmap_raw <- plot_sample_corr_heatmap(
         pbf,

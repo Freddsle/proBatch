@@ -311,15 +311,15 @@ plot_protein_corrplot <- function(data_matrix,
 #' @param data_matrix features (in rows) vs samples (in columns) matrix, with
 #'   feature IDs in rownames and file/sample names as colnames, or a
 #'   `ProBatchFeatures` object. When `data_matrix` is a
-#'   `ProBatchFeatures` object, `pbf_name` is used (or the current assay when
+#'   `ProBatchFeatures` object, `pbf_name` is used (or all assays when
 #'   `pbf_name = NULL`).
 #' @param sample_annotation data frame with sample-level metadata. When
 #'   `data_matrix` is a matrix, this argument is required. When
 #'   `data_matrix` is a `ProBatchFeatures` object and
 #'   `sample_annotation` is not provided, `as.data.frame(colData(data_matrix))`
 #'   is used.
-#' @param pbf_name Assay name used when `data_matrix` is a `ProBatchFeatures`
-#'   object. If `NULL`, [pb_current_assay()] is used.
+#' @param pbf_name Assay name(s) used when `data_matrix` is a
+#'   `ProBatchFeatures` object. If `NULL`, all assays are plotted.
 #' @param samples_to_plot string vector of samples in
 #' \code{data_matrix} to be used in the plot
 #' @param cluster_rows boolean values determining if rows should be clustered or \code{hclust} object
@@ -328,7 +328,8 @@ plot_protein_corrplot <- function(data_matrix,
 #' @param ... parameters for the \code{\link[pheatmap]{pheatmap}} visualisation, for details see
 #'   examples and help to corresponding functions
 #'
-#' @return \code{pheatmap} object
+#' @return \code{pheatmap} object for a single assay, or an arranged plot object
+#'   when multiple assays are plotted.
 #'
 #' @export
 #'
@@ -348,6 +349,7 @@ plot_protein_corrplot <- function(data_matrix,
 #'
 #' @seealso \code{\link[pheatmap]{pheatmap}}
 #'
+
 plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
                                      sample_annotation = NULL,
                                      sample_id_col = "FullRunName",
@@ -365,15 +367,111 @@ plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
                                          ifelse(is.null(samples_to_plot), "", " selected")
                                      ),
                                      pbf_name = NULL, ...) {
+    plot_title_missing <- missing(plot_title)
+
+    if (is(data_matrix, "ProBatchFeatures")) {
+        object <- data_matrix
+        prep <- .pb_prepare_multi_assay(
+            object = object,
+            pbf_name = pbf_name,
+            dots = c(list(filename = filename), list(...)),
+            plot_title = if (isTRUE(plot_title_missing)) NULL else plot_title,
+            default_title_fun = function(x) x,
+            set_silent = TRUE
+        )
+        assays <- prep$assays
+        dots <- prep$dots
+        filename_list <- prep$filename_list
+        split_arg <- prep$split_arg
+        titles <- prep$titles
+        shared_title <- prep$shared_title
+
+        default_sample_annotation <- .pb_default_sample_annotation(
+            object = object,
+            sample_id_col = sample_id_col
+        )
+        sample_ann_list <- split_arg(sample_annotation)
+
+        plot_list <- vector("list", length(assays))
+        names(plot_list) <- assays
+
+        for (i in seq_along(assays)) {
+            assay_nm <- assays[[i]]
+            assay_matrix <- pb_assay_matrix(object, assay = assay_nm)
+            sample_ann <- sample_ann_list[[i]]
+            if (is.null(sample_ann)) {
+                sample_ann <- default_sample_annotation
+            }
+
+            call_args <- .pb_per_assay_dots(dots, filename_list, i)
+            call_args <- c(list(
+                data_matrix = assay_matrix,
+                samples_to_plot = samples_to_plot,
+                sample_annotation = sample_ann,
+                sample_id_col = sample_id_col,
+                factors_to_plot = factors_to_plot,
+                cluster_rows = cluster_rows,
+                cluster_cols = cluster_cols,
+                heatmap_color = heatmap_color,
+                color_list = color_list,
+                width = width,
+                height = height,
+                units = units,
+                plot_title = titles[i]
+            ), call_args)
+
+            plot_list[[i]] <- do.call(.pb_plot_sample_corr_heatmap_single, call_args)
+        }
+
+        plot_list <- .pb_attach_shared_title(plot_list, shared_title)
+
+        return(.pb_arrange_plot_list(
+            plot_list = plot_list,
+            convert_fun = function(x) x$gtable
+        ))
+    }
+
     resolved <- .pb_corr_resolve_sample_input(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
         pbf_name = pbf_name
     )
-    data_matrix <- resolved$data_matrix
-    sample_annotation <- resolved$sample_annotation
 
+    .pb_plot_sample_corr_heatmap_single(
+        data_matrix = resolved$data_matrix,
+        samples_to_plot = samples_to_plot,
+        sample_annotation = resolved$sample_annotation,
+        sample_id_col = sample_id_col,
+        factors_to_plot = factors_to_plot,
+        cluster_rows = cluster_rows,
+        cluster_cols = cluster_cols,
+        heatmap_color = heatmap_color,
+        color_list = color_list,
+        plot_title = plot_title,
+        filename = filename,
+        width = width,
+        height = height,
+        units = units,
+        ...
+    )
+}
+
+.pb_plot_sample_corr_heatmap_single <- function(data_matrix,
+                                                samples_to_plot,
+                                                sample_annotation,
+                                                sample_id_col,
+                                                factors_to_plot,
+                                                cluster_rows,
+                                                cluster_cols,
+                                                heatmap_color,
+                                                color_list = NULL,
+                                                filename = NULL,
+                                                width = NA,
+                                                height = NA,
+                                                units = c("cm", "in", "mm"),
+                                                plot_title = NULL,
+                                                ...) {
     if (!is.null(samples_to_plot)) {
         if (!all(samples_to_plot %in% colnames(data_matrix))) {
             missing_samples <- setdiff(samples_to_plot, colnames(data_matrix))
@@ -394,19 +492,22 @@ plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
         }
     }
 
-    p <- plot_corr_matrix(
+    plot_corr_matrix(
         corr_matrix,
         annotation = sample_annotation,
         annotation_id_col = sample_id_col,
         factors_to_plot = factors_to_plot,
-        cluster_rows = cluster_rows, cluster_cols = cluster_cols,
+        cluster_rows = cluster_rows,
+        cluster_cols = cluster_cols,
         heatmap_color = heatmap_color,
         color_list = color_list,
         plot_title = plot_title,
         filename = filename,
-        width = width, height = height, units = units, ...
+        width = width,
+        height = height,
+        units = units,
+        ...
     )
-    return(p)
 }
 
 get_sample_corr_df <- function(cor_proteome, sample_annotation,
