@@ -10,7 +10,8 @@ subbatch_detection(
   batch_col,
   n_pcs = 10,
   method = c("hclust", "kmeans"),
-  k_max = 6
+  k_max = 6,
+  pbf_name = NULL
 )
 }
 \arguments{
@@ -33,6 +34,9 @@ batch comparison (or other, non-batch factor to be mapped to color in plots).}
 \item{method}{clustering method; \code{"hclust"} or \code{"kmeans"}.}
 
 \item{k_max}{maximum number of clusters to evaluate per batch.}
+
+\item{pbf_name}{Assay name used when `data_matrix` is a `ProBatchFeatures`
+object. If `NULL`, [pb_current_assay()] is used.}
 }
 \value{
 A list with per-sample assignments, per-batch summaries, and

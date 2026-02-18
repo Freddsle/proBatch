@@ -12,7 +12,8 @@ detect_outlier_samples(
   center = TRUE,
   scale. = TRUE,
   robust = TRUE,
-  cutoff = 0.99
+  cutoff = 0.99,
+  pbf_name = NULL
 )
 }
 \arguments{
@@ -31,14 +32,19 @@ use \code{help("example_proteome_matrix")})}
 
 \item{scale.}{logical; scale variables before PCA.}
 
-\item{robust}{logical; use robust covariance via \code{MASS::cov.rob}.}
+\item{robust}{logical; use robust covariance via \code{MASS::cov.rob}. If
+robust estimation flags multiple batches as complete outliers, the
+function falls back to classical covariance.}
 
 \item{cutoff}{probability for the chi-square cutoff used to flag outliers.}
+
+\item{pbf_name}{Assay name used when `data_matrix` is a `ProBatchFeatures`
+object. If `NULL`, [pb_current_assay()] is used.}
 }
 \value{
 A data frame with \code{sample_id}, \code{batch} (if provided),
   \code{mdist}, and \code{is_outlier}. Attributes include \code{cutoff},
-  \code{df}, and \code{mdist_cutoff}. The object has class
+  \code{df}, \code{mdist_cutoff}, and \code{outlier_mode}. The object has class
   \code{"pb_outliers"}.
 }
 \description{

@@ -85,6 +85,50 @@ test_that("detect_outlier_samples flags an injected outlier", {
 
     expect_s3_class(out, "pb_outliers")
     expect_true(out$is_outlier[out$sample_id == "s6"])
+    expect_identical(attr(out, "outlier_mode"), "classical")
+})
+
+test_that("detect_outlier_samples falls back when robust fit flags whole batches", {
+    skip_if_not_installed("MASS")
+
+    set.seed(7)
+    n_features <- 400
+    batch_sizes <- c(40, 40, 10, 10, 10)
+    batch_labels <- paste0("B", seq_along(batch_sizes))
+    shift_means <- c(0, 0.2, 1.6, 2.0, 2.4)
+
+    mat_list <- lapply(seq_along(batch_labels), function(i) {
+        batch_noise <- matrix(
+            rnorm(n_features * batch_sizes[i], sd = 0.9),
+            nrow = n_features
+        )
+        batch_shift <- rnorm(n_features, mean = shift_means[i], sd = 0.2)
+        batch_noise + batch_shift
+    })
+    mat <- do.call(cbind, mat_list)
+    colnames(mat) <- paste0("s", seq_len(ncol(mat)))
+
+    meta <- data.frame(
+        batch = rep(batch_labels, times = batch_sizes),
+        stringsAsFactors = FALSE
+    )
+    rownames(meta) <- colnames(mat)
+
+    expect_warning(
+        out <- detect_outlier_samples(
+            mat,
+            sample_annotation = meta,
+            batch_col = "batch",
+            n_pcs = 5,
+            robust = TRUE,
+            cutoff = 0.99
+        ),
+        "falling back to classical covariance"
+    )
+
+    batch_summary <- attr(out, "batch_summary")
+    expect_true(max(batch_summary$pct_outliers, na.rm = TRUE) < 100)
+    expect_identical(attr(out, "outlier_mode"), "classical_fallback")
 })
 
 test_that("subbatch_detection splits a batch with two clusters", {
@@ -174,4 +218,119 @@ test_that("design diagnostics accept ProBatchFeatures inputs", {
     b1_row <- subbatches$summary[subbatches$summary$batch == "B1", , drop = FALSE]
     expect_true(nrow(b1_row) == 1)
     expect_true(b1_row$k >= 2)
+})
+
+test_that("design diagnostics honor explicit pbf_name assay selection", {
+    set.seed(1)
+    n_features <- 120
+    n_per_batch <- 20
+
+    batch1 <- matrix(rexp(n_features * n_per_batch, rate = 1 / 100), nrow = n_features)
+    batch2 <- matrix(rexp(n_features * n_per_batch, rate = 1 / 100), nrow = n_features)
+    shifted_idx <- sample(seq_len(n_features), size = round(0.35 * n_features))
+    batch2[shifted_idx, ] <- batch2[shifted_idx, ] * runif(length(shifted_idx), 1.8, 5.0)
+
+    mat_raw <- cbind(batch1, batch2)
+    colnames(mat_raw) <- paste0("s", seq_len(ncol(mat_raw)))
+    mat_log <- log2(mat_raw + 1)
+
+    meta <- data.frame(
+        FullRunName = colnames(mat_raw),
+        batch = rep(c("B1", "B2"), each = n_per_batch),
+        stringsAsFactors = FALSE
+    )
+
+    pbf <- suppressMessages(ProBatchFeatures(
+        data_matrix = mat_raw,
+        sample_annotation = meta,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    ))
+    pbf <- pb_transform(pbf, from = "feature::raw", steps = "log2")
+
+    raw_assay <- "feature::raw"
+    log_assay <- as.character(utils::tail(get_operation_log(pbf)$to, 1))
+    expect_false(identical(raw_assay, log_assay))
+
+    out_raw_mat <- detect_outlier_samples(
+        mat_raw,
+        sample_annotation = meta,
+        batch_col = "batch",
+        n_pcs = 5,
+        robust = FALSE,
+        cutoff = 0.99
+    )
+    out_log_mat <- detect_outlier_samples(
+        mat_log,
+        sample_annotation = meta,
+        batch_col = "batch",
+        n_pcs = 5,
+        robust = FALSE,
+        cutoff = 0.99
+    )
+    out_raw_pbf <- detect_outlier_samples(
+        pbf,
+        pbf_name = raw_assay,
+        sample_annotation = meta,
+        batch_col = "batch",
+        n_pcs = 5,
+        robust = FALSE,
+        cutoff = 0.99
+    )
+    out_log_pbf <- detect_outlier_samples(
+        pbf,
+        pbf_name = log_assay,
+        sample_annotation = meta,
+        batch_col = "batch",
+        n_pcs = 5,
+        robust = FALSE,
+        cutoff = 0.99
+    )
+
+    expect_equal(out_raw_pbf$is_outlier, out_raw_mat$is_outlier)
+    expect_equal(out_log_pbf$is_outlier, out_log_mat$is_outlier)
+    expect_false(identical(out_raw_pbf$is_outlier, out_log_pbf$is_outlier))
+
+    set.seed(123)
+    sub_raw_mat <- subbatch_detection(
+        mat_raw,
+        sample_annotation = meta,
+        batch_col = "batch",
+        n_pcs = 5,
+        method = "kmeans",
+        k_max = 4
+    )
+    set.seed(123)
+    sub_log_mat <- subbatch_detection(
+        mat_log,
+        sample_annotation = meta,
+        batch_col = "batch",
+        n_pcs = 5,
+        method = "kmeans",
+        k_max = 4
+    )
+    set.seed(123)
+    sub_raw_pbf <- subbatch_detection(
+        pbf,
+        pbf_name = raw_assay,
+        sample_annotation = meta,
+        batch_col = "batch",
+        n_pcs = 5,
+        method = "kmeans",
+        k_max = 4
+    )
+    set.seed(123)
+    sub_log_pbf <- subbatch_detection(
+        pbf,
+        pbf_name = log_assay,
+        sample_annotation = meta,
+        batch_col = "batch",
+        n_pcs = 5,
+        method = "kmeans",
+        k_max = 4
+    )
+
+    expect_equal(sub_raw_pbf$summary$k, sub_raw_mat$summary$k)
+    expect_equal(sub_log_pbf$summary$k, sub_log_mat$summary$k)
+    expect_false(identical(sub_raw_pbf$summary$k, sub_log_pbf$summary$k))
 })

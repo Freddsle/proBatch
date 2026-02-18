@@ -501,7 +501,7 @@ plot_intragroup_variation <- function(data_matrix, ...) UseMethod("plot_intragro
     list(
         names = metric_choice,
         titles = metric_titles[metric_choice],
-        calls = metric_calls[metric_choice]
+        calls = metric_calls
     )
 }
 
@@ -541,11 +541,21 @@ plot_intragroup_variation <- function(data_matrix, ...) UseMethod("plot_intragro
         assay_label = se_label
     )
 
+    call_info_local <- call_info
     group_data <- list()
     export_data <- list()
     for (grp in group_cols) {
-        call_args <- c(list(se = se, ain = se_label, condition = grp), call_info$args)
-        gg <- do.call(call_info$fun, call_args)
+        call_result <- .pb_intragroup_call_metric(
+            call_info = call_info_local,
+            se = se,
+            assay_label = se_label,
+            group_col = grp,
+            metric_name = metric_name
+        )
+        gg <- call_result$plot
+        if (isTRUE(call_result$fallback_to_no_diff)) {
+            call_info_local$args$diff <- FALSE
+        }
         extracted <- .pb_intragroup_extract_plot_data(gg)
         if (is.null(extracted)) {
             next
@@ -589,6 +599,42 @@ plot_intragroup_variation <- function(data_matrix, ...) UseMethod("plot_intragro
         data = combined,
         metrics = metrics,
         saved_files = saved_files
+    )
+}
+
+.pb_intragroup_call_metric <- function(call_info,
+                                       se,
+                                       assay_label,
+                                       group_col,
+                                       metric_name) {
+    call_args <- c(list(se = se, ain = assay_label, condition = group_col), call_info$args)
+    result <- tryCatch(
+        do.call(call_info$fun, call_args),
+        error = function(e) e
+    )
+    if (!inherits(result, "error")) {
+        return(list(plot = result, fallback_to_no_diff = FALSE))
+    }
+
+    error_msg <- conditionMessage(result)
+    allow_retry <- isTRUE(call_info$args$diff) &&
+        grepl("Difference not applicable", error_msg, fixed = TRUE)
+
+    if (!allow_retry) {
+        stop(result)
+    }
+
+    call_args$diff <- FALSE
+    warning(sprintf(
+        "Metric '%s' with diff = TRUE failed for assay '%s' and grouping '%s'; retrying with diff = FALSE.",
+        metric_name,
+        assay_label,
+        group_col
+    ), call. = FALSE)
+
+    list(
+        plot = do.call(call_info$fun, call_args),
+        fallback_to_no_diff = TRUE
     )
 }
 

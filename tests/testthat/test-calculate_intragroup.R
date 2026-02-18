@@ -527,8 +527,9 @@ test_that("plot_intragroup_variation retries diff metrics with diff = FALSE when
         .package = "PRONE"
     )
 
-    res <- expect_warning(
-        plot_intragroup_variation(
+    res <- NULL
+    expect_warning(
+        res <- plot_intragroup_variation(
             dm,
             sample_annotation = sample_ann,
             group_col = "Condition",

@@ -546,16 +546,20 @@ detect_nested_batches <- function(sample_annotation, batch_cols) {
 #'
 #' @inheritParams proBatch
 #' @param sample_annotation optional sample annotation data frame.
+#' @param pbf_name Assay name used when `data_matrix` is a `ProBatchFeatures`
+#'   object. If `NULL`, [pb_current_assay()] is used.
 #' @param batch_col optional batch column to report per-batch summaries.
 #' @param n_pcs number of principal components to use.
 #' @param center logical; center variables before PCA.
 #' @param scale. logical; scale variables before PCA.
-#' @param robust logical; use robust covariance via \code{MASS::cov.rob}.
+#' @param robust logical; use robust covariance via \code{MASS::cov.rob}. If
+#'   robust estimation flags multiple batches as complete outliers, the
+#'   function falls back to classical covariance.
 #' @param cutoff probability for the chi-square cutoff used to flag outliers.
 #'
 #' @return A data frame with \code{sample_id}, \code{batch} (if provided),
 #'   \code{mdist}, and \code{is_outlier}. Attributes include \code{cutoff},
-#'   \code{df}, and \code{mdist_cutoff}. The object has class
+#'   \code{df}, \code{mdist_cutoff}, and \code{outlier_mode}. The object has class
 #'   \code{"pb_outliers"}.
 #' @export
 #'
@@ -576,10 +580,14 @@ detect_outlier_samples <- function(data_matrix,
                                    center = TRUE,
                                    scale. = TRUE,
                                    robust = TRUE,
-                                   cutoff = 0.99) {
+                                   cutoff = 0.99,
+                                   pbf_name = NULL) {
     if (is(data_matrix, "ProBatchFeatures")) {
         object <- data_matrix
-        assay_name <- .pb_resolve_assay_for_input(object)
+        assay_name <- .pb_resolve_assay_for_input(
+            object = object,
+            pbf_name = pbf_name
+        )
         data_matrix <- pb_assay_matrix(object, assay = assay_name)
         sample_annotation <- .pb_default_sample_annotation(
             object = object,
@@ -615,29 +623,16 @@ detect_outlier_samples <- function(data_matrix,
     scores <- scores_info$scores
     n_pcs <- scores_info$n_pcs
 
-    cov_center <- colMeans(scores)
-    cov_matrix <- stats::cov(scores)
-
-    if (isTRUE(robust)) {
-        if (requireNamespace("MASS", quietly = TRUE)) {
-            cov_fit <- tryCatch(
-                MASS::cov.rob(scores),
-                error = function(e) NULL
-            )
-            if (!is.null(cov_fit)) {
-                cov_center <- cov_fit$center
-                cov_matrix <- cov_fit$cov
-            } else {
-                warning("Robust covariance estimation failed; falling back to cov().")
-            }
-        } else {
-            warning("Package 'MASS' not available; falling back to cov().")
-        }
-    }
-
-    mdist <- .pb_safe_mahalanobis(scores, cov_center, cov_matrix)
-    mdist_cutoff <- stats::qchisq(cutoff, df = n_pcs)
-    is_outlier <- mdist > mdist_cutoff
+    fit <- .pb_outlier_fit(
+        scores = scores,
+        n_pcs = n_pcs,
+        robust = robust,
+        cutoff = cutoff
+    )
+    mdist <- fit$mdist
+    is_outlier <- fit$is_outlier
+    mdist_cutoff <- fit$mdist_cutoff
+    outlier_mode <- if (isTRUE(fit$used_robust)) "robust" else "classical"
 
     out <- data.frame(
         sample_id = sample_ids,
@@ -657,12 +652,32 @@ detect_outlier_samples <- function(data_matrix,
         out$batch <- annotation[[batch_col]]
         out <- out[, c("sample_id", "batch", "mdist", "is_outlier"), drop = FALSE]
         batch_summary <- .pb_outlier_batch_summary(out)
+        if (isTRUE(robust) &&
+            isTRUE(fit$used_robust) &&
+            .pb_has_pathological_outlier_batches(batch_summary)) {
+            fit <- .pb_outlier_fit(
+                scores = scores,
+                n_pcs = n_pcs,
+                robust = FALSE,
+                cutoff = cutoff
+            )
+            out$mdist <- fit$mdist
+            out$is_outlier <- fit$is_outlier
+            mdist_cutoff <- fit$mdist_cutoff
+            batch_summary <- .pb_outlier_batch_summary(out)
+            outlier_mode <- "classical_fallback"
+            warning(
+                "Robust covariance flagged multiple batches as complete outliers; ",
+                "falling back to classical covariance (robust = FALSE)."
+            )
+        }
         attr(out, "batch_summary") <- batch_summary
     }
 
     attr(out, "cutoff") <- cutoff
     attr(out, "df") <- n_pcs
     attr(out, "mdist_cutoff") <- mdist_cutoff
+    attr(out, "outlier_mode") <- outlier_mode
     class(out) <- c("pb_outliers", "data.frame")
     out
 }
@@ -673,6 +688,8 @@ detect_outlier_samples <- function(data_matrix,
 #' @param n_pcs number of principal components to use.
 #' @param method clustering method; \code{"hclust"} or \code{"kmeans"}.
 #' @param k_max maximum number of clusters to evaluate per batch.
+#' @param pbf_name Assay name used when `data_matrix` is a `ProBatchFeatures`
+#'   object. If `NULL`, [pb_current_assay()] is used.
 #'
 #' @return A list with per-sample assignments, per-batch summaries, and
 #'   suggestions. The object has class \code{"pb_subbatches"}.
@@ -695,12 +712,16 @@ subbatch_detection <- function(data_matrix,
                                batch_col,
                                n_pcs = 10,
                                method = c("hclust", "kmeans"),
-                               k_max = 6) {
+                               k_max = 6,
+                               pbf_name = NULL) {
     sample_annotation_missing <- missing(sample_annotation)
 
     if (is(data_matrix, "ProBatchFeatures")) {
         object <- data_matrix
-        assay_name <- .pb_resolve_assay_for_input(object)
+        assay_name <- .pb_resolve_assay_for_input(
+            object = object,
+            pbf_name = pbf_name
+        )
         data_matrix <- pb_assay_matrix(object, assay = assay_name)
         if (sample_annotation_missing || is.null(sample_annotation)) {
             sample_annotation <- .pb_default_sample_annotation(
@@ -965,15 +986,70 @@ subbatch_detection <- function(data_matrix,
     mdist
 }
 
+.pb_outlier_fit <- function(scores, n_pcs, robust, cutoff) {
+    cov_center <- colMeans(scores)
+    cov_matrix <- stats::cov(scores)
+    used_robust <- FALSE
+
+    if (isTRUE(robust)) {
+        if (requireNamespace("MASS", quietly = TRUE)) {
+            cov_fit <- tryCatch(
+                MASS::cov.rob(scores),
+                error = function(e) NULL
+            )
+            if (!is.null(cov_fit)) {
+                cov_center <- cov_fit$center
+                cov_matrix <- cov_fit$cov
+                used_robust <- TRUE
+            } else {
+                warning("Robust covariance estimation failed; falling back to cov().")
+            }
+        } else {
+            warning("Package 'MASS' not available; falling back to cov().")
+        }
+    }
+
+    mdist <- .pb_safe_mahalanobis(scores, cov_center, cov_matrix)
+    mdist_cutoff <- stats::qchisq(cutoff, df = n_pcs)
+
+    list(
+        mdist = mdist,
+        is_outlier = mdist > mdist_cutoff,
+        mdist_cutoff = mdist_cutoff,
+        used_robust = used_robust
+    )
+}
+
+.pb_has_pathological_outlier_batches <- function(batch_summary) {
+    if (is.null(batch_summary) || !nrow(batch_summary) || nrow(batch_summary) < 2) {
+        return(FALSE)
+    }
+
+    pct <- batch_summary$pct_outliers
+    n_complete <- sum(pct == 100, na.rm = TRUE)
+    n_incomplete <- sum(pct < 100, na.rm = TRUE)
+
+    n_complete >= 2 && n_incomplete >= 1
+}
+
 .pb_outlier_batch_summary <- function(outlier_df) {
     batches <- unique(outlier_df$batch)
-    summary <- lapply(batches, function(batch) {
-        idx <- outlier_df$batch == batch
+    summary <- lapply(batches, function(batch_value) {
+        idx <- if (is.na(batch_value)) {
+            is.na(outlier_df$batch)
+        } else {
+            outlier_df$batch == batch_value
+        }
+        idx[is.na(idx)] <- FALSE
         data.frame(
-            batch = batch,
+            batch = as.character(batch_value),
             n_samples = sum(idx),
-            n_outliers = sum(outlier_df$is_outlier[idx]),
-            pct_outliers = 100 * mean(outlier_df$is_outlier[idx]),
+            n_outliers = sum(outlier_df$is_outlier[idx], na.rm = TRUE),
+            pct_outliers = if (sum(idx)) {
+                100 * mean(outlier_df$is_outlier[idx], na.rm = TRUE)
+            } else {
+                NA_real_
+            },
             stringsAsFactors = FALSE
         )
     })
