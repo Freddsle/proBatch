@@ -4,7 +4,7 @@
 \alias{calculate_classification_metrics}
 \alias{calculate_classification_metrics.default}
 \alias{calculate_classification_metrics.ProBatchFeatures}
-\title{Calculate clustering agreement metrics (ARI, MCC, silhouette)}
+\title{Calculate clustering agreement metrics (ARI, MCC, silhouette, Jaccard)}
 \usage{
 calculate_classification_metrics(data_matrix, ...)
 
@@ -17,6 +17,8 @@ calculate_classification_metrics(data_matrix, ...)
   k = NULL,
   fill_the_missing = -1,
   dist_method = "euclidean",
+  raw_matrix = NULL,
+  k_neighbors = 15,
   ...
 )
 
@@ -30,6 +32,8 @@ calculate_classification_metrics(data_matrix, ...)
   k = NULL,
   fill_the_missing = -1,
   dist_method = "euclidean",
+  raw_pbf_name = NULL,
+  k_neighbors = 15,
   ...
 )
 }
@@ -60,26 +64,40 @@ silhouette calculations (see [handle_missing_values()]).}
 \item{dist_method}{Distance method passed to [stats::dist()] for silhouette
 computation.}
 
+\item{raw_matrix}{Optional uncorrected reference matrix used to compute
+neighbor-preservation Jaccard (`jaccard_knn`). When `NULL`, `jaccard_knn`
+is returned as `NA`.}
+
+\item{k_neighbors}{Integer; number of neighbors used by the kNN-based
+Jaccard metric.}
+
 \item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
+
+\item{raw_pbf_name}{Assay name(s) providing the uncorrected reference matrix
+when `data_matrix` is a `ProBatchFeatures` object. Use length 1 to apply
+one reference assay to all evaluated assays, or provide one name per assay.}
 }
 \value{
 A data frame with one row per evaluated `known_col`, including
-  classification summary metrics and metadata. The result carries the
-  `pb_assignments` attribute: a data frame for a single `known_col`, or a
-  named list of data frames when multiple `known_col` values are evaluated.
+  classification summary metrics and metadata. In addition to `ARI`, `MCC`,
+  and `silhouette`, the output includes `jaccard_knn` and `jaccard_label`.
+  The result carries two attributes: `pb_assignments` and
+  `pb_silhouette_clusters`. Each is a single object for one `known_col`, or a
+  named list when multiple `known_col` values are evaluated.
 }
 \description{
 Compute clustering agreement metrics using known class labels and either
 provided cluster labels or k-means clustering when no cluster column is
 supplied. The function returns one row per requested `known_col` with ARI,
-MCC, and mean silhouette width. Sample-level assignments are attached as an
-attribute.
+MCC, mean silhouette width, and two Jaccard summaries. Sample-level
+assignments and per-cluster silhouette summaries are attached as attributes.
 }
 \examples{
 data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
 metrics <- calculate_classification_metrics(
     example_proteome_matrix,
-    example_sample_annotation,
+    sample_annotation = example_sample_annotation,
+    raw_matrix = example_proteome_matrix,
     known_col = "MS_batch",
     k = 2
 )

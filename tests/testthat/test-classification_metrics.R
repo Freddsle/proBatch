@@ -28,11 +28,18 @@ test_that("classification metrics with provided clusters", {
     expect_equal(metrics$MCC, 1)
     expect_true(is.finite(metrics$silhouette))
     expect_true(metrics$silhouette >= -1 && metrics$silhouette <= 1)
+    expect_true(is.na(metrics$jaccard_knn))
+    expect_equal(metrics$jaccard_label, 1)
 
     assignments <- attr(metrics, "pb_assignments")
     expect_true(is.data.frame(assignments))
     expect_equal(assignments$known, sample_annotation$known)
     expect_equal(assignments$predicted, sample_annotation$cluster)
+
+    sil_clusters <- attr(metrics, "pb_silhouette_clusters")
+    expect_true(is.numeric(sil_clusters))
+    expect_equal(length(sil_clusters), metrics$n_clusters)
+    expect_true(all(names(sil_clusters) %in% unique(sample_annotation$cluster)))
 })
 
 test_that("classification metrics uses kmeans fallback when no clusters supplied", {
@@ -66,6 +73,8 @@ test_that("classification metrics uses kmeans fallback when no clusters supplied
     expect_true(is.finite(metrics$ARI))
     expect_true(is.finite(metrics$MCC))
     expect_true(is.finite(metrics$silhouette))
+    expect_true(is.na(metrics$jaccard_knn))
+    expect_true(metrics$jaccard_label >= 0 && metrics$jaccard_label <= 1)
 })
 
 test_that("classification metrics MCC is invariant to factor level order", {
@@ -159,4 +168,43 @@ test_that("classification metrics supports multiple known columns", {
     expect_equal(assignments$known_b$known, sample_annotation$known_b)
     expect_equal(assignments$known_a$predicted, sample_annotation$cluster)
     expect_equal(assignments$known_b$predicted, sample_annotation$cluster)
+
+    sil_clusters <- attr(metrics, "pb_silhouette_clusters")
+    expect_true(is.list(sil_clusters))
+    expect_equal(names(sil_clusters), c("known_a", "known_b"))
+    expect_true(is.numeric(sil_clusters$known_a))
+    expect_true(is.numeric(sil_clusters$known_b))
+})
+
+test_that("classification metrics computes kNN Jaccard from raw matrix", {
+    sample_ids <- paste0("S", 1:6)
+    data_matrix <- matrix(
+        rnorm(24),
+        nrow = 4,
+        dimnames = list(paste0("F", 1:4), sample_ids)
+    )
+    data_matrix[, 1:3] <- data_matrix[, 1:3] + 2
+
+    sample_annotation <- data.frame(
+        FullRunName = sample_ids,
+        known = rep(c("A", "B"), each = 3),
+        stringsAsFactors = FALSE
+    )
+    sample_annotation$cluster <- sample_annotation$known
+
+    metrics <- calculate_classification_metrics(
+        data_matrix,
+        sample_annotation,
+        known_col = "known",
+        cluster_col = "cluster",
+        raw_matrix = data_matrix,
+        k_neighbors = 2
+    )
+
+    expect_equal(metrics$jaccard_knn, 1)
+    expect_equal(metrics$jaccard_label, 1)
+
+    sil_clusters <- attr(metrics, "pb_silhouette_clusters")
+    expect_true(is.numeric(sil_clusters))
+    expect_equal(length(sil_clusters), 2)
 })
