@@ -917,6 +917,8 @@ plot_PCA.default <- function(data_matrix,
             sample_annotation = sample_annotation,
             sample_ids = sample_ids,
             sample_id_col = sample_id_col,
+            color_by = color_by,
+            shape_by = shape_by,
             density_by = marginal_density_by,
             color_scheme = color_scheme,
             base_size = base_size,
@@ -1566,6 +1568,8 @@ plot_UMAP <- function(x, ...) UseMethod("plot_UMAP")
                                      sample_annotation = NULL,
                                      sample_ids = NULL,
                                      sample_id_col = NULL,
+                                     color_by = NULL,
+                                     shape_by = NULL,
                                      density_by = NULL,
                                      color_scheme = "brewer",
                                      base_size, theme_name,
@@ -1750,6 +1754,39 @@ plot_UMAP <- function(x, ...) UseMethod("plot_UMAP")
         scale_x_continuous(limits = range_dim1, expand = ggplot2::expansion(mult = 0)) +
         scale_y_continuous(limits = range_dim2, expand = ggplot2::expansion(mult = 0)) +
         theme(legend.position = "bottom")
+
+    use_two_row_color_legend <- FALSE
+    if (!is.null(sample_annotation) && is.data.frame(sample_annotation) &&
+        !is.null(color_by) && color_by %in% colnames(sample_annotation)) {
+        color_scheme_for_legend <- color_scheme
+        if (is.list(color_scheme_for_legend)) {
+            if (!is.null(names(color_scheme_for_legend)) &&
+                color_by %in% names(color_scheme_for_legend)) {
+                color_scheme_for_legend <- color_scheme_for_legend[[color_by]]
+            } else {
+                color_scheme_for_legend <- "brewer"
+            }
+        }
+
+        color_values <- sample_annotation[[color_by]]
+        if (is_batch_factor(color_values, color_scheme_for_legend)) {
+            labels <- unique(as.character(color_values))
+            labels <- labels[!is.na(labels)]
+            use_two_row_color_legend <- length(labels) > 2L
+        }
+    }
+    if (isTRUE(use_two_row_color_legend)) {
+        base_plot <- base_plot +
+            guides(color = guide_legend(nrow = 2L, byrow = TRUE))
+    }
+    if (!is.null(shape_by) && shape_by %in% colnames(base_plot$data)) {
+        shape_levels <- unique(as.character(base_plot$data[[shape_by]]))
+        shape_levels <- shape_levels[!is.na(shape_levels)]
+        if (length(shape_levels) > 2L) {
+            base_plot <- base_plot +
+                guides(shape = guide_legend(nrow = 2L, byrow = TRUE))
+        }
+    }
 
     top_density_grob <- ggplotGrob(top_density)
     right_density_grob <- ggplotGrob(right_density)

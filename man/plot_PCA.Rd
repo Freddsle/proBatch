@@ -96,8 +96,10 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{point_alpha}{Alpha transparency for plotted points.}
 
-\item{marginal_density}{Logical; if `TRUE`, add marginal density plots above
-and to the right of the PCA scatter plot.}
+\item{marginal_density}{Logical or a single column name. If `TRUE`, add
+marginal density plots grouped by `color_by`. If a column name is
+provided, densities are grouped by that column. Numeric-like grouping
+columns fall back to pooled marginals.}
 
 \item{x_nPC}{Optional integer PC index for the x axis. Use together with `y_nPC`
 to override `PC_to_plot`.}
@@ -133,6 +135,9 @@ pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
 )
 pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
     color_by = "MS_batch", marginal_density = TRUE
+)
+pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
+    color_by = "MS_batch", marginal_density = "digestion_batch"
 )
 
 color_list <- sample_annotation_to_colors(example_sample_annotation,

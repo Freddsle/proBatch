@@ -23,3 +23,4 @@ data/FlashLFQData
 
 vignettes/batch_evaluation_metrics_files/*
 vignettes/batch_evaluation_metrics_cache/*
+..Rcheck/*
