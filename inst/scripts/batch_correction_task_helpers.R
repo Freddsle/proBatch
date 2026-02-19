@@ -247,24 +247,36 @@ resolve_task_refs <- function(x, env) {
     selected_profile_ids <- unique(c(profiles_for_direct, profiles_for_imputation))
     for (profile_id in selected_profile_ids) {
         profile <- profiles_idx[[profile_id]]
-        profile_steps <- .normalize_steps(step = profile$step, steps = profile$steps)
+        has_profile_steps <- !is.null(profile$step) || !is.null(profile$steps)
         profile_from <- as.character(profile$from %||% input_assay)
-        profile_final <- as.character(profile$final_name %||% paste0(assay_prefix, "::", profile_id))
-        profile_label <- as.character(profile$label %||% profile_id)
-        profile_params <- .resolve_params(preprocess_default_params, profile$params, env = env)
-        profile_store <- profile$store_fast_steps %||% default_store_fast_steps
+        # Step-less profiles are pass-through anchors that point to an existing assay.
+        profile_final <- if (!is.null(profile$final_name)) {
+            as.character(profile$final_name)
+        } else if (has_profile_steps) {
+            as.character(paste0(assay_prefix, "::", profile_id))
+        } else {
+            profile_from
+        }
 
-        tasks <- .append_task(
-            tasks,
-            .make_task(
-                label = profile_label,
-                from = profile_from,
-                steps = profile_steps,
-                final_name = profile_final,
-                params = profile_params,
-                store_fast_steps = profile_store
+        if (has_profile_steps) {
+            profile_steps <- .normalize_steps(step = profile$step, steps = profile$steps)
+            profile_label <- as.character(profile$label %||% profile_id)
+            profile_params <- .resolve_params(preprocess_default_params, profile$params, env = env)
+            profile_store <- profile$store_fast_steps %||% default_store_fast_steps
+
+            tasks <- .append_task(
+                tasks,
+                .make_task(
+                    label = profile_label,
+                    from = profile_from,
+                    steps = profile_steps,
+                    final_name = profile_final,
+                    params = profile_params,
+                    store_fast_steps = profile_store
+                )
             )
-        )
+        }
+
         profile_assays[[profile_id]] <- profile_final
     }
 
@@ -578,4 +590,307 @@ run_pb_tasks <- function(pbf, tasks, log_fn = message) {
         task_results = task_results,
         corrected_assays = corrected_assays
     )
+}
+
+# ==============================================================================
+# Workflow-level reusable helpers
+# ==============================================================================
+
+`%+%` <- function(x, y) paste0(x, y)
+
+log_msg <- function(msg, level = "INFO") {
+    timestamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+    cat(sprintf("[%s] %s: %s\n", timestamp, level, msg))
+}
+
+apply_workflow_params <- function(workflow_params, env = parent.frame(), log_fn = log_msg) {
+    if (is.null(workflow_params)) {
+        return(invisible(NULL))
+    }
+    if (!is.list(workflow_params)) {
+        stop("'workflow_params' must be a named list.")
+    }
+    nms <- names(workflow_params)
+    if (is.null(nms) || any(!nzchar(nms))) {
+        stop("'workflow_params' must be a named list with non-empty keys.")
+    }
+
+    unknown <- setdiff(nms, ls(envir = env, all.names = TRUE))
+    if (length(unknown) > 0L) {
+        log_fn(sprintf(
+            "workflow_params contains unknown key(s): %s",
+            paste(unknown, collapse = ", ")
+        ), level = "WARN")
+    }
+
+    for (key in nms) {
+        assign(key, workflow_params[[key]], envir = env)
+    }
+
+    log_fn(sprintf("Applied %d workflow parameter override(s).", length(nms)))
+    invisible(NULL)
+}
+
+safe_try <- function(expr, error_msg = "Error occurred", return_on_error = NULL) {
+    result <- try(expr, silent = TRUE)
+    if (inherits(result, "try-error")) {
+        log_msg(sprintf("%s: %s", error_msg, as.character(result)), level = "WARN")
+        return(return_on_error)
+    }
+    result
+}
+
+save_plot_helper <- function(
+    plot_obj,
+    filename,
+    subdir = "plots",
+    width = plot_width,
+    height = plot_height,
+    format = plot_format,
+    dpi = plot_dpi,
+    n_plots = NULL,
+    n_cols = NULL
+) {
+    if (!save_plots) return(invisible(NULL))
+
+    filepath <- file.path(subdir, sprintf("%s.%s", filename, format))
+
+    # If multiple plots are arranged, scale device size to match the facet grid.
+    if (!is.null(n_plots)) {
+        n_plots_num <- if (is.numeric(n_plots)) n_plots else length(n_plots)
+        if (n_plots_num > 1) {
+            # Keep default grid logic unless caller explicitly provides n_cols.
+            n_cols_use <- n_cols
+            if (is.null(n_cols_use)) {
+                n_cols_use <- if (n_plots_num > 8) 8 else if (n_plots_num > 5) 5 else 2
+            }
+            n_rows <- ceiling(n_plots_num / n_cols_use)
+            width <- round(width * n_cols_use / 2, 0)
+            height <- round(height * n_rows, 0)
+        }
+    }
+
+    safe_try({
+        if (format == "pdf") {
+            pdf(filepath, width = width, height = height)
+        } else if (format == "png") {
+            png(filepath, width = width, height = height, units = "in", res = dpi)
+        } else if (format == "svg") {
+            svg(filepath, width = width, height = height)
+        }
+        print(plot_obj)
+        dev.off()
+        log_msg(sprintf("Saved plot: %s", filepath))
+    }, error_msg = sprintf("Failed to save plot: %s", filepath))
+}
+
+save_metric_helper <- function(data_obj, filename, subdir = "metrics") {
+    if (!save_metrics) return(invisible(NULL))
+
+    filepath <- file.path(subdir, sprintf("%s.csv", filename))
+
+    safe_try({
+        if (is.data.frame(data_obj) || is.matrix(data_obj)) {
+            write.csv(data_obj, filepath, row.names = TRUE)
+            log_msg(sprintf("Saved metric: %s", filepath))
+        } else {
+            safe_try({
+                metric_flatten <- pb_flatten_design_check(data_obj)
+                write.csv(metric_flatten, filepath, row.names = FALSE)
+                log_msg(sprintf("Saved metric (flattened): %s", filepath))
+            }, error_msg = sprintf("Failed to save flattened metric: %s", filepath))
+        }
+    }, error_msg = sprintf("Failed to save metric: %s", filepath))
+}
+
+safe_classification_metrics <- function(
+    x,
+    sample_annotation,
+    known_col = batch_col,
+    fill_the_missing = fill_missing
+) {
+    if (is.null(sample_annotation) || !all(known_col %in% names(sample_annotation))) {
+        return(NULL)
+    }
+
+    for (col in known_col) {
+        n_levels <- length(unique(sample_annotation[[col]][!is.na(sample_annotation[[col]])]))
+        if (n_levels < 2L) {
+            log_msg(sprintf(
+                "Not enough levels in column '%s' for classification metrics. Skipping.",
+                col
+            ), level = "WARN")
+            known_col <- setdiff(known_col, col)
+        }
+    }
+    if (length(known_col) == 0) {
+        log_msg("No valid known columns for classification metrics. Skipping.", level = "WARN")
+        return(NULL)
+    }
+
+    safe_try(
+        proBatch::calculate_classification_metrics(
+            x,
+            known_col = known_col,
+            fill_the_missing = fill_the_missing
+        ),
+        error_msg = "Classification metrics calculation failed",
+        return_on_error = NULL
+    )
+}
+
+pb_flatten_design_check <- function(x, sep = ", ") {
+    `%||%` <- function(a, b) if (is.null(a)) b else a
+    empty <- data.frame(section = character(), key = character(), value = character(), stringsAsFactors = FALSE)
+    if (is.null(x)) return(empty)
+
+    if (!is.list(x)) {
+        return(data.frame(
+            section = "value",
+            key = "",
+            value = paste(x, collapse = sep),
+            stringsAsFactors = FALSE
+        ))
+    }
+
+    summ <- x$summary %||% x[setdiff(names(x), c("errors", "warnings", "summary"))]
+    summ <- if (length(summ)) {
+        rapply(summ, function(v) if (length(v)) paste(v, collapse = sep) else NA_character_, how = "replace")
+    } else {
+        list()
+    }
+    flat <- if (length(summ)) unlist(summ, recursive = TRUE, use.names = TRUE) else character(0)
+
+    nm <- names(flat)
+    if (is.null(nm)) nm <- rep("", length(flat))
+    parts <- strsplit(nm, "\\.", perl = TRUE)
+    sec <- vapply(parts, function(p) if (length(p) && nzchar(p[1])) p[1] else "summary", character(1))
+    key <- vapply(parts, function(p) if (length(p) > 1) paste(p[-1], collapse = ".") else "", character(1))
+
+    errs <- as.character(unlist(x$errors %||% character(0), use.names = FALSE))
+    warns <- as.character(unlist(x$warnings %||% character(0), use.names = FALSE))
+
+    out <- do.call(rbind, Filter(Negate(is.null), list(
+        if (length(errs)) {
+            data.frame(section = "errors", key = as.character(seq_along(errs)), value = errs, stringsAsFactors = FALSE)
+        } else {
+            NULL
+        },
+        if (length(warns)) {
+            data.frame(section = "warnings", key = as.character(seq_along(warns)), value = warns, stringsAsFactors = FALSE)
+        } else {
+            NULL
+        },
+        if (length(flat)) {
+            data.frame(section = sec, key = key, value = as.character(unname(flat)), stringsAsFactors = FALSE)
+        } else {
+            NULL
+        }
+    )))
+    if (is.null(out)) empty else out
+}
+
+first_num <- function(x) {
+    if (is.null(x) || length(x) == 0) return(NA_real_)
+    x <- suppressWarnings(as.numeric(x))
+    if (!length(x) || all(is.na(x))) return(NA_real_)
+    x[which(!is.na(x))[1]]
+}
+
+pvca_share <- function(pvca_df, patterns = character(), category = NULL) {
+    if (is.null(pvca_df) || !is.data.frame(pvca_df)) return(NA_real_)
+
+    value_col <- if ("weights" %in% names(pvca_df)) {
+        "weights"
+    } else if ("Weighted.average.proportion.variance" %in% names(pvca_df)) {
+        "Weighted.average.proportion.variance"
+    } else {
+        return(NA_real_)
+    }
+
+    matched <- pvca_df
+    if (!is.null(category) && "category" %in% names(pvca_df)) {
+        matched <- pvca_df[tolower(pvca_df$category) == tolower(category), , drop = FALSE]
+    } else if (!is.null(patterns) && length(patterns) > 0 && "label" %in% names(pvca_df)) {
+        pattern_vec <- patterns[!is.na(patterns) & nzchar(patterns)]
+        if (length(pattern_vec) == 0) return(NA_real_)
+        matched <- pvca_df[grepl(
+            paste(pattern_vec, collapse = "|"),
+            pvca_df$label,
+            ignore.case = TRUE
+        ), , drop = FALSE]
+    } else {
+        return(NA_real_)
+    }
+
+    if (nrow(matched) == 0) return(NA_real_)
+    sum(matched[[value_col]], na.rm = TRUE)
+}
+
+median_corr_by_group <- function(corr_df, group_label) {
+    if (is.null(corr_df) || !is.data.frame(corr_df) || !"correlation" %in% names(corr_df)) {
+        return(NA_real_)
+    }
+
+    idx <- rep(FALSE, nrow(corr_df))
+    if (identical(group_label, "within_replicate")) {
+        if ("replicate" %in% names(corr_df)) {
+            replicate_flag <- suppressWarnings(as.logical(corr_df$replicate))
+            idx <- !is.na(replicate_flag) & replicate_flag
+        } else if ("batch_replicate" %in% names(corr_df)) {
+            idx <- grepl("same_biospecimen|within_replicate", corr_df$batch_replicate, ignore.case = TRUE)
+        }
+    } else if (identical(group_label, "within_batch")) {
+        if ("batch_the_same" %in% names(corr_df)) {
+            batch_flag <- suppressWarnings(as.logical(corr_df$batch_the_same))
+            idx <- !is.na(batch_flag) & batch_flag
+        } else if ("batch_replicate" %in% names(corr_df)) {
+            idx <- grepl("same_batch|within_batch", corr_df$batch_replicate, ignore.case = TRUE)
+        }
+    }
+
+    if (!any(idx, na.rm = TRUE)) return(NA_real_)
+    median(corr_df$correlation[idx], na.rm = TRUE)
+}
+
+count_outliers <- function(x) {
+    if (is.null(x)) return(NA_integer_)
+    if (is.data.frame(x)) {
+        outlier_col <- c("is_outlier", "outlier")
+        outlier_col <- outlier_col[outlier_col %in% names(x)]
+        if (length(outlier_col) > 0) {
+            outlier_flag <- suppressWarnings(as.logical(x[[outlier_col[1]]]))
+            return(sum(outlier_flag, na.rm = TRUE))
+        }
+    }
+    if (is.list(x) && "outliers" %in% names(x)) {
+        return(length(x$outliers))
+    }
+    if (is.logical(x)) {
+        return(sum(x, na.rm = TRUE))
+    }
+    NA_integer_
+}
+
+extract_class_metric <- function(class_df, metric_cols, known_col_target = batch_col) {
+    if (is.null(class_df) || !is.data.frame(class_df)) return(NA_real_)
+    class_subset <- class_df
+    if (!is.null(known_col_target) && "known_col" %in% names(class_subset) &&
+        known_col_target %in% class_subset$known_col) {
+        class_subset <- class_subset[class_subset$known_col == known_col_target, , drop = FALSE]
+    }
+
+    metric_cols <- metric_cols[metric_cols %in% names(class_subset)]
+    if (length(metric_cols) == 0) return(NA_real_)
+    first_num(class_subset[[metric_cols[1]]])
+}
+
+median_feature_cv <- function(cv_df) {
+    if (is.null(cv_df) || !is.data.frame(cv_df)) return(NA_real_)
+    cv_col <- c("CV_replicate", "CV_total", "CV_perBatch")
+    cv_col <- cv_col[cv_col %in% names(cv_df)]
+    if (length(cv_col) == 0) return(NA_real_)
+    cv_values <- suppressWarnings(as.numeric(cv_df[[cv_col[1]]]))
+    if (!length(cv_values) || all(is.na(cv_values))) return(NA_real_)
+    median(cv_values, na.rm = TRUE)
 }

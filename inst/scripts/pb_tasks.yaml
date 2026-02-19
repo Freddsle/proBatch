@@ -1,0 +1,284 @@
+task_grid:
+  # Fill dataset-specific values once in this section.
+  # Values can be:
+  # - literals (e.g. "MS_batch", 5, true)
+  # - references to workflow objects (e.g. "@batch_col")
+  # - evaluated calls (e.g. "!!call BiocParallel::SerialParam()")
+  user_params:
+    # Core assay selection.
+    assay_prefix: "PGs"
+    input_assay: null # if null -> "<assay_prefix>::log2_on_raw"
+
+    # Defaults point to variables from batch_correction_workflow.R.
+    sample_annotation: "@sample_annotation"
+    sample_id_col: "@sample_id_col"
+    batch_col: "@batch_col"
+    condition_col: "@condition_col"
+    biological_factors: "@biological_factors"
+
+    # Optional covariates for methods that support them.
+    correction_covariates: null
+    bert_reference_name: null
+    ruv_prps_group_cols: null
+
+    # Dataset-specific placeholders (fill only if you enable related methods).
+    mComBat_center: null
+    replicate_col: null
+    negative_control_features: null
+    conda_env_path: null
+    python_env: null
+    conda_env: null
+    inj_order_col: null
+    qc_col_name: null
+
+    # Shared hyperparameters.
+    gmf_ncomponents: 6
+    ruv_k: 5
+    ruv_k_alt: 3
+
+    # Method sets used by combinations below.
+    # Keep these lists as your "compare everything" switches.
+    methods_to_compare:
+      - "ComBat"
+      - "mComBat"
+      - "BERT_ComBat"
+      - "BERT_limma"
+      - "BERT_ref"
+      - "limmaRBE"
+      - "RUVIIIC_k5"
+      - "RUVIIIC_k3"
+      - "NormAE"
+      - "PLSDAbatch"
+      - "sPLSDAbatch"
+      - "omicsGMFcor"
+
+    imputation_methods_to_compare:
+      - "omicsGMFImpute"
+      - "PRONEImpute_conditioned"
+      - "PRONEImpute_global"
+      - "MFimpute"
+
+  settings:
+    assay_prefix: "@assay_prefix"
+    input_assay: "@input_assay"
+    # If true, methods with missing required params are skipped (instead of failing).
+    skip_invalid: true
+
+  defaults:
+    # Used for preprocessing profile tasks.
+    preprocess:
+      sample_annotation: "@sample_annotation"
+      sample_id_col: "@sample_id_col"
+      group_col: "@batch_col"
+      inside_batch: true
+    # Used for imputation tasks.
+    imputation:
+      sample_annotation: "@sample_annotation"
+      sample_id_col: "@sample_id_col"
+    # Used for correction tasks.
+    correction:
+      sample_annotation: "@sample_annotation"
+      sample_id_col: "@sample_id_col"
+    # Optional default for all profile tasks.
+    store_fast_steps: true
+
+  # Profiles define input states used as anchors for downstream combinations.
+  # This profile is pass-through (no preprocessing step): corrections start from input_assay.
+  profiles:
+    - id: "log2_on_raw"
+
+  # Imputation methods to apply before correction.
+  imputation_methods:
+    - id: "omicsGMFImpute"
+      step: "omicsGMFImpute"
+      params:
+        design_formula: "!!call stats::reformulate(batch_col)"
+        ncomponents: "@gmf_ncomponents"
+        # Optional omicsGMF controls.
+        gmf_args:
+          control.alg:
+            tol: 0.001
+            maxiter: 10000
+        # impute_args: {}
+
+    - id: "PRONEImpute_conditioned"
+      step: "PRONEImpute"
+      params:
+        # Usually map to your biological condition of interest.
+        condition_col: "@condition_col"
+
+    - id: "PRONEImpute_global"
+      step: "PRONEImpute"
+      params:
+        # Global PRONE mode; useful when no biological grouping should be used.
+        condition_col: null
+
+    - id: "MFimpute"
+      step: "MFimpute"
+      params:
+        backend: "ranger"
+        parallelize: "variables"
+        num.threads: 1
+        ntree: 100
+        maxiter: 3
+
+  # Batch-correction method catalog.
+  correction_methods:
+    - id: "ComBat"
+      step: "combat"
+      params:
+        batch_col: "@batch_col"
+        covariates_cols: "@correction_covariates"
+        par.prior: true
+        fill_the_missing: false
+
+    - id: "mComBat"
+      step: "mComBat"
+      params:
+        batch_col: "@batch_col"
+        covariates_cols: "@correction_covariates"
+        mComBat_center: "@mComBat_center"
+        par.prior: true
+        fill_the_missing: false
+      required_params:
+        - "mComBat_center"
+
+    - id: "BERT_ComBat"
+      step: "BERT"
+      params:
+        batch_col: "@batch_col"
+        bert_method: "ComBat"
+        cores: 1
+        BPPARAM: null
+        covariates_cols: "@correction_covariates"
+        combatmode: null
+        reference_name: " "
+
+    - id: "BERT_limma"
+      step: "BERT"
+      params:
+        batch_col: "@batch_col"
+        bert_method: "limma"
+        cores: 1
+        BPPARAM: null
+        covariates_cols: "@correction_covariates"
+        combatmode: null
+        reference_name: " "
+
+    - id: "BERT_ref"
+      step: "BERT"
+      params:
+        batch_col: "@batch_col"
+        bert_method: "ref"
+        cores: 1
+        BPPARAM: null
+        covariates_cols: "@correction_covariates"
+        combatmode: null
+        reference_name: "@bert_reference_name"
+      required_params:
+        - "reference_name"
+
+    - id: "limmaRBE"
+      step: "limmaRBE"
+      params:
+        batch_col: "@batch_col"
+        covariates_cols: "@correction_covariates"
+        fill_the_missing: false
+
+    - id: "RUVIIIC_k5"
+      step: "RUVIIIC"
+      params:
+        batch_col: "@batch_col"
+        replicate_col: "@replicate_col"
+        negative_control_features: "@negative_control_features"
+        prps_group_cols: "@ruv_prps_group_cols"
+        use_pseudorep: true
+        rep_force: false
+        k: "@ruv_k"
+        format: "wide"
+      required_params:
+        - "replicate_col"
+        - "negative_control_features"
+
+    - id: "RUVIIIC_k3"
+      step: "RUVIIIC"
+      params:
+        batch_col: "@batch_col"
+        replicate_col: "@replicate_col"
+        negative_control_features: "@negative_control_features"
+        prps_group_cols: "@ruv_prps_group_cols"
+        use_pseudorep: true
+        rep_force: false
+        k: "@ruv_k_alt"
+        format: "wide"
+      required_params:
+        - "replicate_col"
+        - "negative_control_features"
+
+    - id: "NormAE"
+      step: "NormAE"
+      params:
+        batch_col: "@batch_col"
+        inj_order_col: "@inj_order_col"
+        qc_col_name: "@qc_col_name"
+        python_env: "@python_env"
+        conda_env: "@conda_env"
+        conda_env_path: "@conda_env_path"
+        normae_args:
+          log_transform: false
+          early_stop: false
+          n_epochs_iter_train: 500
+          n_latents: 16
+          batch_size: 32
+          order_indicator_col: " "
+
+    - id: "PLSDAbatch"
+      step: "PLSDAbatch"
+      params:
+        batch_col: "@batch_col"
+        effect_col: "@condition_col"
+        run_splsda: false
+        ncomp_trt: null
+        ncomp_bat: null
+        keepX_trt: null
+        keepX_bat: null
+
+    - id: "sPLSDAbatch"
+      step: "sPLSDAbatch"
+      params:
+        batch_col: "@batch_col"
+        effect_col: "@condition_col"
+        run_splsda: true
+        ncomp_trt: null
+        ncomp_bat: null
+        keepX_trt: null
+        keepX_bat: null
+
+    # Additional correction method (included in default comparison set above).
+    - id: "omicsGMFcor"
+      step: "omicsGMFcor"
+      params:
+        design_formula: "!!call stats::reformulate(batch_col)"
+        ncomponents: "@gmf_ncomponents"
+        batch_col: "@batch_col"
+        gmf_args:
+          control.alg:
+            tol: 0.001
+            maxiter: 10000
+        # impute_args: {}
+
+  # Cartesian expansion plan.
+  combinations:
+    # Direct correction on pass-through profile.
+    profiles_for_direct_correction:
+      - "log2_on_raw"
+    direct_corrections: "@methods_to_compare"
+
+    # Imputation + correction branch.
+    profiles_for_imputation:
+      - "log2_on_raw"
+    imputations: "@imputation_methods_to_compare"
+    post_imputation_corrections: "@methods_to_compare"
+
+    # If true, keep imputation-only outputs in addition to post-imputation corrections.
+    include_imputation_outputs: true

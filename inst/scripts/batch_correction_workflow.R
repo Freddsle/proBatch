@@ -17,6 +17,10 @@
 # ==============================================================================
 # CONFIGURATION PARAMETERS - EDIT THIS SECTION
 # ==============================================================================
+# Defaults below are used when running this script directly.
+# For user-specific runs, prefer editing and running:
+#   inst/scripts/batch_correction_workflow_params.R
+# which passes overrides via `workflow_params`.
 
 # --- Input data ---
 # Provide either:
@@ -73,8 +77,9 @@ correction_methods <- c("limmaRBE") # Example: c("limmaRBE", "combat", "centerMe
 
 # Option 2 (advanced): provide a YAML task file (same task structure as inst/scripts/03_data_processing.R)
 # If set, tasks from this file are used instead of correction_methods.
-correction_tasks_yaml <- NULL   # Example: "inst/scripts/pb_tasks.yaml"
+correction_tasks_yaml <- "inst/scripts/pb_tasks.yaml" # Uses task-grid defaults (all methods on log2_on_raw profile)
 correction_task_labels <- NULL  # Optional subset of task labels from correction_tasks_yaml
+                                # example: c("ComBat_log2_on_raw", "BERT_ComBat_log2_on_raw", "omicsGMFcor_log2_on_raw")
 
 # --- Output configuration ---
 output_base_dir <- file.path(tempdir(), "batch_correction_results") # Base output directory
@@ -119,20 +124,6 @@ for (pkg in required_packages) {
     suppressPackageStartupMessages(library(pkg, character.only = TRUE))
 }
 
-# Define string concatenation operator
-`%+%` <- function(x, y) paste0(x, y)
-
-# Set random seed
-if (!is.null(set_seed)) {
-    set.seed(set_seed)
-}
-
-# Logging function
-log_msg <- function(msg, level = "INFO") {
-    timestamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-    cat(sprintf("[%s] %s: %s\n", timestamp, level, msg))
-}
-
 # Load correction-task helpers (kept separate for readability/maintainability)
 file_args <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
 script_dir <- if (length(file_args) > 0L) {
@@ -150,6 +141,20 @@ if (is.na(helper_path) || !nzchar(helper_path)) {
     stop("Could not locate 'batch_correction_task_helpers.R'.")
 }
 source(helper_path)
+
+# Optional overrides from a runner/config script that defines `workflow_params`.
+if (exists("workflow_params", inherits = TRUE)) {
+    apply_workflow_params(
+        get("workflow_params", inherits = TRUE),
+        env = environment(),
+        log_fn = log_msg
+    )
+}
+
+# Set random seed (after optional parameter overrides)
+if (!is.null(set_seed)) {
+    set.seed(set_seed)
+}
 
 # Create output directory structure
 if (save_plots || save_metrics || save_objects) {
@@ -297,134 +302,30 @@ color_list <- proBatch::sample_annotation_to_colors(
 log_msg(sprintf("Data dimensions: %d features x %d samples", 
                nrow(data_matrix_raw_log), ncol(data_matrix_raw_log)))
 
-# ==============================================================================
-# HELPER FUNCTIONS
-# ==============================================================================
+# Pre-validate correction-task YAML before any raw diagnostics (fail-fast).
+correction_tasks_prevalidated <- NULL
+if (!is.null(correction_tasks_yaml) && nzchar(correction_tasks_yaml)) {
+    log_msg(sprintf(
+        "Pre-validating correction tasks YAML before baseline diagnostics: %s",
+        correction_tasks_yaml
+    ))
 
-# Safe function wrapper with try()
-safe_try <- function(expr, error_msg = "Error occurred", return_on_error = NULL) {
-    result <- try(expr, silent = TRUE)
-    if (inherits(result, "try-error")) {
-        log_msg(sprintf("%s: %s", error_msg, as.character(result)), level = "WARN")
-        return(return_on_error)
-    }
-    return(result)
-}
-
-# Save plot helper
-save_plot_helper <- function(plot_obj, filename, subdir = "plots", width = plot_width, 
-                            height = plot_height, format = plot_format, dpi = plot_dpi,
-                            n_plots = NULL, n_cols = NULL) {
-    if (!save_plots) return(invisible(NULL))
-    
-    filepath <- file.path(subdir, sprintf("%s.%s", filename, format))
-
-    # If multiple plots are arranged, scale device size to match the facet grid.
-    if (!is.null(n_plots)) {
-        n_plots_num <- if (is.numeric(n_plots)) n_plots else length(n_plots)
-        if (n_plots_num > 1) {
-            # Keep default grid logic unless caller explicitly provides n_cols.
-            n_cols_use <- n_cols
-            if (is.null(n_cols_use)) {
-                n_cols_use <- if (n_plots_num > 8) 8 else if (n_plots_num > 5) 5 else 2
-            }
-            n_rows <- ceiling(n_plots_num / n_cols_use)
-            width <- round(width * n_cols_use / 2, 0)
-            height <- round(height * n_rows, 0)
-        }
-    }
-
-    safe_try({
-        if (format == "pdf") {
-            pdf(filepath, width = width, height = height)
-        } else if (format == "png") {
-            png(filepath, width = width, height = height, units = "in", res = dpi)
-        } else if (format == "svg") {
-            svg(filepath, width = width, height = height)
-        }
-        print(plot_obj)
-        dev.off()
-        log_msg(sprintf("Saved plot: %s", filepath))
-    }, error_msg = sprintf("Failed to save plot: %s", filepath))
-}
-
-# Save metric helper
-save_metric_helper <- function(data_obj, filename, subdir = "metrics") {
-    if (!save_metrics) return(invisible(NULL))
-    
-    filepath <- file.path(subdir, sprintf("%s.csv", filename))
-    
-    safe_try({
-        if (is.data.frame(data_obj) || is.matrix(data_obj)) {
-            write.csv(data_obj, filepath, row.names = TRUE)
-            log_msg(sprintf("Saved metric: %s", filepath))
-        } else {
-            safe_try({
-                metric_flatten <- pb_flatten_design_check(data_obj)
-                write.csv(metric_flatten, filepath, row.names = FALSE)
-                log_msg(sprintf("Saved metric (flattened): %s", filepath))
-            }, error_msg = sprintf("Failed to save flattened metric: %s", filepath))
-        }
-    }, error_msg = sprintf("Failed to save metric: %s", filepath))
-}
-
-
-# Safe classification metrics
-safe_classification_metrics <- function(
-    x, sample_annotation, 
-    known_col = batch_col,
-    fill_the_missing = fill_missing) {
-    if (is.null(sample_annotation) || !all(known_col %in% names(sample_annotation))) {
-        return(NULL)
-    }
-    for (col in known_col) {
-        n_levels <- length(unique(sample_annotation[[col]][!is.na(sample_annotation[[col]])]))
-        if (n_levels < 2L) {
-            log_msg(sprintf("Not enough levels in column '%s' for classification metrics. Skipping.", col), level = "WARN")
-            known_col <- setdiff(known_col, col)
-        }
-    }
-    if (length(known_col) == 0) {
-        log_msg("No valid known columns for classification metrics. Skipping.", level = "WARN")
-        return(NULL)
-    }
-
-    safe_try(
-        proBatch::calculate_classification_metrics(
-            x, known_col = known_col,
-            fill_the_missing = fill_the_missing
-        ),
-        error_msg = "Classification metrics calculation failed",
-        return_on_error = NULL
+    correction_tasks_prevalidated <- read_pb_tasks_yaml(
+        correction_tasks_yaml,
+        env = environment()
     )
-}
+    correction_tasks_prevalidated <- filter_pb_tasks(
+        correction_tasks_prevalidated,
+        correction_task_labels
+    )
+    if (length(correction_tasks_prevalidated) == 0L) {
+        stop("No correction tasks left after filtering with correction_task_labels.")
+    }
 
-# Flatten design check output for saving
-pb_flatten_design_check <- function(x, sep = ", ") {
-  `%||%` <- function(a, b) if (is.null(a)) b else a
-  empty <- data.frame(section=character(), key=character(), value=character(), stringsAsFactors=FALSE)
-  if (is.null(x)) return(empty)
-
-  if (!is.list(x)) return(data.frame(section="value", key="", value=paste(x, collapse=sep), stringsAsFactors=FALSE))
-
-  summ <- x$summary %||% x[setdiff(names(x), c("errors","warnings","summary"))]
-  summ <- if (length(summ)) rapply(summ, function(v) if (length(v)) paste(v, collapse=sep) else NA_character_, how="replace") else list()
-  flat <- if (length(summ)) unlist(summ, recursive=TRUE, use.names=TRUE) else character(0)
-
-  nm <- names(flat); if (is.null(nm)) nm <- rep("", length(flat))
-  parts <- strsplit(nm, "\\.", perl = TRUE)
-  sec <- vapply(parts, function(p) if (length(p) && nzchar(p[1])) p[1] else "summary", character(1))
-  key <- vapply(parts, function(p) if (length(p) > 1) paste(p[-1], collapse=".") else "", character(1))
-
-  errs  <- as.character(unlist(x$errors   %||% character(0), use.names=FALSE))
-  warns <- as.character(unlist(x$warnings %||% character(0), use.names=FALSE))
-
-  out <- do.call(rbind, Filter(Negate(is.null), list(
-    if (length(errs))  data.frame(section="errors",   key=as.character(seq_along(errs)),  value=errs,  stringsAsFactors=FALSE) else NULL,
-    if (length(warns)) data.frame(section="warnings", key=as.character(seq_along(warns)), value=warns, stringsAsFactors=FALSE) else NULL,
-    if (length(flat))  data.frame(section=sec, key=key, value=as.character(unname(flat)), stringsAsFactors=FALSE) else NULL
-  )))
-  if (is.null(out)) empty else out
+    log_msg(sprintf(
+        "YAML pre-validation successful: %d correction task(s) ready.",
+        length(correction_tasks_prevalidated)
+    ))
 }
 
 # ==============================================================================
@@ -915,7 +816,11 @@ if (length(batch_levels) < 2L) {
         length(unique(sample_annotation[[col]][!is.na(sample_annotation[[col]])])) >= 2
     }, logical(1))]
 
-    correction_tasks <- if (!is.null(correction_tasks_yaml) && nzchar(correction_tasks_yaml)) {
+    correction_tasks <- if (!is.null(correction_tasks_prevalidated)) {
+        log_msg("Using pre-validated correction tasks from YAML.")
+        correction_tasks_prevalidated
+    } else if (!is.null(correction_tasks_yaml) && nzchar(correction_tasks_yaml)) {
+        # Defensive fallback; YAML should normally be pre-validated above.
         log_msg(sprintf("Loading correction tasks from YAML: %s", correction_tasks_yaml))
         tasks_from_yaml <- read_pb_tasks_yaml(correction_tasks_yaml, env = environment())
         tasks_filtered <- filter_pb_tasks(tasks_from_yaml, correction_task_labels)
@@ -1391,110 +1296,6 @@ log_msg("=" %+% "=" %+% "=" %+% " COMPARATIVE ANALYSIS " %+% "=" %+% "=" %+% "="
 
 # --- Summary metrics table ---
 log_msg("Generating summary metrics comparison table")
-
-first_num <- function(x) {
-    if (is.null(x) || length(x) == 0) return(NA_real_)
-    x <- suppressWarnings(as.numeric(x))
-    if (!length(x) || all(is.na(x))) return(NA_real_)
-    x[which(!is.na(x))[1]]
-}
-
-pvca_share <- function(pvca_df, patterns = character(), category = NULL) {
-    if (is.null(pvca_df) || !is.data.frame(pvca_df)) return(NA_real_)
-
-    value_col <- if ("weights" %in% names(pvca_df)) {
-        "weights"
-    } else if ("Weighted.average.proportion.variance" %in% names(pvca_df)) {
-        "Weighted.average.proportion.variance"
-    } else {
-        return(NA_real_)
-    }
-
-    matched <- pvca_df
-    if (!is.null(category) && "category" %in% names(pvca_df)) {
-        matched <- pvca_df[tolower(pvca_df$category) == tolower(category), , drop = FALSE]
-    } else if (!is.null(patterns) && length(patterns) > 0 && "label" %in% names(pvca_df)) {
-        pattern_vec <- patterns[!is.na(patterns) & nzchar(patterns)]
-        if (length(pattern_vec) == 0) return(NA_real_)
-        matched <- pvca_df[grepl(paste(pattern_vec, collapse = "|"), 
-                                 pvca_df$label, ignore.case = TRUE), , drop = FALSE]
-    } else {
-        return(NA_real_)
-    }
-
-    if (nrow(matched) == 0) return(NA_real_)
-    sum(matched[[value_col]], na.rm = TRUE)
-}
-
-median_corr_by_group <- function(corr_df, group_label) {
-    if (is.null(corr_df) || !is.data.frame(corr_df) || !"correlation" %in% names(corr_df)) {
-        return(NA_real_)
-    }
-
-    idx <- rep(FALSE, nrow(corr_df))
-    if (identical(group_label, "within_replicate")) {
-        if ("replicate" %in% names(corr_df)) {
-            replicate_flag <- suppressWarnings(as.logical(corr_df$replicate))
-            idx <- !is.na(replicate_flag) & replicate_flag
-        } else if ("batch_replicate" %in% names(corr_df)) {
-            idx <- grepl("same_biospecimen|within_replicate",
-                         corr_df$batch_replicate, ignore.case = TRUE)
-        }
-    } else if (identical(group_label, "within_batch")) {
-        if ("batch_the_same" %in% names(corr_df)) {
-            batch_flag <- suppressWarnings(as.logical(corr_df$batch_the_same))
-            idx <- !is.na(batch_flag) & batch_flag
-        } else if ("batch_replicate" %in% names(corr_df)) {
-            idx <- grepl("same_batch|within_batch",
-                         corr_df$batch_replicate, ignore.case = TRUE)
-        }
-    }
-
-    if (!any(idx, na.rm = TRUE)) return(NA_real_)
-    median(corr_df$correlation[idx], na.rm = TRUE)
-}
-
-count_outliers <- function(x) {
-    if (is.null(x)) return(NA_integer_)
-    if (is.data.frame(x)) {
-        outlier_col <- c("is_outlier", "outlier")
-        outlier_col <- outlier_col[outlier_col %in% names(x)]
-        if (length(outlier_col) > 0) {
-            outlier_flag <- suppressWarnings(as.logical(x[[outlier_col[1]]]))
-            return(sum(outlier_flag, na.rm = TRUE))
-        }
-    }
-    if (is.list(x) && "outliers" %in% names(x)) {
-        return(length(x$outliers))
-    }
-    if (is.logical(x)) {
-        return(sum(x, na.rm = TRUE))
-    }
-    return(NA_integer_)
-}
-
-extract_class_metric <- function(class_df, metric_cols, known_col_target = batch_col) {
-    if (is.null(class_df) || !is.data.frame(class_df)) return(NA_real_)
-    class_subset <- class_df
-    if (!is.null(known_col_target) && "known_col" %in% names(class_subset) &&
-        known_col_target %in% class_subset$known_col) {
-        class_subset <- class_subset[class_subset$known_col == known_col_target, , drop = FALSE]
-    }
-
-    metric_cols <- metric_cols[metric_cols %in% names(class_subset)]
-    if (length(metric_cols) == 0) return(NA_real_)
-    first_num(class_subset[[metric_cols[1]]])
-}
-
-median_feature_cv <- function(cv_df) {
-    if (is.null(cv_df) || !is.data.frame(cv_df)) return(NA_real_)
-    cv_col <- c("CV_replicate", "CV_total", "CV_perBatch")
-    cv_col <- cv_col[cv_col %in% names(cv_df)]
-    if (length(cv_col) == 0) return(NA_real_)
-    cv_values <- suppressWarnings(as.numeric(cv_df[[cv_col[1]]]))
-    if (!length(cv_values) || all(is.na(cv_values))) return(NA_real_)
-    median(cv_values, na.rm = TRUE)
-}
 
 metric_names <- c(
     "PVCA: Technical %",
