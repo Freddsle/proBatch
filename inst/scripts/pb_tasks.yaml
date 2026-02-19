@@ -13,6 +13,7 @@ task_grid:
     sample_annotation: "@sample_annotation"
     sample_id_col: "@sample_id_col"
     batch_col: "@batch_col"
+    order_col: "@order_col"
     condition_col: "@condition_col"
     biological_factors: "@biological_factors"
 
@@ -45,6 +46,7 @@ task_grid:
       - "BERT_limma"
       - "BERT_ref"
       - "limmaRBE"
+      - "LOESS_limmaRBE"
       - "RUVIIIC_k5"
       - "RUVIIIC_k3"
       - "NormAE"
@@ -184,6 +186,17 @@ task_grid:
         batch_col: "@batch_col"
         covariates_cols: "@correction_covariates"
         fill_the_missing: false
+
+    - id: "LOESS_limmaRBE"
+      step: "loessLimmaRBE"
+      params:
+        sample_annotation: null
+        batch_col: "@batch_col"
+        order_col: "@order_col"
+        covariates_cols: "@correction_covariates"
+        fill_the_missing: false
+      required_params:
+        - "order_col"
 
     - id: "RUVIIIC_k5"
       step: "RUVIIIC"

@@ -488,7 +488,35 @@ sanitize_label_for_path <- function(x) {
     gsub("[^A-Za-z0-9._-]+", "_", x)
 }
 
-run_pb_tasks <- function(pbf, tasks, log_fn = message) {
+.with_captured_task_output <- function(log_path, expr) {
+    dir.create(dirname(log_path), recursive = TRUE, showWarnings = FALSE)
+    con <- file(log_path, open = "wt")
+    out_sinks_before <- sink.number(type = "output")
+    msg_sinks_before <- sink.number(type = "message")
+    on.exit(
+        {
+            while (sink.number(type = "message") > msg_sinks_before) {
+                sink(type = "message")
+            }
+            while (sink.number(type = "output") > out_sinks_before) {
+                sink(type = "output")
+            }
+            close(con)
+        },
+        add = TRUE
+    )
+    sink(con, type = "output")
+    sink(con, type = "message")
+    force(expr)
+}
+
+run_pb_tasks <- function(
+  pbf,
+  tasks,
+  log_fn = message,
+  normae_log_base_dir = NULL,
+  plsdabatch_log_base_dir = NULL
+) {
     if (length(tasks) == 0L) {
         return(list(
             pbf = pbf,
@@ -528,6 +556,44 @@ run_pb_tasks <- function(pbf, tasks, log_fn = message) {
         step_text <- paste(steps, collapse = " -> ")
         log_fn(sprintf("(%d/%d) Running task '%s' [%s]", i, length(tasks), label, step_text))
 
+        has_normae_step <- any(tolower(steps) %in% "normae")
+        has_plsda_step <- any(tolower(steps) %in% c("plsdabatch", "splsdabatch"))
+        normae_log_root <- NULL
+        old_normae_run_root <- getOption("proBatch.normae_run_root", NULL)
+        override_normae_run_root <- FALSE
+        if (has_normae_step &&
+            !is.null(normae_log_base_dir) &&
+            nzchar(trimws(as.character(normae_log_base_dir)))) {
+            normae_base <- trimws(as.character(normae_log_base_dir)[1L])
+            normae_log_root <- file.path(normae_base, sanitize_label_for_path(label))
+            dir.create(normae_log_root, recursive = TRUE, showWarnings = FALSE)
+            options(proBatch.normae_run_root = normae_log_root)
+            override_normae_run_root <- TRUE
+            log_fn(sprintf(
+                "NormAE logs for task '%s' will be saved under: %s",
+                label,
+                normalizePath(normae_log_root, winslash = "/", mustWork = FALSE)
+            ))
+        }
+
+        plsda_task_log <- NULL
+        if (has_plsda_step &&
+            !is.null(plsdabatch_log_base_dir) &&
+            nzchar(trimws(as.character(plsdabatch_log_base_dir)))) {
+            plsda_base <- trimws(as.character(plsdabatch_log_base_dir)[1L])
+            plsda_label_dir <- file.path(plsda_base, sanitize_label_for_path(label))
+            dir.create(plsda_label_dir, recursive = TRUE, showWarnings = FALSE)
+            plsda_task_log <- file.path(
+                plsda_label_dir,
+                paste0("plsdabatch_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".log")
+            )
+            log_fn(sprintf(
+                "PLSDA-batch stdout/messages for task '%s' will be saved to: %s",
+                label,
+                normalizePath(plsda_task_log, winslash = "/", mustWork = FALSE)
+            ))
+        }
+
         transform_args <- list(
             pbf,
             from = t$from,
@@ -541,10 +607,26 @@ run_pb_tasks <- function(pbf, tasks, log_fn = message) {
 
         task_error <- NULL
         updated <- tryCatch(
-            do.call(proBatch::pb_transform, transform_args),
+            if (is.null(plsda_task_log)) {
+                do.call(proBatch::pb_transform, transform_args)
+            } else {
+                .with_captured_task_output(
+                    plsda_task_log,
+                    do.call(proBatch::pb_transform, transform_args)
+                )
+            },
             error = function(e) {
                 task_error <<- conditionMessage(e)
                 pbf
+            },
+            finally = {
+                if (override_normae_run_root) {
+                    if (is.null(old_normae_run_root)) {
+                        options(proBatch.normae_run_root = NULL)
+                    } else {
+                        options(proBatch.normae_run_root = old_normae_run_root)
+                    }
+                }
             }
         )
 

@@ -50,6 +50,8 @@ Use `correction_task_labels` only for exact label filtering of expanded tasks.
 ## What to Customize Where
 
 - Use `workflow_params` for dataset paths, column names, plotting options, output folder, and task-file path.
+- Optional: set `workflow_params$normae_log_base_dir` to route NormAE CLI logs to a dedicated folder organized by task label (for example: `workflow_params$normae_log_base_dir <- file.path(workflow_params$output_base_dir, "02_corrected_diagnostics", "logs", "normae")`).
+- Optional: set `workflow_params$plsdabatch_log_base_dir` to route noisy `(s)PLSDA-batch` messages/progress to per-task log files (for example: `workflow_params$plsdabatch_log_base_dir <- file.path(workflow_params$output_base_dir, "02_corrected_diagnostics", "logs", "plsdabatch")`).
 - Use task YAML for method graph design (profiles, imputation/correction combinations, method-specific required params).
 - If you only need to enable methods skipped by required params, set those required values in YAML `task_grid.user_params` (or in objects referenced by YAML).
 
@@ -106,6 +108,7 @@ The task grid expands into three branches:
 | `BERT_limma` | BERT | — |
 | `BERT_ref` | BERT | `bert_reference_name` |
 | `limmaRBE` | limmaRBE | — |
+| `LOESS_limmaRBE` | loessLimmaRBE | `order_col` |
 | `RUVIIIC_k5` | RUVIIIC | `replicate_col`, `negative_control_features` |
 | `RUVIIIC_k3` | RUVIIIC | `replicate_col`, `negative_control_features` |
 | `NormAE` | NormAE | — |
@@ -117,11 +120,11 @@ Methods with missing required params are skipped when `settings.skip_invalid: tr
 
 ### Branch 1 — Direct Correction
 
-**1 profile × 12 methods = 12 max combinations**
+**1 profile × 13 methods = 13 max combinations**
 
 | Profile | Correction Methods |
 |---------|--------------------|
-| `log2_on_raw` | all 12 above |
+| `log2_on_raw` | all 13 above |
 
 ### Branch 2 — Imputation Only
 
@@ -137,25 +140,26 @@ Methods with missing required params are skipped when `settings.skip_invalid: tr
 
 ### Branch 3 — Imputation + Correction
 
-**1 profile × 4 imputation methods × 12 correction methods = 48 max combinations**
+**1 profile × 4 imputation methods × 13 correction methods = 52 max combinations**
 
 | Profile | Imputation | Correction Methods |
 |---------|------------|--------------------|
-| `log2_on_raw` | omicsGMFImpute | all 12 above |
-| `log2_on_raw` | PRONEImpute_conditioned | all 12 above |
-| `log2_on_raw` | PRONEImpute_global | all 12 above |
-| `log2_on_raw` | MFimpute | all 12 above |
+| `log2_on_raw` | omicsGMFImpute | all 13 above |
+| `log2_on_raw` | PRONEImpute_conditioned | all 13 above |
+| `log2_on_raw` | PRONEImpute_global | all 13 above |
+| `log2_on_raw` | MFimpute | all 13 above |
 
 ### Grand Total
 
 | Branch | Max | Runnable (with defaults) |
 |--------|-----|--------------------------|
-| Direct correction | 12 | 8 |
+| Direct correction | 13 | 9 |
 | Imputation-only | 4 | 4 |
-| Imputation + Correction | 48 | 32 |
-| **Total** | **64** | **44** |
+| Imputation + Correction | 52 | 36 |
+| **Total** | **69** | **49** |
 
 Runnable with defaults excludes methods requiring unset params (`mComBat`, `BERT_ref`, `RUVIIIC_k5`, `RUVIIIC_k3`).
+`LOESS_limmaRBE` also requires `order_col` to be present in the assay colData/sample annotation.
 
 ### Enabling Skipped Methods
 

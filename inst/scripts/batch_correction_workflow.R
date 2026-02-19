@@ -73,7 +73,7 @@ example_feature_id <- NULL # Specific feature ID or NULL for auto
 
 # --- Batch correction methods ---
 # Option 1: provide one or many methods with shared parameters (batch_col + correction_covariates)
-correction_methods <- c("limmaRBE") # Example: c("limmaRBE", "combat", "centerMean")
+correction_methods <- c("limmaRBE") # Example: c("limmaRBE", "combat", "loessLimmaRBE")
 
 # Option 2 (advanced): provide a YAML task file (same task structure as inst/scripts/03_data_processing.R)
 # If set, tasks from this file are used instead of correction_methods.
@@ -87,6 +87,14 @@ results_prefix <- "BEC" # Prefix for result files
 save_plots <- TRUE # Save plots to files
 save_metrics <- TRUE # Save metric tables to CSV
 save_objects <- TRUE # Save R objects (pbf, matrices) to RDS
+# Optional root for NormAE stdout/stderr logs.
+# Default NULL keeps current behavior (logs under current working directory).
+# Example: file.path(output_base_dir, "02_corrected_diagnostics", "logs", "normae")
+normae_log_base_dir <- NULL
+# Optional root for (s)PLSDA-batch R output/messages.
+# Default NULL keeps current behavior (messages in workflow log).
+# Example: file.path(output_base_dir, "02_corrected_diagnostics", "logs", "plsdabatch")
+plsdabatch_log_base_dir <- NULL
 
 # --- Plot settings ---
 plot_format <- "png" # Options: "png", "pdf", "svg"
@@ -925,10 +933,32 @@ if (length(batch_levels) < 2L) {
     }
 
     log_msg(sprintf("Running %d correction task(s)", length(correction_tasks)))
+    if (!is.null(normae_log_base_dir) && nzchar(trimws(as.character(normae_log_base_dir)))) {
+        normae_log_base_dir <- trimws(as.character(normae_log_base_dir)[1L])
+        dir.create(normae_log_base_dir, recursive = TRUE, showWarnings = FALSE)
+        log_msg(sprintf(
+            "NormAE logs will be organized under: %s",
+            normalizePath(normae_log_base_dir, winslash = "/", mustWork = FALSE)
+        ))
+    } else {
+        normae_log_base_dir <- NULL
+    }
+    if (!is.null(plsdabatch_log_base_dir) && nzchar(trimws(as.character(plsdabatch_log_base_dir)))) {
+        plsdabatch_log_base_dir <- trimws(as.character(plsdabatch_log_base_dir)[1L])
+        dir.create(plsdabatch_log_base_dir, recursive = TRUE, showWarnings = FALSE)
+        log_msg(sprintf(
+            "(s)PLSDA-batch logs will be organized under: %s",
+            normalizePath(plsdabatch_log_base_dir, winslash = "/", mustWork = FALSE)
+        ))
+    } else {
+        plsdabatch_log_base_dir <- NULL
+    }
     correction_run <- run_pb_tasks(
         pbf_object,
         correction_tasks,
-        log_fn = function(msg) log_msg(msg)
+        log_fn = function(msg) log_msg(msg),
+        normae_log_base_dir = normae_log_base_dir,
+        plsdabatch_log_base_dir = plsdabatch_log_base_dir
     )
     pbf_object <- correction_run$pbf
     correction_task_results <- correction_run$task_results

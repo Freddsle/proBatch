@@ -55,6 +55,16 @@ workflow_params <- list(
     save_plots = TRUE,
     save_metrics = TRUE,
     save_objects = TRUE,
+    # Optional root for NormAE stdout/stderr logs.
+    # Keep NULL for current behavior (logs in current working directory).
+    # To colocate with workflow outputs, set after this list is created:
+    # workflow_params$normae_log_base_dir <- file.path(workflow_params$output_base_dir, "02_corrected_diagnostics", "logs", "normae")
+    normae_log_base_dir = NULL,
+    # Optional root for (s)PLSDA-batch R output/messages.
+    # Keep NULL for current behavior (messages in workflow log).
+    # To colocate with workflow outputs, set after this list is created:
+    # workflow_params$plsdabatch_log_base_dir <- file.path(workflow_params$output_base_dir, "02_corrected_diagnostics", "logs", "plsdabatch")
+    plsdabatch_log_base_dir = NULL,
 
     # --- Plot settings ---
     plot_format = "png",
