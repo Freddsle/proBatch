@@ -454,11 +454,11 @@ filter_pb_tasks <- function(tasks, labels = NULL) {
 }
 
 build_simple_correction_tasks <- function(
-    correction_methods,
-    assay_prefix,
-    batch_col,
-    correction_covariates = character(0),
-    from_assay = paste0(assay_prefix, "::log2_on_raw")
+  correction_methods,
+  assay_prefix,
+  batch_col,
+  correction_covariates = character(0),
+  from_assay = paste0(assay_prefix, "::log2_on_raw")
 ) {
     methods <- unique(as.character(correction_methods))
     methods <- methods[!is.na(methods) & nzchar(methods)]
@@ -641,17 +641,19 @@ safe_try <- function(expr, error_msg = "Error occurred", return_on_error = NULL)
 }
 
 save_plot_helper <- function(
-    plot_obj,
-    filename,
-    subdir = "plots",
-    width = plot_width,
-    height = plot_height,
-    format = plot_format,
-    dpi = plot_dpi,
-    n_plots = NULL,
-    n_cols = NULL
+  plot_obj,
+  filename,
+  subdir = "plots",
+  width = plot_width,
+  height = plot_height,
+  format = plot_format,
+  dpi = plot_dpi,
+  n_plots = NULL,
+  n_cols = NULL
 ) {
-    if (!save_plots) return(invisible(NULL))
+    if (!save_plots) {
+        return(invisible(NULL))
+    }
 
     filepath <- file.path(subdir, sprintf("%s.%s", filename, format))
 
@@ -670,44 +672,55 @@ save_plot_helper <- function(
         }
     }
 
-    safe_try({
-        if (format == "pdf") {
-            pdf(filepath, width = width, height = height)
-        } else if (format == "png") {
-            png(filepath, width = width, height = height, units = "in", res = dpi)
-        } else if (format == "svg") {
-            svg(filepath, width = width, height = height)
-        }
-        print(plot_obj)
-        dev.off()
-        log_msg(sprintf("Saved plot: %s", filepath))
-    }, error_msg = sprintf("Failed to save plot: %s", filepath))
+    safe_try(
+        {
+            if (format == "pdf") {
+                pdf(filepath, width = width, height = height)
+            } else if (format == "png") {
+                png(filepath, width = width, height = height, units = "in", res = dpi)
+            } else if (format == "svg") {
+                svg(filepath, width = width, height = height)
+            }
+            print(plot_obj)
+            dev.off()
+            log_msg(sprintf("Saved plot: %s", filepath))
+        },
+        error_msg = sprintf("Failed to save plot: %s", filepath)
+    )
 }
 
 save_metric_helper <- function(data_obj, filename, subdir = "metrics") {
-    if (!save_metrics) return(invisible(NULL))
+    if (!save_metrics) {
+        return(invisible(NULL))
+    }
 
     filepath <- file.path(subdir, sprintf("%s.csv", filename))
 
-    safe_try({
-        if (is.data.frame(data_obj) || is.matrix(data_obj)) {
-            write.csv(data_obj, filepath, row.names = TRUE)
-            log_msg(sprintf("Saved metric: %s", filepath))
-        } else {
-            safe_try({
-                metric_flatten <- pb_flatten_design_check(data_obj)
-                write.csv(metric_flatten, filepath, row.names = FALSE)
-                log_msg(sprintf("Saved metric (flattened): %s", filepath))
-            }, error_msg = sprintf("Failed to save flattened metric: %s", filepath))
-        }
-    }, error_msg = sprintf("Failed to save metric: %s", filepath))
+    safe_try(
+        {
+            if (is.data.frame(data_obj) || is.matrix(data_obj)) {
+                write.csv(data_obj, filepath, row.names = TRUE)
+                log_msg(sprintf("Saved metric: %s", filepath))
+            } else {
+                safe_try(
+                    {
+                        metric_flatten <- pb_flatten_design_check(data_obj)
+                        write.csv(metric_flatten, filepath, row.names = FALSE)
+                        log_msg(sprintf("Saved metric (flattened): %s", filepath))
+                    },
+                    error_msg = sprintf("Failed to save flattened metric: %s", filepath)
+                )
+            }
+        },
+        error_msg = sprintf("Failed to save metric: %s", filepath)
+    )
 }
 
 safe_classification_metrics <- function(
-    x,
-    sample_annotation,
-    known_col = batch_col,
-    fill_the_missing = fill_missing
+  x,
+  sample_annotation,
+  known_col = batch_col,
+  fill_the_missing = fill_missing
 ) {
     if (is.null(sample_annotation) || !all(known_col %in% names(sample_annotation))) {
         return(NULL)
@@ -742,7 +755,9 @@ safe_classification_metrics <- function(
 pb_flatten_design_check <- function(x, sep = ", ") {
     `%||%` <- function(a, b) if (is.null(a)) b else a
     empty <- data.frame(section = character(), key = character(), value = character(), stringsAsFactors = FALSE)
-    if (is.null(x)) return(empty)
+    if (is.null(x)) {
+        return(empty)
+    }
 
     if (!is.list(x)) {
         return(data.frame(
@@ -791,14 +806,20 @@ pb_flatten_design_check <- function(x, sep = ", ") {
 }
 
 first_num <- function(x) {
-    if (is.null(x) || length(x) == 0) return(NA_real_)
+    if (is.null(x) || length(x) == 0) {
+        return(NA_real_)
+    }
     x <- suppressWarnings(as.numeric(x))
-    if (!length(x) || all(is.na(x))) return(NA_real_)
+    if (!length(x) || all(is.na(x))) {
+        return(NA_real_)
+    }
     x[which(!is.na(x))[1]]
 }
 
 pvca_share <- function(pvca_df, patterns = character(), category = NULL) {
-    if (is.null(pvca_df) || !is.data.frame(pvca_df)) return(NA_real_)
+    if (is.null(pvca_df) || !is.data.frame(pvca_df)) {
+        return(NA_real_)
+    }
 
     value_col <- if ("weights" %in% names(pvca_df)) {
         "weights"
@@ -813,7 +834,9 @@ pvca_share <- function(pvca_df, patterns = character(), category = NULL) {
         matched <- pvca_df[tolower(pvca_df$category) == tolower(category), , drop = FALSE]
     } else if (!is.null(patterns) && length(patterns) > 0 && "label" %in% names(pvca_df)) {
         pattern_vec <- patterns[!is.na(patterns) & nzchar(patterns)]
-        if (length(pattern_vec) == 0) return(NA_real_)
+        if (length(pattern_vec) == 0) {
+            return(NA_real_)
+        }
         matched <- pvca_df[grepl(
             paste(pattern_vec, collapse = "|"),
             pvca_df$label,
@@ -823,7 +846,9 @@ pvca_share <- function(pvca_df, patterns = character(), category = NULL) {
         return(NA_real_)
     }
 
-    if (nrow(matched) == 0) return(NA_real_)
+    if (nrow(matched) == 0) {
+        return(NA_real_)
+    }
     sum(matched[[value_col]], na.rm = TRUE)
 }
 
@@ -849,12 +874,16 @@ median_corr_by_group <- function(corr_df, group_label) {
         }
     }
 
-    if (!any(idx, na.rm = TRUE)) return(NA_real_)
+    if (!any(idx, na.rm = TRUE)) {
+        return(NA_real_)
+    }
     median(corr_df$correlation[idx], na.rm = TRUE)
 }
 
 count_outliers <- function(x) {
-    if (is.null(x)) return(NA_integer_)
+    if (is.null(x)) {
+        return(NA_integer_)
+    }
     if (is.data.frame(x)) {
         outlier_col <- c("is_outlier", "outlier")
         outlier_col <- outlier_col[outlier_col %in% names(x)]
@@ -873,7 +902,9 @@ count_outliers <- function(x) {
 }
 
 extract_class_metric <- function(class_df, metric_cols, known_col_target = batch_col) {
-    if (is.null(class_df) || !is.data.frame(class_df)) return(NA_real_)
+    if (is.null(class_df) || !is.data.frame(class_df)) {
+        return(NA_real_)
+    }
     class_subset <- class_df
     if (!is.null(known_col_target) && "known_col" %in% names(class_subset) &&
         known_col_target %in% class_subset$known_col) {
@@ -881,16 +912,24 @@ extract_class_metric <- function(class_df, metric_cols, known_col_target = batch
     }
 
     metric_cols <- metric_cols[metric_cols %in% names(class_subset)]
-    if (length(metric_cols) == 0) return(NA_real_)
+    if (length(metric_cols) == 0) {
+        return(NA_real_)
+    }
     first_num(class_subset[[metric_cols[1]]])
 }
 
 median_feature_cv <- function(cv_df) {
-    if (is.null(cv_df) || !is.data.frame(cv_df)) return(NA_real_)
+    if (is.null(cv_df) || !is.data.frame(cv_df)) {
+        return(NA_real_)
+    }
     cv_col <- c("CV_replicate", "CV_total", "CV_perBatch")
     cv_col <- cv_col[cv_col %in% names(cv_df)]
-    if (length(cv_col) == 0) return(NA_real_)
+    if (length(cv_col) == 0) {
+        return(NA_real_)
+    }
     cv_values <- suppressWarnings(as.numeric(cv_df[[cv_col[1]]]))
-    if (!length(cv_values) || all(is.na(cv_values))) return(NA_real_)
+    if (!length(cv_values) || all(is.na(cv_values))) {
+        return(NA_real_)
+    }
     median(cv_values, na.rm = TRUE)
 }

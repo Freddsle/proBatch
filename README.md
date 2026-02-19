@@ -57,6 +57,12 @@ browseVignettes('proBatch')
 browseVignettes('proBatchFeatures')
 ```
 
+## Workflow Scripts (Repository)
+
+The repository includes script-based batch-correction workflows under `inst/scripts`.
+
+- Workflow usage, edit policy, and task-grid reference: `inst/scripts/batch_correction_workflow_README.md`
+
 
 ## Citation
 Diagnostics and correction of batch effects in large-scale proteomic studies: a tutorial. Molecular Systems Biology 17, e10240 (2021). https://doi.org/10.15252/msb.202110240
