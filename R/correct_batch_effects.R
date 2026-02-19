@@ -1131,9 +1131,6 @@ run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
   qual_value = NULL,
   ...
 ) {
-    input_features <- rownames(data_matrix)
-    input_samples <- colnames(data_matrix)
-
     if (!is.null(sample_annotation) && !(sample_id_col %in% names(sample_annotation))) {
         sample_ids <- rownames(sample_annotation)
         if (is.null(sample_ids)) {
@@ -1145,7 +1142,7 @@ run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
         sample_annotation[[sample_id_col]] <- sample_ids
     }
 
-    corrected_matrix <- correct_batch_effects(
+    correct_batch_effects(
         x = data_matrix,
         sample_annotation = sample_annotation,
         format = "wide",
@@ -1164,23 +1161,6 @@ run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
         min_measurements = min_measurements,
         ...
     )
-
-    if (!is.null(input_samples) && !is.null(colnames(corrected_matrix))) {
-        missing_samples <- setdiff(input_samples, colnames(corrected_matrix))
-        extra_samples <- setdiff(colnames(corrected_matrix), input_samples)
-        if (length(missing_samples) || length(extra_samples)) {
-            stop("loessLimmaRBE must preserve sample IDs in the output matrix.")
-        }
-        corrected_matrix <- corrected_matrix[, input_samples, drop = FALSE]
-    }
-
-    if (!is.null(input_features) &&
-        !is.null(rownames(corrected_matrix)) &&
-        setequal(rownames(corrected_matrix), input_features)) {
-        corrected_matrix <- corrected_matrix[input_features, , drop = FALSE]
-    }
-
-    corrected_matrix
 }
 
 .combat_matrix_step <- function(data_matrix, sample_annotation,

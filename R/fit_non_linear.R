@@ -48,7 +48,7 @@ fit_nonlinear <- function(df_feature_batch,
                           min_measurements = 8, ...) {
     x_all <- df_feature_batch[[order_col]]
 
-    # Keep original values for fallback in case fitting fails
+    # Keep full-length response for consistent output length
     y_all <- df_feature_batch[[measure_col]]
 
     if (no_fit_imputed) {
@@ -110,6 +110,7 @@ fit_nonlinear <- function(df_feature_batch,
 loess_regression <- function(x_to_fit, y, x_all, y_all,
                              feature_id = NULL, batch_id = NULL, ...) {
     loess_warning <- NULL
+    fallback_fit <- rep(NA_real_, length(y_all))
     out <- tryCatch(
         withCallingHandlers(
             {
@@ -128,7 +129,7 @@ loess_regression <- function(x_to_fit, y, x_all, y_all,
                 feature_id, batch_id
             ))
             message(conditionMessage(cond))
-            y_all
+            fallback_fit
         }
     )
     if (!is.null(loess_warning)) {
@@ -137,7 +138,7 @@ loess_regression <- function(x_to_fit, y, x_all, y_all,
             feature_id, batch_id
         ))
         message(loess_warning)
-        return(y_all)
+        return(fallback_fit)
     }
     return(out)
 }
@@ -148,6 +149,7 @@ loess_regression_opt <- function(x_to_fit, y, x_all, y_all,
                                  bws = c(0.01, 0.5, 1, 1.5, 2, 5, 10),
                                  ...) {
     loess_warning <- NULL
+    fallback_fit <- rep(NA_real_, length(y_all))
     out <- tryCatch(
         withCallingHandlers(
             {
@@ -168,7 +170,7 @@ loess_regression_opt <- function(x_to_fit, y, x_all, y_all,
                 feature_id, batch_id
             ))
             message(conditionMessage(cond))
-            y_all
+            fallback_fit
         }
     )
     if (!is.null(loess_warning)) {
@@ -177,7 +179,7 @@ loess_regression_opt <- function(x_to_fit, y, x_all, y_all,
             feature_id, batch_id
         ))
         message(loess_warning)
-        return(y_all)
+        return(fallback_fit)
     }
     return(out)
 }
