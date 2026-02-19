@@ -225,7 +225,14 @@ correct_with_NormAE <- function(
     meta_df <- as.data.frame(t(data_matrix), check.names = FALSE)
     rownames(meta_df) <- sample_ids
     run_tag <- paste0("normae_", format(Sys.time(), "%Y%m%d_%H%M%S"), "_", as.integer(runif(1, 1, 1e9)))
-    run_dir <- file.path(getwd(), run_tag)
+    run_root <- getOption("proBatch.normae_run_root", NULL)
+    if (is.null(run_root) || !nzchar(as.character(run_root))) {
+        run_root <- getwd()
+    } else {
+        run_root <- as.character(run_root)
+        dir.create(run_root, recursive = TRUE, showWarnings = FALSE)
+    }
+    run_dir <- file.path(run_root, run_tag)
     dir.create(run_dir, recursive = TRUE, showWarnings = FALSE)
 
     meta_path <- file.path(run_dir, "meta.csv")
@@ -272,16 +279,21 @@ correct_with_NormAE <- function(
     if (!is.null(overlay_dir)) {
         overlay_main <- file.path(overlay_dir, "__main__.py")
         cmd <- c(overlay_main, cli_args)
+        overlay_log <- file.path(run_dir, "normae_overlay.log")
         cat("Running command:", shQuote(python_bin), paste(cmd, collapse = " "), "\n")
-        stat <- system2(python_bin, cmd, stdout = "", stderr = "", env = env)
+        cat("NormAE stdout/stderr log:", normalizePath(overlay_log, winslash = "/", mustWork = FALSE), "\n")
+        stat <- system2(python_bin, cmd, stdout = overlay_log, stderr = overlay_log, env = env)
         status <- if (length(stat)) as.integer(stat[[1L]]) else 0L
         if (!identical(status, 0L)) {
-            # capture overlay error for diagnostics, then fallback to package CLIs
             out_overlay <- tryCatch(
-                system2(python_bin, c(overlay_main, cli_args), stdout = TRUE, stderr = TRUE, env = env),
-                error = function(e) paste("Failed to capture overlay output:", conditionMessage(e))
+                readLines(overlay_log, warn = FALSE),
+                error = function(e) paste("Failed to read overlay log:", conditionMessage(e))
             )
-            message("Overlay run failed; falling back to installed 'normae' module.\n", paste(out_overlay, collapse = "\n"))
+            message(
+                "Overlay run failed; falling back to installed 'normae' module.\n",
+                "Overlay log: ", normalizePath(overlay_log, winslash = "/", mustWork = FALSE), "\n",
+                paste(out_overlay, collapse = "\n")
+            )
         } else {
             # success path; proceed to read X_clean.csv
             res_csv <- file.path(out_dir, "X_clean.csv")
@@ -309,27 +321,32 @@ correct_with_NormAE <- function(
     # ---- Fallbacks: installed CLI (may plot PCA; last resort) ------------------
     run_try <- function(mod) {
         cmd <- c("-m", mod, cli_args)
+        mod_log <- file.path(run_dir, paste0("normae_", gsub("[^A-Za-z0-9._-]", "_", mod), ".log"))
         cat("Running command:", shQuote(python_bin), paste(cmd, collapse = " "), "\n")
-        stat <- system2(python_bin, cmd, stdout = "", stderr = "", env = env)
+        cat("NormAE stdout/stderr log:", normalizePath(mod_log, winslash = "/", mustWork = FALSE), "\n")
+        stat <- system2(python_bin, cmd, stdout = mod_log, stderr = mod_log, env = env)
         status <- if (length(stat)) as.integer(stat[[1L]]) else 0L
-        if (is.na(status)) NA_integer_ else status
+        if (is.na(status)) status <- NA_integer_
+        list(status = status, log_path = mod_log)
     }
-    status <- run_try("normae")
-    if (!identical(status, 0L)) {
+    run1 <- run_try("normae")
+    if (!identical(run1$status, 0L)) {
         out <- tryCatch(
-            system2(python_bin, c("-m", "normae", cli_args), stdout = TRUE, stderr = TRUE, env = env),
-            error = function(e) paste("Failed to capture output:", conditionMessage(e))
+            readLines(run1$log_path, warn = FALSE),
+            error = function(e) paste("Failed to read log:", conditionMessage(e))
         )
-        status2 <- run_try("normae.cli")
-        if (!identical(status2, 0L)) {
+        run2 <- run_try("normae.cli")
+        if (!identical(run2$status, 0L)) {
             out2 <- tryCatch(
-                system2(python_bin, c("-m", "normae.cli", cli_args), stdout = TRUE, stderr = TRUE, env = env),
-                error = function(e) paste("Failed to capture output:", conditionMessage(e))
+                readLines(run2$log_path, warn = FALSE),
+                error = function(e) paste("Failed to read log:", conditionMessage(e))
             )
             unlink(run_dir, recursive = TRUE)
             stop("NormAE CLI failed.\n---- Attempt 1: python -m normae ----\n",
+                "Log file: ", normalizePath(run1$log_path, winslash = "/", mustWork = FALSE), "\n",
                 paste(out, collapse = "\n"),
                 "\n---- Attempt 2: python -m normae.cli ----\n",
+                "Log file: ", normalizePath(run2$log_path, winslash = "/", mustWork = FALSE), "\n",
                 paste(out2, collapse = "\n"),
                 call. = FALSE
             )
