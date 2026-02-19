@@ -704,6 +704,7 @@ plot_intragroup_variation <- function(data_matrix, ...) UseMethod("plot_intragro
     if (n_assays == 1L) {
         assay_name <- levels(df$assay_display)[1]
         assay_line <- .pb_intragroup_format_assay_label(assay_name)
+        x_axis_labels <- levels(df$group_column)
         gg <- gg + ggplot2::labs(
             title = sprintf("%s\nAssay: %s", metric_label, assay_line),
             subtitle = NULL
@@ -717,13 +718,15 @@ plot_intragroup_variation <- function(data_matrix, ...) UseMethod("plot_intragro
         }
         level_label <- .pb_intragroup_common_level(assay_levels)
         include_level_in_labels <- is.null(level_label)
+        x_axis_labels <- vapply(
+            assay_levels,
+            .pb_intragroup_format_assay_label,
+            character(1),
+            include_level = include_level_in_labels
+        )
+        x_axis_label_map <- stats::setNames(x_axis_labels, assay_levels)
         gg <- gg + ggplot2::scale_x_discrete(labels = function(x) {
-            vapply(
-                x,
-                .pb_intragroup_format_assay_label,
-                character(1),
-                include_level = include_level_in_labels
-            )
+            unname(x_axis_label_map[as.character(x)])
         })
         if (!is.null(level_label) && nzchar(level_label) && !level_label %in% subtitle_parts) {
             subtitle_parts <- c(subtitle_parts, level_label)
@@ -731,6 +734,12 @@ plot_intragroup_variation <- function(data_matrix, ...) UseMethod("plot_intragro
         subtitle <- if (length(subtitle_parts)) paste(subtitle_parts, collapse = "\n") else NULL
         gg <- gg + ggplot2::labs(title = metric_label, subtitle = subtitle)
         gg <- gg + ggplot2::xlab("Assay")
+    }
+
+    if (.pb_intragroup_should_rotate_x_labels(x_axis_labels, max_chars = 15L)) {
+        gg <- gg + ggplot2::theme(
+            axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5)
+        )
     }
 
     gg
@@ -752,6 +761,29 @@ plot_intragroup_variation <- function(data_matrix, ...) UseMethod("plot_intragro
     } else {
         NULL
     }
+}
+
+.pb_intragroup_should_rotate_x_labels <- function(labels, max_chars = 15L) {
+    if (is.null(labels) || !length(labels)) {
+        return(FALSE)
+    }
+    labels <- as.character(labels)
+    labels <- labels[!is.na(labels) & nzchar(labels)]
+    if (!length(labels)) {
+        return(FALSE)
+    }
+
+    max_chars_per_label <- vapply(labels, function(label) {
+        lines <- strsplit(label, "\n", fixed = TRUE)[[1]]
+        lines <- trimws(lines)
+        lines <- lines[nzchar(lines)]
+        if (!length(lines)) {
+            return(0L)
+        }
+        max(nchar(lines, type = "chars"))
+    }, integer(1))
+
+    any(max_chars_per_label > max_chars)
 }
 
 .pb_intragroup_group_colors <- function(group_levels) {

@@ -571,3 +571,73 @@ test_that("plot_intragroup_variation requires non-empty grouping columns", {
         fixed = TRUE
     )
 })
+
+test_that(".pb_build_intragroup_plot rotates assay labels when any is longer than 15 characters", {
+    df <- data.frame(
+        value = c(1, 2, 3, 4),
+        group_column = rep("Condition", 4),
+        assay_display = c(
+            "peptide::short",
+            "peptide::short",
+            "peptide::veryveryverylongassaystep",
+            "peptide::veryveryverylongassaystep"
+        ),
+        stringsAsFactors = FALSE
+    )
+
+    gg <- proBatch:::`.pb_build_intragroup_plot`(
+        data = df,
+        metric_label = "Intragroup correlation",
+        group_levels = "Condition",
+        base_size = 12
+    )
+
+    expect_s3_class(gg, "ggplot")
+    expect_equal(gg$labels$x, "Assay")
+    expect_equal(gg$theme$axis.text.x$angle, 90)
+})
+
+test_that(".pb_build_intragroup_plot rotates grouping labels when any is longer than 15 characters", {
+    long_group <- "VeryLongGroupingLabelName"
+    df <- data.frame(
+        value = c(1, 2, 3, 4),
+        group_column = c(long_group, long_group, "B", "B"),
+        assay_display = rep("peptide::raw", 4),
+        stringsAsFactors = FALSE
+    )
+
+    gg <- proBatch:::`.pb_build_intragroup_plot`(
+        data = df,
+        metric_label = "Intragroup correlation",
+        group_levels = c(long_group, "B"),
+        base_size = 12
+    )
+
+    expect_s3_class(gg, "ggplot")
+    expect_equal(gg$labels$x, "Grouping factor")
+    expect_equal(gg$theme$axis.text.x$angle, 90)
+})
+
+test_that(".pb_build_intragroup_plot keeps horizontal labels when all are 15 chars or shorter", {
+    df <- data.frame(
+        value = c(1, 2, 3, 4),
+        group_column = rep("Condition", 4),
+        assay_display = c(
+            "peptide::short",
+            "peptide::short",
+            "peptide::medium_len",
+            "peptide::medium_len"
+        ),
+        stringsAsFactors = FALSE
+    )
+
+    gg <- proBatch:::`.pb_build_intragroup_plot`(
+        data = df,
+        metric_label = "Intragroup correlation",
+        group_levels = "Condition",
+        base_size = 12
+    )
+
+    expect_s3_class(gg, "ggplot")
+    expect_null(gg$theme$axis.text.x$angle)
+})
