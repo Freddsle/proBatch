@@ -25,6 +25,7 @@ plot_sample_corr_heatmap(
   plot_title = sprintf("Correlation matrix of\%s samples",
     ifelse(is.null(samples_to_plot), "", " selected")),
   pbf_name = NULL,
+  plot_ncol = NULL,
   ...
 )
 }
@@ -83,6 +84,8 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{pbf_name}{Assay name(s) used when `data_matrix` is a
 `ProBatchFeatures` object. If `NULL`, all assays are plotted.}
+
+\item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 
 \item{...}{parameters for the \code{\link[pheatmap]{pheatmap}} visualisation, for details see
 examples and help to corresponding functions}

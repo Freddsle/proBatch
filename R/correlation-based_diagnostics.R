@@ -320,6 +320,7 @@ plot_protein_corrplot <- function(data_matrix,
 #'   is used.
 #' @param pbf_name Assay name(s) used when `data_matrix` is a
 #'   `ProBatchFeatures` object. If `NULL`, all assays are plotted.
+#' @param plot_ncol Number of columns when arranging multiple assay plots.
 #' @param samples_to_plot string vector of samples in
 #' \code{data_matrix} to be used in the plot
 #' @param cluster_rows boolean values determining if rows should be clustered or \code{hclust} object
@@ -374,7 +375,8 @@ plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
                                          "Correlation matrix of%s samples",
                                          ifelse(is.null(samples_to_plot), "", " selected")
                                      ),
-                                     pbf_name = NULL, ...) {
+                                     pbf_name = NULL,
+                                     plot_ncol = NULL, ...) {
     plot_title_missing <- missing(plot_title)
 
     if (is(data_matrix, "ProBatchFeatures")) {
@@ -439,7 +441,8 @@ plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
 
         return(.pb_arrange_plot_list(
             plot_list = plot_list,
-            convert_fun = function(x) x$gtable
+            convert_fun = function(x) x$gtable,
+            plot_ncol = plot_ncol
         ))
     }
 
