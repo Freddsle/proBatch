@@ -31,13 +31,13 @@ assay_prefix <- "PGs"
 
 # --- Annotation data ---
 # If not already in pbf_object, provide paths to annotation tables
-sample_annotation_path <- NULL # Path to sample metadata CSV/RDS
+sample_annotation_path <- NULL  # Path to sample metadata CSV/RDS
 peptide_annotation_path <- NULL # Path to feature/peptide annotation CSV/RDS
 
 # --- Column identifiers ---
-sample_id_col <- "FullRunName" # Sample ID column name
+sample_id_col <- "FullRunName"          # Sample ID column name
 feature_id_col <- "peptide_group_label" # Feature ID column name
-measure_col <- "Intensity" # Intensity column name for long format
+measure_col <- "Intensity"              # Intensity column name for long format
 
 # --- Technical factors (batch variables) ---
 batch_col <- "MS_batch" # Primary batch column
@@ -52,8 +52,8 @@ biospecimen_id_col <- "EarTag" # Biological replicate identifier (for CV, correl
 correction_covariates <- c("Diet", "Sex") # Protected biological factors during correction
 
 # --- Other metadata columns ---
-order_col <- "order" # Run order column (for drift diagnostics)
-datetime_col <- "DateTime" # Date/time column (optional)
+order_col <- "order"        # Run order column (for drift diagnostics)
+datetime_col <- "DateTime"  # Date/time column (optional)
 
 # --- Factors for visualization ---
 factors_to_plot <- c("MS_batch", "Diet", "Sex", "Strain") # For heatmaps, clustering
@@ -62,39 +62,44 @@ numeric_columns_colors <- c("DateTime", "order")
 
 # --- Feature-level selectors (for example plots) ---
 # Provide specific feature/protein names, or set to NULL for auto-selection
-example_protein_name <- NULL # Example: "Haao" or NULL for auto
-example_spike_in_name <- NULL # Example: "BOVINE_A1ag" or NULL for auto
-example_irt_pattern <- "iRT" # Pattern to identify iRT peptides
-example_feature_id <- NULL # Specific feature ID or NULL for auto
+example_protein_name <- NULL    # Example: "Haao" or NULL for auto
+example_spike_in_name <- NULL   # Example: "BOVINE_A1ag" or NULL for auto
+example_irt_pattern <- "iRT"    # Pattern to identify iRT peptides
+example_feature_id <- NULL      # Specific feature ID or NULL for auto
 
-# --- Batch correction method ---
-correction_method <- "limmaRBE" # Options: "limmaRBE", "combat", "centerMean", "centerMedian", etc.
-# See ?pb_transform and ?correct_batch_effects for available methods
+# --- Batch correction methods ---
+# Option 1: provide one or many methods with shared parameters (batch_col + correction_covariates)
+correction_methods <- c("limmaRBE") # Example: c("limmaRBE", "combat", "centerMean")
+
+# Option 2 (advanced): provide a YAML task file (same task structure as inst/scripts/03_data_processing.R)
+# If set, tasks from this file are used instead of correction_methods.
+correction_tasks_yaml <- NULL   # Example: "inst/scripts/pb_tasks.yaml"
+correction_task_labels <- NULL  # Optional subset of task labels from correction_tasks_yaml
 
 # --- Output configuration ---
 output_base_dir <- file.path(tempdir(), "batch_correction_results") # Base output directory
-results_prefix <- "BEC" # Prefix for result files
-save_plots <- TRUE # Save plots to files
-save_metrics <- TRUE # Save metric tables to CSV
-save_objects <- TRUE # Save R objects (pbf, matrices) to RDS
+results_prefix <- "BEC"     # Prefix for result files
+save_plots <- TRUE          # Save plots to files
+save_metrics <- TRUE        # Save metric tables to CSV
+save_objects <- TRUE        # Save R objects (pbf, matrices) to RDS
 
 # --- Plot settings ---
-plot_format <- "png" # Options: "png", "pdf", "svg"
-plot_width <- 10 # inches
-plot_height <- 6 # inches
-plot_dpi <- 300 # resolution for raster formats
+plot_format <- "png"        # Options: "png", "pdf", "svg"
+plot_width <- 10            # inches
+plot_height <- 6            # inches
+plot_dpi <- 300             # resolution for raster formats
 
 # --- Computational settings ---
-set_seed <- 42 # Random seed for reproducibility
-n_pcs_embeddings <- 10 # Number of PCs for t-SNE/UMAP
-perplexity_tsne <- 10 # t-SNE perplexity
-n_neighbors_umap <- 10 # UMAP n_neighbors
-fill_missing <- -1 # Value for missing data in PVCA/variance partition (-1 or 0)
-variance_threshold <- 0.05 # PVCA/variance partition threshold
+set_seed <- 42              # Random seed for reproducibility
+n_pcs_embeddings <- 10      # Number of PCs for t-SNE/UMAP
+perplexity_tsne <- 10       # t-SNE perplexity
+n_neighbors_umap <- 10      # UMAP n_neighbors
+fill_missing <- -1          # Value for missing data in PVCA/variance partition (-1 or 0)
+variance_threshold <- 0.05  # PVCA/variance partition threshold
 
 # --- Sample subsetting (for speed in large datasets) ---
-samples_for_corr_heatmap <- NULL # Vector of sample IDs or NULL for all (or first N)
-n_samples_corr_heatmap <- 20 # If samples_for_corr_heatmap is NULL, use first N
+samples_for_corr_heatmap <- NULL    # Vector of sample IDs or NULL for all (or first N)
+n_samples_corr_heatmap <- 20        # If samples_for_corr_heatmap is NULL, use first N
 
 # --- Caching ---
 cache_expensive <- TRUE # Cache expensive operations (embeddings, variance partition)
@@ -127,6 +132,24 @@ log_msg <- function(msg, level = "INFO") {
     timestamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
     cat(sprintf("[%s] %s: %s\n", timestamp, level, msg))
 }
+
+# Load correction-task helpers (kept separate for readability/maintainability)
+file_args <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
+script_dir <- if (length(file_args) > 0L) {
+    dirname(normalizePath(sub("^--file=", "", file_args[1]), mustWork = FALSE))
+} else {
+    getwd()
+}
+helper_candidates <- c(
+    file.path(script_dir, "batch_correction_task_helpers.R"),
+    file.path(script_dir, "inst", "scripts", "batch_correction_task_helpers.R"),
+    file.path(getwd(), "inst", "scripts", "batch_correction_task_helpers.R")
+)
+helper_path <- helper_candidates[file.exists(helper_candidates)][1]
+if (is.na(helper_path) || !nzchar(helper_path)) {
+    stop("Could not locate 'batch_correction_task_helpers.R'.")
+}
+source(helper_path)
 
 # Create output directory structure
 if (save_plots || save_metrics || save_objects) {
@@ -291,20 +314,22 @@ safe_try <- function(expr, error_msg = "Error occurred", return_on_error = NULL)
 # Save plot helper
 save_plot_helper <- function(plot_obj, filename, subdir = "plots", width = plot_width, 
                             height = plot_height, format = plot_format, dpi = plot_dpi,
-                            n_plots = NULL) {
+                            n_plots = NULL, n_cols = NULL) {
     if (!save_plots) return(invisible(NULL))
     
     filepath <- file.path(subdir, sprintf("%s.%s", filename, format))
 
-    # if n_plots is provided, save re-adjust high and width to accommodate multiple plots in one image
+    # If multiple plots are arranged, scale device size to match the facet grid.
     if (!is.null(n_plots)) {
         n_plots_num <- if (is.numeric(n_plots)) n_plots else length(n_plots)
         if (n_plots_num > 1) {
-            # if n_plots > 8 - the will be 8 cols, if n > 5 - 5, otherwise 2
-            # adjust with and height accordingly to have enough space for all plots
-            n_cols <- if (n_plots_num > 8) 8 else if (n_plots_num > 5) 5 else 2
-            n_rows <- ceiling(n_plots_num / n_cols)
-            width <- round(width * n_cols / 2, 0)
+            # Keep default grid logic unless caller explicitly provides n_cols.
+            n_cols_use <- n_cols
+            if (is.null(n_cols_use)) {
+                n_cols_use <- if (n_plots_num > 8) 8 else if (n_plots_num > 5) 5 else 2
+            }
+            n_rows <- ceiling(n_plots_num / n_cols_use)
+            width <- round(width * n_cols_use / 2, 0)
             height <- round(height * n_rows, 0)
         }
     }
@@ -870,62 +895,89 @@ log_msg("Baseline diagnostics complete")
 
 
 log_msg("=" %+% "=" %+% "=" %+% " BATCH EFFECT CORRECTION " %+% "=" %+% "=" %+% "=")
-log_msg(sprintf("Applying correction method: %s", correction_method))
+corrected_methods_table <- data.frame(
+    method_label = character(),
+    corrected_assay = character(),
+    method_dir = character(),
+    stringsAsFactors = FALSE
+)
+correction_task_results <- data.frame()
+failed_correction_task_labels <- character()
+corrected_diagnostics <- list()
 
 # Validate batch column has at least 2 levels
 batch_levels <- unique(sample_annotation[[batch_col]][!is.na(sample_annotation[[batch_col]])])
 if (length(batch_levels) < 2L) {
     log_msg("WARNING: Batch column has < 2 levels. Skipping correction.", level = "WARN")
-    pbf_object <- pbf_object
 } else {
-    # Validate and filter covariates
     valid_covariates <- correction_covariates[correction_covariates %in% names(sample_annotation)]
     valid_covariates <- valid_covariates[vapply(valid_covariates, function(col) {
         length(unique(sample_annotation[[col]][!is.na(sample_annotation[[col]])])) >= 2
     }, logical(1))]
-    
-    # Apply correction
-    pbf_object <- safe_try({
-        proBatch::pb_transform(
-            pbf_object,
-            from = paste0(assay_prefix, "::log2_on_raw"),
-            steps = correction_method,
-            params_list = list(list(
-                batch_col = batch_col,
-                covariates_cols = valid_covariates
-            ))
+
+    correction_tasks <- if (!is.null(correction_tasks_yaml) && nzchar(correction_tasks_yaml)) {
+        log_msg(sprintf("Loading correction tasks from YAML: %s", correction_tasks_yaml))
+        tasks_from_yaml <- read_pb_tasks_yaml(correction_tasks_yaml, env = environment())
+        tasks_filtered <- filter_pb_tasks(tasks_from_yaml, correction_task_labels)
+        if (length(tasks_filtered) == 0L) {
+            stop("No correction tasks left after filtering with correction_task_labels.")
+        }
+        tasks_filtered
+    } else {
+        build_simple_correction_tasks(
+            correction_methods = correction_methods,
+            assay_prefix = assay_prefix,
+            batch_col = batch_col,
+            correction_covariates = valid_covariates,
+            from_assay = paste0(assay_prefix, "::log2_on_raw")
         )
-    }, error_msg = sprintf("Batch correction (%s) failed", correction_method),
-       return_on_error = pbf_object)
-}
-
-# Extract corrected data
-data_matrix_corrected <- proBatch::pb_assay_matrix(pbf_object)
-df_long_corrected <- proBatch::pb_as_long(
-    pbf_object,
-    feature_id_col = feature_id_col,
-    sample_id_col = sample_id_col,
-    measure_col = measure_col
-)
-
-# generate method-specific dir names
-method_plot_directory <- file.path(output_dirs$plots_corr, correction_method)
-method_metric_directory <- file.path(output_dirs$metrics_corr, correction_method)
-method_pvca_directory <- file.path(output_dirs$pvca_corr, correction_method)
-method_objects_directory <- file.path(output_dirs$objects, correction_method)
-
-for (dir_path in c(method_plot_directory, method_metric_directory, method_pvca_directory, method_objects_directory)) {
-    if (!dir.exists(dir_path)) {
-        dir.create(dir_path, recursive = TRUE, showWarnings = FALSE)
     }
-}
 
-# Save corrected data_matrix_corrected and df_long_corrected as objects for downstream use
-if (save_objects) {    
-    # saveRDS(pbf_object, file.path(output_dirs$objects, "pbf_corrected.rds"))
-    saveRDS(data_matrix_corrected, file.path(method_objects_directory, "data_matrix_corrected.rds"))
-    saveRDS(df_long_corrected, file.path(method_objects_directory, "df_long_corrected.rds"))
-    log_msg("Saved corrected ProBatchFeatures object, matrix, and long dataframe")
+    log_msg(sprintf("Running %d correction task(s)", length(correction_tasks)))
+    correction_run <- run_pb_tasks(
+        pbf_object,
+        correction_tasks,
+        log_fn = function(msg) log_msg(msg)
+    )
+    pbf_object <- correction_run$pbf
+    correction_task_results <- correction_run$task_results
+    save_metric_helper(correction_task_results, "correction_task_results", output_dirs$metrics_comp)
+
+    if (NROW(correction_task_results) > 0) {
+        failed_rows <- correction_task_results[!correction_task_results$success, , drop = FALSE]
+        if (NROW(failed_rows) > 0) {
+            failed_correction_task_labels <- unique(as.character(failed_rows$label))
+            log_msg(sprintf(
+                "Correction tasks completed with failures (%d failed out of %d).",
+                NROW(failed_rows), NROW(correction_task_results)
+            ), level = "WARN")
+            log_msg(sprintf(
+                "Failed correction task labels: %s",
+                paste(failed_correction_task_labels, collapse = ", ")
+            ), level = "WARN")
+        } else {
+            log_msg(sprintf(
+                "All correction tasks succeeded (%d/%d).",
+                NROW(correction_task_results), NROW(correction_task_results)
+            ))
+        }
+    }
+
+    if (NROW(correction_task_results) > 0) {
+        successful <- correction_task_results[correction_task_results$success, , drop = FALSE]
+        successful <- successful[!duplicated(successful$final_name), , drop = FALSE]
+        if (NROW(successful) > 0) {
+            corrected_methods_table <- data.frame(
+                method_label = successful$label,
+                corrected_assay = successful$final_name,
+                method_dir = vapply(successful$label, sanitize_label_for_path, character(1)),
+                stringsAsFactors = FALSE
+            )
+            corrected_methods_table$method_dir[is.na(corrected_methods_table$method_dir) |
+                !nzchar(corrected_methods_table$method_dir)] <- "unnamed_method"
+            corrected_methods_table$method_dir <- make.unique(corrected_methods_table$method_dir, sep = "_")
+        }
+    }
 }
 
 # ==============================================================================
@@ -934,365 +986,402 @@ if (save_objects) {
 
 log_msg("=" %+% "=" %+% "=" %+% " POST-CORRECTION DIAGNOSTICS " %+% "=" %+% "=" %+% "=")
 
-# --- Missingness diagnostics ---
-log_msg("Generating post-correction missingness diagnostics")
+if (NROW(corrected_methods_table) == 0) {
+    log_msg("No corrected assays available for post-correction diagnostics.", level = "WARN")
+} else {
+    for (i in seq_len(nrow(corrected_methods_table))) {
+        method_label <- corrected_methods_table$method_label[i]
+        corrected_assay <- corrected_methods_table$corrected_assay[i]
+        method_dir_name <- corrected_methods_table$method_dir[i]
 
-p_na_density_corr <- safe_try(
-    proBatch::plot_NA_density(
-        pbf_object,
-        from = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-    ) + ggtitle(
-            paste0("Corrected: NA density\n", 
-            assay_prefix, "::", correction_method, "_on_log2_on_raw")
-        ),
-    error_msg = "plot_NA_density (corrected) failed"
-)
-save_plot_helper(p_na_density_corr, "NA_density_corr", method_plot_directory)
+        log_msg(sprintf("Running post-correction diagnostics for: %s (%s)",
+                        method_label, corrected_assay))
 
-# --- Sample distributions ---
-log_msg("Generating post-correction sample distribution diagnostics")
+        method_plot_directory <- file.path(output_dirs$plots_corr, method_dir_name)
+        method_metric_directory <- file.path(output_dirs$metrics_corr, method_dir_name)
+        method_pvca_directory <- file.path(output_dirs$pvca_corr, method_dir_name)
+        method_objects_directory <- file.path(output_dirs$objects, method_dir_name)
 
-p_sample_mean_corr <- safe_try({
-    proBatch::plot_sample_mean(
-        pbf_object,
-        pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-        order_col = order_col,
-        batch_col = batch_col,
-        color_by_batch = TRUE,
-        color_scheme = color_list,
-        base_size = 15
-    ) + ggtitle(
-        paste0("Sample means after correction\n", 
-                assay_prefix, "::", correction_method, "_on_log2_on_raw")
-    )
-}, error_msg = "plot_sample_mean (corrected) failed")
-save_plot_helper(p_sample_mean_corr, "sample_mean_corr", method_plot_directory)
+        for (dir_path in c(method_plot_directory, method_metric_directory, method_pvca_directory, method_objects_directory)) {
+            if (!dir.exists(dir_path)) {
+                dir.create(dir_path, recursive = TRUE, showWarnings = FALSE)
+            }
+        }
 
-# will plot all assays available in the pbf object
-p_boxplot_corr <- safe_try({
-    proBatch::plot_boxplot(
-        pbf_object,
-        pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-        sample_id_col = sample_id_col,
-        batch_col = batch_col,
-        color_by_batch = TRUE,
-        color_scheme = color_list,
-        base_size = 10
-    ) + ggtitle(paste0("Boxplot of all assays, colored by ", batch_col))
-}, error_msg = "plot_boxplot (corrected) failed")
-save_plot_helper(p_boxplot_corr, "boxplot_corr", method_plot_directory)
-
-# --- Heatmaps and clustering ---
-log_msg("Generating post-correction heatmaps and clustering diagnostics")
-
-# also plot all assays in pbf_object
-p_heatmap_diag_corr <- safe_try({
-    proBatch::plot_heatmap_diagnostic(
-        pbf_object,
-        pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-        factors_to_plot = factors_to_plot,
-        color_list = color_list,
-        show_rownames = FALSE,
-        show_colnames = FALSE,
-        fill_the_missing = fill_missing
-    )
-}, error_msg = "plot_heatmap_diagnostic (corrected) failed")
-save_plot_helper(p_heatmap_diag_corr, "heatmap_diagnostic_corr", method_plot_directory)
-
-p_hierarchical_corr <- safe_try({
-    proBatch::plot_hierarchical_clustering(
-        pbf_object,
-        pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-        factors_to_plot = factors_to_plot,
-        color_list = color_list,
-        label_samples = FALSE,
-        fill_the_missing = fill_missing
-    )
-}, error_msg = "plot_hierarchical_clustering (corrected) failed")
-save_plot_helper(p_hierarchical_corr, "hierarchical_clustering_corr", method_plot_directory)
-
-# --- Embeddings ---
-log_msg("Generating post-correction embeddings")
-
-pca_corr <- safe_try({
-    proBatch::plot_PCA(
-        pbf_object,
-        pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-        color_by = batch_col,
-        shape_by = condition_col,
-        marginal_density = TRUE,
-        fill_the_missing = fill_missing,
-        base_size = 8
-    )
-}, error_msg = "plot_PCA (corrected) failed")
-save_plot_helper(pca_corr, "PCA_corr", method_plot_directory)
-
-tsne_corr <- safe_try({
-    proBatch::plot_TSNE(
-        pbf_object,
-        pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-        color_by = batch_col,
-        shape_by = condition_col,
-        perplexity = perplexity_tsne,
-        max_iter = 300,
-        initial_dims = n_pcs_embeddings,
-        fill_the_missing = fill_missing,
-        point_size = 4
-    )
-}, error_msg = "plot_TSNE (corrected) failed")
-save_plot_helper(tsne_corr, "tSNE_corr", method_plot_directory)
-
-umap_corr <- safe_try({
-    proBatch::plot_UMAP(
-        pbf_object,
-        pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-        color_by = batch_col,
-        shape_by = condition_col,
-        n_neighbors = n_neighbors_umap,
-        min_dist = 0.3,
-        random_state = set_seed,
-        fill_the_missing = fill_missing,
-        point_size = 4
-    )
-}, error_msg = "plot_UMAP (corrected) failed")
-save_plot_helper(umap_corr, "UMAP_corr", method_plot_directory)
-
-# --- PVCA ---
-log_msg("Calculating post-correction PVCA")
-
-pvca_corr <- safe_try({
-    proBatch::calculate_PVCA(
-        pbf_object,
-        pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-        factors_for_PVCA = c(technical_factors, biological_factors),
-        fill_the_missing = fill_missing
-    )
-}, error_msg = "calculate_PVCA (corrected) failed")
-save_metric_helper(pvca_corr, "pvca_corr", method_pvca_directory)
-
-p_pvca_corr <- safe_try({
-    proBatch::plot_PVCA(
-        pbf_object,
-        pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-        technical_factors = technical_factors,
-        biological_factors = biological_factors,
-        fill_the_missing = fill_missing,
-        variance_threshold = variance_threshold,
-        base_size = 10
-    )
-}, error_msg = "plot_PVCA (corrected) failed")
-save_plot_helper(p_pvca_corr, "PVCA_corr", method_plot_directory)
-
-pvca_df_corr <- safe_try({
-    proBatch::prepare_PVCA_df(
-        pbf_object,
-        pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-        technical_factors = technical_factors,
-        biological_factors = biological_factors,
-        fill_the_missing = fill_missing,
-        variance_threshold = variance_threshold,
-        path_to_save_results = output_dirs$pvca_corr
-    )
-}, error_msg = "prepare_PVCA_df (corrected) failed")
-save_metric_helper(pvca_df_corr, "pvca_prepared_corr", method_pvca_directory)
-
-# --- Variance partition ---
-log_msg("Calculating post-correction variance partition")
-
-vp_corr <- safe_try({
-    proBatch::calculate_variance_partition(
-        pbf_object,
-        pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-        model_variables = c(batch_col, biological_factors),
-        fill_the_missing = fill_missing
-    )
-}, error_msg = "calculate_variance_partition (corrected) failed")
-save_metric_helper(vp_corr, "variance_partition_corr", method_metric_directory)
-
-p_vp_corr <- safe_try({
-    proBatch::plot_variance_partition(
-        pbf_object,
-        pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-        technical_factors = batch_col,
-        biological_factors = biological_factors,
-        variance_threshold = variance_threshold,
-        summary_stat = "boxplot",
-        fill_the_missing = fill_missing,
-        base_size = 10
-    )
-}, error_msg = "plot_variance_partition (corrected) failed")
-save_plot_helper(p_vp_corr, "variance_partition_corr", method_plot_directory)
-
-# --- Correlation analyses ---
-log_msg("Calculating post-correction correlation diagnostics")
-
-sample_corr_df_corr <- safe_try({
-    proBatch::calculate_sample_corr_distr(
-        pbf_object,
-        pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-        sample_annotation,
-        batch_col = batch_col,
-        biospecimen_id_col = biospecimen_id_col
-    )
-}, error_msg = "calculate_sample_corr_distr (corrected) failed")
-save_metric_helper(sample_corr_df_corr, "sample_correlations_corr", method_metric_directory)
-
-p_sample_corr_corr <- safe_try({
-    proBatch::plot_sample_corr_distribution(
-        pbf_object,
-        pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-        sample_annotation,
-        batch_col = batch_col,
-        biospecimen_id_col = biospecimen_id_col,
-        plot_param = "batch_replicate",
-        plot_title = paste0(
-            "Sample correlation distribution after correction,\n", 
-            biospecimen_id_col, " and ", batch_col, " columns used for grouping"
+        data_matrix_corrected <- safe_try(
+            proBatch::pb_assay_matrix(pbf_object, assay = corrected_assay),
+            error_msg = sprintf("pb_assay_matrix failed for %s", corrected_assay)
         )
-    )
-}, error_msg = "plot_sample_corr_distribution (corrected) failed")
-save_plot_helper(p_sample_corr_corr, "sample_corr_distribution_corr", method_plot_directory)
+        df_long_corrected <- safe_try(
+            proBatch::pb_as_long(
+                pbf_object,
+                feature_id_col = feature_id_col,
+                sample_id_col = sample_id_col,
+                measure_col = measure_col,
+                pbf_name = corrected_assay
+            ),
+            error_msg = sprintf("pb_as_long failed for %s", corrected_assay)
+        )
 
-if (!is.null(peptide_annotation) && "Gene" %in% names(peptide_annotation)) {
-    peptide_corr_df_corr <- safe_try({
-        proBatch::calculate_peptide_corr_distr(
-            pbf_object,
-            pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-            peptide_annotation,
-            protein_col = "Gene"
+        if (save_objects) {
+            saveRDS(data_matrix_corrected, file.path(method_objects_directory, "data_matrix_corrected.rds"))
+            saveRDS(df_long_corrected, file.path(method_objects_directory, "df_long_corrected.rds"))
+            log_msg(sprintf("Saved corrected objects for method '%s'", method_label))
+        }
+
+        # --- Missingness diagnostics ---
+        p_na_density_corr <- safe_try(
+            proBatch::plot_NA_density(
+                pbf_object,
+                pbf_name = corrected_assay
+            ) + ggtitle(paste0("Corrected: NA density\n", corrected_assay)),
+            error_msg = "plot_NA_density (corrected) failed"
         )
-    }, error_msg = "calculate_peptide_corr_distr (corrected) failed")
-    save_metric_helper(peptide_corr_df_corr, "peptide_correlations_corr", method_metric_directory)
-    
-    p_peptide_corr_corr <- safe_try({
-        proBatch::plot_peptide_corr_distribution(
-            pbf_object,
-            pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-            peptide_annotation,
-            protein_col = "Gene"
+        save_plot_helper(p_na_density_corr, "NA_density_corr", method_plot_directory)
+
+        # --- Sample distributions ---
+        p_sample_mean_corr <- safe_try({
+            proBatch::plot_sample_mean(
+                pbf_object,
+                pbf_name = corrected_assay,
+                order_col = order_col,
+                batch_col = batch_col,
+                color_by_batch = TRUE,
+                color_scheme = color_list,
+                base_size = 15
+            ) + ggtitle(paste0("Sample means after correction\n", corrected_assay))
+        }, error_msg = "plot_sample_mean (corrected) failed")
+        save_plot_helper(p_sample_mean_corr, "sample_mean_corr", method_plot_directory)
+
+        p_boxplot_corr <- safe_try({
+            proBatch::plot_boxplot(
+                pbf_object,
+                pbf_name = corrected_assay,
+                sample_id_col = sample_id_col,
+                batch_col = batch_col,
+                color_by_batch = TRUE,
+                color_scheme = color_list,
+                base_size = 10
+            ) + ggtitle(paste0("Boxplot of corrected assay, colored by ", batch_col))
+        }, error_msg = "plot_boxplot (corrected) failed")
+        save_plot_helper(p_boxplot_corr, "boxplot_corr", method_plot_directory)
+
+        # --- Heatmaps and clustering ---
+        p_heatmap_diag_corr <- safe_try({
+            proBatch::plot_heatmap_diagnostic(
+                pbf_object,
+                pbf_name = corrected_assay,
+                factors_to_plot = factors_to_plot,
+                color_list = color_list,
+                show_rownames = FALSE,
+                show_colnames = FALSE,
+                fill_the_missing = fill_missing
+            )
+        }, error_msg = "plot_heatmap_diagnostic (corrected) failed")
+        save_plot_helper(p_heatmap_diag_corr, "heatmap_diagnostic_corr", method_plot_directory)
+
+        p_hierarchical_corr <- safe_try({
+            proBatch::plot_hierarchical_clustering(
+                pbf_object,
+                pbf_name = corrected_assay,
+                factors_to_plot = factors_to_plot,
+                color_list = color_list,
+                label_samples = FALSE,
+                fill_the_missing = fill_missing
+            )
+        }, error_msg = "plot_hierarchical_clustering (corrected) failed")
+        save_plot_helper(p_hierarchical_corr, "hierarchical_clustering_corr", method_plot_directory)
+
+        # --- Embeddings ---
+        pca_corr <- safe_try({
+            proBatch::plot_PCA(
+                pbf_object,
+                pbf_name = corrected_assay,
+                color_by = batch_col,
+                shape_by = condition_col,
+                marginal_density = TRUE,
+                fill_the_missing = fill_missing,
+                base_size = 8
+            )
+        }, error_msg = "plot_PCA (corrected) failed")
+        save_plot_helper(pca_corr, "PCA_corr", method_plot_directory)
+
+        tsne_corr <- safe_try({
+            proBatch::plot_TSNE(
+                pbf_object,
+                pbf_name = corrected_assay,
+                color_by = batch_col,
+                shape_by = condition_col,
+                perplexity = perplexity_tsne,
+                max_iter = 300,
+                initial_dims = n_pcs_embeddings,
+                fill_the_missing = fill_missing,
+                point_size = 4
+            )
+        }, error_msg = "plot_TSNE (corrected) failed")
+        save_plot_helper(tsne_corr, "tSNE_corr", method_plot_directory)
+
+        umap_corr <- safe_try({
+            proBatch::plot_UMAP(
+                pbf_object,
+                pbf_name = corrected_assay,
+                color_by = batch_col,
+                shape_by = condition_col,
+                n_neighbors = n_neighbors_umap,
+                min_dist = 0.3,
+                random_state = set_seed,
+                fill_the_missing = fill_missing,
+                point_size = 4
+            )
+        }, error_msg = "plot_UMAP (corrected) failed")
+        save_plot_helper(umap_corr, "UMAP_corr", method_plot_directory)
+
+        # --- PVCA ---
+        pvca_corr <- safe_try({
+            proBatch::calculate_PVCA(
+                pbf_object,
+                pbf_name = corrected_assay,
+                factors_for_PVCA = c(technical_factors, biological_factors),
+                fill_the_missing = fill_missing
+            )
+        }, error_msg = "calculate_PVCA (corrected) failed")
+        save_metric_helper(pvca_corr, "pvca_corr", method_pvca_directory)
+
+        p_pvca_corr <- safe_try({
+            proBatch::plot_PVCA(
+                pbf_object,
+                pbf_name = corrected_assay,
+                technical_factors = technical_factors,
+                biological_factors = biological_factors,
+                fill_the_missing = fill_missing,
+                variance_threshold = variance_threshold,
+                base_size = 10
+            )
+        }, error_msg = "plot_PVCA (corrected) failed")
+        save_plot_helper(p_pvca_corr, "PVCA_corr", method_plot_directory)
+
+        pvca_df_corr <- safe_try({
+            proBatch::prepare_PVCA_df(
+                pbf_object,
+                pbf_name = corrected_assay,
+                technical_factors = technical_factors,
+                biological_factors = biological_factors,
+                fill_the_missing = fill_missing,
+                variance_threshold = variance_threshold,
+                path_to_save_results = method_pvca_directory
+            )
+        }, error_msg = "prepare_PVCA_df (corrected) failed")
+        save_metric_helper(pvca_df_corr, "pvca_prepared_corr", method_pvca_directory)
+
+        # --- Variance partition ---
+        vp_corr <- safe_try({
+            proBatch::calculate_variance_partition(
+                pbf_object,
+                pbf_name = corrected_assay,
+                model_variables = c(batch_col, biological_factors),
+                fill_the_missing = fill_missing
+            )
+        }, error_msg = "calculate_variance_partition (corrected) failed")
+        save_metric_helper(vp_corr, "variance_partition_corr", method_metric_directory)
+
+        p_vp_corr <- safe_try({
+            proBatch::plot_variance_partition(
+                pbf_object,
+                pbf_name = corrected_assay,
+                technical_factors = batch_col,
+                biological_factors = biological_factors,
+                variance_threshold = variance_threshold,
+                summary_stat = "boxplot",
+                fill_the_missing = fill_missing,
+                base_size = 10
+            )
+        }, error_msg = "plot_variance_partition (corrected) failed")
+        save_plot_helper(p_vp_corr, "variance_partition_corr", method_plot_directory)
+
+        # --- Correlation analyses ---
+        sample_corr_df_corr <- safe_try({
+            proBatch::calculate_sample_corr_distr(
+                pbf_object,
+                sample_annotation = sample_annotation,
+                batch_col = batch_col,
+                biospecimen_id_col = biospecimen_id_col,
+                pbf_name = corrected_assay
+            )
+        }, error_msg = "calculate_sample_corr_distr (corrected) failed")
+        save_metric_helper(sample_corr_df_corr, "sample_correlations_corr", method_metric_directory)
+
+        p_sample_corr_corr <- safe_try({
+            proBatch::plot_sample_corr_distribution(
+                pbf_object,
+                sample_annotation = sample_annotation,
+                batch_col = batch_col,
+                biospecimen_id_col = biospecimen_id_col,
+                pbf_name = corrected_assay,
+                plot_param = "batch_replicate",
+                plot_title = paste0(
+                    "Sample correlation distribution after correction,\n",
+                    biospecimen_id_col, " and ", batch_col, " columns used for grouping"
+                )
+            )
+        }, error_msg = "plot_sample_corr_distribution (corrected) failed")
+        save_plot_helper(p_sample_corr_corr, "sample_corr_distribution_corr", method_plot_directory)
+
+        if (!is.null(peptide_annotation) && "Gene" %in% names(peptide_annotation)) {
+            peptide_corr_df_corr <- safe_try({
+                proBatch::calculate_peptide_corr_distr(
+                    pbf_object,
+                    pbf_name = corrected_assay,
+                    peptide_annotation,
+                    protein_col = "Gene"
+                )
+            }, error_msg = "calculate_peptide_corr_distr (corrected) failed")
+            save_metric_helper(peptide_corr_df_corr, "peptide_correlations_corr", method_metric_directory)
+
+            p_peptide_corr_corr <- safe_try({
+                proBatch::plot_peptide_corr_distribution(
+                    pbf_object,
+                    pbf_name = corrected_assay,
+                    peptide_annotation,
+                    protein_col = "Gene"
+                )
+            }, error_msg = "plot_peptide_corr_distribution (corrected) failed")
+            save_plot_helper(p_peptide_corr_corr, "peptide_corr_distribution_corr", method_plot_directory)
+        }
+
+        p_corr_heatmap_corr <- safe_try({
+            proBatch::plot_sample_corr_heatmap(
+                pbf_object,
+                pbf_name = corrected_assay,
+                sample_annotation = sample_annotation,
+                samples_to_plot = samples_for_corr_heatmap,
+                factors_to_plot = c(batch_col, condition_col),
+                cluster_rows = TRUE,
+                cluster_cols = TRUE,
+                color_list = color_list,
+                show_row_dend = FALSE, show_column_dend = FALSE,
+                x_axis_label_size = 4, y_axis_label_size = 4
+            ) + ggtitle("Sample correlation heatmap after correction")
+        }, error_msg = "plot_sample_corr_heatmap (corrected) failed")
+        save_plot_helper(p_corr_heatmap_corr, "sample_corr_heatmap_corr", method_plot_directory)
+
+        # --- Feature-level diagnostics ---
+        if (!is.null(peptide_annotation) && !is.null(example_spike_in_name)) {
+            p_spike_corr <- safe_try({
+                proBatch::plot_spike_in(
+                    spike_ins = example_spike_in_name,
+                    peptide_annotation = peptide_annotation,
+                    protein_col = "Gene",
+                    df_long = pbf_object,
+                    pbf_name = corrected_assay,
+                    sample_annotation = sample_annotation,
+                    batch_col = batch_col,
+                    color_by_batch = TRUE,
+                    base_size = 13
+                )
+            }, error_msg = "plot_spike_in (corrected) failed")
+            save_plot_helper(p_spike_corr, "spike_in_corr", method_plot_directory)
+        }
+
+        if (!is.null(peptide_annotation) && !is.null(example_irt_pattern)) {
+            p_irt_corr <- safe_try({
+                proBatch::plot_iRT(
+                    irt_pattern = example_irt_pattern,
+                    peptide_annotation = peptide_annotation,
+                    protein_col = "ProteinName",
+                    df_long = pbf_object,
+                    pbf_name = corrected_assay,
+                    sample_annotation = sample_annotation,
+                    batch_col = batch_col,
+                    color_by_batch = TRUE,
+                    base_size = 13
+                )
+            }, error_msg = "plot_iRT (corrected) failed")
+            save_plot_helper(p_irt_corr, "iRT_corr", method_plot_directory)
+        }
+
+        # --- QC summaries ---
+        cv_df_corr <- safe_try({
+            proBatch::calculate_feature_CV(
+                pbf_object,
+                pbf_name = corrected_assay,
+                sample_annotation = sample_annotation,
+                batch_col = batch_col,
+                biospecimen_id_col = biospecimen_id_col,
+                unlog = FALSE
+            )
+        }, error_msg = "calculate_feature_CV (corrected) failed")
+        save_metric_helper(cv_df_corr, "feature_CV_corr", method_metric_directory)
+
+        p_cv_corr <- safe_try({
+            proBatch::plot_CV_distr(
+                pbf_object,
+                pbf_name = corrected_assay,
+                sample_annotation = sample_annotation,
+                batch_col = batch_col,
+                biospecimen_id_col = biospecimen_id_col,
+                unlog = FALSE
+            ) + ggtitle(paste0("Feature CV distribution after correction\n", corrected_assay))
+        }, error_msg = "plot_CV_distr (corrected) failed")
+        save_plot_helper(p_cv_corr, "CV_distribution_corr", method_plot_directory)
+
+        class_metrics_corr <- safe_classification_metrics(
+            proBatch::pb_assay_matrix(pbf_object, assay = corrected_assay),
+            sample_annotation,
+            fill_the_missing = fill_missing,
+            known_col = c(batch_col, condition_col)
         )
-    }, error_msg = "plot_peptide_corr_distribution (corrected) failed")
-    save_plot_helper(p_peptide_corr_corr, "peptide_corr_distribution_corr", method_plot_directory)
+        save_metric_helper(class_metrics_corr, "classification_metrics_corr", method_metric_directory)
+
+        intragroup_corr <- safe_try({
+            proBatch::plot_intragroup_variation(
+                pbf_object,
+                pbf_name = corrected_assay,
+                group_col = c(condition_col, batch_col),
+                fill_the_missing = fill_missing,
+                metrics = c("correlation", "PCV")
+            )
+        }, error_msg = "plot_intragroup_variation (corrected) failed")
+        save_plot_helper(intragroup_corr, "intragroup_variation_corr", method_plot_directory)
+
+        outliers_corr <- safe_try({
+            proBatch::detect_outlier_samples(
+                pbf_object,
+                pbf_name = corrected_assay,
+                sample_annotation = sample_annotation,
+                batch_col = batch_col,
+                n_pcs = 5
+            )
+        }, error_msg = "detect_outlier_samples (corrected) failed")
+        save_metric_helper(outliers_corr, "outlier_samples_corr", method_metric_directory)
+
+        subbatches_corr <- safe_try({
+            proBatch::subbatch_detection(
+                pbf_object,
+                pbf_name = corrected_assay,
+                sample_annotation = sample_annotation,
+                batch_col = batch_col,
+                n_pcs = 5,
+                method = "kmeans",
+                k_max = 4
+            )
+        }, error_msg = "subbatch_detection (corrected) failed")
+        if (!is.null(subbatches_corr) && "summary" %in% names(subbatches_corr)) {
+            save_metric_helper(subbatches_corr$summary, "subbatch_detection_corr", method_metric_directory)
+        }
+
+        corrected_diagnostics[[paste0(method_dir_name, "_", i)]] <- list(
+            method_label = method_label,
+            corrected_assay = corrected_assay,
+            pvca_df_corr = pvca_df_corr,
+            sample_corr_df_corr = sample_corr_df_corr,
+            class_metrics_corr = class_metrics_corr,
+            outliers_corr = outliers_corr,
+            cv_df_corr = cv_df_corr
+        )
+    }
+
+    log_msg("Post-correction diagnostics complete")
 }
-
-# Correlation heatmaps
-p_corr_heatmap_corr <- safe_try({
-    proBatch::plot_sample_corr_heatmap(
-        pbf_object,
-        sample_annotation = sample_annotation,
-        samples_to_plot = samples_for_corr_heatmap,
-        factors_to_plot = c(batch_col, condition_col),
-        cluster_rows = TRUE,
-        cluster_cols = TRUE,
-        color_list = color_list,
-        show_row_dend = FALSE, show_column_dend = FALSE,
-        x_axis_label_size = 4, y_axis_label_size = 4,
-    )  + ggtitle("Sample correlation heatmap after correction")
-}, error_msg = "plot_sample_corr_heatmap (corrected) failed")
-save_plot_helper(p_corr_heatmap_corr, "sample_corr_heatmap_corr", method_plot_directory)
-
-# --- Feature-level diagnostics ---
-log_msg("Generating post-correction feature-level diagnostics")
-if (!is.null(peptide_annotation) && !is.null(example_spike_in_name)) {
-    p_spike_corr <- safe_try({
-        proBatch::plot_spike_in(
-            spike_ins = example_spike_in_name,
-            peptide_annotation = peptide_annotation,
-            protein_col = "Gene",
-            df_long = pbf_object,
-            pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-            sample_annotation = sample_annotation,
-            batch_col = batch_col,
-            color_by_batch = TRUE,
-            base_size = 13
-        )
-    }, error_msg = "plot_spike_in (corrected) failed")
-    save_plot_helper(p_spike_corr, "spike_in_corr", method_plot_directory)
-}
-
-if (!is.null(peptide_annotation) && !is.null(example_irt_pattern)) {
-    p_irt_corr <- safe_try({
-        proBatch::plot_iRT(
-            irt_pattern = example_irt_pattern,
-            peptide_annotation = peptide_annotation,
-            protein_col = "ProteinName",
-            df_long = pbf_object,
-            pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-            sample_annotation = sample_annotation,
-            batch_col = batch_col,
-            color_by_batch = TRUE,
-            base_size = 13
-        )
-    }, error_msg = "plot_iRT (corrected) failed")
-    save_plot_helper(p_irt_corr, "iRT_corr", method_plot_directory)
-}
-
-# --- QC summaries ---
-log_msg("Calculating post-correction QC summary metrics")
-
-cv_df_corr <- safe_try({
-    proBatch::calculate_feature_CV(
-        pbf_object,
-        pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-        sample_annotation = sample_annotation,
-        batch_col = batch_col,
-        biospecimen_id_col = biospecimen_id_col,
-        unlog = FALSE
-    )
-}, error_msg = "calculate_feature_CV (corrected) failed")
-save_metric_helper(cv_df_corr, "feature_CV_corr", method_metric_directory)
-
-p_cv_corr <- safe_try({
-    proBatch::plot_CV_distr(
-        pbf_object,
-        pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-        sample_annotation = sample_annotation,
-        batch_col = batch_col,
-        biospecimen_id_col = biospecimen_id_col,
-        unlog = FALSE
-    ) + ggtitle(paste0("Feature CV distribution after correction\n", 
-                    assay_prefix, "::", correction_method, "_on_log2_on_raw"))
-}, error_msg = "plot_CV_distr (corrected) failed")
-save_plot_helper(p_cv_corr, "CV_distribution_corr", method_plot_directory)
-
-intragroup_corr <- safe_try({
-    proBatch::plot_intragroup_variation(
-        pbf_object,
-        pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-        group_col = c(condition_col, batch_col),
-        fill_the_missing = fill_missing,
-        metrics = c("correlation", "PCV")
-    )
-}, error_msg = "plot_intragroup_variation (corrected) failed")
-save_plot_helper(intragroup_corr, "intragroup_variation_corr", method_plot_directory)
-
-outliers_corr <- safe_try({
-    proBatch::detect_outlier_samples(
-        pbf_object,
-        pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-        sample_annotation = sample_annotation,
-        batch_col = batch_col,
-        n_pcs = 5
-    )
-}, error_msg = "detect_outlier_samples (corrected) failed")
-save_metric_helper(outliers_corr, "outlier_samples_corr", method_metric_directory)
-
-subbatches_corr <- safe_try({
-    proBatch::subbatch_detection(
-        pbf_object,
-        pbf_name = paste0(assay_prefix, "::", correction_method, "_on_log2_on_raw"),
-        sample_annotation = sample_annotation,
-        batch_col = batch_col,
-        n_pcs = 5,
-        method = "kmeans",
-        k_max = 4
-    )
-}, error_msg = "subbatch_detection (corrected) failed")
-if (!is.null(subbatches_corr) && "summary" %in% names(subbatches_corr)) {
-    save_metric_helper(subbatches_corr$summary, "subbatch_detection_corr", method_metric_directory)
-}
-
-log_msg("Post-correction diagnostics complete")
 
 # ==============================================================================
 # COMPARATIVE ANALYSIS (RAW vs CORRECTED)
@@ -1407,51 +1496,73 @@ median_feature_cv <- function(cv_df) {
     median(cv_values, na.rm = TRUE)
 }
 
+metric_names <- c(
+    "PVCA: Technical %",
+    "PVCA: Biological %",
+    "Median within-replicate corr",
+    "Median within-batch corr",
+    "Silhouette (batch)",
+    "ASW (batch)",
+    "Number of outliers",
+    "Median feature CV (within-replicate)"
+)
+raw_metric_values <- c(
+    pvca_share(pvca_df_raw, technical_factors, category = "technical") * 100,
+    pvca_share(pvca_df_raw, biological_factors, category = "biological") * 100,
+    median_corr_by_group(sample_corr_df_raw, "within_replicate"),
+    median_corr_by_group(sample_corr_df_raw, "within_batch"),
+    extract_class_metric(
+        class_metrics_raw,
+        c("silhouette", "silhouette_score", "avg_silhouette_width")
+    ),
+    extract_class_metric(
+        class_metrics_raw,
+        c("avg_silhouette_width", "silhouette_score", "silhouette")
+    ),
+    count_outliers(outliers_raw),
+    median_feature_cv(cv_df_raw)
+)
+
 summary_metrics <- tibble::tibble(
-    Metric = c(
-        "PVCA: Technical %",
-        "PVCA: Biological %",
-        "Median within-replicate corr",
-        "Median within-batch corr",
-        "Silhouette (batch)",
-        "ASW (batch)",
-        "Number of outliers",
-        "Median feature CV (within-replicate)"
-    ),
-    Raw = c(
-        pvca_share(pvca_df_raw, technical_factors, category = "technical") * 100,
-        pvca_share(pvca_df_raw, biological_factors, category = "biological") * 100,
-        median_corr_by_group(sample_corr_df_raw, "within_replicate"),
-        median_corr_by_group(sample_corr_df_raw, "within_batch"),
-        extract_class_metric(
-            class_metrics_raw,
-            c("silhouette", "silhouette_score", "avg_silhouette_width")
-        ),
-        extract_class_metric(
-            class_metrics_raw,
-            c("avg_silhouette_width", "silhouette_score", "silhouette")
-        ),
-        count_outliers(outliers_raw),
-        median_feature_cv(cv_df_raw)
-    ),
-    Corrected = c(
-        pvca_share(pvca_df_corr, technical_factors, category = "technical") * 100,
-        pvca_share(pvca_df_corr, biological_factors, category = "biological") * 100,
-        median_corr_by_group(sample_corr_df_corr, "within_replicate"),
-        median_corr_by_group(sample_corr_df_corr, "within_batch"),
-        extract_class_metric(
-            class_metrics_corr,
-            c("silhouette", "silhouette_score", "avg_silhouette_width")
-        ),
-        extract_class_metric(
-            class_metrics_corr,
-            c("avg_silhouette_width", "silhouette_score", "silhouette")
-        ),
-        count_outliers(outliers_corr),
-        median_feature_cv(cv_df_corr)
-    )
-) %>%
-    mutate(Change = Corrected - Raw)
+    Method = character(),
+    Corrected_assay = character(),
+    Metric = character(),
+    Raw = numeric(),
+    Corrected = numeric(),
+    Change = numeric()
+)
+
+if (length(corrected_diagnostics) == 0L) {
+    log_msg("No corrected diagnostics available. Summary metrics table will be empty.", level = "WARN")
+} else {
+    summary_metrics <- dplyr::bind_rows(lapply(corrected_diagnostics, function(diag_obj) {
+        corrected_metric_values <- c(
+            pvca_share(diag_obj$pvca_df_corr, technical_factors, category = "technical") * 100,
+            pvca_share(diag_obj$pvca_df_corr, biological_factors, category = "biological") * 100,
+            median_corr_by_group(diag_obj$sample_corr_df_corr, "within_replicate"),
+            median_corr_by_group(diag_obj$sample_corr_df_corr, "within_batch"),
+            extract_class_metric(
+                diag_obj$class_metrics_corr,
+                c("silhouette", "silhouette_score", "avg_silhouette_width")
+            ),
+            extract_class_metric(
+                diag_obj$class_metrics_corr,
+                c("avg_silhouette_width", "silhouette_score", "silhouette")
+            ),
+            count_outliers(diag_obj$outliers_corr),
+            median_feature_cv(diag_obj$cv_df_corr)
+        )
+
+        tibble::tibble(
+            Method = diag_obj$method_label,
+            Corrected_assay = diag_obj$corrected_assay,
+            Metric = metric_names,
+            Raw = raw_metric_values,
+            Corrected = corrected_metric_values,
+            Change = corrected_metric_values - raw_metric_values
+        )
+    }))
+}
 
 save_metric_helper(summary_metrics, "summary_metrics_comparison", output_dirs$metrics_comp)
 
@@ -1467,8 +1578,9 @@ save_metric_helper(class_metrics_combined, "classification_metrics_comparison", 
 #  --- Plots and metrics groupped - plotted using proBatch functionality ---
 log_msg("Generating combined boxplots, heatmaps, and clustering diagnostics")
 
-plot_ncol = ifelse(length(names(pbf_object)) > 15, 8, 
-                   ifelse(length(names(pbf_object)) > 5, 5, length(names(pbf_object)))) 
+combined_assays <- names(pbf_object)
+plot_ncol <- ifelse(length(combined_assays) > 15, 8, 
+                    ifelse(length(combined_assays) > 5, 5, length(combined_assays)))
 
 p_boxplot_combined <- safe_try({
     proBatch::plot_boxplot(
@@ -1482,7 +1594,8 @@ p_boxplot_combined <- safe_try({
     ) + ggtitle(paste0("Boxplot of all assays, colored by ", batch_col))
 }, error_msg = "plot_boxplot (combined) failed")
 save_plot_helper(
-    p_boxplot_combined, "boxplot", output_dirs$plots_comp, n_plots = names(pbf_object))
+    p_boxplot_combined, "boxplot", output_dirs$plots_comp,
+    n_plots = combined_assays, n_cols = plot_ncol)
 
 p_heatmap_diag_combined <- safe_try({
     proBatch::plot_heatmap_diagnostic(
@@ -1495,7 +1608,10 @@ p_heatmap_diag_combined <- safe_try({
         plot_ncol = plot_ncol
     )
 }, error_msg = "plot_heatmap_diagnostic (combined) failed")
-save_plot_helper(p_heatmap_diag_combined, "heatmap_diagnostic_", output_dirs$plots_comp, n_plots = names(pbf_object))
+save_plot_helper(
+    p_heatmap_diag_combined, "heatmap_diagnostic_", output_dirs$plots_comp,
+    n_plots = combined_assays, n_cols = plot_ncol
+)
 
 p_hierarchical_combined <- safe_try({
     proBatch::plot_hierarchical_clustering(
@@ -1507,7 +1623,10 @@ p_hierarchical_combined <- safe_try({
         plot_ncol = plot_ncol
     )
 }, error_msg = "plot_hierarchical_clustering (combined) failed")
-save_plot_helper(p_hierarchical_combined, "hierarchical_clustering_", output_dirs$plots_comp, n_plots = names(pbf_object))
+save_plot_helper(
+    p_hierarchical_combined, "hierarchical_clustering_", output_dirs$plots_comp,
+    n_plots = combined_assays, n_cols = plot_ncol
+)
 
 log_msg("Generating combined PCA, tSNE, and UMAP diagnostics")
 
@@ -1522,7 +1641,10 @@ pca_combined <- safe_try({
         plot_ncol = plot_ncol
     )
 }, error_msg = "plot_PCA (combined) failed")
-save_plot_helper(pca_combined, "PCA_", output_dirs$plots_comp, n_plots = names(pbf_object))
+save_plot_helper(
+    pca_combined, "PCA_", output_dirs$plots_comp,
+    n_plots = combined_assays, n_cols = plot_ncol
+)
 
 tsne_combined <- safe_try({
     proBatch::plot_TSNE(
@@ -1537,7 +1659,10 @@ tsne_combined <- safe_try({
         plot_ncol = plot_ncol
     )
 }, error_msg = "plot_TSNE (combined) failed")
-save_plot_helper(tsne_combined, "tSNE_", output_dirs$plots_comp, n_plots = names(pbf_object))
+save_plot_helper(
+    tsne_combined, "tSNE_", output_dirs$plots_comp,
+    n_plots = combined_assays, n_cols = plot_ncol
+)
 
 umap_combined <- safe_try({
     proBatch::plot_UMAP(
@@ -1552,7 +1677,10 @@ umap_combined <- safe_try({
         plot_ncol = plot_ncol
     )
 }, error_msg = "plot_UMAP (combined) failed")
-save_plot_helper(umap_combined, "UMAP_", output_dirs$plots_comp, n_plots = names(pbf_object))
+save_plot_helper(
+    umap_combined, "UMAP_", output_dirs$plots_comp,
+    n_plots = combined_assays, n_cols = plot_ncol
+)
 
 # --- PVCA ---
 log_msg("Calculating combined PVCA")
@@ -1577,7 +1705,10 @@ p_pvca_combined <- safe_try({
         plot_ncol = plot_ncol
     )
 }, error_msg = "plot_PVCA (combined) failed")
-save_plot_helper(p_pvca_combined, "PVCA_combined", output_dirs$plots_comp, n_plots = names(pbf_object))
+save_plot_helper(
+    p_pvca_combined, "PVCA_combined", output_dirs$plots_comp,
+    n_plots = combined_assays, n_cols = plot_ncol
+)
 
 
 # --- Variance partition ---
@@ -1590,7 +1721,7 @@ vp_combined <- safe_try({
         fill_the_missing = fill_missing
     )
 }, error_msg = "calculate_variance_partition (combined) failed")
-save_metric_helper(vp_combined, "variance_partition_combined", output_dirs$metrics_combined)
+save_metric_helper(vp_combined, "variance_partition_combined", output_dirs$metrics_comp)
 
 p_vp_combined <- safe_try({
     proBatch::plot_variance_partition(
@@ -1604,7 +1735,10 @@ p_vp_combined <- safe_try({
         plot_ncol = plot_ncol
     )
 }, error_msg = "plot_variance_partition (combined) failed")
-save_plot_helper(p_vp_combined, "variance_partition_combined", output_dirs$plots_combined, n_plots = names(pbf_object))
+save_plot_helper(
+    p_vp_combined, "variance_partition_combined", output_dirs$plots_comp,
+    n_plots = combined_assays, n_cols = plot_ncol
+)
 
 
 # Correlation heatmaps
@@ -1623,7 +1757,10 @@ p_corr_heatmap_combined <- safe_try({
         x_axis_label_size = 4, y_axis_label_size = 4
     )  + ggtitle("Sample correlation heatmap after correction")
 }, error_msg = "plot_sample_corr_heatmap (combined) failed")
-save_plot_helper(p_corr_heatmap_combined, "sample_corr_heatmap_combined", output_dirs$plots_combined, n_plots = names(pbf_object))
+save_plot_helper(
+    p_corr_heatmap_combined, "sample_corr_heatmap_combined", output_dirs$plots_comp,
+    n_plots = combined_assays, n_cols = plot_ncol
+)
 
 log_msg("Generating combined intragroup correlation diagnostics")
 intragroup_combined <- safe_try({
@@ -1635,7 +1772,10 @@ intragroup_combined <- safe_try({
         metrics = c("correlation", "PCV", "PMAD", "PEV")
     )
 }, error_msg = "plot_intragroup_variation (combined) failed")
-save_plot_helper(intragroup_combined, "intragroup_variation_combined", output_dirs$plots_combined, n_plots = names(pbf_object))
+save_plot_helper(
+    intragroup_combined, "intragroup_variation_combined", output_dirs$plots_comp,
+    n_plots = combined_assays, n_cols = plot_ncol
+)
 
 # ==============================================================================
 # GENERATE SUMMARY REPORT
@@ -1654,7 +1794,25 @@ cat("Generated:", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "\n")
 cat("Output directory:", output_base_dir, "\n\n")
 
 cat("--- Configuration ---\n")
-cat("Correction method:", correction_method, "\n")
+cat("Correction methods (requested):", paste(correction_methods, collapse = ", "), "\n")
+if (!is.null(correction_tasks_yaml) && nzchar(correction_tasks_yaml)) {
+    cat("Correction tasks YAML:", correction_tasks_yaml, "\n")
+}
+if (NROW(corrected_methods_table) > 0) {
+    cat("Corrected assays generated:", paste(corrected_methods_table$corrected_assay, collapse = ", "), "\n")
+}
+if (NROW(correction_task_results) > 0) {
+    if (length(failed_correction_task_labels) > 0) {
+        cat("Failed correction task labels:", paste(failed_correction_task_labels, collapse = ", "), "\n")
+        cat("Failed correction task labels (list):\n")
+        for (lbl in failed_correction_task_labels) {
+            cat(" - ", lbl, "\n", sep = "")
+        }
+    } else {
+        cat("Failed correction task labels: none\n")
+    }
+    cat("\n")
+}
 cat("Batch column:", batch_col, "\n")
 cat("Condition column:", condition_col, "\n")
 cat("Technical factors:", paste(technical_factors, collapse = ", "), "\n")
@@ -1694,6 +1852,12 @@ log_msg(sprintf("Summary report saved: %s", report_file))
 
 log_msg("=" %+% "=" %+% "=" %+% " WORKFLOW COMPLETE " %+% "=" %+% "=" %+% "=")
 log_msg(sprintf("All results saved to: %s", output_base_dir))
+if (length(failed_correction_task_labels) > 0) {
+    log_msg("Failed correction task labels (final):", level = "WARN")
+    for (lbl in failed_correction_task_labels) {
+        log_msg(sprintf(" - %s", lbl), level = "WARN")
+    }
+}
 log_msg("Check SUMMARY_REPORT.txt for key findings")
 
 cat("\n")
@@ -1710,14 +1874,16 @@ cat("  03_raw_vs_corrected/\n")
 cat("    plots/          - Comparative plots\n")
 cat("    metrics/        - Comparative metric tables\n")
 cat("  04_objects/\n")
-cat("    pbf_corrected.rds           - Corrected ProBatchFeatures object\n")
-cat("    data_matrix_corrected.rds   - Corrected data matrix\n")
+cat("    <method>/data_matrix_corrected.rds - Corrected data matrix per method\n")
+cat("    <method>/df_long_corrected.rds     - Long-format corrected data per method\n")
 cat("  SUMMARY_REPORT.txt            - Summary of key metrics\n")
 cat("\n")
 
 # Return key objects (for interactive use)
 invisible(list(
     pbf_corrected = pbf_object,
+    corrected_methods = corrected_methods_table,
+    failed_correction_task_labels = failed_correction_task_labels,
     summary_metrics = summary_metrics,
     output_dir = output_base_dir
 ))
