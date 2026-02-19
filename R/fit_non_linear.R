@@ -48,16 +48,14 @@ fit_nonlinear <- function(df_feature_batch,
                           min_measurements = 8, ...) {
     x_all <- df_feature_batch[[order_col]]
 
-    # Prepare response vector with NAs for missing
+    # Keep original values for fallback in case fitting fails
     y_all <- df_feature_batch[[measure_col]]
-    missing_vals <- is.na(y_all)
 
     if (no_fit_imputed) {
         if (!is.null(qual_col) && (qual_col %in% names(df_feature_batch))) {
             warning("Imputed-value column present; fitting only to measured (non-imputed) values.")
             imputed_values <- df_feature_batch[[qual_col]] == qual_value
             df_feature_batch[[measure_col]][imputed_values] <- NA
-            missing_values <- imputed_values
         } else {
             stop("Imputed values should not be used, but no flag column specified.")
         }
@@ -65,12 +63,13 @@ fit_nonlinear <- function(df_feature_batch,
         if (!is.null(qual_col) && (qual_col %in% names(df_feature_batch))) {
             warning("Imputed-value column present; fitting non-linear curve to imputed values as well. Are you sure?")
         }
-        missing_values <- is.na(y_all)
     }
 
     # Filter for fitting
+    y_to_consider <- df_feature_batch[[measure_col]]
+    missing_vals <- is.na(y_to_consider)
     x_to_fit <- x_all[!missing_vals]
-    y_to_fit <- y_all[!missing_vals]
+    y_to_fit <- y_to_consider[!missing_vals]
 
     max_consec_meas <- rle_func(
         df_feature_batch,
@@ -110,21 +109,36 @@ fit_nonlinear <- function(df_feature_batch,
 #' @importFrom stats predict loess
 loess_regression <- function(x_to_fit, y, x_all, y_all,
                              feature_id = NULL, batch_id = NULL, ...) {
+    loess_warning <- NULL
     out <- tryCatch(
-        {
-            fit <- loess(y ~ x_to_fit, surface = "direct", ...)
-            pred <- predict(fit, newdata = data.frame(x_to_fit = x_all))
-            pred
-        },
-        warning = function(cond) {
+        withCallingHandlers(
+            {
+                fit <- loess(y ~ x_to_fit, surface = "direct", ...)
+                pred <- predict(fit, newdata = data.frame(x_to_fit = x_all))
+                pred
+            },
+            warning = function(cond) {
+                loess_warning <<- conditionMessage(cond)
+                invokeRestart("muffleWarning")
+            }
+        ),
+        error = function(cond) {
             message(sprintf(
                 "Feature %s in batch %s could not be fit with LOESS:",
                 feature_id, batch_id
             ))
-            message(cond)
+            message(conditionMessage(cond))
             y_all
         }
     )
+    if (!is.null(loess_warning)) {
+        message(sprintf(
+            "Feature %s in batch %s could not be fit with LOESS:",
+            feature_id, batch_id
+        ))
+        message(loess_warning)
+        return(y_all)
+    }
     return(out)
 }
 
@@ -133,23 +147,38 @@ loess_regression_opt <- function(x_to_fit, y, x_all, y_all,
                                  kernel = "normal",
                                  bws = c(0.01, 0.5, 1, 1.5, 2, 5, 10),
                                  ...) {
+    loess_warning <- NULL
     out <- tryCatch(
-        {
-            bw <- optimise_bw(x_to_fit, y, kernel = kernel, bws = bws)
-            degr_freedom <- optimise_df(x_to_fit, bw)
-            fit <- loess(y ~ x_to_fit, enp.target = degr_freedom, surface = "direct", ...)
-            pred <- predict(fit, newdata = data.frame(x_to_fit = x_all))
-            return(pred)
-        },
-        warning = function(cond) {
+        withCallingHandlers(
+            {
+                bw <- optimise_bw(x_to_fit, y, kernel = kernel, bws = bws)
+                degr_freedom <- optimise_df(x_to_fit, bw)
+                fit <- loess(y ~ x_to_fit, enp.target = degr_freedom, surface = "direct", ...)
+                pred <- predict(fit, newdata = data.frame(x_to_fit = x_all))
+                return(pred)
+            },
+            warning = function(cond) {
+                loess_warning <<- conditionMessage(cond)
+                invokeRestart("muffleWarning")
+            }
+        ),
+        error = function(cond) {
             message(sprintf(
                 "Feature %s in batch %s could not be fit with optimised LOESS:",
                 feature_id, batch_id
             ))
-            message(cond)
+            message(conditionMessage(cond))
             y_all
         }
     )
+    if (!is.null(loess_warning)) {
+        message(sprintf(
+            "Feature %s in batch %s could not be fit with optimised LOESS:",
+            feature_id, batch_id
+        ))
+        message(loess_warning)
+        return(y_all)
+    }
     return(out)
 }
 

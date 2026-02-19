@@ -801,10 +801,14 @@ correct_batch_effects <- function(
 ) {
     format <- match.arg(format)
     discrete_func <- match.arg(discrete_func)
+    input_feature_ids <- NULL
+    input_sample_ids <- NULL
 
     # Standardize to LONG for the pipeline, then back if needed
     if (identical(format, "wide")) {
         stopifnot(is.matrix(x))
+        input_feature_ids <- rownames(x)
+        input_sample_ids <- colnames(x)
         df_long <- matrix_to_long(
             data_matrix    = x,
             feature_id_col = feature_id_col,
@@ -893,12 +897,26 @@ correct_batch_effects <- function(
     )
 
     if (back_to_wide) {
-        return(long_to_matrix(
+        corrected_matrix <- long_to_matrix(
             df_long,
             feature_id_col = feature_id_col,
             measure_col    = measure_col,
             sample_id_col  = sample_id_col
-        ))
+        )
+
+        if (!is.null(input_sample_ids) &&
+            !is.null(colnames(corrected_matrix)) &&
+            setequal(colnames(corrected_matrix), input_sample_ids)) {
+            corrected_matrix <- corrected_matrix[, input_sample_ids, drop = FALSE]
+        }
+
+        if (!is.null(input_feature_ids) &&
+            !is.null(rownames(corrected_matrix)) &&
+            setequal(rownames(corrected_matrix), input_feature_ids)) {
+            corrected_matrix <- corrected_matrix[input_feature_ids, , drop = FALSE]
+        }
+
+        return(corrected_matrix)
     }
 
     # Ensure provenance columns are retained for long
@@ -1096,6 +1114,73 @@ run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
         use_mComBat = use_mComBat,
         ...
     )
+}
+
+.loess_limmaRBE_matrix_step <- function(
+  data_matrix, sample_annotation,
+  batch_col = "MS_batch",
+  sample_id_col = "FullRunName",
+  feature_id_col = "peptide_group_label",
+  measure_col = "Intensity",
+  order_col = "order",
+  covariates_cols = NULL,
+  fill_the_missing = NULL,
+  min_measurements = 8,
+  no_fit_imputed = TRUE,
+  qual_col = NULL,
+  qual_value = NULL,
+  ...
+) {
+    input_features <- rownames(data_matrix)
+    input_samples <- colnames(data_matrix)
+
+    if (!is.null(sample_annotation) && !(sample_id_col %in% names(sample_annotation))) {
+        sample_ids <- rownames(sample_annotation)
+        if (is.null(sample_ids)) {
+            stop(
+                "sample_annotation must contain column '", sample_id_col,
+                "' or row names for loessLimmaRBE."
+            )
+        }
+        sample_annotation[[sample_id_col]] <- sample_ids
+    }
+
+    corrected_matrix <- correct_batch_effects(
+        x = data_matrix,
+        sample_annotation = sample_annotation,
+        format = "wide",
+        continuous_func = "loess_regression",
+        discrete_func = "removeBatchEffect",
+        batch_col = batch_col,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        measure_col = measure_col,
+        order_col = order_col,
+        no_fit_imputed = no_fit_imputed,
+        qual_col = qual_col,
+        qual_value = qual_value,
+        fill_the_missing = fill_the_missing,
+        covariates_cols = covariates_cols,
+        min_measurements = min_measurements,
+        ...
+    )
+
+    if (!is.null(input_samples) && !is.null(colnames(corrected_matrix))) {
+        missing_samples <- setdiff(input_samples, colnames(corrected_matrix))
+        extra_samples <- setdiff(colnames(corrected_matrix), input_samples)
+        if (length(missing_samples) || length(extra_samples)) {
+            stop("loessLimmaRBE must preserve sample IDs in the output matrix.")
+        }
+        corrected_matrix <- corrected_matrix[, input_samples, drop = FALSE]
+    }
+
+    if (!is.null(input_features) &&
+        !is.null(rownames(corrected_matrix)) &&
+        setequal(rownames(corrected_matrix), input_features)) {
+        corrected_matrix <- corrected_matrix[input_features, , drop = FALSE]
+    }
+
+    corrected_matrix
 }
 
 .combat_matrix_step <- function(data_matrix, sample_annotation,
@@ -1373,7 +1458,26 @@ correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
                     stop("`covariates_cols` must not include `batch_col` when using removeBatchEffect.")
                 }
                 covariates <- as.data.frame(sample_annotation[, covariates_cols, drop = FALSE])
-                mod <- model.matrix(~., data = covariates)
+                degenerate_cov <- names(covariates)[vapply(
+                    covariates,
+                    function(column_values) {
+                        values <- unique(column_values[!is.na(column_values)])
+                        length(values) < 2L
+                    },
+                    logical(1)
+                )]
+                if (length(degenerate_cov)) {
+                    warning(
+                        "Dropping covariates with <2 observed values for removeBatchEffect: ",
+                        paste(degenerate_cov, collapse = ", ")
+                    )
+                    covariates <- covariates[, setdiff(names(covariates), degenerate_cov), drop = FALSE]
+                }
+                if (ncol(covariates)) {
+                    mod <- model.matrix(~., data = covariates)
+                } else {
+                    mod <- model.matrix(~1, data = sample_annotation)
+                }
             } else {
                 mod <- model.matrix(~1, data = sample_annotation)
             }

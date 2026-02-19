@@ -6,6 +6,8 @@
     # existing
     safe_register("combat", .combat_matrix_step)
     safe_register("limmaRBE", .removeBatchEffect_matrix_step)
+    safe_register("loessLimmaRBE", .loess_limmaRBE_matrix_step)
+    safe_register("loesslimmarbe", .loess_limmaRBE_matrix_step)
     # mComBat uses the same func, but with use_mComBat = TRUE
     safe_register("mComBat", .mComBat_matrix_step)
 

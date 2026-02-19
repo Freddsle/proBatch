@@ -52,3 +52,34 @@ test_that("fit_nonlinear returns NA vector when insufficient data", {
     )
     expect_true(all(is.na(vals)))
 })
+
+test_that("fit_nonlinear excludes imputed values when requested", {
+    df <- data.frame(
+        order = 1:10,
+        Intensity = c(1, 1, 1, 100, 1, 1, 1, 1, 1, 1),
+        m_score = c(0, 0, 0, 2, 0, 0, 0, 0, 0, 0)
+    )
+
+    vals_without_imputed <- suppressWarnings(
+        fit_nonlinear(
+            df_feature_batch = df,
+            min_measurements = 3,
+            no_fit_imputed = TRUE,
+            qual_col = "m_score",
+            qual_value = 2
+        )
+    )
+
+    df_masked <- df
+    df_masked$Intensity[df_masked$m_score == 2] <- NA_real_
+    vals_expected <- suppressWarnings(
+        fit_nonlinear(
+            df_feature_batch = df_masked,
+            min_measurements = 3,
+            no_fit_imputed = FALSE,
+            qual_col = NULL
+        )
+    )
+
+    expect_equal(vals_without_imputed, vals_expected)
+})
