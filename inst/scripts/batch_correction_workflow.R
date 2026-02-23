@@ -80,6 +80,9 @@ correction_methods <- c("limmaRBE") # Example: c("limmaRBE", "combat", "loessLim
 correction_tasks_yaml <- "inst/scripts/pb_tasks.yaml" # Uses task-grid defaults (all methods on log2_on_raw profile)
 correction_task_labels <- NULL # Optional subset of task labels from correction_tasks_yaml
 # example: c("ComBat_log2_on_raw", "BERT_ComBat_log2_on_raw", "omicsGMFcor_log2_on_raw")
+# Optional one-time retry: on specific rowname-related failures, repair missing
+# feature rownames in the task source assay and retry the task once.
+enable_rowname_repair_retry <- FALSE
 
 # --- Output configuration ---
 output_base_dir <- file.path(tempdir(), "batch_correction_results") # Base output directory
@@ -959,7 +962,8 @@ if (length(batch_levels) < 2L) {
         correction_tasks,
         log_fn = function(msg) log_msg(msg),
         normae_log_base_dir = normae_log_base_dir,
-        plsdabatch_log_base_dir = plsdabatch_log_base_dir
+        plsdabatch_log_base_dir = plsdabatch_log_base_dir,
+        enable_rowname_repair_retry = enable_rowname_repair_retry
     )
     pbf_object <- correction_run$pbf
     correction_task_results <- correction_run$task_results

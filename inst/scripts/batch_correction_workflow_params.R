@@ -2,6 +2,21 @@
 # User-editable parameters for batch_correction_workflow.R.
 # Copy this file, edit values in `workflow_params`, then run it.
 
+# Resolve paths from this params file location so `source()` works
+# regardless of the current working directory.
+source_path <- tryCatch(
+    normalizePath(sys.frames()[[1]]$ofile, mustWork = FALSE),
+    error = function(...) NA_character_
+)
+file_args <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
+script_dir <- if (!is.na(source_path) && nzchar(source_path)) {
+    dirname(source_path)
+} else if (length(file_args) > 0L) {
+    dirname(normalizePath(sub("^--file=", "", file_args[1]), mustWork = FALSE))
+} else {
+    getwd()
+}
+
 workflow_params <- list(
     # --- Input data ---
     pbf_object = NULL,
@@ -46,7 +61,7 @@ workflow_params <- list(
 
     # --- Batch correction methods ---
     correction_methods = c("limmaRBE"),
-    correction_tasks_yaml = "inst/scripts/pb_tasks.yaml",
+    correction_tasks_yaml = file.path(script_dir, "pb_tasks.yaml"),
     correction_task_labels = NULL,
     enable_rowname_repair_retry = FALSE,
 
@@ -88,13 +103,6 @@ workflow_params <- list(
     # --- Caching ---
     cache_expensive = TRUE
 )
-
-file_args <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
-script_dir <- if (length(file_args) > 0L) {
-    dirname(normalizePath(sub("^--file=", "", file_args[1]), mustWork = FALSE))
-} else {
-    getwd()
-}
 
 workflow_candidates <- c(
     file.path(script_dir, "batch_correction_workflow.R"),

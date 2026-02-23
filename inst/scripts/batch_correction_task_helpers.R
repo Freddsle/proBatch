@@ -109,6 +109,86 @@ resolve_task_refs <- function(x, env) {
     resolve_task_refs(merged, env = env)
 }
 
+.retry_param_names_for_steps <- function(steps) {
+    step_lower <- tolower(as.character(steps))
+    out <- character(0)
+    if (any(step_lower %in% c("limmarbe", "combat"))) {
+        out <- c(out, "covariates_cols", "covariates", "condition_col")
+    }
+    if (any(step_lower %in% c("omicsgmfcor", "omicsgmfimpute"))) {
+        out <- c(out, "design_formula")
+    }
+    if (any(step_lower %in% c("omicsgmfcor"))) {
+        # When falling back to global omicsGMF correction, also disable
+        # batch-term preservation from fixed effects.
+        out <- c(out, "batch_col")
+    }
+    unique(out)
+}
+
+.drop_retry_sensitive_params <- function(params_list, steps) {
+    if (is.null(params_list) || length(params_list) == 0L) {
+        return(params_list)
+    }
+    drop_keys <- .retry_param_names_for_steps(steps)
+    if (length(drop_keys) == 0L) {
+        return(params_list)
+    }
+    lapply(params_list, function(p) {
+        if (!is.list(p)) {
+            return(p)
+        }
+        for (k in drop_keys) {
+            p[[k]] <- NULL
+        }
+        p
+    })
+}
+
+.has_retry_sensitive_params <- function(params_list, steps) {
+    if (is.null(params_list) || length(params_list) == 0L) {
+        return(FALSE)
+    }
+    keys <- .retry_param_names_for_steps(steps)
+    if (length(keys) == 0L) {
+        return(FALSE)
+    }
+    any(vapply(params_list, function(p) {
+        is.list(p) && any(keys %in% names(p))
+    }, logical(1)))
+}
+
+.covariate_retry_reason <- function(steps, task_error = NULL, warning_messages = character(0), params_list = NULL) {
+    step_lower <- tolower(as.character(steps))
+    has_lm_or_combat <- any(step_lower %in% c("limmarbe", "combat"))
+    has_omics <- any(step_lower %in% c("omicsgmfcor", "omicsgmfimpute"))
+    if (!has_lm_or_combat && !has_omics) {
+        return(NULL)
+    }
+    if (!.has_retry_sensitive_params(params_list, steps)) {
+        return(NULL)
+    }
+
+    issues <- c(task_error, warning_messages)
+    issues <- issues[!is.na(issues) & nzchar(issues)]
+    if (length(issues) == 0L) {
+        return(NULL)
+    }
+    issue_text <- tolower(paste(issues, collapse = " | "))
+
+    if (has_lm_or_combat && grepl("coefficients?\\s+not\\s+estimable", issue_text, perl = TRUE)) {
+        return("coefficients not estimable")
+    }
+    if (has_lm_or_combat && grepl("confound|rank[- ]deficient|not full rank|singular|aliased|contrasts can be applied only to factors with 2 or more levels", issue_text, perl = TRUE)) {
+        return("design/covariate confounding")
+    }
+    if (has_omics && grepl("lapack routine dgesv|system is exactly singular|rank[- ]deficient|not full rank|singular", issue_text, perl = TRUE)) {
+        return("omicsGMF singular design/system")
+    }
+
+    NULL
+}
+
 .read_legacy_tasks <- function(tasks, env) {
     lapply(tasks, function(t) {
         if (is.null(t$from) || (is.null(t$step) && is.null(t$steps)) ||
@@ -620,21 +700,31 @@ sanitize_label_for_path <- function(x) {
     run_args <- transform_args
     run_args[[1]] <- pbf_input
     task_error <- NULL
+    warning_messages <- character(0)
     updated <- tryCatch(
-        if (is.null(plsda_task_log)) {
-            do.call(proBatch::pb_transform, run_args)
-        } else {
-            .with_captured_task_output(
-                plsda_task_log,
+        withCallingHandlers(
+            if (is.null(plsda_task_log)) {
                 do.call(proBatch::pb_transform, run_args)
-            )
-        },
+            } else {
+                .with_captured_task_output(
+                    plsda_task_log,
+                    do.call(proBatch::pb_transform, run_args)
+                )
+            },
+            warning = function(w) {
+                warning_messages <<- c(warning_messages, conditionMessage(w))
+            }
+        ),
         error = function(e) {
             task_error <<- conditionMessage(e)
             pbf_input
         }
     )
-    list(updated = updated, task_error = task_error)
+    list(
+        updated = updated,
+        task_error = task_error,
+        warnings = unique(warning_messages)
+    )
 }
 
 run_pb_tasks <- function(
@@ -736,6 +826,8 @@ run_pb_tasks <- function(
         task_error <- NULL
         rowname_retry_used <- FALSE
         rowname_repair_applied <- FALSE
+        covariate_retry_used <- FALSE
+        covariate_retry_succeeded <- FALSE
         updated <- tryCatch(
             {
                 attempt <- .run_pb_transform_once(
@@ -743,11 +835,54 @@ run_pb_tasks <- function(
                     pbf_input = pbf,
                     plsda_task_log = plsda_task_log
                 )
-                initial_error <- attempt$task_error
 
-                if (!is.null(initial_error) &&
+                retry_reason <- .covariate_retry_reason(
+                    steps = steps,
+                    task_error = attempt$task_error,
+                    warning_messages = attempt$warnings,
+                    params_list = params_list
+                )
+                if (!is.null(retry_reason)) {
+                    retry_params_list <- .drop_retry_sensitive_params(params_list, steps)
+                    if (!identical(retry_params_list, params_list)) {
+                        covariate_retry_used <- TRUE
+                        log_fn(sprintf(
+                            "Task '%s' matched '%s'; retrying once without covariate/design inputs.",
+                            label,
+                            retry_reason
+                        ))
+                        retry_args <- transform_args
+                        retry_args$params_list <- retry_params_list
+                        retry_attempt <- .run_pb_transform_once(
+                            transform_args = retry_args,
+                            pbf_input = pbf,
+                            plsda_task_log = plsda_task_log
+                        )
+                        if (is.null(retry_attempt$task_error)) {
+                            covariate_retry_succeeded <- TRUE
+                            attempt <- retry_attempt
+                            log_fn(sprintf("Task '%s' retry without covariates succeeded.", label))
+                        } else if (is.null(attempt$task_error)) {
+                            log_fn(sprintf(
+                                "Task '%s' retry without covariates failed; keeping original result. Retry error: %s",
+                                label,
+                                retry_attempt$task_error
+                            ))
+                        } else {
+                            attempt$task_error <- paste(
+                                attempt$task_error,
+                                sprintf("Retry without covariates also failed: %s", retry_attempt$task_error),
+                                sep = " | "
+                            )
+                        }
+                    }
+                }
+
+                rowname_initial_error <- attempt$task_error
+
+                if (!is.null(rowname_initial_error) &&
                     isTRUE(enable_rowname_repair_retry) &&
-                    .is_rowname_related_failure(initial_error)) {
+                    .is_rowname_related_failure(rowname_initial_error)) {
                     rowname_retry_used <- TRUE
                     log_fn(sprintf(
                         "Task '%s' failed with a rowname-related error; retrying once after rowname repair.",
@@ -775,7 +910,7 @@ run_pb_tasks <- function(
                         attempt$task_error <- paste0(
                             attempt$task_error,
                             " [initial error: ",
-                            initial_error,
+                            rowname_initial_error,
                             "]"
                         )
                     }
@@ -831,6 +966,8 @@ run_pb_tasks <- function(
                         } else {
                             "ok_after_rowname_retry"
                         }
+                    } else if (covariate_retry_used && covariate_retry_succeeded) {
+                        "ok_after_covariate_retry"
                     } else {
                         "ok"
                     }
@@ -982,6 +1119,7 @@ save_metric_helper <- function(data_obj, filename, subdir = "metrics") {
 safe_classification_metrics <- function(
   x,
   sample_annotation,
+  sample_id_col = "FullRunName",
   known_col = batch_col,
   fill_the_missing = fill_missing
 ) {
@@ -1007,6 +1145,8 @@ safe_classification_metrics <- function(
     safe_try(
         proBatch::calculate_classification_metrics(
             x,
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
             known_col = known_col,
             fill_the_missing = fill_the_missing
         ),
