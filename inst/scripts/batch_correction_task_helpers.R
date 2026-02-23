@@ -510,12 +510,140 @@ sanitize_label_for_path <- function(x) {
     force(expr)
 }
 
+.is_rowname_related_failure <- function(msg) {
+    if (is.null(msg) || !length(msg)) {
+        return(FALSE)
+    }
+    msg <- tolower(paste(msg, collapse = " "))
+    patterns <- c(
+        "different rownames",
+        "!is.null(feature_cols) is not true"
+    )
+    any(vapply(patterns, function(pat) grepl(pat, msg, fixed = TRUE), logical(1)))
+}
+
+.task_parent_assay <- function(pbf, assay_name) {
+    if (is.null(assay_name) || !nzchar(assay_name)) {
+        return(NULL)
+    }
+    op_log <- tryCatch(proBatch::get_operation_log(pbf), error = function(e) NULL)
+    if (is.null(op_log) || !NROW(op_log) ||
+        !("to" %in% names(op_log)) ||
+        !("from" %in% names(op_log))) {
+        return(NULL)
+    }
+    idx <- which(as.character(op_log$to) == assay_name)
+    if (!length(idx)) {
+        return(NULL)
+    }
+    parent <- as.character(op_log$from[idx[length(idx)]])
+    if (!length(parent) || !nzchar(parent)) {
+        return(NULL)
+    }
+    parent
+}
+
+.repair_task_from_assay_rownames <- function(pbf, assay_name, log_fn = message) {
+    assay_name <- as.character(assay_name %||% "")
+    if (!nzchar(assay_name) || !(assay_name %in% names(pbf))) {
+        return(list(
+            pbf = pbf,
+            repaired = FALSE,
+            source = "none",
+            reason = "assay_not_found"
+        ))
+    }
+
+    se <- pbf[[assay_name]]
+    mat <- SummarizedExperiment::assay(se, "intensity")
+    if (!is.matrix(mat)) {
+        mat <- as.matrix(mat)
+    }
+
+    n_features <- nrow(mat)
+    existing_ids <- rownames(mat)
+    has_valid_ids <- !is.null(existing_ids) &&
+        length(existing_ids) == n_features &&
+        !anyNA(existing_ids) &&
+        all(nzchar(existing_ids))
+    if (has_valid_ids) {
+        return(list(
+            pbf = pbf,
+            repaired = FALSE,
+            source = "none",
+            reason = "already_present"
+        ))
+    }
+
+    repair_ids <- NULL
+    repair_source <- "generated"
+    parent_assay <- .task_parent_assay(pbf, assay_name)
+    if (!is.null(parent_assay) && parent_assay %in% names(pbf)) {
+        parent_mat <- SummarizedExperiment::assay(pbf[[parent_assay]], "intensity")
+        parent_ids <- rownames(parent_mat)
+        if (!is.null(parent_ids) &&
+            length(parent_ids) == n_features &&
+            !anyNA(parent_ids) &&
+            all(nzchar(parent_ids))) {
+            repair_ids <- as.character(parent_ids)
+            repair_source <- paste0("parent:'", parent_assay, "'")
+        }
+    }
+    if (is.null(repair_ids)) {
+        repair_ids <- sprintf("feature_%d", seq_len(n_features))
+    }
+    repair_ids <- make.unique(repair_ids, sep = "__dup_")
+
+    rownames(mat) <- repair_ids
+    sample_ids <- colnames(SummarizedExperiment::assay(se, "intensity"))
+    colnames(mat) <- sample_ids
+    SummarizedExperiment::assay(se, "intensity", withDimnames = FALSE) <- mat
+    rownames(se) <- repair_ids
+
+    pbf[[assay_name]] <- se
+
+    log_fn(sprintf(
+        "Applied rowname repair to assay '%s' (%s).",
+        assay_name,
+        repair_source
+    ))
+
+    list(
+        pbf = pbf,
+        repaired = TRUE,
+        source = repair_source,
+        reason = "ok"
+    )
+}
+
+.run_pb_transform_once <- function(transform_args, pbf_input, plsda_task_log = NULL) {
+    run_args <- transform_args
+    run_args[[1]] <- pbf_input
+    task_error <- NULL
+    updated <- tryCatch(
+        if (is.null(plsda_task_log)) {
+            do.call(proBatch::pb_transform, run_args)
+        } else {
+            .with_captured_task_output(
+                plsda_task_log,
+                do.call(proBatch::pb_transform, run_args)
+            )
+        },
+        error = function(e) {
+            task_error <<- conditionMessage(e)
+            pbf_input
+        }
+    )
+    list(updated = updated, task_error = task_error)
+}
+
 run_pb_tasks <- function(
   pbf,
   tasks,
   log_fn = message,
   normae_log_base_dir = NULL,
-  plsdabatch_log_base_dir = NULL
+  plsdabatch_log_base_dir = NULL,
+  enable_rowname_repair_retry = FALSE
 ) {
     if (length(tasks) == 0L) {
         return(list(
@@ -606,14 +734,55 @@ run_pb_tasks <- function(
         }
 
         task_error <- NULL
+        rowname_retry_used <- FALSE
+        rowname_repair_applied <- FALSE
         updated <- tryCatch(
-            if (is.null(plsda_task_log)) {
-                do.call(proBatch::pb_transform, transform_args)
-            } else {
-                .with_captured_task_output(
-                    plsda_task_log,
-                    do.call(proBatch::pb_transform, transform_args)
+            {
+                attempt <- .run_pb_transform_once(
+                    transform_args = transform_args,
+                    pbf_input = pbf,
+                    plsda_task_log = plsda_task_log
                 )
+                initial_error <- attempt$task_error
+
+                if (!is.null(initial_error) &&
+                    isTRUE(enable_rowname_repair_retry) &&
+                    .is_rowname_related_failure(initial_error)) {
+                    rowname_retry_used <- TRUE
+                    log_fn(sprintf(
+                        "Task '%s' failed with a rowname-related error; retrying once after rowname repair.",
+                        label
+                    ))
+                    repaired <- .repair_task_from_assay_rownames(
+                        pbf = pbf,
+                        assay_name = t$from,
+                        log_fn = log_fn
+                    )
+                    rowname_repair_applied <- isTRUE(repaired$repaired)
+                    if (!rowname_repair_applied) {
+                        log_fn(sprintf(
+                            "Rowname repair was not applied for assay '%s' (%s); retrying once unchanged.",
+                            as.character(t$from),
+                            repaired$reason %||% "unknown"
+                        ))
+                    }
+                    attempt <- .run_pb_transform_once(
+                        transform_args = transform_args,
+                        pbf_input = repaired$pbf,
+                        plsda_task_log = plsda_task_log
+                    )
+                    if (!is.null(attempt$task_error)) {
+                        attempt$task_error <- paste0(
+                            attempt$task_error,
+                            " [initial error: ",
+                            initial_error,
+                            "]"
+                        )
+                    }
+                }
+
+                task_error <<- attempt$task_error
+                attempt$updated
             },
             error = function(e) {
                 task_error <<- conditionMessage(e)
@@ -655,7 +824,19 @@ run_pb_tasks <- function(
             final_name = as.character(final_name %||% NA_character_),
             success = success,
             message = if (is.null(task_error)) {
-                if (assay_created) "ok" else "assay_not_found"
+                if (assay_created) {
+                    if (rowname_retry_used) {
+                        if (rowname_repair_applied) {
+                            "ok_after_rowname_repair"
+                        } else {
+                            "ok_after_rowname_retry"
+                        }
+                    } else {
+                        "ok"
+                    }
+                } else {
+                    "assay_not_found"
+                }
             } else {
                 task_error
             },

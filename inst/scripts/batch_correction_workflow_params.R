@@ -48,6 +48,7 @@ workflow_params <- list(
     correction_methods = c("limmaRBE"),
     correction_tasks_yaml = "inst/scripts/pb_tasks.yaml",
     correction_task_labels = NULL,
+    enable_rowname_repair_retry = FALSE,
 
     # --- Output configuration ---
     output_base_dir = file.path(tempdir(), "batch_correction_results"),

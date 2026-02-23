@@ -52,6 +52,7 @@ Use `correction_task_labels` only for exact label filtering of expanded tasks.
 - Use `workflow_params` for dataset paths, column names, plotting options, output folder, and task-file path.
 - Optional: set `workflow_params$normae_log_base_dir` to route NormAE CLI logs to a dedicated folder organized by task label (for example: `workflow_params$normae_log_base_dir <- file.path(workflow_params$output_base_dir, "02_corrected_diagnostics", "logs", "normae")`).
 - Optional: set `workflow_params$plsdabatch_log_base_dir` to route noisy `(s)PLSDA-batch` messages/progress to per-task log files (for example: `workflow_params$plsdabatch_log_base_dir <- file.path(workflow_params$output_base_dir, "02_corrected_diagnostics", "logs", "plsdabatch")`).
+- Optional: set `workflow_params$enable_rowname_repair_retry <- TRUE` to allow one retry on rowname-specific task failures (`Different rownames...` / BERT `feature_cols` assertion) after auto-repairing missing feature rownames in the task input assay.
 - Use task YAML for method graph design (profiles, imputation/correction combinations, method-specific required params).
 - If you only need to enable methods skipped by required params, set those required values in YAML `task_grid.user_params` (or in objects referenced by YAML).
 
