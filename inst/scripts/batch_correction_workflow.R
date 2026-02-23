@@ -80,9 +80,6 @@ correction_methods <- c("limmaRBE") # Example: c("limmaRBE", "combat", "loessLim
 correction_tasks_yaml <- "inst/scripts/pb_tasks.yaml" # Uses task-grid defaults (all methods on log2_on_raw profile)
 correction_task_labels <- NULL # Optional subset of task labels from correction_tasks_yaml
 # example: c("ComBat_log2_on_raw", "BERT_ComBat_log2_on_raw", "omicsGMFcor_log2_on_raw")
-# Optional one-time retry: on specific rowname-related failures, repair missing
-# feature rownames in the task source assay and retry the task once.
-enable_rowname_repair_retry <- FALSE
 
 # --- Output configuration ---
 output_base_dir <- file.path(tempdir(), "batch_correction_results") # Base output directory
@@ -835,6 +832,7 @@ save_plot_helper(p_cv_raw, "CV_distribution_raw", output_dirs$plots_raw)
 class_metrics_raw <- safe_classification_metrics(
     pbf_object,
     sample_annotation,
+    sample_id_col = sample_id_col,
     fill_the_missing = fill_missing,
     known_col = c(batch_col, condition_col)
 )
@@ -961,8 +959,7 @@ if (length(batch_levels) < 2L) {
         correction_tasks,
         log_fn = function(msg) log_msg(msg),
         normae_log_base_dir = normae_log_base_dir,
-        plsdabatch_log_base_dir = plsdabatch_log_base_dir,
-        enable_rowname_repair_retry = enable_rowname_repair_retry
+        plsdabatch_log_base_dir = plsdabatch_log_base_dir
     )
     pbf_object <- correction_run$pbf
     correction_task_results <- correction_run$task_results
@@ -1417,6 +1414,7 @@ if (NROW(corrected_methods_table) == 0) {
         class_metrics_corr <- safe_classification_metrics(
             proBatch::pb_assay_matrix(pbf_object, assay = corrected_assay),
             sample_annotation,
+            sample_id_col = sample_id_col,
             fill_the_missing = fill_missing,
             known_col = c(batch_col, condition_col)
         )
@@ -1565,6 +1563,7 @@ save_metric_helper(summary_metrics, "summary_metrics_comparison", output_dirs$me
 class_metrics_combined <- safe_classification_metrics(
     pbf_object,
     sample_annotation,
+    sample_id_col = sample_id_col,
     fill_the_missing = fill_missing,
     known_col = c(batch_col, condition_col)
 )

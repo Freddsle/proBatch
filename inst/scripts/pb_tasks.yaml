@@ -119,7 +119,8 @@ task_grid:
       step: "MFimpute"
       params:
         backend: "ranger"
-        parallelize: "variables"
+        # Run serially to avoid requiring a registered foreach backend.
+        parallelize: "no"   # "variables"
         num.threads: 1
         ntree: 100
         maxiter: 3
