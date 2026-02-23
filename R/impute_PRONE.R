@@ -252,6 +252,10 @@ imputePRONE_dm <- function(x,
                 imputed_mat <- as.matrix(imputed_mat)
             }
             storage.mode(imputed_mat) <- "double"
+            imputed_mat <- .pb_prone_restore_dimnames(
+                original_matrix = original_data_matrix,
+                imputed_matrix = imputed_mat
+            )
 
             if (!is.null(condition_arg)) {
                 imputed_mat <- .pb_prone_condition_cleanup(
@@ -263,6 +267,95 @@ imputePRONE_dm <- function(x,
             imputed_mat
         }
     )
+}
+
+.pb_prone_restore_dimnames <- function(original_matrix, imputed_matrix) {
+    out <- imputed_matrix
+
+    expected_cols <- colnames(original_matrix)
+    if (!is.null(expected_cols)) {
+        current_cols <- colnames(out)
+        has_bad_cols <- is.null(current_cols) ||
+            length(current_cols) != ncol(out) ||
+            anyNA(current_cols) ||
+            any(!nzchar(current_cols))
+
+        if (has_bad_cols) {
+            if (ncol(out) != length(expected_cols)) {
+                stop(
+                    "PRONE imputation returned a matrix with unexpected sample dimensions.",
+                    call. = FALSE
+                )
+            }
+            colnames(out) <- expected_cols
+        } else if (length(expected_cols) == ncol(out) &&
+            !anyDuplicated(expected_cols) &&
+            !anyDuplicated(current_cols) &&
+            setequal(expected_cols, current_cols)) {
+            out <- out[, expected_cols, drop = FALSE]
+        } else if (ncol(out) == length(expected_cols)) {
+            colnames(out) <- expected_cols
+        } else {
+            stop(
+                "PRONE imputation returned columns that cannot be aligned to the original samples.",
+                call. = FALSE
+            )
+        }
+    }
+
+    expected_rows <- rownames(original_matrix)
+    if (!is.null(expected_rows)) {
+        current_rows <- rownames(out)
+        has_bad_rows <- is.null(current_rows) ||
+            length(current_rows) != nrow(out) ||
+            anyNA(current_rows) ||
+            any(!nzchar(current_rows))
+
+        if (!has_bad_rows && !anyDuplicated(current_rows) && !anyDuplicated(expected_rows)) {
+            if (nrow(out) != length(expected_rows) || !setequal(expected_rows, current_rows)) {
+                message(
+                    "PRONE imputation returned a different feature set than input; ",
+                    "missing features will be padded with NA."
+                )
+            }
+            aligned <- matrix(
+                NA_real_,
+                nrow = length(expected_rows),
+                ncol = ncol(out),
+                dimnames = list(expected_rows, colnames(out))
+            )
+            idx_expected <- match(current_rows, expected_rows)
+            keep <- !is.na(idx_expected)
+            if (any(keep)) {
+                aligned[idx_expected[keep], ] <- out[keep, , drop = FALSE]
+            }
+            out <- aligned
+        } else if (has_bad_rows && nrow(out) == length(expected_rows)) {
+            rownames(out) <- expected_rows
+        } else if (has_bad_rows && nrow(out) < length(expected_rows)) {
+            message(
+                "PRONE imputation returned fewer features without valid row names; ",
+                "padding missing features with NA by position."
+            )
+            aligned <- matrix(
+                NA_real_,
+                nrow = length(expected_rows),
+                ncol = ncol(out),
+                dimnames = list(expected_rows, colnames(out))
+            )
+            if (nrow(out) > 0L) {
+                aligned[seq_len(nrow(out)), ] <- out
+            }
+            out <- aligned
+        } else {
+            stop(
+                "PRONE imputation returned rows that cannot be aligned to the original features.",
+                call. = FALSE
+            )
+        }
+    }
+
+    out
 }
 
 .pb_prone_condition_cleanup <- function(original_matrix, imputed_matrix) {
@@ -281,11 +374,11 @@ imputePRONE_dm <- function(x,
     )
 
     if (after_count > 0L) {
-        message(base_msg, " Removing remaining rows.")
-        return(imputed_matrix[!rows_with_na_after, , drop = FALSE])
+        message(base_msg, " Keeping all rows; unresolved values remain NA.")
+        return(imputed_matrix)
     }
 
-    message(base_msg, " No rows removed.")
+    message(base_msg, " No additional NA rows remained.")
     imputed_matrix
 }
 

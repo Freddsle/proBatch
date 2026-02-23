@@ -167,3 +167,131 @@ test_that("imputePRONE_dm returns the imputed assay matrix", {
     expect_false(anyNA(res))
     expect_identical(storage.mode(res), "double")
 })
+
+test_that(".pb_prone_restore_dimnames realigns matrices by feature/sample IDs", {
+    original <- matrix(
+        c(1, 2, 3, 4),
+        nrow = 2,
+        byrow = TRUE,
+        dimnames = list(c("feat1", "feat2"), c("sample1", "sample2"))
+    )
+
+    scrambled <- original[c("feat2", "feat1"), c("sample2", "sample1"), drop = FALSE]
+
+    restored <- proBatch:::.pb_prone_restore_dimnames(
+        original_matrix = original,
+        imputed_matrix = scrambled
+    )
+
+    expect_identical(rownames(restored), rownames(original))
+    expect_identical(colnames(restored), colnames(original))
+    expect_equal(restored, original)
+})
+
+test_that(".pb_prone_restore_dimnames pads missing features with NA", {
+    original <- matrix(
+        c(1, 2, 3, 4),
+        nrow = 2,
+        byrow = TRUE,
+        dimnames = list(c("feat1", "feat2"), c("sample1", "sample2"))
+    )
+
+    partial <- original["feat2", , drop = FALSE]
+
+    restored <- proBatch:::.pb_prone_restore_dimnames(
+        original_matrix = original,
+        imputed_matrix = partial
+    )
+
+    expect_identical(rownames(restored), rownames(original))
+    expect_identical(colnames(restored), colnames(original))
+    expect_true(all(is.na(restored["feat1", ])))
+    expect_equal(restored["feat2", ], original["feat2", ])
+})
+
+test_that("imputePRONE_dm restores dimnames when PRONE output drops them", {
+    skip_if_not_installed("PRONE")
+    skip_if_not_installed("SummarizedExperiment")
+
+    dm <- matrix(
+        c(1, NA, 3, 4),
+        nrow = 2,
+        dimnames = list(
+            c("featA", "featB"),
+            c("sample1", "sample2")
+        )
+    )
+
+    sa <- data.frame(
+        FullRunName = colnames(dm),
+        stringsAsFactors = FALSE
+    )
+
+    expected <- dm
+    expected["featB", "sample1"] <- 2
+    no_dimnames <- unname(expected)
+
+    local_mocked_prone(function(se, ain, condition) {
+        se_out <- se
+        SummarizedExperiment::assay(
+            se_out,
+            paste0(ain, "_imputed"),
+            withDimnames = FALSE
+        ) <- no_dimnames
+        se_out
+    })
+
+    res <- imputePRONE_dm(
+        dm,
+        sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        assay_in = "raw"
+    )
+
+    expect_identical(rownames(res), rownames(dm))
+    expect_identical(colnames(res), colnames(dm))
+    expect_equal(res, expected, ignore_attr = TRUE)
+})
+
+test_that("imputePRONE_dm pads missing feature rows returned by PRONE", {
+    skip_if_not_installed("PRONE")
+    skip_if_not_installed("SummarizedExperiment")
+
+    dm <- matrix(
+        c(1, NA, 3, 4),
+        nrow = 2,
+        dimnames = list(
+            c("featA", "featB"),
+            c("sample1", "sample2")
+        )
+    )
+
+    sa <- data.frame(
+        FullRunName = colnames(dm),
+        stringsAsFactors = FALSE
+    )
+
+    local_mocked_prone(function(se, ain, condition) {
+        # Return a valid SummarizedExperiment with fewer rows (features).
+        # This mimics an imputer that dropped some features.
+        se_out <- se["featB", , drop = FALSE]
+        SummarizedExperiment::assay(
+            se_out,
+            paste0(ain, "_imputed"),
+            withDimnames = FALSE
+        ) <- matrix(c(10, 20), nrow = 1)
+        se_out
+    })
+
+    res <- imputePRONE_dm(
+        dm,
+        sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        assay_in = "raw"
+    )
+
+    expect_identical(rownames(res), rownames(dm))
+    expect_identical(colnames(res), colnames(dm))
+    expect_true(all(is.na(res["featA", ])))
+    expect_equal(res["featB", ], c(sample1 = 10, sample2 = 20))
+})
