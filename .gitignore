@@ -25,3 +25,4 @@ vignettes/batch_evaluation_metrics_files/*
 Dockerfile
 Renviron.bioc
 .dockerignore
+proBatch_*.tar.gz
