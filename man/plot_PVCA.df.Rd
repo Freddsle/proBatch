@@ -2,44 +2,30 @@
 % Please edit documentation in R/proteome_wide_diagnostics.R
 \name{plot_PVCA.df}
 \alias{plot_PVCA.df}
-\alias{plot_PVCA.df.default}
-\alias{plot_PVCA.df.ProBatchFeatures}
 \title{plot PVCA, when the analysis is completed}
 \usage{
-\method{plot_PVCA}{df.default}(
-  df,
-  colors_for_bars = NULL,
-  filename = NULL,
-  width = NA,
-  height = NA,
-  units = c("cm", "in", "mm"),
-  plot_title = NULL,
-  theme = "classic",
-  base_size = 15,
-  ...
-)
-
-\method{plot_PVCA.df}{ProBatchFeatures}(
-  df,
-  pbf_name = NULL,
-  sample_annotation = NULL,
-  feature_id_col = "peptide_group_label",
-  sample_id_col = "FullRunName",
-  colors_for_bars = NULL,
-  filename = NULL,
-  width = NA,
-  height = NA,
-  units = c("cm", "in", "mm"),
-  plot_title = NULL,
-  theme = "classic",
-  base_size = 20,
-  return_gridExtra = FALSE,
-  plot_ncol = NULL,
-  ...
-)
+\method{plot_PVCA}{df}(df, ...)
 }
 \arguments{
-\item{df}{Data frame of PVCA weights, typically the result of `calculate_PVCA()`.}
+\item{df}{Data frame of PVCA weights, typically the result of
+`prepare_PVCA_df()`, or a `ProBatchFeatures` object.}
+
+\item{...}{Additional arguments. When `df` is a
+`ProBatchFeatures`, these are forwarded to `prepare_PVCA_df()`.}
+
+\item{sample_annotation}{data frame with:
+\enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
+  \item biological covariates
+  \item technical covariates (batches etc) }.
+  See \code{help("example_sample_annotation")}}
+
+\item{feature_id_col}{name of the column with feature/gene/peptide/protein
+ID used in the long format representation \code{df_long}. In the wide
+formatted representation \code{data_matrix} this corresponds to the row
+names.}
+
+\item{sample_id_col}{name of the column in \code{sample_annotation} table,
+where the filenames (colnames of the \code{data_matrix}) are found.}
 
 \item{colors_for_bars}{four-item color vector, specifying colors for the
 following categories: c('residual', 'biological', 'biol:techn',
@@ -63,23 +49,7 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{base_size}{base size of the text in the plot}
 
-\item{...}{Additional arguments forwarded to `prepare_PVCA_df()`.}
-
 \item{pbf_name}{Assay name(s) used when `df` is a `ProBatchFeatures`.}
-
-\item{sample_annotation}{data frame with:
-\enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
-  \item biological covariates
-  \item technical covariates (batches etc) }.
-  See \code{help("example_sample_annotation")}}
-
-\item{feature_id_col}{name of the column with feature/gene/peptide/protein
-ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
-
-\item{sample_id_col}{name of the column in \code{sample_annotation} table,
-where the filenames (colnames of the \code{data_matrix} are found).}
 
 \item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
 

@@ -1081,42 +1081,13 @@ prepare_PVCA_df.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
 #' @export
 prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
 
-#' plot PVCA, when the analysis is completed
-#'
-#' @inheritParams proBatch
-#' @param df Data frame of PVCA weights, typically the result of `calculate_PVCA()`.
-#' @param colors_for_bars four-item color vector, specifying colors for the
-#'   following categories: c('residual', 'biological', 'biol:techn',
-#'   'technical')
-#' @param base_size base size of the text in the plot
-#' @param pbf_name Assay name(s) used when `df` is a `ProBatchFeatures`.
-#' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
-#' @param plot_ncol Number of columns when arranging multiple assay plots.
-#' @param ... Additional arguments forwarded to `prepare_PVCA_df()`.
-#'
-#' @return \code{ggplot} object with bars as weights, colored by bio/tech factors
-#' @export
-#'
-#' @examples
-#' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
-#' matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
-#' pvca_df_res <- prepare_PVCA_df(matrix_test, example_sample_annotation,
-#'     technical_factors = c("MS_batch", "digestion_batch"),
-#'     biological_factors = c("Diet", "Sex", "Strain"),
-#'     pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1
-#' )
-#' colors_for_bars <- c("grey", "green", "blue", "red")
-#' names(colors_for_bars) <- c("residual", "biological", "biol:techn", "technical")
-#'
-#' pvca_plot <- plot_PVCA.df(pvca_df_res, colors_for_bars)
-#' @name plot_PVCA.df
-plot_PVCA.df.default <- function(df,
-                                 colors_for_bars = NULL,
-                                 filename = NULL, width = NA, height = NA,
-                                 units = c("cm", "in", "mm"),
-                                 plot_title = NULL,
-                                 theme = "classic",
-                                 base_size = 15, ...) {
+.plot_PVCA_df_default <- function(df,
+                                  colors_for_bars = NULL,
+                                  filename = NULL, width = NA, height = NA,
+                                  units = c("cm", "in", "mm"),
+                                  plot_title = NULL,
+                                  theme = "classic",
+                                  base_size = 15, ...) {
     pvca_res <- df
     pvca_res <- pvca_res %>%
         mutate(label = factor(label, levels = label))
@@ -1168,23 +1139,20 @@ plot_PVCA.df.default <- function(df,
     return(gg)
 }
 
-#' @rdname plot_PVCA.df
-#' @method plot_PVCA.df ProBatchFeatures
-#' @export
-plot_PVCA.df.ProBatchFeatures <- function(df, pbf_name = NULL,
-                                          sample_annotation = NULL,
-                                          feature_id_col = "peptide_group_label",
-                                          sample_id_col = "FullRunName",
-                                          colors_for_bars = NULL,
-                                          filename = NULL, width = NA, height = NA,
-                                          units = c("cm", "in", "mm"),
-                                          plot_title = NULL,
-                                          theme = "classic",
-                                          base_size = 20,
-                                          return_gridExtra = FALSE,
-                                          plot_ncol = NULL,
-                                          ...) {
-    object <- df
+.plot_PVCA_df_ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
+                                           sample_annotation = NULL,
+                                           feature_id_col = "peptide_group_label",
+                                           sample_id_col = "FullRunName",
+                                           colors_for_bars = NULL,
+                                           filename = NULL, width = NA, height = NA,
+                                           units = c("cm", "in", "mm"),
+                                           plot_title = NULL,
+                                           theme = "classic",
+                                           base_size = 20,
+                                           return_gridExtra = FALSE,
+                                           plot_ncol = NULL,
+                                           ...) {
+    object <- data_matrix
     assays <- .pb_assays_to_plot(object, pbf_name)
     prepare_dots <- list(...)
 
@@ -1226,14 +1194,70 @@ plot_PVCA.df.ProBatchFeatures <- function(df, pbf_name = NULL,
             base_size = base_size
         )
 
-        plot_list[[i]] <- do.call(plot_PVCA.df.default, plot_args)
+        plot_list[[i]] <- do.call(.plot_PVCA_df_default, plot_args)
     }
 
     .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
 }
 
+#' plot PVCA, when the analysis is completed
+#'
+#' @param df Data frame of PVCA weights, typically the result of
+#'   `prepare_PVCA_df()`, or a `ProBatchFeatures` object.
+#' @param sample_annotation data frame with:
+#' \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
+#'   \item biological covariates
+#'   \item technical covariates (batches etc) }.
+#'   See \code{help("example_sample_annotation")}
+#' @param feature_id_col name of the column with feature/gene/peptide/protein
+#'   ID used in the long format representation \code{df_long}. In the wide
+#'   formatted representation \code{data_matrix} this corresponds to the row
+#'   names.
+#' @param sample_id_col name of the column in \code{sample_annotation} table,
+#'   where the filenames (colnames of the \code{data_matrix}) are found.
+#' @param colors_for_bars four-item color vector, specifying colors for the
+#'   following categories: c('residual', 'biological', 'biol:techn',
+#'   'technical')
+#' @param filename path where the results are saved.
+#'   If null the object is returned to the active window;
+#'   otherwise, the object is save into the file. Currently only
+#'   pdf and png format is supported
+#' @param width option  determining the output image width
+#' @param height option  determining the output image height
+#' @param units units: 'cm', 'in' or 'mm'
+#' @param plot_title title of the plot (e.g., processing step + representation
+#'   level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))
+#' @param theme ggplot theme, by default \code{classic}. Can be easily overriden
+#' @param base_size base size of the text in the plot
+#' @param pbf_name Assay name(s) used when `df` is a `ProBatchFeatures`.
+#' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
+#' @param plot_ncol Number of columns when arranging multiple assay plots.
+#' @param ... Additional arguments. When `df` is a
+#'   `ProBatchFeatures`, these are forwarded to `prepare_PVCA_df()`.
+#'
+#' @return \code{ggplot} object with bars as weights, colored by bio/tech factors
 #' @export
-plot_PVCA.df <- function(df, ...) UseMethod("plot_PVCA.df")
+#'
+#' @examples
+#' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+#' matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
+#' pvca_df_res <- prepare_PVCA_df(matrix_test, example_sample_annotation,
+#'     technical_factors = c("MS_batch", "digestion_batch"),
+#'     biological_factors = c("Diet", "Sex", "Strain"),
+#'     pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1
+#' )
+#' colors_for_bars <- c("grey", "green", "blue", "red")
+#' names(colors_for_bars) <- c("residual", "biological", "biol:techn", "technical")
+#'
+#' pvca_plot <- plot_PVCA.df(pvca_df_res, colors_for_bars)
+#' @name plot_PVCA.df
+plot_PVCA.df <- function(df, ...) {
+    if (is(df, "ProBatchFeatures")) {
+        return(.plot_PVCA_df_ProBatchFeatures(data_matrix = df, ...))
+    }
+
+    .plot_PVCA_df_default(df = df, ...)
+}
 
 #' plot PCA plot
 #'
