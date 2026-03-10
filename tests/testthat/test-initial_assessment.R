@@ -44,7 +44,6 @@ test_that("boxplot_plots", {
 })
 
 
-
 test_that("mean plot adds vertical lines and y limits", {
     matrix <- matrix(1:9, nrow = 3)
     colnames(matrix) <- paste0("S", 1:3)
