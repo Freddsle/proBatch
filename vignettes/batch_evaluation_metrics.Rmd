@@ -25,6 +25,7 @@ knitr::opts_chunk$set(
     echo = TRUE,
     warning = FALSE,
     message = FALSE,
+    fig.crop = FALSE,
     fig.pos = "H",
     fig.align = "center",
     fig.width = 9,
@@ -42,11 +43,78 @@ biocpkg <- function(pkg) {
         pkg
     }
 }
+
+safe_classification_metrics <- function(x,
+                                        sample_annotation,
+                                        known_col = "MS_batch",
+                                        pbf_name = NULL,
+                                        fill_the_missing = -1,
+                                        ...) {
+    known_cols <- unique(as.character(known_col))
+    known_cols <- known_cols[!is.na(known_cols)]
+    known_cols <- trimws(known_cols)
+    known_cols <- known_cols[nzchar(known_cols)]
+
+    if (is.null(sample_annotation) || !length(known_cols)) {
+        stop("`sample_annotation` must contain the `known_col` used for classification metrics.")
+    }
+
+    missing_cols <- setdiff(known_cols, names(sample_annotation))
+    if (length(missing_cols)) {
+        stop(
+            "`sample_annotation` must contain the `known_col` used for classification metrics. Missing: ",
+            paste(missing_cols, collapse = ", ")
+        )
+    }
+
+    valid_known_cols <- known_cols[vapply(
+        known_cols,
+        function(col_nm) {
+            n_levels <- length(unique(sample_annotation[[col_nm]][!is.na(sample_annotation[[col_nm]])]))
+            n_levels >= 2L
+        },
+        logical(1)
+    )]
+    skipped_known_cols <- setdiff(known_cols, valid_known_cols)
+    if (length(skipped_known_cols)) {
+        message(
+            "Skipping classification metrics for: ",
+            paste(skipped_known_cols, collapse = ", "),
+            " (fewer than 2 observed levels in the selected subset)."
+        )
+    }
+    if (!length(valid_known_cols)) {
+        return(data.frame(
+            known_col = known_cols,
+            ARI = NA_real_,
+            MCC = NA_real_,
+            silhouette = NA_real_,
+            stringsAsFactors = FALSE
+        ))
+    }
+    if (inherits(x, "ProBatchFeatures")) {
+        return(calculate_classification_metrics(
+            x,
+            sample_annotation = sample_annotation,
+            known_col = valid_known_cols,
+            pbf_name = pbf_name,
+            fill_the_missing = fill_the_missing,
+            ...
+        ))
+    }
+    calculate_classification_metrics(
+        x,
+        sample_annotation = sample_annotation,
+        known_col = valid_known_cols,
+        fill_the_missing = fill_the_missing,
+        ...
+    )
+}
 ```
 
 # Introduction
 
-This vignette focuses on *evaluation metrics* for batch effects in
+This vignette focuses on evaluation metrics for batch effects in
 `r biocpkg("proBatch")`, with an emphasis on interpreting diagnostics
 before and after correction.
 
@@ -57,9 +125,6 @@ It complements:
 - the `ProBatchFeatures` vignette (`proBatchFeatures.Rmd`) for
   `QFeatures`-based data processing pipelines.
 
-Use this document when you need a diagnostic-first checklist to decide
-whether technical variation is present, whether correction is needed,
-and whether correction quality is acceptable.
 
 <div class="alert alert-info">
 **Note:** If you are new to the package, start with `proBatch.Rmd` and
@@ -72,16 +137,17 @@ quality-control interpretation.
 Install the release version from Bioconductor:
 
 ```{r install-probatch, eval=FALSE}
-if (!require("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
-BiocManager::install("proBatch")
+# if (!require("BiocManager", quietly = TRUE))
+#     install.packages("BiocManager")
+# BiocManager::install("proBatch")
 ```
 
 To install the development version from GitHub:
 
 ```{r install-probatch-devel, eval=FALSE}
-if (!require("remotes", quietly = TRUE))
+if (!require("remotes", quietly = TRUE)) {
     install.packages("remotes")
+}
 remotes::install_github("Freddsle/proBatch")
 ```
 
@@ -131,6 +197,7 @@ knitr::kable(
 
 ```{r load-packages, message=FALSE, warning=FALSE}
 library(proBatch)
+
 library(dplyr)
 library(tibble)
 library(ggplot2)
@@ -630,6 +697,7 @@ plot_PVCA(
 
 pvca_df_raw <- prepare_PVCA_df(
     pbf_log,
+    pbf_name = pb_current_assay(pbf_log),
     technical_factors = c("MS_batch", "digestion_batch"),
     biological_factors = c("Diet", "Sex", "Strain"),
     fill_the_missing = -1,
@@ -660,12 +728,22 @@ plot_variance_partition(
 
 vp_df_raw <- prepare_variance_partition_df(
     pbf_log,
+    pbf_name = pb_current_assay(pbf_log),
     technical_factors = "MS_batch",
     biological_factors = c("Diet", "Sex"),
     variance_threshold = 0.05,
     abundance_top_n = 20,
     abundance_direction = "most"
 )
+
+if (is.list(vp_df_raw) && !is.data.frame(vp_df_raw)) {
+    current_assay <- pb_current_assay(pbf_log)
+    if (!is.null(names(vp_df_raw)) && current_assay %in% names(vp_df_raw)) {
+        vp_df_raw <- vp_df_raw[[current_assay]]
+    } else {
+        vp_df_raw <- vp_df_raw[[1]]
+    }
+}
 
 plot_variance_partition.df(vp_df_raw, plot_title = "Variance partition (raw, prepared)")
 
@@ -847,19 +925,19 @@ cv_df_raw <- calculate_feature_CV(
     unlog = FALSE
 )
 
-plot_CV_distr(
+cv_df_raw_plot <- cv_df_raw %>%
+    filter(is.finite(CV_total))
+
+if (nrow(cv_df_raw_plot) == 0) {
+    message("Skipping CV plots (raw): no features with sufficient measurements.")
+} else {
+    plot_CV_distr.df(cv_df_raw_plot, batch_col = "MS_batch", plot_title = "Raw data: CV distribution")
+    plot_CV_distr.df(cv_df_raw_plot, batch_col = "MS_batch", plot_title = "CV distribution (raw)")
+}
+
+class_metrics_raw <- safe_classification_metrics(
     pbf_log,
     sample_annotation = sample_annotation,
-    batch_col = "MS_batch",
-    biospecimen_id_col = "EarTag",
-    unlog = FALSE,
-    plot_title = "Raw data: CV distribution"
-)
-
-plot_CV_distr.df(cv_df_raw, plot_title = "CV distribution (raw)")
-
-class_metrics_raw <- calculate_classification_metrics(
-    pbf_log,
     known_col = "MS_batch"
 )
 
@@ -867,7 +945,7 @@ intragroup_raw <- plot_intragroup_variation(
     pbf_log,
     group_col = "Diet",
     fill_the_missing = -1,
-    metrics = c("correlation", "PCV", "PMAD", "PEV")
+    metrics = "correlation"
 )
 
 outliers_raw <- detect_outlier_samples(
@@ -902,15 +980,30 @@ This section demonstrates a single method in depth; see
 for alternatives.
 
 ```{r apply-limma-rbe}
-pbf_corr <- pb_transform(
-    pbf_log,
-    from = pb_current_assay(pbf_log),
-    steps = "limmaRBE",
-    params_list = list(list(
-        batch_col = "MS_batch",
-        covariates_cols = c("Diet", "Sex")
-    ))
-)
+# limma::removeBatchEffect requires at least two observed batch levels.
+batch_levels <- unique(sample_annotation$MS_batch[!is.na(sample_annotation$MS_batch)])
+limma_covariates <- c("Diet", "Sex")
+limma_covariates <- limma_covariates[limma_covariates %in% names(sample_annotation)]
+limma_covariates <- limma_covariates[vapply(limma_covariates, function(col) {
+    length(unique(sample_annotation[[col]][!is.na(sample_annotation[[col]])])) >= 2
+}, logical(1))]
+
+if (length(batch_levels) < 2L) {
+    message("Skipping limmaRBE: MS_batch has fewer than 2 observed levels in this subset.")
+    pbf_corr <- pbf_log
+} else {
+    limma_params <- list(batch_col = "MS_batch")
+    if (length(limma_covariates)) {
+        limma_params$covariates_cols <- limma_covariates
+    }
+
+    pbf_corr <- pb_transform(
+        pbf_log,
+        from = pb_current_assay(pbf_log),
+        steps = "limmaRBE",
+        params_list = list(limma_params)
+    )
+}
 
 data_matrix_corrected <- pb_assay_matrix(pbf_corr)
 
@@ -1145,6 +1238,7 @@ plot_PVCA(
 
 pvca_df_corr <- prepare_PVCA_df(
     pbf_corr,
+    pbf_name = pb_current_assay(pbf_corr),
     technical_factors = c("MS_batch", "digestion_batch"),
     biological_factors = c("Diet", "Sex", "Strain"),
     fill_the_missing = -1,
@@ -1175,12 +1269,22 @@ plot_variance_partition(
 
 vp_df_corr <- prepare_variance_partition_df(
     pbf_corr,
+    pbf_name = pb_current_assay(pbf_corr),
     technical_factors = "MS_batch",
     biological_factors = c("Diet", "Sex"),
     variance_threshold = 0.05,
     abundance_top_n = 20,
     abundance_direction = "most"
 )
+
+if (is.list(vp_df_corr) && !is.data.frame(vp_df_corr)) {
+    current_assay <- pb_current_assay(pbf_corr)
+    if (!is.null(names(vp_df_corr)) && current_assay %in% names(vp_df_corr)) {
+        vp_df_corr <- vp_df_corr[[current_assay]]
+    } else {
+        vp_df_corr <- vp_df_corr[[1]]
+    }
+}
 
 plot_variance_partition.df(vp_df_corr, plot_title = "Variance partition (limmaRBE, prepared)")
 
@@ -1344,19 +1448,19 @@ cv_df_corr <- calculate_feature_CV(
     unlog = FALSE
 )
 
-plot_CV_distr(
+cv_df_corr_plot <- cv_df_corr %>%
+    filter(is.finite(CV_total))
+
+if (nrow(cv_df_corr_plot) == 0) {
+    message("Skipping CV plots (corrected): no features with sufficient measurements.")
+} else {
+    plot_CV_distr.df(cv_df_corr_plot, batch_col = "MS_batch", plot_title = "Corrected data: CV distribution")
+    plot_CV_distr.df(cv_df_corr_plot, batch_col = "MS_batch", plot_title = "CV distribution (limmaRBE)")
+}
+
+class_metrics_corr <- safe_classification_metrics(
     pbf_corr,
     sample_annotation = sample_annotation,
-    batch_col = "MS_batch",
-    biospecimen_id_col = "EarTag",
-    unlog = FALSE,
-    plot_title = "Corrected data: CV distribution"
-)
-
-plot_CV_distr.df(cv_df_corr, plot_title = "CV distribution (limmaRBE)")
-
-class_metrics_corr <- calculate_classification_metrics(
-    pbf_corr,
     known_col = "MS_batch"
 )
 
@@ -1364,7 +1468,7 @@ intragroup_corr <- plot_intragroup_variation(
     pbf_corr,
     group_col = "Diet",
     fill_the_missing = -1,
-    metrics = c("correlation", "PCV", "PMAD", "PEV")
+    metrics = "correlation"
 )
 
 outliers_corr <- detect_outlier_samples(
@@ -1471,8 +1575,8 @@ count_outliers <- function(x) {
     if (is.null(x)) {
         return(NA_real_)
     }
-    if (is.data.frame(x)) {
-        return(nrow(x))
+    if (is.data.frame(x) && "is_outlier" %in% names(x)) {
+        return(sum(x$is_outlier, na.rm = TRUE))
     }
     if (is.list(x) && !is.null(x$outliers) && is.data.frame(x$outliers)) {
         return(nrow(x$outliers))
