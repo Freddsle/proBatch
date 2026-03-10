@@ -62,8 +62,6 @@ dates_to_posix <- function(sample_annotation,
 }
 
 
-
-
 #' Convert date/time to POSIXct and rank samples by it
 #'
 #' Converts date/time columns for sample_annotation to POSIXct format and

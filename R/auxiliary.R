@@ -102,7 +102,6 @@ matrix_to_long <- function(data_matrix, sample_annotation = NULL,
 }
 
 
-
 #' Prepare peptide annotation from long format data frame
 #'
 #' Create light-weight peptide annotation data frame
