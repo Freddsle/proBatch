@@ -4,14 +4,30 @@
 \alias{plot_PVCA.df}
 \title{plot PVCA, when the analysis is completed}
 \usage{
-\method{plot_PVCA}{df}(df, ...)
+\method{plot_PVCA}{df}(
+  data_matrix,
+  pbf_name = NULL,
+  sample_annotation = NULL,
+  feature_id_col = "peptide_group_label",
+  sample_id_col = "FullRunName",
+  colors_for_bars = NULL,
+  filename = NULL,
+  width = NA,
+  height = NA,
+  units = c("cm", "in", "mm"),
+  plot_title = NULL,
+  theme = "classic",
+  base_size = 15,
+  return_gridExtra = FALSE,
+  plot_ncol = NULL,
+  ...
+)
 }
 \arguments{
-\item{df}{Data frame of PVCA weights, typically the result of
+\item{data_matrix}{Data frame of PVCA weights, typically the result of
 `prepare_PVCA_df()`, or a `ProBatchFeatures` object.}
 
-\item{...}{Additional arguments. When `df` is a
-`ProBatchFeatures`, these are forwarded to `prepare_PVCA_df()`.}
+\item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -49,11 +65,12 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{base_size}{base size of the text in the plot}
 
-\item{pbf_name}{Assay name(s) used when `df` is a `ProBatchFeatures`.}
-
 \item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
+
+\item{...}{Additional arguments. When `data_matrix` is a
+`ProBatchFeatures`, these are forwarded to `prepare_PVCA_df()`.}
 }
 \value{
 \code{ggplot} object with bars as weights, colored by bio/tech factors
