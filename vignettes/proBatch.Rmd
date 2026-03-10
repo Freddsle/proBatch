@@ -4,10 +4,10 @@ author: |
   | Jelena Čuklina, Chloe H. Lee, Patrick Pedrioli and Ruedi Aebersold
   | Institute of Molecular Systems Biology, Department of Biology, ETH Zurich, Switzerland
 date: "`r Sys.Date()`"
-output: pdf_document
-#output: html_document
+output: BiocStyle::html_document
 bibliography: "references.bib"
 csl: "nature-no-superscript.csl"
+package: proBatch
 vignette: >
   %\VignetteIndexEntry{proBatch package overview}
   %\VignetteEncoding{UTF-8}

@@ -4,10 +4,10 @@ author: |
   | Yuliya Burankova
   | Institute for Computational Systems Biology, University of Hamburg, Germany
 date: "`r Sys.Date()`"
-output: pdf_document
-#output: html_document
+output: BiocStyle::html_document
 bibliography: "references.bib"
 csl: "nature-no-superscript.csl"
+package: proBatch
 vignette: >
   %\VignetteIndexEntry{ProBatchFeatures: QFeatures-based pipelines with operation logging for proBatch}
   %\VignetteEncoding{UTF-8}

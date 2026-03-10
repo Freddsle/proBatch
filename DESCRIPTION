@@ -58,6 +58,7 @@ Imports:
     wesanderson,
     WGCNA
 Suggests: 
+    BiocStyle,
     cowplot,
     ggplotify,
     knitr,
