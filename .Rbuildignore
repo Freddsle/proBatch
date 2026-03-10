@@ -13,3 +13,6 @@
 ^\.travis\.yml$
 ^tmp\.R$
 ^prep_code$
+Renviron.bioc
+^Dockerfile$
+^\.dockerignore$
