@@ -715,6 +715,598 @@ plot_heatmap_generic.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
 #' @export
 plot_heatmap_generic <- function(data_matrix, ...) UseMethod("plot_heatmap_generic")
 
+#' Calculate variance distribution by variable
+#'
+#' @inheritParams proBatch
+#' @param factors_for_PVCA vector of factors from \code{sample_annotation}, that
+#'   are used in PVCA analysis
+#' @param pca_threshold the percentile value of the minimum amount of the
+#'   variabilities that the selected principal components need to explain
+#' @param variance_threshold the percentile value of weight each of the factors
+#'   needs to explain (the rest will be lumped together)
+#' @param fill_the_missing numeric value determining how  missing values
+#' should be substituted. If \code{NULL}, features with missing values are
+#' excluded.
+#' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
+#' @param ... Additional arguments forwarded between methods.
+#'
+#' @name calculate_PVCA
+#' @return data frame of weights of Principal Variance Components
+#' @export
+#'
+#' @examples
+#' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+#' matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
+#' pvca_df <- calculate_PVCA(matrix_test, example_sample_annotation,
+#'     factors_for_PVCA = c("MS_batch", "digestion_batch", "Diet", "Sex", "Strain"),
+#'     pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1
+#' )
+calculate_PVCA.default <- function(data_matrix, sample_annotation,
+                                   feature_id_col = "peptide_group_label",
+                                   sample_id_col = "FullRunName",
+                                   factors_for_PVCA = c(
+                                       "MS_batch", "digestion_batch",
+                                       "Diet", "Sex", "Strain"
+                                   ),
+                                   pca_threshold = .6, variance_threshold = .01,
+                                   fill_the_missing = -1, ...) {
+    df_long <- matrix_to_long(data_matrix, sample_id_col = sample_id_col)
+    df_long <- check_sample_consistency(sample_annotation, sample_id_col, df_long,
+        batch_col = NULL, order_col = NULL,
+        facet_col = NULL, merge = FALSE
+    )
+    data_matrix <- long_to_matrix(df_long, sample_id_col = sample_id_col)
+
+    # if factors_for_PVCA is NULL, add default columns
+    if (is.null(factors_for_PVCA)) {
+        factors_for_PVCA <- intersect(
+            c("MS_batch", "digestion_batch", "Diet", "Sex", "Strain"),
+            names(sample_annotation)
+        )
+    }
+
+    sample_annotation <- sample_annotation %>%
+        select(all_of(c(sample_id_col, factors_for_PVCA))) %>%
+        mutate_if(is.POSIXct, as.numeric) %>%
+        as.data.frame() %>%
+        column_to_rownames(var = sample_id_col)
+
+    data_matrix <- check_feature_id_col_in_dm(feature_id_col, data_matrix)
+
+    warning_message <- "PVCA cannot operate with missing values in the matrix"
+    data_matrix <- handle_missing_values(
+        data_matrix, warning_message,
+        fill_the_missing
+    )
+
+    covrts.annodf <- AnnotatedDataFrame(data = sample_annotation)
+    data_matrix <- data_matrix[, rownames(sample_annotation)]
+    expr_set <- ExpressionSet(
+        assayData = data_matrix,
+        phenoData = covrts.annodf
+    )
+    pvcaAssess <- pvcaBatchAssess(expr_set, factors_for_PVCA,
+        threshold = pca_threshold
+    )
+    pvcaAssess_df <- data.frame(
+        weights = as.vector(pvcaAssess$dat),
+        label = pvcaAssess$label,
+        stringsAsFactors = FALSE
+    )
+
+    label_of_small <- sprintf("Below %1.0f%%", 100 * variance_threshold)
+    if (sum(pvcaAssess_df$weights < variance_threshold) > 1) {
+        small_weights <- pvcaAssess_df$weights < variance_threshold
+        pvca_res_small <- sum(pvcaAssess_df$weights[small_weights])
+        pvca_res <- pvcaAssess_df[pvcaAssess_df$weights >= variance_threshold, ]
+        pvca_res_add <- data.frame(weights = pvca_res_small, label = label_of_small)
+        pvca_res <- rbind(pvca_res, pvca_res_add)
+    } else {
+        pvca_res <- pvcaAssess_df
+    }
+    return(pvca_res)
+}
+
+#' @rdname calculate_PVCA
+#' @method calculate_PVCA ProBatchFeatures
+#' @export
+calculate_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
+                                            sample_annotation = NULL,
+                                            feature_id_col = "peptide_group_label",
+                                            sample_id_col = "FullRunName",
+                                            ...) {
+    object <- data_matrix
+    data_matrix <- pb_assay_matrix(object, pbf_name)
+
+    if (is.null(sample_annotation)) {
+        sample_annotation <- as.data.frame(colData(object))
+    }
+
+    calculate_PVCA.default(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        ...
+    )
+}
+
+#' @export
+calculate_PVCA <- function(data_matrix, ...) UseMethod("calculate_PVCA")
+
+#' Plot variance distribution by variable
+#'
+#' @inheritParams proBatch
+#' @param technical_factors vector \code{sample_annotation} column names that
+#' are technical covariates
+#' @param biological_factors vector \code{sample_annotation} column names, that
+#'   are biologically meaningful covariates
+#' @param colors_for_bars four-item color vector, specifying colors for the
+#'   following categories: c('residual', 'biological', 'biol:techn',
+#'   'technical')
+#' @param pca_threshold the percentile value of the minimum amount of the
+#'   variabilities that the selected principal components need to explain
+#' @param variance_threshold the percentile value of weight each of the
+#'  covariates needs to explain (the rest will be lumped together)
+#' @param fill_the_missing numeric value determining how  missing values
+#' should be substituted. If \code{NULL}, features with missing values are
+#' excluded.
+#' If \code{NULL}, features with missing values are excluded.
+#' @param data_matrix Input object: matrix-like data or a `ProBatchFeatures` instance.
+#' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
+#' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
+#' @param plot_ncol Number of columns when arranging multiple assay plots.
+#' @param ... Additional arguments passed to lower-level methods.
+#' @param base_size base size of the text in the plot
+#'
+#' @name plot_PVCA
+#' @return \code{ggplot} object with the plot
+#' @export
+#'
+#' @examples
+#' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+#' matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
+#'
+#' pvca_file <- tempfile("pvca", fileext = ".png")
+#' pvca_plot <- plot_PVCA(
+#'     matrix_test,
+#'     example_sample_annotation,
+#'     technical_factors = c("MS_batch", "digestion_batch"),
+#'     biological_factors = c("Diet", "Sex", "Strain"),
+#'     filename = pvca_file, # save to file, can be NULL
+#'     width = 12, height = 8, units = "cm"
+#' )
+#' unlink(pvca_file)
+#'
+#' @seealso \code{\link{sample_annotation_to_colors}},
+#' \code{\link[ggplot2]{ggplot}}
+plot_PVCA.default <- function(data_matrix, sample_annotation,
+                              feature_id_col = "peptide_group_label",
+                              sample_id_col = "FullRunName",
+                              technical_factors = c("MS_batch", "instrument"),
+                              biological_factors = c("cell_line", "drug_dose"),
+                              fill_the_missing = -1,
+                              pca_threshold = .6, variance_threshold = .01,
+                              colors_for_bars = NULL,
+                              filename = NULL, width = NA, height = NA,
+                              units = c("cm", "in", "mm"),
+                              plot_title = NULL,
+                              theme = "classic",
+                              base_size = 15, ...) {
+    pvca_res <- prepare_PVCA_df(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        technical_factors = technical_factors,
+        biological_factors = biological_factors,
+        fill_the_missing = fill_the_missing,
+        pca_threshold = pca_threshold,
+        variance_threshold = variance_threshold
+    )
+
+    gg <- plot_PVCA.df(
+        data_matrix = pvca_res, colors_for_bars = colors_for_bars,
+        filename = filename, width = width, height = height, units = units,
+        plot_title = plot_title,
+        theme = theme, base_size = base_size
+    )
+    return(gg)
+}
+
+#' @rdname plot_PVCA
+#' @method plot_PVCA ProBatchFeatures
+#' @export
+plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
+                                       sample_annotation = NULL,
+                                       feature_id_col = "peptide_group_label",
+                                       sample_id_col = "FullRunName",
+                                       plot_title = NULL,
+                                       return_gridExtra = FALSE,
+                                       plot_ncol = NULL,
+                                       ...) {
+    object <- data_matrix
+    assays <- .pb_assays_to_plot(object, pbf_name)
+    dots <- list(...)
+
+    filename_list <- NULL
+    if ("filename" %in% names(dots)) {
+        filename_list <- .pb_split_arg_by_assay(dots$filename, assays)
+        dots$filename <- NULL
+    }
+
+    if (is.null(sample_annotation)) {
+        sample_annotation <- as.data.frame(colData(object))
+        rownames(sample_annotation) <- NULL
+    }
+    sample_ann_list <- .pb_split_arg_by_assay(sample_annotation, assays)
+    titles <- .pb_resolve_titles(assays, plot_title, default_fun = function(x) x)
+
+    plot_list <- vector("list", length(assays))
+    names(plot_list) <- assays
+
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        data_matrix <- pb_assay_matrix(object, assay_nm)
+        sample_ann <- sample_ann_list[[i]]
+        if (is.null(sample_ann)) {
+            sample_ann <- as.data.frame(colData(object))
+            rownames(sample_ann) <- NULL
+        }
+
+        call_args <- dots
+        if (!is.null(filename_list)) {
+            fn <- filename_list[[i]]
+            if (!is.null(fn)) {
+                call_args$filename <- fn
+            }
+        }
+
+        call_args <- c(list(
+            data_matrix = data_matrix,
+            sample_annotation = sample_ann,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col,
+            plot_title = titles[i]
+        ), call_args)
+
+        plot_list[[i]] <- do.call(plot_PVCA.default, call_args)
+    }
+
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
+}
+
+#' @export
+plot_PVCA <- function(data_matrix, ...) UseMethod("plot_PVCA")
+
+#' prepare the weights of Principal Variance Components
+#'
+#' @inheritParams proBatch
+#' @param technical_factors vector \code{sample_annotation} column names that
+#' are technical covariates
+#' @param biological_factors vector \code{sample_annotation} column names, that
+#'   are biologically meaningful covariates
+#' @param pca_threshold the percentile value of the minimum amount of the
+#'   variabilities that the selected principal components need to explain
+#' @param variance_threshold the percentile value of weight each of the
+#'  covariates needs to explain (the rest will be lumped together)
+#' @param fill_the_missing numeric value determining how  missing values
+#' should be substituted. If \code{NULL}, features with missing values are
+#' excluded.
+#' If \code{NULL}, features with missing values are excluded.
+#' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
+#' @param ... Additional arguments forwarded between methods.
+#'
+#' @return data frame with weights and factors, combined in a way ready for plotting
+#' @export
+#'
+#' @examples
+#' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+#' matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
+#'
+#' pvca_df_res <- prepare_PVCA_df(matrix_test, example_sample_annotation,
+#'     technical_factors = c("MS_batch", "digestion_batch"),
+#'     biological_factors = c("Diet", "Sex", "Strain"),
+#'     pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1
+#' )
+#' @name prepare_PVCA_df
+prepare_PVCA_df.default <- function(data_matrix, sample_annotation,
+                                    feature_id_col = "peptide_group_label",
+                                    sample_id_col = "FullRunName",
+                                    technical_factors = c("MS_batch", "instrument"),
+                                    biological_factors = c("cell_line", "drug_dose"),
+                                    fill_the_missing = -1,
+                                    pca_threshold = .6, variance_threshold = .01,
+                                    ...) {
+    factors_for_PVCA <- c(technical_factors, biological_factors)
+
+    pvca_res <- calculate_PVCA(
+        data_matrix,
+        sample_annotation,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        factors_for_PVCA = factors_for_PVCA,
+        pca_threshold = pca_threshold,
+        variance_threshold = variance_threshold,
+        fill_the_missing = fill_the_missing
+    )
+
+    tech_interactions <- expand.grid(technical_factors, technical_factors) %>%
+        mutate(tech_interactions = paste(Var1, Var2, sep = ":")) %>%
+        pull(tech_interactions)
+    biol_interactions <- expand.grid(biological_factors, biological_factors) %>%
+        mutate(biol_interactions = paste(Var1, Var2, sep = ":")) %>%
+        pull(biol_interactions)
+
+    label_of_small <- sprintf("Below %1.0f%%", 100 * variance_threshold)
+    technical_factors <- c(technical_factors, tech_interactions)
+    biological_factors <- c(biological_factors, biol_interactions)
+    pvca_res <- pvca_res %>% mutate(category = ifelse(label %in% technical_factors,
+        "technical",
+        ifelse(label %in% biological_factors,
+            "biological",
+            ifelse(label %in% c(label_of_small, "resid"),
+                "residual", "biol:techn"
+            )
+        )
+    ))
+
+    pvca_res <- pvca_res %>%
+        arrange(desc(weights)) %>%
+        arrange(label == label_of_small) %>%
+        arrange(label == "resid")
+    return(pvca_res)
+}
+
+#' @rdname prepare_PVCA_df
+#' @method prepare_PVCA_df ProBatchFeatures
+#' @export
+prepare_PVCA_df.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
+                                             sample_annotation = NULL,
+                                             feature_id_col = "peptide_group_label",
+                                             sample_id_col = "FullRunName",
+                                             ...) {
+    object <- data_matrix
+    data_matrix <- pb_assay_matrix(object, pbf_name)
+
+    if (is.null(sample_annotation)) {
+        sample_annotation <- as.data.frame(colData(object))
+    }
+
+    prepare_PVCA_df.default(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        ...
+    )
+}
+
+#' @export
+prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
+
+.plot_PVCA_df_default <- function(df,
+                                  colors_for_bars = NULL,
+                                  filename = NULL, width = NA, height = NA,
+                                  units = c("cm", "in", "mm"),
+                                  plot_title = NULL,
+                                  theme = "classic",
+                                  base_size = 15, ...) {
+    pvca_res <- df
+    pvca_res <- pvca_res %>%
+        mutate(label = factor(label, levels = label))
+
+    gg <- ggplot(pvca_res, aes(x = label, y = weights, fill = category)) +
+        geom_bar(stat = "identity", color = "black") +
+        ylab("Weighted average proportion variance")
+
+    if (is.null(colors_for_bars)) {
+        colors_for_bars <- c("grey", wes_palettes$Rushmore[3:5])
+        names(colors_for_bars) <- c(
+            "residual", "biological",
+            "biol:techn", "technical"
+        )
+    } else {
+        if (length(colors_for_bars) != 4) {
+            color_names <- paste(c(
+                "residual", "biological", "biol:techn",
+                "technical"
+            ), collapse = " ")
+            warning(sprintf("four colors for: %s were expected", color_names))
+        }
+    }
+    gg <- gg + scale_fill_manual(values = colors_for_bars)
+
+    if (!is.null(plot_title)) {
+        gg <- gg + ggtitle(plot_title)
+    }
+
+    # Change the theme
+    if (!is.null(theme) && theme == "classic") {
+        gg <- gg + theme_classic(base_size = base_size)
+    } else {
+        message("plotting with default ggplot theme, only theme = 'classic'
+            implemented")
+    }
+
+    gg <- gg +
+        theme(
+            axis.title.x = element_blank(),
+            axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5),
+            plot.title = element_text(size = round(base_size * 1.2, 0))
+        ) +
+        xlab(NULL) +
+        guides(fill = guide_legend(override.aes = list(color = NA), title = NULL))
+
+    save_ggplot(filename, units, width, height, gg)
+
+    return(gg)
+}
+
+.plot_PVCA_df_ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
+                                           sample_annotation = NULL,
+                                           feature_id_col = "peptide_group_label",
+                                           sample_id_col = "FullRunName",
+                                           colors_for_bars = NULL,
+                                           filename = NULL, width = NA, height = NA,
+                                           units = c("cm", "in", "mm"),
+                                           plot_title = NULL,
+                                           theme = "classic",
+                                           base_size = 20,
+                                           return_gridExtra = FALSE,
+                                           plot_ncol = NULL,
+                                           ...) {
+    object <- data_matrix
+    assays <- .pb_assays_to_plot(object, pbf_name)
+    prepare_dots <- list(...)
+
+    if (is.null(sample_annotation)) {
+        sample_annotation <- as.data.frame(colData(object))
+    }
+    sample_ann_list <- .pb_split_arg_by_assay(sample_annotation, assays)
+    filename_list <- .pb_split_arg_by_assay(filename, assays)
+    titles <- .pb_resolve_titles(assays, plot_title, default_fun = function(x) x)
+
+    plot_list <- vector("list", length(assays))
+    names(plot_list) <- assays
+
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        data_matrix <- pb_assay_matrix(object, assay_nm)
+        sample_ann <- sample_ann_list[[i]]
+        if (is.null(sample_ann)) {
+            sample_ann <- as.data.frame(colData(object))
+        }
+
+        prepare_args <- c(list(
+            data_matrix = data_matrix,
+            sample_annotation = sample_ann,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col
+        ), prepare_dots)
+        pvca_res <- do.call(prepare_PVCA_df.default, prepare_args)
+
+        plot_args <- list(
+            df = pvca_res,
+            colors_for_bars = colors_for_bars,
+            filename = filename_list[[i]],
+            width = width,
+            height = height,
+            units = units,
+            plot_title = titles[i],
+            theme = theme,
+            base_size = base_size
+        )
+
+        plot_list[[i]] <- do.call(.plot_PVCA_df_default, plot_args)
+    }
+
+    .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
+}
+
+#' plot PVCA, when the analysis is completed
+#'
+#' @param data_matrix Data frame of PVCA weights, typically the result of
+#'   `prepare_PVCA_df()`, or a `ProBatchFeatures` object.
+#' @param sample_annotation data frame with:
+#' \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
+#'   \item biological covariates
+#'   \item technical covariates (batches etc) }.
+#'   See \code{help("example_sample_annotation")}
+#' @param feature_id_col name of the column with feature/gene/peptide/protein
+#'   ID used in the long format representation \code{df_long}. In the wide
+#'   formatted representation \code{data_matrix} this corresponds to the row
+#'   names.
+#' @param sample_id_col name of the column in \code{sample_annotation} table,
+#'   where the filenames (colnames of the \code{data_matrix}) are found.
+#' @param colors_for_bars four-item color vector, specifying colors for the
+#'   following categories: c('residual', 'biological', 'biol:techn',
+#'   'technical')
+#' @param filename path where the results are saved.
+#'   If null the object is returned to the active window;
+#'   otherwise, the object is save into the file. Currently only
+#'   pdf and png format is supported
+#' @param width option  determining the output image width
+#' @param height option  determining the output image height
+#' @param units units: 'cm', 'in' or 'mm'
+#' @param plot_title title of the plot (e.g., processing step + representation
+#'   level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))
+#' @param theme ggplot theme, by default \code{classic}. Can be easily overriden
+#' @param base_size base size of the text in the plot
+#' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
+#' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
+#' @param plot_ncol Number of columns when arranging multiple assay plots.
+#' @param ... Additional arguments. When `data_matrix` is a
+#'   `ProBatchFeatures`, these are forwarded to `prepare_PVCA_df()`.
+#'
+#' @return \code{ggplot} object with bars as weights, colored by bio/tech factors
+#' @rawNamespace export(plot_PVCA.df)
+#' @export
+#'
+#' @examples
+#' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+#' matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
+#' pvca_df_res <- prepare_PVCA_df(matrix_test, example_sample_annotation,
+#'     technical_factors = c("MS_batch", "digestion_batch"),
+#'     biological_factors = c("Diet", "Sex", "Strain"),
+#'     pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1
+#' )
+#' colors_for_bars <- c("grey", "green", "blue", "red")
+#' names(colors_for_bars) <- c("residual", "biological", "biol:techn", "technical")
+#'
+#' pvca_plot <- plot_PVCA.df(pvca_df_res, colors_for_bars)
+#' @name plot_PVCA.df
+plot_PVCA.df <- function(data_matrix,
+                         pbf_name = NULL,
+                         sample_annotation = NULL,
+                         feature_id_col = "peptide_group_label",
+                         sample_id_col = "FullRunName",
+                         colors_for_bars = NULL,
+                         filename = NULL, width = NA, height = NA,
+                         units = c("cm", "in", "mm"),
+                         plot_title = NULL,
+                         theme = "classic",
+                         base_size = 15,
+                         return_gridExtra = FALSE,
+                         plot_ncol = NULL,
+                         ...) {
+    if (is(data_matrix, "ProBatchFeatures")) {
+        if (missing(base_size)) {
+            base_size <- 20
+        }
+        return(.plot_PVCA_df_ProBatchFeatures(
+            data_matrix = data_matrix,
+            pbf_name = pbf_name,
+            sample_annotation = sample_annotation,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col,
+            colors_for_bars = colors_for_bars,
+            filename = filename,
+            width = width,
+            height = height,
+            units = units,
+            plot_title = plot_title,
+            theme = theme,
+            base_size = base_size,
+            return_gridExtra = return_gridExtra,
+            plot_ncol = plot_ncol,
+            ...
+        ))
+    }
+    .plot_PVCA_df_default(
+        df = data_matrix,
+        colors_for_bars = colors_for_bars,
+        filename = filename,
+        width = width,
+        height = height,
+        units = units,
+        plot_title = plot_title,
+        theme = theme,
+        base_size = base_size,
+        ...
+    )
+}
+
 #' plot PCA plot
 #'
 #' @inheritParams proBatch

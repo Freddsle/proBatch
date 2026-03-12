@@ -4,10 +4,18 @@ author: |
   | Yuliya Burankova
   | Institute for Computational Systems Biology, University of Hamburg, Germany
 date: "`r Sys.Date()`"
-output: pdf_document
-#output: html_document
+output:
+  BiocStyle::html_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
 bibliography: "references.bib"
 csl: "nature-no-superscript.csl"
+package: proBatch
 vignette: >
   %\VignetteIndexEntry{ProBatchFeatures: QFeatures-based pipelines with operation logging for proBatch}
   %\VignetteEncoding{UTF-8}
@@ -15,9 +23,6 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
 abstract: |
   This vignette demonstrates how to perform and evaluate data preprocessing and batch-effect correction workflows using `ProBatchFeatures`, a `QFeatures`-based extension of `proBatch`.
-toc: yes
-toc_depth: 2
-numbersections: true
 editor_options:
   markdown:
     wrap: 72
@@ -358,6 +363,7 @@ pca2 <- plot_PCA(
     base_size = 10, point_size = 3, point_alpha = 0.5
 )
 
+library(gridExtra)
 grid.arrange(pca1, pca2, ncol = 2, nrow = 1)
 ```
 

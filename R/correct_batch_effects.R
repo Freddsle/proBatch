@@ -1391,7 +1391,7 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
 #'     batch_col = "MS_batch",
 #'     covariates_cols = c("Diet", "Sex")
 #' )
-#' @seealso \code{\link{removeBatchEffect}}
+#' @seealso \code{\link[limma:removeBatchEffect]{removeBatchEffect}}
 #' @export
 correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
                                               feature_id_col = "peptide_group_label",

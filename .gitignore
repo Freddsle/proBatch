@@ -17,10 +17,12 @@ tmp.R
 /doc/
 /Meta/
 /prep_code
-/tmp/
-data/FlashLFQData
+..Rcheck/00check.log
 
-
-vignettes/batch_evaluation_metrics_files/*
 vignettes/batch_evaluation_metrics_cache/*
-..Rcheck/*
+vignettes/batch_evaluation_metrics_files/*
+.Rbuildignore
+Dockerfile
+Renviron.bioc
+.dockerignore
+proBatch_*.tar.gz

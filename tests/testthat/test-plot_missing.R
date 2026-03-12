@@ -65,7 +65,6 @@ test_that(".pb_truncate_heatmap_labels shortens long labels by default", {
     expect_null(.pb_truncate_heatmap_labels(NULL))
 })
 
-
 test_that("plot_NA_heatmap.default returns pheatmap", {
     skip_if_not_installed("pheatmap")
 

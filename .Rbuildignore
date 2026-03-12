@@ -13,4 +13,10 @@
 ^\.travis\.yml$
 ^tmp\.R$
 ^prep_code$
-^inst/scripts/.*$
+Renviron.bioc
+^Dockerfile$
+^\.dockerignore$
+^vignettes/.*\.html$
+^vignettes/.*(_cache|_files)(/|$)
+^vignettes/\.Rhistory$
+^proBatch_.*\.tar\.gz$

@@ -4,10 +4,18 @@ author: |
   | Jelena Čuklina, Chloe H. Lee, Patrick Pedrioli and Ruedi Aebersold
   | Institute of Molecular Systems Biology, Department of Biology, ETH Zurich, Switzerland
 date: "`r Sys.Date()`"
-output: pdf_document
-#output: html_document
+output:
+  BiocStyle::html_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
 bibliography: "references.bib"
 csl: "nature-no-superscript.csl"
+package: proBatch
 vignette: >
   %\VignetteIndexEntry{proBatch package overview}
   %\VignetteEncoding{UTF-8}
@@ -18,9 +26,6 @@ abstract: |
   
   The `proBatch` package is designed for researchers with basic R knowledge but without extensive programming experience. 
   The `proBatch` provides a comprehensive workflow for batch effect correction, including data preprocessing, batch effect diagnosis and correction, and post-correction evaluation using quality control metrics.
-toc: yes
-toc_depth: 2
-numbersections: true
 editor_options:
   markdown:
     wrap: 72

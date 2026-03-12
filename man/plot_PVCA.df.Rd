@@ -2,26 +2,10 @@
 % Please edit documentation in R/explained_variance_plots.R
 \name{plot_PVCA.df}
 \alias{plot_PVCA.df}
-\alias{plot_PVCA.df.default}
-\alias{plot_PVCA.df.ProBatchFeatures}
 \title{plot PVCA, when the analysis is completed}
 \usage{
-\method{plot_PVCA}{df.default}(
-  df,
-  colors_for_bars = NULL,
-  filename = NULL,
-  width = NA,
-  height = NA,
-  units = c("cm", "in", "mm"),
-  plot_title = NULL,
-  theme = "classic",
-  base_size = 15,
-  add_values = FALSE,
-  ...
-)
-
-\method{plot_PVCA.df}{ProBatchFeatures}(
-  df,
+\method{plot_PVCA}{df}(
+  data_matrix,
   pbf_name = NULL,
   sample_annotation = NULL,
   feature_id_col = "peptide_group_label",
@@ -33,7 +17,7 @@
   units = c("cm", "in", "mm"),
   plot_title = NULL,
   theme = "classic",
-  base_size = 20,
+  base_size = 15,
   return_gridExtra = FALSE,
   plot_ncol = NULL,
   stacked_bar = FALSE,
@@ -44,7 +28,24 @@
 )
 }
 \arguments{
-\item{df}{Data frame of PVCA weights, typically the result of `calculate_PVCA()`.}
+\item{data_matrix}{Data frame of PVCA weights, typically the result of
+`prepare_PVCA_df()`, or a `ProBatchFeatures` object.}
+
+\item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
+
+\item{sample_annotation}{data frame with:
+\enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
+  \item biological covariates
+  \item technical covariates (batches etc) }.
+  See \code{help("example_sample_annotation")}}
+
+\item{feature_id_col}{name of the column with feature/gene/peptide/protein
+ID used in the long format representation \code{df_long}. In the wide
+formatted representation \code{data_matrix} this corresponds to the row
+names.}
+
+\item{sample_id_col}{name of the column in \code{sample_annotation} table,
+where the filenames (colnames of the \code{data_matrix}) are found.}
 
 \item{colors_for_bars}{four-item color vector, specifying colors for the
 following categories: c('residual', 'biological', 'biol:techn',
@@ -68,39 +69,12 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{base_size}{base size of the text in the plot}
 
-\item{add_values}{logical; when `TRUE`, annotates each bar with its rounded weight.}
-
-\item{...}{Additional arguments forwarded to `prepare_PVCA_df()`.}
-
-\item{pbf_name}{Assay name(s) used when `df` is a `ProBatchFeatures`.}
-
-\item{sample_annotation}{data frame with:
-\enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
-  \item biological covariates
-  \item technical covariates (batches etc) }.
-  See \code{help("example_sample_annotation")}}
-
-\item{feature_id_col}{name of the column with feature/gene/peptide/protein
-ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
-
-\item{sample_id_col}{name of the column in \code{sample_annotation} table,
-where the filenames (colnames of the \code{data_matrix} are found).}
-
 \item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 
-\item{stacked_bar}{logical; when `TRUE` and multiple `pbf_name` entries are
-supplied for a `ProBatchFeatures` object, a single stacked bar chart is
-produced instead of subplots.}
-
-\item{stacked_plot_title}{optional character vector providing lines for the
-stacked plot title; entries are joined with newlines before rendering.}
-
-\item{sort_stacked}{optional factor name; when `stacked_bar = TRUE`, assays
-are ordered by the explained variance of this factor (descending).}
+\item{...}{Additional arguments. When `data_matrix` is a
+`ProBatchFeatures`, these are forwarded to `prepare_PVCA_df()`.}
 }
 \value{
 \code{ggplot} object with bars as weights, colored by bio/tech factors

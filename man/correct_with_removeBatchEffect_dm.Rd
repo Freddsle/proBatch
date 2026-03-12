@@ -76,5 +76,5 @@ batch_corrected_matrix <- correct_with_removeBatchEffect_dm(
 )
 }
 \seealso{
-\code{\link{removeBatchEffect}}
+\code{\link[limma:removeBatchEffect]{removeBatchEffect}}
 }
