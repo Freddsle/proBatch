@@ -4,7 +4,15 @@ author: |
   | Yuliya Burankova
   | Institute for Computational Systems Biology, University of Hamburg, Germany
 date: "`r Sys.Date()`"
-output: BiocStyle::html_document
+output:
+  BiocStyle::html_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
 bibliography: "references.bib"
 csl: "nature-no-superscript.csl"
 package: proBatch
@@ -15,9 +23,6 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
 abstract: |
   This vignette demonstrates how to perform and evaluate data preprocessing and batch-effect correction workflows using `ProBatchFeatures`, a `QFeatures`-based extension of `proBatch`.
-toc: yes
-toc_depth: 2
-numbersections: true
 editor_options:
   markdown:
     wrap: 72
