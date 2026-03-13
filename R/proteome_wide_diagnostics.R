@@ -750,61 +750,16 @@ calculate_PVCA.default <- function(data_matrix, sample_annotation,
                                    ),
                                    pca_threshold = .6, variance_threshold = .01,
                                    fill_the_missing = -1, ...) {
-    df_long <- matrix_to_long(data_matrix, sample_id_col = sample_id_col)
-    df_long <- check_sample_consistency(sample_annotation, sample_id_col, df_long,
-        batch_col = NULL, order_col = NULL,
-        facet_col = NULL, merge = FALSE
+    .pb_calculate_PVCA_default_impl(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        factors_for_PVCA = factors_for_PVCA,
+        pca_threshold = pca_threshold,
+        variance_threshold = variance_threshold,
+        fill_the_missing = fill_the_missing
     )
-    data_matrix <- long_to_matrix(df_long, sample_id_col = sample_id_col)
-
-    # if factors_for_PVCA is NULL, add default columns
-    if (is.null(factors_for_PVCA)) {
-        factors_for_PVCA <- intersect(
-            c("MS_batch", "digestion_batch", "Diet", "Sex", "Strain"),
-            names(sample_annotation)
-        )
-    }
-
-    sample_annotation <- sample_annotation %>%
-        select(all_of(c(sample_id_col, factors_for_PVCA))) %>%
-        mutate_if(is.POSIXct, as.numeric) %>%
-        as.data.frame() %>%
-        column_to_rownames(var = sample_id_col)
-
-    data_matrix <- check_feature_id_col_in_dm(feature_id_col, data_matrix)
-
-    warning_message <- "PVCA cannot operate with missing values in the matrix"
-    data_matrix <- handle_missing_values(
-        data_matrix, warning_message,
-        fill_the_missing
-    )
-
-    covrts.annodf <- AnnotatedDataFrame(data = sample_annotation)
-    data_matrix <- data_matrix[, rownames(sample_annotation)]
-    expr_set <- ExpressionSet(
-        assayData = data_matrix,
-        phenoData = covrts.annodf
-    )
-    pvcaAssess <- pvcaBatchAssess(expr_set, factors_for_PVCA,
-        threshold = pca_threshold
-    )
-    pvcaAssess_df <- data.frame(
-        weights = as.vector(pvcaAssess$dat),
-        label = pvcaAssess$label,
-        stringsAsFactors = FALSE
-    )
-
-    label_of_small <- sprintf("Below %1.0f%%", 100 * variance_threshold)
-    if (sum(pvcaAssess_df$weights < variance_threshold) > 1) {
-        small_weights <- pvcaAssess_df$weights < variance_threshold
-        pvca_res_small <- sum(pvcaAssess_df$weights[small_weights])
-        pvca_res <- pvcaAssess_df[pvcaAssess_df$weights >= variance_threshold, ]
-        pvca_res_add <- data.frame(weights = pvca_res_small, label = label_of_small)
-        pvca_res <- rbind(pvca_res, pvca_res_add)
-    } else {
-        pvca_res <- pvcaAssess_df
-    }
-    return(pvca_res)
 }
 
 #' @rdname calculate_PVCA
@@ -815,15 +770,9 @@ calculate_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
                                             feature_id_col = "peptide_group_label",
                                             sample_id_col = "FullRunName",
                                             ...) {
-    object <- data_matrix
-    data_matrix <- pb_assay_matrix(object, pbf_name)
-
-    if (is.null(sample_annotation)) {
-        sample_annotation <- as.data.frame(colData(object))
-    }
-
-    calculate_PVCA.default(
+    .pb_calculate_PVCA_ProBatchFeatures_impl(
         data_matrix = data_matrix,
+        pbf_name = pbf_name,
         sample_annotation = sample_annotation,
         feature_id_col = feature_id_col,
         sample_id_col = sample_id_col,
@@ -892,8 +841,10 @@ plot_PVCA.default <- function(data_matrix, sample_annotation,
                               units = c("cm", "in", "mm"),
                               plot_title = NULL,
                               theme = "classic",
-                              base_size = 15, ...) {
-    pvca_res <- prepare_PVCA_df(
+                              base_size = 15,
+                              path_to_save_results = NULL,
+                              ...) {
+    .pb_plot_PVCA_default_impl(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
         feature_id_col = feature_id_col,
@@ -902,16 +853,18 @@ plot_PVCA.default <- function(data_matrix, sample_annotation,
         biological_factors = biological_factors,
         fill_the_missing = fill_the_missing,
         pca_threshold = pca_threshold,
-        variance_threshold = variance_threshold
-    )
-
-    gg <- plot_PVCA.df(
-        data_matrix = pvca_res, colors_for_bars = colors_for_bars,
-        filename = filename, width = width, height = height, units = units,
+        variance_threshold = variance_threshold,
+        colors_for_bars = colors_for_bars,
+        filename = filename,
+        width = width,
+        height = height,
+        units = units,
         plot_title = plot_title,
-        theme = theme, base_size = base_size
+        theme = theme,
+        base_size = base_size,
+        path_to_save_results = path_to_save_results,
+        ...
     )
-    return(gg)
 }
 
 #' @rdname plot_PVCA
@@ -924,56 +877,28 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
                                        plot_title = NULL,
                                        return_gridExtra = FALSE,
                                        plot_ncol = NULL,
+                                       stacked_bar = FALSE,
+                                       stacked_plot_title = "Plot of weighted average proportion variance vs effects in PVCA",
+                                       sort_stacked = NULL,
+                                       category_order = NULL,
+                                       path_to_save_results = NULL,
                                        ...) {
-    object <- data_matrix
-    assays <- .pb_assays_to_plot(object, pbf_name)
-    dots <- list(...)
-
-    filename_list <- NULL
-    if ("filename" %in% names(dots)) {
-        filename_list <- .pb_split_arg_by_assay(dots$filename, assays)
-        dots$filename <- NULL
-    }
-
-    if (is.null(sample_annotation)) {
-        sample_annotation <- as.data.frame(colData(object))
-        rownames(sample_annotation) <- NULL
-    }
-    sample_ann_list <- .pb_split_arg_by_assay(sample_annotation, assays)
-    titles <- .pb_resolve_titles(assays, plot_title, default_fun = function(x) x)
-
-    plot_list <- vector("list", length(assays))
-    names(plot_list) <- assays
-
-    for (i in seq_along(assays)) {
-        assay_nm <- assays[[i]]
-        data_matrix <- pb_assay_matrix(object, assay_nm)
-        sample_ann <- sample_ann_list[[i]]
-        if (is.null(sample_ann)) {
-            sample_ann <- as.data.frame(colData(object))
-            rownames(sample_ann) <- NULL
-        }
-
-        call_args <- dots
-        if (!is.null(filename_list)) {
-            fn <- filename_list[[i]]
-            if (!is.null(fn)) {
-                call_args$filename <- fn
-            }
-        }
-
-        call_args <- c(list(
-            data_matrix = data_matrix,
-            sample_annotation = sample_ann,
-            feature_id_col = feature_id_col,
-            sample_id_col = sample_id_col,
-            plot_title = titles[i]
-        ), call_args)
-
-        plot_list[[i]] <- do.call(plot_PVCA.default, call_args)
-    }
-
-    .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
+    .pb_plot_PVCA_ProBatchFeatures_impl(
+        data_matrix = data_matrix,
+        pbf_name = pbf_name,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        plot_title = plot_title,
+        return_gridExtra = return_gridExtra,
+        plot_ncol = plot_ncol,
+        stacked_bar = stacked_bar,
+        stacked_plot_title = stacked_plot_title,
+        sort_stacked = sort_stacked,
+        category_order = category_order,
+        path_to_save_results = path_to_save_results,
+        ...
+    )
 }
 
 #' @export
@@ -1016,46 +941,23 @@ prepare_PVCA_df.default <- function(data_matrix, sample_annotation,
                                     technical_factors = c("MS_batch", "instrument"),
                                     biological_factors = c("cell_line", "drug_dose"),
                                     fill_the_missing = -1,
-                                    pca_threshold = .6, variance_threshold = .01,
+                                    pca_threshold = .6,
+                                    variance_threshold = .01,
+                                    path_to_save_results = NULL,
                                     ...) {
-    factors_for_PVCA <- c(technical_factors, biological_factors)
-
-    pvca_res <- calculate_PVCA(
-        data_matrix,
-        sample_annotation,
+    .pb_prepare_PVCA_df_default_impl(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
         feature_id_col = feature_id_col,
         sample_id_col = sample_id_col,
-        factors_for_PVCA = factors_for_PVCA,
+        technical_factors = technical_factors,
+        biological_factors = biological_factors,
+        fill_the_missing = fill_the_missing,
         pca_threshold = pca_threshold,
         variance_threshold = variance_threshold,
-        fill_the_missing = fill_the_missing
+        path_to_save_results = path_to_save_results,
+        ...
     )
-
-    tech_interactions <- expand.grid(technical_factors, technical_factors) %>%
-        mutate(tech_interactions = paste(Var1, Var2, sep = ":")) %>%
-        pull(tech_interactions)
-    biol_interactions <- expand.grid(biological_factors, biological_factors) %>%
-        mutate(biol_interactions = paste(Var1, Var2, sep = ":")) %>%
-        pull(biol_interactions)
-
-    label_of_small <- sprintf("Below %1.0f%%", 100 * variance_threshold)
-    technical_factors <- c(technical_factors, tech_interactions)
-    biological_factors <- c(biological_factors, biol_interactions)
-    pvca_res <- pvca_res %>% mutate(category = ifelse(label %in% technical_factors,
-        "technical",
-        ifelse(label %in% biological_factors,
-            "biological",
-            ifelse(label %in% c(label_of_small, "resid"),
-                "residual", "biol:techn"
-            )
-        )
-    ))
-
-    pvca_res <- pvca_res %>%
-        arrange(desc(weights)) %>%
-        arrange(label == label_of_small) %>%
-        arrange(label == "resid")
-    return(pvca_res)
 }
 
 #' @rdname prepare_PVCA_df
@@ -1066,15 +968,9 @@ prepare_PVCA_df.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
                                              feature_id_col = "peptide_group_label",
                                              sample_id_col = "FullRunName",
                                              ...) {
-    object <- data_matrix
-    data_matrix <- pb_assay_matrix(object, pbf_name)
-
-    if (is.null(sample_annotation)) {
-        sample_annotation <- as.data.frame(colData(object))
-    }
-
-    prepare_PVCA_df.default(
+    .pb_prepare_PVCA_df_ProBatchFeatures_impl(
         data_matrix = data_matrix,
+        pbf_name = pbf_name,
         sample_annotation = sample_annotation,
         feature_id_col = feature_id_col,
         sample_id_col = sample_id_col,
@@ -1256,56 +1152,7 @@ prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
 #'
 #' pvca_plot <- plot_PVCA.df(pvca_df_res, colors_for_bars)
 #' @name plot_PVCA.df
-plot_PVCA.df <- function(data_matrix,
-                         pbf_name = NULL,
-                         sample_annotation = NULL,
-                         feature_id_col = "peptide_group_label",
-                         sample_id_col = "FullRunName",
-                         colors_for_bars = NULL,
-                         filename = NULL, width = NA, height = NA,
-                         units = c("cm", "in", "mm"),
-                         plot_title = NULL,
-                         theme = "classic",
-                         base_size = 15,
-                         return_gridExtra = FALSE,
-                         plot_ncol = NULL,
-                         ...) {
-    if (is(data_matrix, "ProBatchFeatures")) {
-        if (missing(base_size)) {
-            base_size <- 20
-        }
-        return(.plot_PVCA_df_ProBatchFeatures(
-            data_matrix = data_matrix,
-            pbf_name = pbf_name,
-            sample_annotation = sample_annotation,
-            feature_id_col = feature_id_col,
-            sample_id_col = sample_id_col,
-            colors_for_bars = colors_for_bars,
-            filename = filename,
-            width = width,
-            height = height,
-            units = units,
-            plot_title = plot_title,
-            theme = theme,
-            base_size = base_size,
-            return_gridExtra = return_gridExtra,
-            plot_ncol = plot_ncol,
-            ...
-        ))
-    }
-    .plot_PVCA_df_default(
-        df = data_matrix,
-        colors_for_bars = colors_for_bars,
-        filename = filename,
-        width = width,
-        height = height,
-        units = units,
-        plot_title = plot_title,
-        theme = theme,
-        base_size = base_size,
-        ...
-    )
-}
+plot_PVCA.df <- function(df, ...) UseMethod("plot_PVCA.df")
 
 #' plot PCA plot
 #'

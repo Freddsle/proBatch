@@ -146,6 +146,7 @@ calculate_PVCA.default <- function(data_matrix, sample_annotation,
     }
     return(pvca_res)
 }
+.pb_calculate_PVCA_default_impl <- calculate_PVCA.default
 
 #' @rdname calculate_PVCA
 #' @method calculate_PVCA ProBatchFeatures
@@ -197,6 +198,7 @@ calculate_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
 
     pvca_list
 }
+.pb_calculate_PVCA_ProBatchFeatures_impl <- calculate_PVCA.ProBatchFeatures
 
 #' @export
 calculate_PVCA <- function(data_matrix, ...) UseMethod("calculate_PVCA")
@@ -311,6 +313,7 @@ plot_PVCA.default <- function(data_matrix, sample_annotation,
     }
     return(gg)
 }
+.pb_plot_PVCA_default_impl <- plot_PVCA.default
 
 #' @rdname plot_PVCA
 #' @method plot_PVCA ProBatchFeatures
@@ -467,6 +470,7 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
 
     .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
 }
+.pb_plot_PVCA_ProBatchFeatures_impl <- plot_PVCA.ProBatchFeatures
 
 .pb_plot_pvca_stacked_bar <- function(pvca_df_list,
                                       assays,
@@ -825,6 +829,7 @@ prepare_PVCA_df.default <- function(data_matrix, sample_annotation,
 
     return(pvca_res)
 }
+.pb_prepare_PVCA_df_default_impl <- prepare_PVCA_df.default
 
 #' @rdname prepare_PVCA_df
 #' @method prepare_PVCA_df ProBatchFeatures
@@ -877,6 +882,7 @@ prepare_PVCA_df.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
 
     pvca_df_list
 }
+.pb_prepare_PVCA_df_ProBatchFeatures_impl <- prepare_PVCA_df.ProBatchFeatures
 
 #' @export
 prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
