@@ -122,6 +122,7 @@
              on_raw = NULL,
              assay_in = "raw",
              batch = NULL,
+             condition = NULL,
              refs = NULL,
              ...) {
         .prone_normalize_matrix_step(
@@ -132,6 +133,7 @@
             norm_method = norm_method,
             assay_in = assay_in,
             batch = batch,
+            condition = condition,
             refs = refs,
             ...
         )
@@ -144,6 +146,9 @@
         return(opt_fun)
     }
     .pb_requireNamespace("PRONE")
+    if ("normalize_se_combination" %in% getNamespaceExports("PRONE")) {
+        return(PRONE::normalize_se_combination)
+    }
     PRONE::normalize_se_single
 }
 
@@ -168,6 +173,23 @@
     c(base_args, dot_args)
 }
 
+.pb_prone_normalization_base_args <- function(se,
+                                              norm_method,
+                                              on_raw = NULL,
+                                              assay_in = "raw") {
+    list(
+        se = se,
+        methods = norm_method,
+        method = norm_method,
+        norm_method = norm_method,
+        on_raw = on_raw,
+        ain = assay_in,
+        ains = assay_in,
+        aout = norm_method,
+        combination_pattern = "_on_"
+    )
+}
+
 .pb_prone_resolve_sample_vector <- function(values,
                                             sample_annotation,
                                             sample_ids,
@@ -189,19 +211,54 @@
         idx <- match(sample_ids, names(values_local))
         if (anyNA(idx)) {
             stop(
-                "PRONE normalization: `", arg_name,
+                "PRONE: `", arg_name,
                 "` has names that do not cover all samples."
             )
         }
         values_local <- values_local[idx]
     } else if (length(values_local) != length(sample_ids)) {
         stop(
-            "PRONE normalization: `", arg_name,
+            "PRONE: `", arg_name,
             "` must have length 1 (column name) or length equal to number of samples."
         )
     }
 
     unname(values_local)
+}
+
+.pb_prone_resolve_metadata_key <- function(values,
+                                           sample_annotation,
+                                           sample_ids,
+                                           arg_name,
+                                           col_prefix) {
+    if (is.null(values)) {
+        return(NULL)
+    }
+
+    if (
+        is.character(values) &&
+            length(values) == 1L &&
+            values %in% colnames(sample_annotation)
+    ) {
+        return(list(column_name = values, column_values = NULL))
+    }
+
+    values_vec <- .pb_prone_resolve_sample_vector(
+        values = values,
+        sample_annotation = sample_annotation,
+        sample_ids = sample_ids,
+        arg_name = arg_name
+    )
+
+    existing_names <- colnames(sample_annotation)
+    col_name <- col_prefix
+    counter <- 1L
+    while (!is.null(existing_names) && col_name %in% existing_names) {
+        counter <- counter + 1L
+        col_name <- paste0(col_prefix, "_", counter)
+    }
+
+    list(column_name = col_name, column_values = values_vec)
 }
 
 .pb_prone_resolve_refs <- function(refs, sample_annotation, sample_ids) {
@@ -253,20 +310,51 @@
                                       sample_annotation,
                                       sample_ids,
                                       batch = NULL,
+                                      condition = NULL,
                                       refs = NULL) {
-    batch_vec <- .pb_prone_resolve_sample_vector(
+    sample_df <- as.data.frame(sample_annotation, stringsAsFactors = FALSE)
+    did_add_coldata <- FALSE
+
+    batch_key <- .pb_prone_resolve_metadata_key(
         values = batch,
-        sample_annotation = sample_annotation,
+        sample_annotation = sample_df,
         sample_ids = sample_ids,
-        arg_name = "batch"
+        arg_name = "batch",
+        col_prefix = ".pb_prone_batch"
     )
-    if (!is.null(batch_vec)) {
-        S4Vectors::metadata(se)$batch <- as.vector(batch_vec)
+    if (!is.null(batch_key)) {
+        if (!is.null(batch_key$column_values)) {
+            sample_df[[batch_key$column_name]] <- as.vector(batch_key$column_values)
+            did_add_coldata <- TRUE
+        }
+        S4Vectors::metadata(se)$batch <- batch_key$column_name
+    }
+
+    condition_key <- .pb_prone_resolve_metadata_key(
+        values = condition,
+        sample_annotation = sample_df,
+        sample_ids = sample_ids,
+        arg_name = "condition",
+        col_prefix = ".pb_prone_condition"
+    )
+    if (!is.null(condition_key)) {
+        if (!is.null(condition_key$column_values)) {
+            sample_df[[condition_key$column_name]] <- as.vector(condition_key$column_values)
+            did_add_coldata <- TRUE
+        }
+        S4Vectors::metadata(se)$condition <- condition_key$column_name
+    }
+
+    if (did_add_coldata) {
+        rownames(sample_df) <- sample_ids
+        col_data <- S4Vectors::DataFrame(sample_df)
+        rownames(col_data) <- sample_ids
+        SummarizedExperiment::colData(se) <- col_data
     }
 
     refs_vec <- .pb_prone_resolve_refs(
         refs = refs,
-        sample_annotation = sample_annotation,
+        sample_annotation = sample_df,
         sample_ids = sample_ids
     )
     if (!is.null(refs_vec) && length(refs_vec)) {
@@ -315,6 +403,28 @@
     )
 }
 
+.pb_prone_validate_method_prerequisites <- function(se, norm_method) {
+    if (!identical(tolower(norm_method), "eigenms")) {
+        return(invisible(NULL))
+    }
+
+    condition_col <- S4Vectors::metadata(se)$condition
+    if (
+        is.null(condition_col) ||
+            !is.character(condition_col) ||
+            length(condition_col) != 1L ||
+            !nzchar(condition_col) ||
+            !(condition_col %in% colnames(SummarizedExperiment::colData(se)))
+    ) {
+        stop(
+            "PRONE normalization 'EigenMS' requires `condition` as a valid column ",
+            "name (or a sample-aligned vector) in step parameters."
+        )
+    }
+
+    invisible(NULL)
+}
+
 .prone_normalize_matrix_step <- function(data_matrix,
                                          sample_annotation = NULL,
                                          sample_id_col = "FullRunName",
@@ -322,6 +432,7 @@
                                          norm_method,
                                          assay_in = "raw",
                                          batch = NULL,
+                                         condition = NULL,
                                          refs = NULL,
                                          ...) {
     if (is.null(colnames(data_matrix))) {
@@ -363,18 +474,20 @@
                 sample_annotation = sample_df,
                 sample_ids = sample_ids_local,
                 batch = batch,
+                condition = condition,
                 refs = refs
+            )
+            .pb_prone_validate_method_prerequisites(
+                se = se,
+                norm_method = norm_method
             )
 
             normalize_single <- .pb_prone_normalize_single_fun()
-            base_args <- list(
+            base_args <- .pb_prone_normalization_base_args(
                 se = se,
-                methods = norm_method,
-                method = norm_method,
                 norm_method = norm_method,
                 on_raw = on_raw,
-                ain = assay_in,
-                aout = norm_method
+                assay_in = assay_in
             )
             dot_args <- list(...)
             all_args <- .pb_prone_match_supported_args(

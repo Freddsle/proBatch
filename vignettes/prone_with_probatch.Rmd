@@ -68,19 +68,53 @@ stopifnot(identical(as.character(sample_ann[[sample_id_col]]), colnames(mat)))
 
 md <- S4Vectors::metadata(se_src)
 batch_col <- md[["batch"]]
-if (is.null(batch_col) || !is.character(batch_col) || length(batch_col) != 1L ||
+if (!is.character(batch_col) || length(batch_col) != 1L ||
     !(batch_col %in% colnames(sample_ann))) {
-    stop("PRONE metadata(se)$batch must be a column name present in colData.")
+    batch_col <- NULL
 }
 
-prone_step_params <- Filter(
-    Negate(is.null),
-    list(
-        sample_id_col = sample_id_col,
-        batch = batch_col,
-        refs = md[["refs"]]
-    )
-)
+.prone_step_params_for <- function(step_name) {
+    step_token <- tolower(sub("^pr", "", step_name, ignore.case = TRUE))
+    needs_batch <- step_token %in% c("irs", "limbe")
+    needs_refs <- step_token %in% c("irs")
+    needs_condition <- step_token %in% c("eigenms")
+
+    params <- list(sample_id_col = sample_id_col)
+
+    if (needs_batch) {
+        if (is.null(batch_col)) {
+            stop(
+                "Step '", step_name,
+                "' requires PRONE `batch`, but no valid batch column is available."
+            )
+        }
+        params$batch <- batch_col
+    }
+
+    if (needs_refs) {
+        refs_val <- md[["refs"]]
+        if (is.null(refs_val)) {
+            stop(
+                "Step '", step_name,
+                "' requires PRONE `refs`, but metadata(se)$refs is missing."
+            )
+        }
+        params$refs <- refs_val
+    }
+
+    if (needs_condition) {
+        condition_val <- md[["condition"]]
+        if (is.null(condition_val)) {
+            stop(
+                "Step '", step_name,
+                "' requires PRONE `condition`, but metadata(se)$condition is missing."
+            )
+        }
+        params$condition <- condition_val
+    }
+
+    Filter(Negate(is.null), params)
+}
 
 pbf <- ProBatchFeatures(
     data_matrix = mat,
@@ -126,11 +160,13 @@ chosen_step
 # Apply one PRONE normalization step with `pb_transform()`
 
 ```{r prone-transform-only, eval=prone_ok}
+chosen_step_params <- .prone_step_params_for(chosen_step)
+
 pbf_norm <- pb_transform(
     object = pbf,
     from = "feature::raw",
     steps = chosen_step,
-    params_list = list(prone_step_params)
+    params_list = list(chosen_step_params)
 )
 
 # New assay created by this step
@@ -146,6 +182,9 @@ if (!length(bec_candidates)) {
     stop("Neither 'combat' nor 'limmaRBE' is currently available.")
 }
 bec_step <- bec_candidates[[1]]
+if (is.null(batch_col)) {
+    stop("Batch-correction step '", bec_step, "' requires a valid batch column.")
+}
 bec_params <- switch(bec_step,
     combat = list(
         batch_col = batch_col,
@@ -164,7 +203,7 @@ pbf_norm_bec <- pb_transform(
     from = "feature::raw",
     steps = c(chosen_step, bec_step),
     params_list = list(
-        prone_step_params,
+        .prone_step_params_for(chosen_step),
         bec_params
     )
 )
@@ -185,7 +224,7 @@ mat_eval <- pb_eval(
     from = "feature::raw",
     steps = c(chosen_step, bec_step),
     params_list = list(
-        prone_step_params,
+        .prone_step_params_for(chosen_step),
         bec_params
     )
 )
@@ -208,12 +247,15 @@ smoke_results <- do.call(
     rbind,
     lapply(target_steps, function(step_name) {
         out <- try(
-            pb_eval(
-                object = pbf,
-                from = "feature::raw",
-                steps = step_name,
-                params_list = list(prone_step_params)
-            ),
+            {
+                step_params <- .prone_step_params_for(step_name)
+                pb_eval(
+                    object = pbf,
+                    from = "feature::raw",
+                    steps = step_name,
+                    params_list = list(step_params)
+                )
+            },
             silent = TRUE
         )
         ok <- !inherits(out, "try-error")
@@ -236,8 +278,10 @@ subset(smoke_results, !ok)
 - PRONE normalization methods are registered as standard
   `pb_transform()`/`pb_eval()` steps, so they can be mixed with any other
   registered proBatch step.
-- For methods that require PRONE metadata (`limBE`, `IRS`), pass `batch`
-  and `refs` through step params (as shown by `prone_step_params`).
+- In this vignette, step parameters are built with
+  `.prone_step_params_for(step_name)`, which adds PRONE metadata only when
+  needed:
+  `batch` for `limBE`/`IRS`, `refs` for `IRS`, and `condition` for `EigenMS`.
 - Use `pb_list_steps("^PR")` to list currently available PRONE
   normalization steps.
 - For reproducible benchmarking, store pipeline outputs with

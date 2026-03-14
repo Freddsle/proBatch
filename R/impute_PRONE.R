@@ -218,36 +218,15 @@ imputePRONE_dm <- function(x,
         return(list(sample_df = sample_df, condition_arg = condition_arg))
     }
 
-    cond_values <- condition_col
-    if (!is.null(names(cond_values))) {
-        idx <- match(sample_ids, names(cond_values))
-        if (anyNA(idx)) {
-            stop(
-                "PRONE imputation: condition vector is missing values for some samples.",
-                call. = FALSE
-            )
-        }
-        cond_values <- cond_values[idx]
-    } else if (length(cond_values) != length(sample_ids)) {
-        stop(
-            "PRONE imputation: unnamed condition vector must match the number of samples.",
-            call. = FALSE
-        )
-    }
-
-    cond_values <- unname(as.vector(cond_values))
-
-    existing_names <- colnames(sample_df)
-    base_name <- ".pb_prone_condition"
-    new_name <- base_name
-    counter <- 1L
-    while (!is.null(existing_names) && new_name %in% existing_names) {
-        counter <- counter + 1L
-        new_name <- paste0(base_name, "_", counter)
-    }
-
-    sample_df[[new_name]] <- cond_values
-    condition_arg <- new_name
+    condition_key <- .pb_prone_resolve_metadata_key(
+        values = condition_col,
+        sample_annotation = sample_df,
+        sample_ids = sample_ids,
+        arg_name = "condition",
+        col_prefix = ".pb_prone_condition"
+    )
+    sample_df[[condition_key$column_name]] <- as.vector(condition_key$column_values)
+    condition_arg <- condition_key$column_name
 
     list(sample_df = sample_df, condition_arg = condition_arg)
 }

@@ -105,6 +105,51 @@ make_prone_norm_compare_test_pbf <- function() {
     mat
 }
 
+.run_direct_prone_normalization <- function(se,
+                                            method,
+                                            on_raw = NULL,
+                                            assay_in = "raw",
+                                            ...) {
+    normalize_fun <- .pb_prone_normalize_single_fun()
+    base_args <- .pb_prone_normalization_base_args(
+        se = se,
+        norm_method = method,
+        on_raw = on_raw,
+        assay_in = assay_in
+    )
+    all_args <- .pb_prone_match_supported_args(
+        fun = normalize_fun,
+        base_args = base_args,
+        dot_args = list(...)
+    )
+    do.call(normalize_fun, all_args)
+}
+
+.extract_direct_prone_matrix <- function(se_norm,
+                                         input_matrix,
+                                         method,
+                                         assay_in = "raw") {
+    assay_out <- .pb_prone_guess_norm_assay(
+        se_norm = se_norm,
+        ain = assay_in,
+        norm_method = method
+    )
+    normalized_mat <- SummarizedExperiment::assay(
+        se_norm,
+        assay_out,
+        withDimnames = FALSE
+    )
+    if (!is.matrix(normalized_mat)) {
+        normalized_mat <- as.matrix(normalized_mat)
+    }
+    storage.mode(normalized_mat) <- "double"
+
+    .pb_prone_restore_dimnames(
+        original_matrix = input_matrix,
+        imputed_matrix = normalized_mat
+    )
+}
+
 .resolve_prone_step_name <- function(method) {
     prefixed <- .pb_prone_norm_step_name(method)
     candidates <- c(
@@ -155,13 +200,19 @@ test_that("Direct PRONE normalization matches proBatch PRONE steps for complex m
         direct_args <- c(
             list(
                 se = se_direct,
-                methods = method,
-                on_raw = NULL
+                method = method,
+                on_raw = NULL,
+                assay_in = "raw"
             ),
             method_params[[method]]
         )
-        se_direct_norm <- do.call(PRONE::normalize_se_single, direct_args)
-        direct_mat <- .to_numeric_matrix(SummarizedExperiment::assay(se_direct_norm, method))
+        se_direct_norm <- do.call(.run_direct_prone_normalization, direct_args)
+        direct_mat <- .extract_direct_prone_matrix(
+            se_norm = se_direct_norm,
+            input_matrix = raw_mat,
+            method = method,
+            assay_in = "raw"
+        )
 
         step_name <- .resolve_prone_step_name(method)
         pb_args <- c(
@@ -180,6 +231,56 @@ test_that("Direct PRONE normalization matches proBatch PRONE steps for complex m
         expect_identical(colnames(pb_mat), colnames(direct_mat), info = method)
         expect_equal(pb_mat, direct_mat, tolerance = 1e-8, info = method)
     }
+})
+
+test_that("proBatch limmaRBE matches PRONE limBE after harmonizing input scale", {
+    skip_if_not_installed("PRONE")
+
+    pbf <- make_prone_norm_compare_test_pbf()
+    .pb_register_prone_normalization_steps(
+        methods = "limBE",
+        prefix = "PR",
+        register_lowercase = TRUE
+    )
+    prone_step <- .resolve_prone_step_name("limBE")
+
+    prone_limbe <- suppressWarnings(.to_numeric_matrix(pb_eval(
+        object = pbf,
+        from = "feature::raw",
+        steps = c("log2", prone_step),
+        params_list = list(
+            list(),
+            list(
+                sample_id_col = "FullRunName",
+                batch = "MS_batch",
+                # limBE expects log2 input by default; after a preceding log2 step,
+                # point PRONE to the "log2" assay to avoid an extra log2 transform.
+                assay_in = "log2",
+                on_raw = FALSE
+            )
+        )
+    )))
+
+    probatch_limmarbe <- suppressWarnings(.to_numeric_matrix(pb_eval(
+        object = pbf,
+        from = "feature::raw",
+        steps = c("log2", "limmaRBE"),
+        params_list = list(
+            list(),
+            list(
+                sample_id_col = "FullRunName",
+                batch_col = "MS_batch"
+            )
+        )
+    )))
+
+    expect_identical(dim(probatch_limmarbe), dim(prone_limbe))
+    expect_identical(rownames(probatch_limmarbe), rownames(prone_limbe))
+    expect_identical(colnames(probatch_limmarbe), colnames(prone_limbe))
+
+    max_abs_diff <- max(abs(probatch_limmarbe - prone_limbe), na.rm = TRUE)
+    expect_lte(max_abs_diff, 1e-8)
+    expect_equal(probatch_limmarbe, prone_limbe, tolerance = 1e-8)
 })
 
 test_that("Direct PRONE sequential normalization matches proBatch PRONE step chains", {
@@ -214,13 +315,19 @@ test_that("Direct PRONE sequential normalization matches proBatch PRONE step cha
         direct_args <- c(
             list(
                 se = se_direct,
-                methods = method,
-                on_raw = NULL
+                method = method,
+                on_raw = NULL,
+                assay_in = "raw"
             ),
             method_params[[method]]
         )
-        se_direct_norm <- do.call(PRONE::normalize_se_single, direct_args)
-        direct_mat <- .to_numeric_matrix(SummarizedExperiment::assay(se_direct_norm, method))
+        se_direct_norm <- do.call(.run_direct_prone_normalization, direct_args)
+        direct_mat <- .extract_direct_prone_matrix(
+            se_norm = se_direct_norm,
+            input_matrix = direct_mat,
+            method = method,
+            assay_in = "raw"
+        )
     }
 
     pb_steps <- vapply(chain_methods, .resolve_prone_step_name, FUN.VALUE = character(1))
@@ -448,6 +555,7 @@ test_that("PRONE normalization forwards batch and refs metadata", {
     local_mocked_prone_normalize(function(se, methods, ...) {
         captured$methods <- methods
         captured$batch <- S4Vectors::metadata(se)$batch
+        captured$batch_values <- as.character(SummarizedExperiment::colData(se)[[captured$batch]])
         captured$refs <- S4Vectors::metadata(se)$refs
         mat <- SummarizedExperiment::assay(se, 1)
         SummarizedExperiment::assay(
@@ -471,8 +579,115 @@ test_that("PRONE normalization forwards batch and refs metadata", {
 
     expect_true(is.matrix(out))
     expect_identical(captured$methods, "mockMetadata")
-    expect_identical(as.character(captured$batch), c("B1", "B1", "B1", "B2", "B2", "B2"))
+    expect_identical(captured$batch, "MS_batch")
+    expect_identical(captured$batch_values, c("B1", "B1", "B1", "B2", "B2", "B2"))
     expect_identical(captured$refs, sample_ids[1:2])
+})
+
+test_that("PRONE normalization forwards condition metadata as a column key", {
+    pbf <- make_prone_norm_test_pbf()
+    reg_info <- .pb_register_prone_normalization_steps(
+        methods = "mockCondition",
+        prefix = "PR",
+        register_lowercase = FALSE
+    )
+    step_name <- if (length(reg_info$prefixed)) reg_info$prefixed[[1]] else "PRmockCondition"
+    condition_vec <- rep(c("ctrl", "case"), each = 3)
+
+    captured <- new.env(parent = emptyenv())
+    local_mocked_prone_normalize(function(se, methods, ...) {
+        captured$methods <- methods
+        captured$condition <- S4Vectors::metadata(se)$condition
+        captured$condition_values <- as.character(
+            SummarizedExperiment::colData(se)[[captured$condition]]
+        )
+        mat <- SummarizedExperiment::assay(se, 1)
+        SummarizedExperiment::assay(
+            se,
+            paste0(methods, "_on_", SummarizedExperiment::assayNames(se)[1]),
+            withDimnames = FALSE
+        ) <- mat
+        se
+    })
+
+    out <- pb_eval(
+        object = pbf,
+        from = "feature::raw",
+        steps = step_name,
+        params_list = list(list(
+            sample_id_col = "FullRunName",
+            condition = condition_vec
+        ))
+    )
+
+    expect_true(is.matrix(out))
+    expect_identical(captured$methods, "mockCondition")
+    expect_true(startsWith(captured$condition, ".pb_prone_condition"))
+    expect_identical(captured$condition_values, condition_vec)
+})
+
+test_that("PRONE EigenMS step errors clearly when condition is missing", {
+    pbf <- make_prone_norm_test_pbf()
+    reg_info <- .pb_register_prone_normalization_steps(
+        methods = "EigenMS",
+        prefix = "PR",
+        register_lowercase = FALSE
+    )
+    step_name <- if (length(reg_info$prefixed)) reg_info$prefixed[[1]] else "PREigenMS"
+
+    local_mocked_prone_normalize(function(se, methods, ain, ...) {
+        mat <- SummarizedExperiment::assay(se, ain)
+        SummarizedExperiment::assay(
+            se,
+            paste0(methods, "_on_", ain),
+            withDimnames = FALSE
+        ) <- mat
+        se
+    })
+
+    expect_error(
+        pb_eval(
+            object = pbf,
+            from = "feature::raw",
+            steps = step_name,
+            params_list = list(list(sample_id_col = "FullRunName"))
+        ),
+        "requires `condition`"
+    )
+})
+
+test_that("PRONE normalization supports backends that use `ains`", {
+    pbf <- make_prone_norm_test_pbf()
+    reg_info <- .pb_register_prone_normalization_steps(
+        methods = "mockAins",
+        prefix = "PR",
+        register_lowercase = FALSE
+    )
+    step_name <- if (length(reg_info$prefixed)) reg_info$prefixed[[1]] else "PRmockAins"
+
+    captured <- new.env(parent = emptyenv())
+    local_mocked_prone_normalize(function(se, methods, ains, ...) {
+        captured$methods <- methods
+        captured$ains <- ains
+        mat <- SummarizedExperiment::assay(se, ains)
+        SummarizedExperiment::assay(
+            se,
+            paste0(methods, "_on_", ains),
+            withDimnames = FALSE
+        ) <- mat
+        se
+    })
+
+    out <- pb_eval(
+        object = pbf,
+        from = "feature::raw",
+        steps = step_name,
+        params_list = list(list(sample_id_col = "FullRunName"))
+    )
+
+    expect_true(is.matrix(out))
+    expect_identical(captured$methods, "mockAins")
+    expect_identical(captured$ains, "raw")
 })
 
 test_that("PRONE normalization keeps base args when backend exposes only dots", {
@@ -513,6 +728,7 @@ test_that("PRONE normalization keeps base args when backend exposes only dots", 
     expect_true("se" %in% captured$arg_names)
     expect_true("methods" %in% captured$arg_names)
     expect_true("ain" %in% captured$arg_names)
+    expect_true("ains" %in% captured$arg_names)
 })
 
 make_prone_norm_assay_se <- function(assay_names) {
