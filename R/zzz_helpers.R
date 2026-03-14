@@ -48,6 +48,7 @@
     if (.pb_requireNamespace("PRONE", only_info = TRUE)) {
         safe_register("PRONEImpute", .prone_matrix_step)
         safe_register("proneImpute", .prone_matrix_step)
+        try(.pb_register_prone_normalization_steps(), silent = TRUE)
     }
 
     if (.pb_requireNamespace("missForest", only_info = TRUE)) {

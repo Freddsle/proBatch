@@ -50,7 +50,6 @@
 #'   metric tables) and `pb_intragroup_saved_files` (paths to saved CSV files
 #'   when `path_to_save_results` is provided).
 #'
-#' @importFrom PRONE plot_intragroup_correlation plot_intragroup_PCV plot_intragroup_PMAD plot_intragroup_PEV
 #' @name plot_intragroup_variation
 #' @export
 plot_intragroup_variation.default <- function(data_matrix,

@@ -1,0 +1,244 @@
+---
+title: "Using PRONE Normalization in proBatch Pipelines"
+author: |
+  | Yuliya Burankova
+  | Institute for Computational Systems Biology, University of Hamburg, Germany
+date: "`r Sys.Date()`"
+output:
+  BiocStyle::html_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+package: proBatch
+vignette: >
+  %\VignetteIndexEntry{Using PRONE normalization methods in proBatch pipelines}
+  %\VignetteEncoding{UTF-8}
+  %\usepackage[utf8]{inputenc}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r global-options, include=FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    warning = FALSE,
+    message = FALSE,
+    collapse = TRUE,
+    comment = "#>"
+)
+```
+
+# Overview
+
+This vignette shows a simple, practical workflow:
+
+1. list PRONE normalization steps available in `pb_transform()`,
+2. run one PRONE normalization step,
+3. chain PRONE normalization with a batch-correction step.
+
+```{r setup, message=FALSE}
+library(proBatch)
+
+prone_ok <- requireNamespace("PRONE", quietly = TRUE)
+if (!prone_ok) {
+    cat(
+        "Package 'PRONE' is not installed. ",
+        "PRONE-dependent chunks are shown but not evaluated.\n",
+        sep = ""
+    )
+}
+```
+
+# Prepare example data
+
+```{r load-data, eval=prone_ok}
+data("tuberculosis_TMT_se", package = "PRONE")
+se_src <- tuberculosis_TMT_se
+
+stopifnot("raw" %in% SummarizedExperiment::assayNames(se_src))
+mat <- as.matrix(SummarizedExperiment::assay(se_src, "raw"))
+sample_ann <- as.data.frame(SummarizedExperiment::colData(se_src))
+
+sample_id_col <- "Column"
+stopifnot(sample_id_col %in% colnames(sample_ann))
+sample_ann <- sample_ann[match(colnames(mat), as.character(sample_ann[[sample_id_col]])), , drop = FALSE]
+stopifnot(identical(as.character(sample_ann[[sample_id_col]]), colnames(mat)))
+
+md <- S4Vectors::metadata(se_src)
+batch_col <- md[["batch"]]
+if (is.null(batch_col) || !is.character(batch_col) || length(batch_col) != 1L ||
+    !(batch_col %in% colnames(sample_ann))) {
+    stop("PRONE metadata(se)$batch must be a column name present in colData.")
+}
+
+prone_step_params <- Filter(
+    Negate(is.null),
+    list(
+        sample_id_col = sample_id_col,
+        batch = batch_col,
+        refs = md[["refs"]]
+    )
+)
+
+pbf <- ProBatchFeatures(
+    data_matrix = mat,
+    sample_annotation = sample_ann,
+    sample_id_col = sample_id_col,
+    name = "raw"
+)
+
+pbf
+```
+
+# Find PRONE steps for `pb_transform()`
+
+```{r register-prone-steps, eval=prone_ok}
+# Methods available in PRONE itself
+head(PRONE::get_normalization_methods())
+
+# PRONE normalization steps currently available in proBatch
+prone_steps <- pb_list_steps("^PR")
+if (!length(prone_steps)) {
+    stop("No PRONE normalization steps are currently available in pb_list_steps().")
+}
+head(prone_steps, 10)
+
+# batch-correction steps available in the current session
+intersect(c("combat", "limmaRBE", "mComBat", "loessLimmaRBE"), pb_list_steps())
+```
+
+PRONE normalization methods are registered automatically at package load
+when `PRONE` is installed. If a method name collides with an existing
+`proBatch` step (for example `medianNorm`), the original `proBatch`
+implementation keeps the unprefixed name, and the PRONE version remains
+available via `PR<method>`.
+
+# Choose one PRONE step for the example
+
+```{r choose-prone-step, eval=prone_ok}
+preferred_step <- "PRGlobalMedian"
+chosen_step <- if (preferred_step %in% prone_steps) preferred_step else prone_steps[[1]]
+chosen_step
+```
+
+# Apply one PRONE normalization step with `pb_transform()`
+
+```{r prone-transform-only, eval=prone_ok}
+pbf_norm <- pb_transform(
+    object = pbf,
+    from = "feature::raw",
+    steps = chosen_step,
+    params_list = list(prone_step_params)
+)
+
+# New assay created by this step
+tail(names(pbf_norm), 1)
+```
+
+# Chain PRONE normalization with one BEC step in `pb_transform()`
+
+```{r prone-transform-with-bec, eval=prone_ok}
+available_bec <- pb_list_steps()
+bec_candidates <- intersect(c("combat", "limmaRBE"), available_bec)
+if (!length(bec_candidates)) {
+    stop("Neither 'combat' nor 'limmaRBE' is currently available.")
+}
+bec_step <- bec_candidates[[1]]
+bec_params <- switch(bec_step,
+    combat = list(
+        batch_col = batch_col,
+        sample_id_col = sample_id_col,
+        par.prior = TRUE,
+        fill_the_missing = 0
+    ),
+    limmaRBE = list(
+        batch_col = batch_col,
+        sample_id_col = sample_id_col
+    )
+)
+
+pbf_norm_bec <- pb_transform(
+    object = pbf,
+    from = "feature::raw",
+    steps = c(chosen_step, bec_step),
+    params_list = list(
+        prone_step_params,
+        bec_params
+    )
+)
+
+# Show assays created by this chain
+grep("^feature::(PR|combat|limmaRBE)", names(pbf_norm_bec), value = TRUE)
+
+# inspect operation log entries for these pipelines
+oplog_df <- as.data.frame(get_operation_log(pbf_norm_bec))
+tail(oplog_df[, c("step", "from", "to")], 4)
+```
+
+# Optional: evaluate a chain quickly without storing assays
+
+```{r prone-pbeval-quick, eval=prone_ok}
+mat_eval <- pb_eval(
+    object = pbf,
+    from = "feature::raw",
+    steps = c(chosen_step, bec_step),
+    params_list = list(
+        prone_step_params,
+        bec_params
+    )
+)
+
+dim(mat_eval)
+summary(as.vector(mat_eval))
+```
+
+# Optional: smoke-test all PRONE normalization steps
+
+```{r prone-all-methods-smoke, eval=prone_ok}
+target_methods <- PRONE::get_normalization_methods()
+target_steps <- unique(c(
+    paste0("PR", target_methods),
+    tolower(paste0("PR", target_methods))
+))
+target_steps <- intersect(target_steps, pb_list_steps("^PR|^pr"))
+
+smoke_results <- do.call(
+    rbind,
+    lapply(target_steps, function(step_name) {
+        out <- try(
+            pb_eval(
+                object = pbf,
+                from = "feature::raw",
+                steps = step_name,
+                params_list = list(prone_step_params)
+            ),
+            silent = TRUE
+        )
+        ok <- !inherits(out, "try-error")
+        msg <- if (ok) "" else as.character(out)
+        data.frame(
+            step = step_name,
+            ok = ok,
+            message = msg,
+            stringsAsFactors = FALSE
+        )
+    })
+)
+
+smoke_results
+subset(smoke_results, !ok)
+```
+
+# Notes
+
+- PRONE normalization methods are registered as standard
+  `pb_transform()`/`pb_eval()` steps, so they can be mixed with any other
+  registered proBatch step.
+- For methods that require PRONE metadata (`limBE`, `IRS`), pass `batch`
+  and `refs` through step params (as shown by `prone_step_params`).
+- Use `pb_list_steps("^PR")` to list currently available PRONE
+  normalization steps.
+- For reproducible benchmarking, store pipeline outputs with
+  `pb_transform()` and compare diagnostics across assays.

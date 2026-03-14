@@ -854,12 +854,16 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
     # Add assay
     object <- addAssay(object, se, name = to)
 
-    # Best-effort 1:1 link only if feature rownames match
+    # Best-effort 1:1 link only for unique feature rownames.
+    # Duplicate rownames can trigger addAssayLinkOneToOne() failures.
     ok_link <- FALSE
     if (has_from) {
         r_to <- rownames(assay(object[[to]], "intensity"))
         r_from <- rownames(assay(object[[from]], "intensity"))
-        if (setequal(r_to, r_from)) {
+        can_link_1to1 <- !is.null(r_to) && !is.null(r_from) &&
+            !anyDuplicated(r_to) && !anyDuplicated(r_from) &&
+            setequal(r_to, r_from)
+        if (can_link_1to1) {
             object <- addAssayLinkOneToOne(object, from = from, to = to)
             ok_link <- TRUE
         }

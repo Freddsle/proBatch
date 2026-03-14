@@ -131,6 +131,127 @@ imputePRONE_dm <- function(x,
 
 # ---- shared helper --------------------------------------------------------
 
+.pb_prone_prepare_sample_annotation <- function(sample_annotation,
+                                                sample_ids,
+                                                sample_id_col = "FullRunName",
+                                                align = TRUE,
+                                                placeholder_col = ".pb_prone_sample_id") {
+    sample_annotation_local <- sample_annotation
+    sample_id_col_local <- sample_id_col
+    placeholder_col_local <- NULL
+
+    if (is.null(sample_annotation_local)) {
+        placeholder_col_local <- placeholder_col
+        sample_annotation_local <- data.frame(sample_ids, stringsAsFactors = FALSE)
+        colnames(sample_annotation_local) <- placeholder_col_local
+        sample_id_col_local <- placeholder_col_local
+    }
+
+    if (isTRUE(align)) {
+        sample_annotation_local <- .align_sample_annotation(
+            sample_annotation = sample_annotation_local,
+            sample_ids = sample_ids,
+            sample_id_col = sample_id_col_local
+        )
+    }
+
+    list(
+        sample_annotation = sample_annotation_local,
+        sample_id_col = sample_id_col_local,
+        placeholder_col = placeholder_col_local
+    )
+}
+
+.pb_prone_make_se <- function(data_matrix,
+                              sample_annotation,
+                              assay_in = "raw",
+                              force_column = FALSE) {
+    sample_df <- as.data.frame(sample_annotation, stringsAsFactors = FALSE)
+    sample_ids <- colnames(data_matrix)
+    feature_ids <- rownames(data_matrix)
+
+    if (is.null(feature_ids)) {
+        feature_ids <- sprintf("feature_%d", seq_len(nrow(data_matrix)))
+    } else {
+        feature_ids <- as.character(feature_ids)
+        bad_ids <- is.na(feature_ids) | !nzchar(feature_ids)
+        if (any(bad_ids)) {
+            feature_ids[bad_ids] <- sprintf("feature_%d", which(bad_ids))
+        }
+        feature_ids <- make.unique(feature_ids, sep = "_dup")
+    }
+
+    rownames(sample_df) <- sample_ids
+    col_data <- S4Vectors::DataFrame(sample_df)
+    rownames(col_data) <- sample_ids
+    if (isTRUE(force_column) || !("Column" %in% colnames(col_data))) {
+        col_data$Column <- rownames(col_data)
+    }
+    row_data <- S4Vectors::DataFrame(
+        "Protein.IDs" = feature_ids,
+        "IDs" = feature_ids,
+        check.names = FALSE
+    )
+
+    SummarizedExperiment::SummarizedExperiment(
+        assays = setNames(list(data_matrix), assay_in),
+        colData = col_data,
+        rowData = row_data
+    )
+}
+
+.pb_prone_prepare_condition <- function(sample_df, sample_ids, condition_col = NULL) {
+    condition_arg <- NULL
+    if (is.null(condition_col)) {
+        return(list(sample_df = sample_df, condition_arg = condition_arg))
+    }
+
+    if (is.character(condition_col) && length(condition_col) == 1L) {
+        if (!(condition_col %in% colnames(sample_df))) {
+            stop(
+                "PRONE imputation: condition column '", condition_col,
+                "' not found in sample annotation.",
+                call. = FALSE
+            )
+        }
+        condition_arg <- condition_col
+        return(list(sample_df = sample_df, condition_arg = condition_arg))
+    }
+
+    cond_values <- condition_col
+    if (!is.null(names(cond_values))) {
+        idx <- match(sample_ids, names(cond_values))
+        if (anyNA(idx)) {
+            stop(
+                "PRONE imputation: condition vector is missing values for some samples.",
+                call. = FALSE
+            )
+        }
+        cond_values <- cond_values[idx]
+    } else if (length(cond_values) != length(sample_ids)) {
+        stop(
+            "PRONE imputation: unnamed condition vector must match the number of samples.",
+            call. = FALSE
+        )
+    }
+
+    cond_values <- unname(as.vector(cond_values))
+
+    existing_names <- colnames(sample_df)
+    base_name <- ".pb_prone_condition"
+    new_name <- base_name
+    counter <- 1L
+    while (!is.null(existing_names) && new_name %in% existing_names) {
+        counter <- counter + 1L
+        new_name <- paste0(base_name, "_", counter)
+    }
+
+    sample_df[[new_name]] <- cond_values
+    condition_arg <- new_name
+
+    list(sample_df = sample_df, condition_arg = condition_arg)
+}
+
 .prone_matrix_step <- function(data_matrix,
                                sample_annotation = NULL,
                                sample_id_col = "FullRunName",
@@ -147,18 +268,15 @@ imputePRONE_dm <- function(x,
         stop("PRONE imputation requires matrix column names (sample identifiers).", call. = FALSE)
     }
     sample_ids <- colnames(data_matrix)
-    sample_id_col_local <- sample_id_col
-    placeholder_col <- NULL
-    sample_annotation_local <- sample_annotation
-
-    if (is.null(sample_annotation_local)) {
-        placeholder_col <- ".pb_prone_sample_id"
-        sample_annotation_local <- data.frame(
-            .pb_prone_sample_id = sample_ids,
-            stringsAsFactors = FALSE
-        )
-        sample_id_col_local <- placeholder_col
-    }
+    annotation_prep <- .pb_prone_prepare_sample_annotation(
+        sample_annotation = sample_annotation,
+        sample_ids = sample_ids,
+        sample_id_col = sample_id_col,
+        align = FALSE
+    )
+    sample_annotation_local <- annotation_prep$sample_annotation
+    sample_id_col_local <- annotation_prep$sample_id_col
+    placeholder_col <- annotation_prep$placeholder_col
 
     .run_matrix_method(
         data_matrix = data_matrix,
@@ -169,68 +287,25 @@ imputePRONE_dm <- function(x,
         method_fun = function(data_matrix, sample_annotation) {
             original_data_matrix <- data_matrix
             sample_ids_local <- colnames(data_matrix)
-            sample_df <- as.data.frame(sample_annotation)
+            sample_df <- as.data.frame(sample_annotation, stringsAsFactors = FALSE)
 
             if (!is.null(placeholder_col) && placeholder_col %in% names(sample_df)) {
                 sample_df[[placeholder_col]] <- NULL
             }
 
-            rownames(sample_df) <- sample_ids_local
+            condition_prep <- .pb_prone_prepare_condition(
+                sample_df = sample_df,
+                sample_ids = sample_ids_local,
+                condition_col = condition_col
+            )
+            sample_df <- condition_prep$sample_df
+            condition_arg <- condition_prep$condition_arg
 
-            condition_arg <- NULL
-            if (!is.null(condition_col)) {
-                if (is.character(condition_col) && length(condition_col) == 1L) {
-                    if (!(condition_col %in% colnames(sample_df))) {
-                        stop(
-                            "PRONE imputation: condition column '", condition_col,
-                            "' not found in sample annotation.",
-                            call. = FALSE
-                        )
-                    }
-                    condition_arg <- condition_col
-                } else {
-                    cond_values <- condition_col
-                    if (!is.null(names(cond_values))) {
-                        idx <- match(sample_ids_local, names(cond_values))
-                        if (anyNA(idx)) {
-                            stop(
-                                "PRONE imputation: condition vector is missing values for some samples.",
-                                call. = FALSE
-                            )
-                        }
-                        cond_values <- cond_values[idx]
-                    } else {
-                        if (length(cond_values) != length(sample_ids_local)) {
-                            stop(
-                                "PRONE imputation: unnamed condition vector must match the number of samples.",
-                                call. = FALSE
-                            )
-                        }
-                    }
-
-                    cond_values <- unname(as.vector(cond_values))
-
-                    existing_names <- colnames(sample_df)
-                    base_name <- ".pb_prone_condition"
-                    new_name <- base_name
-                    counter <- 1L
-                    while (!is.null(existing_names) && new_name %in% existing_names) {
-                        counter <- counter + 1L
-                        new_name <- paste0(base_name, "_", counter)
-                    }
-
-                    sample_df[[new_name]] <- cond_values
-                    condition_arg <- new_name
-                }
-            }
-
-            col_data <- S4Vectors::DataFrame(sample_df)
-            rownames(col_data) <- sample_ids_local
-            col_data$Column <- rownames(col_data)
-
-            se <- SummarizedExperiment::SummarizedExperiment(
-                assays = setNames(list(data_matrix), assay_in),
-                colData = col_data
+            se <- .pb_prone_make_se(
+                data_matrix = data_matrix,
+                sample_annotation = sample_df,
+                assay_in = assay_in,
+                force_column = TRUE
             )
 
             prone_impute <- .pb_prone_impute_fun()
