@@ -58,7 +58,7 @@ Imports:
     utils,
     umap,
     viridis,
-    variancePartition,
+    variancePartition (>= 1.40.1),
     wesanderson,
     WGCNA
 Suggests: 

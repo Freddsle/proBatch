@@ -1,4 +1,4 @@
-GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin,
+GeomSplitViolin <- ggplot2::ggproto("GeomSplitViolin", ggplot2::GeomViolin,
     draw_group = function(self, data, ..., draw_quantiles = NULL) {
         data <- transform(data, xminv = x - violinwidth *
             (x - xmin), xmaxv = x + violinwidth *
@@ -20,7 +20,7 @@ GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin,
             "x"
         ] <- round(newdata[1, "x"])
 
-        if (length(draw_quantiles) > 0 & !zero_range(range(data$y))) {
+        if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
             stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <=
                 1))
             quantiles <- create_quantile_segment_frame(
@@ -33,13 +33,13 @@ GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin,
             ]
             aesthetics$alpha <- rep(1, nrow(quantiles))
             both <- cbind(quantiles, aesthetics)
-            quantile_grob <- GeomPath$draw_panel(
+            quantile_grob <- ggplot2::GeomPath$draw_panel(
                 both,
                 ...
             )
             ggplot2:::ggname(
                 "geom_split_violin",
-                grobTree(GeomPolygon$draw_panel(
+                grid::grobTree(ggplot2::GeomPolygon$draw_panel(
                     newdata,
                     ...
                 ), quantile_grob)
@@ -47,7 +47,7 @@ GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin,
         } else {
             ggplot2:::ggname(
                 "geom_split_violin",
-                GeomPolygon$draw_panel(newdata, ...)
+                ggplot2::GeomPolygon$draw_panel(newdata, ...)
             )
         }
     }
@@ -59,7 +59,7 @@ geom_split_violin <- function(
   trim = TRUE, scale = "area", na.rm = FALSE, show.legend = NA,
   inherit.aes = TRUE
 ) {
-    layer(
+    ggplot2::layer(
         data = data, mapping = mapping, stat = stat, geom = GeomSplitViolin,
         position = position, show.legend = show.legend,
         inherit.aes = inherit.aes, params = list(
@@ -94,13 +94,13 @@ plot_split_violin_with_boxplot <- function(
   col_for_box = "x", colors_for_plot = c("#8f1811", "#F8C333"),
   hlineintercept = NULL, plot_title = NULL, theme = "classic"
 ) {
-    p <- ggplot(df, aes(
+    p <- ggplot2::ggplot(df, ggplot2::aes(
         x = !!sym(col_for_box), y = !!sym(y_col),
         fill = !!sym(col_for_color)
     )) +
         geom_split_violin(alpha = 0.75) +
-        geom_boxplot(
-            aes(group = interaction(
+        ggplot2::geom_boxplot(
+            ggplot2::aes(group = interaction(
                 !!sym(col_for_color),
                 !!sym(col_for_box)
             )),
@@ -108,21 +108,21 @@ plot_split_violin_with_boxplot <- function(
             outlier.shape = NA, coef = 0
         )
 
-    p <- p + labs(x = col_for_box, y = y_col, fill = col_for_color)
+    p <- p + ggplot2::labs(x = col_for_box, y = y_col, fill = col_for_color)
     if (!is.null(colors_for_plot)) {
-        p <- p + scale_fill_manual(values = colors_for_plot)
+        p <- p + ggplot2::scale_fill_manual(values = colors_for_plot)
     }
 
     if (!is.null(hlineintercept)) {
-        p <- p + geom_hline(yintercept = hlineintercept, linetype = "dashed")
+        p <- p + ggplot2::geom_hline(yintercept = hlineintercept, linetype = "dashed")
     }
 
     if (theme == "classic") {
-        p <- p + theme_classic(base_size = 20)
+        p <- p + ggplot2::theme_classic(base_size = 20)
     }
 
     if (!is.null(plot_title)) {
-        p <- p + ggtitle(plot_title)
+        p <- p + ggplot2::ggtitle(plot_title)
     }
     return(p)
 }
