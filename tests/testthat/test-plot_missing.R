@@ -337,6 +337,38 @@ test_that("plot_NA_density.default summarises intensity distribution", {
     expect_equal(density_plot$labels$y, "Density")
 })
 
+test_that("plot_NA_density.default supports grouped densities", {
+    density_plot <- plot_NA_density(
+        toy_matrix,
+        sample_annotation = toy_sa,
+        sample_id_col = "FullRunName",
+        color_by = "Condition"
+    )
+
+    expect_s3_class(density_plot, "ggplot")
+    grouped_data <- density_plot$data[, c("mean", "Type", ".pb_density_group"), drop = FALSE]
+    grouped_data <- grouped_data[order(grouped_data$.pb_density_group, grouped_data$mean), , drop = FALSE]
+    expected <- data.frame(
+        mean = c(7, 10, 5.5, 8.5, 12),
+        Type = c(
+            "Valid Value",
+            "Valid Value",
+            "Valid Value",
+            "Valid Value",
+            "Missing Value"
+        ),
+        .pb_density_group = c(
+            rep("Condition=A (n=1)", 2L),
+            rep("Condition=B (n=2)", 3L)
+        ),
+        stringsAsFactors = FALSE
+    )
+
+    expect_equal(grouped_data, expected, ignore_attr = TRUE)
+    expect_equal(density_plot$labels$colour, "Condition")
+    expect_equal(density_plot$labels$linetype, "Value Type")
+})
+
 
 test_that("plot_NA_density.ProBatchFeatures facets assays", {
     density_plot <- plot_NA_density(
@@ -351,6 +383,28 @@ test_that("plot_NA_density.ProBatchFeatures facets assays", {
         unique(as.character(density_plot$data$pbf_name)),
         c(toy_assay, toy_assay_alt)
     )
+})
+
+test_that("plot_NA_density.ProBatchFeatures supports grouped densities", {
+    density_plot <- plot_NA_density(
+        pbf_multi,
+        pbf_name = c(toy_assay, toy_assay_alt),
+        color_by = "Condition",
+        nrow = 1,
+        ncol = 2
+    )
+
+    expect_s3_class(density_plot, "ggplot")
+    expect_setequal(
+        unique(as.character(density_plot$data$pbf_name)),
+        c(toy_assay, toy_assay_alt)
+    )
+    expect_setequal(
+        unique(density_plot$data$.pb_density_group),
+        c("Condition=A (n=1)", "Condition=B (n=2)")
+    )
+    expect_equal(density_plot$labels$colour, "Condition")
+    expect_equal(density_plot$labels$linetype, "Value Type")
 })
 
 

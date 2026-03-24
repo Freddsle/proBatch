@@ -93,6 +93,10 @@ plot_NA_heatmap.default <- function(
     }
 
     binary_matrix <- .pb_binary_missing_matrix(data_matrix, drop_complete = drop_complete)
+    heatmap_scale <- .pb_missing_binary_heatmap_scale(
+        missing_color = missing_color,
+        valid_color = valid_color
+    )
     .pb_draw_missing_heatmap(
         plot_matrix = binary_matrix,
         sample_annotation = sample_annotation,
@@ -106,10 +110,10 @@ plot_NA_heatmap.default <- function(
         col_vector = col_vector,
         draw = draw,
         main = main,
-        heatmap_colors = c(missing_color, valid_color),
-        heatmap_breaks = c(-0.5, 0.5, 1.5),
-        legend_breaks = c(0, 1),
-        legend_labels = c("Missing", "Valid"),
+        heatmap_colors = heatmap_scale$heatmap_colors,
+        heatmap_breaks = heatmap_scale$heatmap_breaks,
+        legend_breaks = heatmap_scale$legend_breaks,
+        legend_labels = heatmap_scale$legend_labels,
         label_max_chars = 15L,
         label_keep_chars = 10L,
         plot_params = list(...)
@@ -182,6 +186,11 @@ plot_NA_heatmap.ProBatchFeatures <- function(
 #' @inheritParams plot_NA_heatmap
 #' @param color_by One or more column names in `sample_annotation` used both to
 #'   define the sample groups and to annotate the grouped heatmap columns.
+#' @param force_binarization Optional threshold used to binarize grouped
+#'   observed fractions. Use `FALSE` (default) to retain fractions, `TRUE` to
+#'   use `0.5`, or a single numeric value in `[0, 1]` to mark group cells with
+#'   observed fraction greater than or equal to the threshold as present and
+#'   lower values as missing.
 #'
 #' @return For a single assay the returned value is the `pheatmap` object. When
 #'   multiple assays are requested a list is returned invisibly with elements
@@ -208,6 +217,7 @@ plot_grouped_NA_heatmap.default <- function(
   valid_color = "grey90",
   col_vector = NULL,
   drop_complete = TRUE,
+  force_binarization = FALSE,
   draw = TRUE,
   main = NULL,
   ...
@@ -231,7 +241,13 @@ plot_grouped_NA_heatmap.default <- function(
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
         color_by = color_by,
-        drop_complete = drop_complete
+        drop_complete = drop_complete,
+        force_binarization = force_binarization
+    )
+    heatmap_scale <- .pb_grouped_missing_heatmap_scale(
+        missing_color = missing_color,
+        valid_color = valid_color,
+        force_binarization = force_binarization
     )
 
     if (is.null(label_by)) {
@@ -251,10 +267,10 @@ plot_grouped_NA_heatmap.default <- function(
         col_vector = col_vector,
         draw = draw,
         main = main,
-        heatmap_colors = grDevices::colorRampPalette(c(missing_color, valid_color))(101L),
-        heatmap_breaks = seq(0, 1, length.out = 102L),
-        legend_breaks = c(0, 0.25, 0.5, 0.75, 1),
-        legend_labels = c("0%", "25%", "50%", "75%", "100%"),
+        heatmap_colors = heatmap_scale$heatmap_colors,
+        heatmap_breaks = heatmap_scale$heatmap_breaks,
+        legend_breaks = heatmap_scale$legend_breaks,
+        legend_labels = heatmap_scale$legend_labels,
         label_max_chars = 40L,
         label_keep_chars = 30L,
         plot_params = list(...)
@@ -278,6 +294,7 @@ plot_grouped_NA_heatmap.ProBatchFeatures <- function(
   valid_color = "grey90",
   col_vector = NULL,
   drop_complete = TRUE,
+  force_binarization = FALSE,
   nrow = NULL,
   ncol = NULL,
   draw = TRUE,
@@ -312,22 +329,37 @@ plot_grouped_NA_heatmap.ProBatchFeatures <- function(
         draw = draw,
         use_subset = use_subset,
         subset_columns = FALSE,
-        extra_args = list(...)
+        extra_args = c(list(force_binarization = force_binarization), list(...))
     )
 }
 
 #' Plot intensity density by missingness
 #'
 #' Compare the distribution of average intensities between features with and
-#' without missing observations.
+#' without missing observations. When `color_by` is supplied, densities are
+#' computed within each sample group, colours distinguish groups, and linetypes
+#' distinguish `missing_label` from `valid_label`.
 #'
-#' @inheritParams plot_NA_heatmap
+#' @param sample_annotation Optional data frame with sample-level metadata. Row
+#'   names (or the column specified via `sample_id_col`) must match the column
+#'   names of the intensity matrix. When `x` is a `SummarizedExperiment`,
+#'   `colData(x)` is used by default.
+#' @param sample_id_col Optional column in `sample_annotation` providing unique
+#'   sample identifiers. Use this when the data frame lacks row names matching
+#'   the assay column names.
+#' @param color_by Optional column name or character vector of column names in
+#'   `sample_annotation` used to split grouped densities. When supplied,
+#'   colours encode groups and linetypes encode `missing_label` and
+#'   `valid_label`.
 #' @param missing_label,valid_label Labels used to distinguish rows with and
 #'   without missing values.
 #' @param palette Named vector of colours mapped to `missing_label` and
-#'   `valid_label`.
+#'   `valid_label` when `color_by` is not supplied.
+#' @param col_vector Optional vector of colours recycled across grouped density
+#'   lines defined by `color_by`.
 #' @param facet_scales Scaling behaviour passed to [ggplot2::facet_wrap()] when
 #'   multiple assays are plotted.
+#' @param ... Additional arguments forwarded to [ggplot2::geom_density()].
 #'
 #' @return A `ggplot` object.
 #' @export
@@ -338,12 +370,25 @@ plot_NA_density <- function(x, ...) UseMethod("plot_NA_density")
 #' @export
 plot_NA_density.default <- function(
   x,
+  sample_annotation = NULL,
+  sample_id_col = NULL,
+  color_by = NULL,
   missing_label = "Missing Value",
   valid_label = "Valid Value",
   palette = c(`Missing Value` = "#A92C23", `Valid Value` = "#345995"),
+  col_vector = NULL,
   ...
 ) {
-    data_matrix <- .pb_coerce_missing_plot_matrix(x)
+    data_matrix <- x
+
+    if (is(data_matrix, "SummarizedExperiment")) {
+        if (is.null(sample_annotation)) {
+            sample_annotation <- as.data.frame(colData(data_matrix))
+        }
+        data_matrix <- assay(data_matrix)
+    }
+
+    data_matrix <- .pb_coerce_missing_plot_matrix(data_matrix)
     if (is.null(data_matrix)) {
         return(ggplot())
     }
@@ -354,19 +399,27 @@ plot_NA_density.default <- function(
         return(ggplot())
     }
 
-    df <- .pb_missing_density_df(data_matrix, "", missing_label, valid_label)
+    df <- .pb_missing_density_df(
+        data_matrix = data_matrix,
+        assay_nm = "",
+        missing_label = missing_label,
+        valid_label = valid_label,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        color_by = color_by
+    )
     if (is.null(df) || !nrow(df)) {
         warning("No finite mean intensities available for plotting.")
         return(ggplot())
     }
-    df <- df[, c("mean", "Type"), drop = FALSE]
-
-    palette <- .pb_match_palette(palette, c(missing_label, valid_label))
     .pb_plot_missing_density(
         df = df,
-        palette = palette,
+        palette = .pb_match_palette(palette, c(missing_label, valid_label)),
+        group_palette = .pb_missing_density_group_palette(df, col_vector = col_vector),
+        group_label = .pb_missing_density_group_title(color_by),
         missing_label = missing_label,
-        valid_label = valid_label
+        valid_label = valid_label,
+        density_params = list(...)
     )
 }
 
@@ -376,9 +429,12 @@ plot_NA_density.default <- function(
 plot_NA_density.ProBatchFeatures <- function(
   x,
   pbf_name = NULL,
+  color_by = NULL,
+  sample_id_col = NULL,
   missing_label = "Missing Value",
   valid_label = "Valid Value",
   palette = c(`Missing Value` = "#A92C23", `Valid Value` = "#345995"),
+  col_vector = NULL,
   nrow = NULL,
   ncol = NULL,
   facet_scales = "free_y",
@@ -386,10 +442,25 @@ plot_NA_density.ProBatchFeatures <- function(
 ) {
     object <- x
     assays <- .pb_missing_requested_assays(object, pbf_name)
+    sample_annotation <- .pb_prepare_missing_heatmap_sample_annotation(
+        object = object,
+        assays = assays,
+        sample_id_col = sample_id_col
+    )
 
     collected <- .pb_collect_missing_assay_data(
         object, assays,
-        function(mat, assay_nm) .pb_missing_density_df(mat, assay_nm, missing_label, valid_label)
+        function(mat, assay_nm) {
+            .pb_missing_density_df(
+                data_matrix = mat,
+                assay_nm = assay_nm,
+                missing_label = missing_label,
+                valid_label = valid_label,
+                sample_annotation = sample_annotation,
+                sample_id_col = NULL,
+                color_by = color_by
+            )
+        }
     )
     df_list <- collected$df_list
     keep <- collected$keep
@@ -401,15 +472,17 @@ plot_NA_density.ProBatchFeatures <- function(
     combined <- do.call(rbind, df_list[keep])
     combined$pbf_name <- factor(combined$pbf_name, levels = assays[keep])
 
-    palette <- .pb_match_palette(palette, c(missing_label, valid_label))
     .pb_plot_missing_density(
         df = combined,
-        palette = palette,
+        palette = .pb_match_palette(palette, c(missing_label, valid_label)),
+        group_palette = .pb_missing_density_group_palette(combined, col_vector = col_vector),
+        group_label = .pb_missing_density_group_title(color_by),
         missing_label = missing_label,
         valid_label = valid_label,
         nrow = nrow,
         ncol = ncol,
-        facet_scales = facet_scales
+        facet_scales = facet_scales,
+        density_params = list(...)
     )
 }
 
@@ -555,19 +628,71 @@ plot_NA_frequency.ProBatchFeatures <- function(
     binary
 }
 
-.pb_group_missing_matrix <- function(data_matrix,
-                                     sample_annotation,
-                                     sample_id_col,
-                                     color_by,
-                                     drop_complete = TRUE) {
-    disable_annotation <- is.null(color_by) ||
+.pb_missing_binary_heatmap_scale <- function(missing_color, valid_color) {
+    list(
+        heatmap_colors = c(missing_color, valid_color),
+        heatmap_breaks = c(-0.5, 0.5, 1.5),
+        legend_breaks = c(0, 1),
+        legend_labels = c("Missing", "Valid")
+    )
+}
+
+.pb_grouped_missing_heatmap_scale <- function(missing_color,
+                                              valid_color,
+                                              force_binarization = FALSE) {
+    if (!identical(force_binarization, FALSE)) {
+        return(.pb_missing_binary_heatmap_scale(
+            missing_color = missing_color,
+            valid_color = valid_color
+        ))
+    }
+
+    list(
+        heatmap_colors = grDevices::colorRampPalette(c(missing_color, valid_color))(101L),
+        heatmap_breaks = seq(0, 1, length.out = 102L),
+        legend_breaks = c(0, 0.25, 0.5, 0.75, 1),
+        legend_labels = c("0%", "25%", "50%", "75%", "100%")
+    )
+}
+
+.pb_resolve_grouped_missing_binarization <- function(force_binarization = FALSE) {
+    if (identical(force_binarization, FALSE)) {
+        return(FALSE)
+    }
+    if (identical(force_binarization, TRUE)) {
+        return(0.5)
+    }
+    if (is.numeric(force_binarization) &&
+        length(force_binarization) == 1L &&
+        !is.na(force_binarization) &&
+        is.finite(force_binarization) &&
+        force_binarization >= 0 &&
+        force_binarization <= 1) {
+        return(as.numeric(force_binarization))
+    }
+
+    stop(
+        "`force_binarization` must be FALSE, TRUE, or a single numeric value between 0 and 1.",
+        call. = FALSE
+    )
+}
+
+.pb_missing_grouping_disabled <- function(color_by) {
+    is.null(color_by) ||
         !length(color_by) ||
         (length(color_by) == 1L && (
             isFALSE(color_by) ||
                 (is.character(color_by) && identical(tolower(color_by), "no"))
         ))
-    if (disable_annotation) {
-        stop("Grouped missingness heatmaps require one or more metadata columns in `color_by`.")
+}
+
+.pb_prepare_grouped_missing_annotation <- function(sample_annotation,
+                                                   sample_id_col,
+                                                   color_by,
+                                                   sample_order,
+                                                   empty_message) {
+    if (.pb_missing_grouping_disabled(color_by)) {
+        stop(empty_message)
     }
     if (!is.character(color_by)) {
         stop("`color_by` must be a character vector of column names.")
@@ -577,7 +702,7 @@ plot_NA_frequency.ProBatchFeatures <- function(
     aligned_annotation <- .pb_align_sample_annotation_rows(
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
-        sample_order = colnames(data_matrix)
+        sample_order = sample_order
     )
 
     missing_cols <- setdiff(color_by, colnames(aligned_annotation))
@@ -596,7 +721,7 @@ plot_NA_frequency.ProBatchFeatures <- function(
         interaction,
         c(grouping_df, list(drop = TRUE, lex.order = TRUE, sep = " | "))
     )
-    group_indices <- split(seq_len(ncol(data_matrix)), group_factor)
+    group_indices <- split(seq_along(sample_order), group_factor)
     group_rows <- vapply(group_indices, `[`, integer(1), 1L)
 
     grouped_annotation <- grouping_df[group_rows, , drop = FALSE]
@@ -608,6 +733,31 @@ plot_NA_frequency.ProBatchFeatures <- function(
     grouped_annotation$.group_label <- paste0(group_ids, " (n=", group_sizes, ")")
     rownames(grouped_annotation) <- group_ids
 
+    list(
+        group_indices = group_indices,
+        annotation = grouped_annotation,
+        group_ids = group_ids
+    )
+}
+
+.pb_group_missing_matrix <- function(data_matrix,
+                                     sample_annotation,
+                                     sample_id_col,
+                                     color_by,
+                                     drop_complete = TRUE,
+                                     force_binarization = FALSE) {
+    force_binarization <- .pb_resolve_grouped_missing_binarization(force_binarization)
+    group_info <- .pb_prepare_grouped_missing_annotation(
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        color_by = color_by,
+        sample_order = colnames(data_matrix),
+        empty_message = "Grouped missingness heatmaps require one or more metadata columns in `color_by`."
+    )
+    group_indices <- group_info$group_indices
+    grouped_annotation <- group_info$annotation
+    group_ids <- group_info$group_ids
+
     observed_matrix <- !is.na(data_matrix)
     grouped_matrix <- vapply(
         group_indices,
@@ -616,6 +766,10 @@ plot_NA_frequency.ProBatchFeatures <- function(
     )
     rownames(grouped_matrix) <- rownames(data_matrix)
     colnames(grouped_matrix) <- group_ids
+
+    if (!identical(force_binarization, FALSE)) {
+        grouped_matrix <- (grouped_matrix >= force_binarization) * 1
+    }
 
     if (drop_complete) {
         keep <- rowSums(grouped_matrix < 1) > 0
@@ -988,15 +1142,58 @@ plot_NA_frequency.ProBatchFeatures <- function(
 
 .pb_plot_missing_density <- function(df,
                                      palette,
+                                     group_palette,
+                                     group_label,
                                      missing_label,
                                      valid_label,
                                      nrow = NULL,
                                      ncol = NULL,
-                                     facet_scales = "free_y") {
-    p <- ggplot(df, aes(x = .data$mean, colour = .data$Type)) +
-        geom_density(na.rm = TRUE) +
-        labs(x = "Intensity", y = "Density", colour = "Value Type") +
-        scale_colour_manual(values = palette, breaks = c(missing_label, valid_label))
+                                     facet_scales = "free_y",
+                                     density_params = list()) {
+    if (".pb_density_group" %in% names(df)) {
+        density_layer <- do.call(
+            geom_density,
+            c(list(
+                mapping = aes(
+                    colour = .data$.pb_density_group,
+                    linetype = .data$Type,
+                    group = interaction(.data$.pb_density_group, .data$Type)
+                ),
+                na.rm = TRUE
+            ), density_params)
+        )
+        linetype_values <- c(
+            setNames("dashed", missing_label),
+            setNames("solid", valid_label)
+        )
+        p <- ggplot(df, aes(x = .data$mean)) +
+            density_layer +
+            labs(
+                x = "Intensity",
+                y = "Density",
+                colour = group_label,
+                linetype = "Value Type"
+            ) +
+            scale_colour_manual(
+                values = group_palette,
+                breaks = names(group_palette),
+                drop = FALSE
+            ) +
+            scale_linetype_manual(
+                values = linetype_values,
+                breaks = c(missing_label, valid_label),
+                drop = FALSE
+            )
+    } else {
+        density_layer <- do.call(
+            geom_density,
+            c(list(na.rm = TRUE), density_params)
+        )
+        p <- ggplot(df, aes(x = .data$mean, colour = .data$Type)) +
+            density_layer +
+            labs(x = "Intensity", y = "Density", colour = "Value Type") +
+            scale_colour_manual(values = palette, breaks = c(missing_label, valid_label))
+    }
 
     if ("pbf_name" %in% names(df) && length(unique(df$pbf_name)) > 1L) {
         layout <- .pb_missing_layout(length(unique(df$pbf_name)), nrow = nrow, ncol = ncol)
@@ -1032,13 +1229,49 @@ plot_NA_frequency.ProBatchFeatures <- function(
     p
 }
 
-.pb_missing_density_df <- function(data_matrix, assay_nm, missing_label, valid_label) {
+.pb_missing_density_df <- function(data_matrix,
+                                   assay_nm,
+                                   missing_label,
+                                   valid_label,
+                                   sample_annotation = NULL,
+                                   sample_id_col = NULL,
+                                   color_by = NULL) {
     if (!is.matrix(data_matrix)) {
         data_matrix <- as.matrix(data_matrix)
     }
     if (!nrow(data_matrix) || !ncol(data_matrix)) {
         return(NULL)
     }
+
+    if (!.pb_missing_grouping_disabled(color_by)) {
+        group_info <- .pb_prepare_grouped_missing_annotation(
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
+            color_by = color_by,
+            sample_order = colnames(data_matrix),
+            empty_message = "Grouped density plots require one or more metadata columns in `color_by`."
+        )
+        df_list <- lapply(seq_along(group_info$group_indices), function(idx) {
+            group_matrix <- data_matrix[, group_info$group_indices[[idx]], drop = FALSE]
+            df <- .pb_missing_density_df(
+                data_matrix = group_matrix,
+                assay_nm = assay_nm,
+                missing_label = missing_label,
+                valid_label = valid_label
+            )
+            if (is.null(df) || !nrow(df)) {
+                return(NULL)
+            }
+            df$.pb_density_group <- group_info$annotation$.group_label[[idx]]
+            df
+        })
+        df_list <- Filter(Negate(is.null), df_list)
+        if (!length(df_list)) {
+            return(NULL)
+        }
+        return(do.call(rbind, df_list))
+    }
+
     has_observation <- rowSums(!is.na(data_matrix)) > 0
     if (!any(has_observation)) {
         return(NULL)
@@ -1052,6 +1285,25 @@ plot_NA_frequency.ProBatchFeatures <- function(
         stringsAsFactors = FALSE
     )
     df[is.finite(df$mean), , drop = FALSE]
+}
+
+.pb_missing_density_group_palette <- function(df, col_vector = NULL) {
+    if (!".pb_density_group" %in% names(df)) {
+        return(NULL)
+    }
+
+    .pb_build_annotation_colors(df$.pb_density_group, col_vector = col_vector)
+}
+
+.pb_missing_density_group_title <- function(color_by) {
+    if (.pb_missing_grouping_disabled(color_by)) {
+        return(NULL)
+    }
+    if (length(color_by) == 1L) {
+        return(as.character(color_by))
+    }
+
+    "Group"
 }
 
 .pb_missing_frequency_df <- function(data_matrix, assay_nm) {

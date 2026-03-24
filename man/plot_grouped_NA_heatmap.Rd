@@ -22,6 +22,7 @@ plot_grouped_NA_heatmap(x, ...)
   valid_color = "grey90",
   col_vector = NULL,
   drop_complete = TRUE,
+  force_binarization = FALSE,
   draw = TRUE,
   main = NULL,
   ...
@@ -41,6 +42,7 @@ plot_grouped_NA_heatmap(x, ...)
   valid_color = "grey90",
   col_vector = NULL,
   drop_complete = TRUE,
+  force_binarization = FALSE,
   nrow = NULL,
   ncol = NULL,
   draw = TRUE,
@@ -85,6 +87,12 @@ the unique values of `color_by`.}
 
 \item{drop_complete}{Logical, drop features without any missing values before
 plotting. Defaults to `TRUE` to focus on missingness patterns.}
+
+\item{force_binarization}{Optional threshold used to binarize grouped
+observed fractions. Use `FALSE` (default) to retain fractions, `TRUE` to
+use `0.5`, or a single numeric value in `[0, 1]` to mark group cells with
+observed fraction greater than or equal to the threshold as present and
+lower values as missing.}
 
 \item{draw}{Logical, draw the heatmap(s). Set to `FALSE` to obtain the grob(s)
 without plotting. For multiple assays, the arranged grob is returned

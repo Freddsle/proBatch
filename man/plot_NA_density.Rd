@@ -10,18 +10,25 @@ plot_NA_density(x, ...)
 
 \method{plot_NA_density}{default}(
   x,
+  sample_annotation = NULL,
+  sample_id_col = NULL,
+  color_by = NULL,
   missing_label = "Missing Value",
   valid_label = "Valid Value",
   palette = c(`Missing Value` = "#A92C23", `Valid Value` = "#345995"),
+  col_vector = NULL,
   ...
 )
 
 \method{plot_NA_density}{ProBatchFeatures}(
   x,
   pbf_name = NULL,
+  color_by = NULL,
+  sample_id_col = NULL,
   missing_label = "Missing Value",
   valid_label = "Valid Value",
   palette = c(`Missing Value` = "#A92C23", `Valid Value` = "#345995"),
+  col_vector = NULL,
   nrow = NULL,
   ncol = NULL,
   facet_scales = "free_y",
@@ -29,25 +36,30 @@ plot_NA_density(x, ...)
 )
 }
 \arguments{
-\item{x}{A data container. For the `ProBatchFeatures` method this must be a
-`ProBatchFeatures` object. The default method accepts any matrix-like input
-(including `SummarizedExperiment`).}
+\item{...}{Additional arguments forwarded to [ggplot2::geom_density()].}
 
-\item{...}{Additional parameters forwarded to [pheatmap::pheatmap()].}
+\item{sample_annotation}{Optional data frame with sample-level metadata. Row
+names (or the column specified via `sample_id_col`) must match the column
+names of the intensity matrix. When `x` is a `SummarizedExperiment`,
+`colData(x)` is used by default.}
+
+\item{sample_id_col}{Optional column in `sample_annotation` providing unique
+sample identifiers. Use this when the data frame lacks row names matching
+the assay column names.}
+
+\item{color_by}{Optional column name or character vector of column names in
+`sample_annotation` used to split grouped densities. When supplied,
+colours encode groups and linetypes encode `missing_label` and
+`valid_label`.}
 
 \item{missing_label, valid_label}{Labels used to distinguish rows with and
 without missing values.}
 
 \item{palette}{Named vector of colours mapped to `missing_label` and
-`valid_label`.}
+`valid_label` when `color_by` is not supplied.}
 
-\item{pbf_name}{Character scalar or vector with assay names to plot. When
-`NULL`, the most recent assay returned by [pb_current_assay()] is used.
-Only used by the `ProBatchFeatures` method.}
-
-\item{nrow, ncol}{Integers controlling the layout when multiple assays are
-plotted. If both are `NULL`, a roughly square layout is chosen
-automatically.}
+\item{col_vector}{Optional vector of colours recycled across grouped density
+lines defined by `color_by`.}
 
 \item{facet_scales}{Scaling behaviour passed to [ggplot2::facet_wrap()] when
 multiple assays are plotted.}
@@ -57,5 +69,7 @@ A `ggplot` object.
 }
 \description{
 Compare the distribution of average intensities between features with and
-without missing observations.
+without missing observations. When `color_by` is supplied, densities are
+computed within each sample group, colours distinguish groups, and linetypes
+distinguish `missing_label` from `valid_label`.
 }
