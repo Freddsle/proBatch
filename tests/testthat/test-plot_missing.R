@@ -358,8 +358,8 @@ test_that("plot_NA_density.default supports grouped densities", {
             "Missing Value"
         ),
         .pb_density_group = c(
-            rep("Condition=A (n=1)", 2L),
-            rep("Condition=B (n=2)", 3L)
+            rep("A", 2L),
+            rep("B", 3L)
         ),
         stringsAsFactors = FALSE
     )
@@ -401,10 +401,24 @@ test_that("plot_NA_density.ProBatchFeatures supports grouped densities", {
     )
     expect_setequal(
         unique(density_plot$data$.pb_density_group),
-        c("Condition=A (n=1)", "Condition=B (n=2)")
+        c("A", "B")
     )
     expect_equal(density_plot$labels$colour, "Condition")
     expect_equal(density_plot$labels$linetype, "Value Type")
+})
+
+test_that("plot_NA_density.default applies grouped color_scheme", {
+    density_plot <- plot_NA_density(
+        toy_matrix,
+        sample_annotation = toy_sa,
+        sample_id_col = "FullRunName",
+        color_by = "Condition",
+        color_scheme = c(A = "#111111", B = "#222222")
+    )
+
+    built <- ggplot_build(density_plot)
+
+    expect_setequal(unique(built$data[[1]]$colour), c("#111111", "#222222"))
 })
 
 

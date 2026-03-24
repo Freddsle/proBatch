@@ -340,6 +340,9 @@ plot_grouped_NA_heatmap.ProBatchFeatures <- function(
 #' computed within each sample group, colours distinguish groups, and linetypes
 #' distinguish `missing_label` from `valid_label`.
 #'
+#' @param x A data container. For the `ProBatchFeatures` method this must be a
+#'   `ProBatchFeatures` object. The default method accepts any matrix-like input
+#'   (including `SummarizedExperiment`).
 #' @param sample_annotation Optional data frame with sample-level metadata. Row
 #'   names (or the column specified via `sample_id_col`) must match the column
 #'   names of the intensity matrix. When `x` is a `SummarizedExperiment`,
@@ -355,8 +358,19 @@ plot_grouped_NA_heatmap.ProBatchFeatures <- function(
 #'   without missing values.
 #' @param palette Named vector of colours mapped to `missing_label` and
 #'   `valid_label` when `color_by` is not supplied.
+#' @param color_scheme Colour mapping used for grouped densities when
+#'   `color_by` is supplied. Accepts `"brewer"` (default), a named vector of
+#'   colours, or a named list such as returned by
+#'   [sample_annotation_to_colors()].
 #' @param col_vector Optional vector of colours recycled across grouped density
-#'   lines defined by `color_by`.
+#'   lines defined by `color_by`. Used as a simple fallback when
+#'   `color_scheme` is not supplied explicitly.
+#' @param pbf_name Character scalar or vector with assay names to plot. When
+#'   `NULL`, the most recent assay returned by [pb_current_assay()] is used.
+#'   Only used by the `ProBatchFeatures` method.
+#' @param nrow,ncol Integers controlling the layout when multiple assays are
+#'   plotted. If both are `NULL`, a roughly square layout is chosen
+#'   automatically.
 #' @param facet_scales Scaling behaviour passed to [ggplot2::facet_wrap()] when
 #'   multiple assays are plotted.
 #' @param ... Additional arguments forwarded to [ggplot2::geom_density()].
@@ -376,6 +390,7 @@ plot_NA_density.default <- function(
   missing_label = "Missing Value",
   valid_label = "Valid Value",
   palette = c(`Missing Value` = "#A92C23", `Valid Value` = "#345995"),
+  color_scheme = "brewer",
   col_vector = NULL,
   ...
 ) {
@@ -415,7 +430,11 @@ plot_NA_density.default <- function(
     .pb_plot_missing_density(
         df = df,
         palette = .pb_match_palette(palette, c(missing_label, valid_label)),
-        group_palette = .pb_missing_density_group_palette(df, col_vector = col_vector),
+        color_scheme = .pb_resolve_missing_density_color_scheme(
+            color_scheme = color_scheme,
+            color_by = color_by,
+            col_vector = col_vector
+        ),
         group_label = .pb_missing_density_group_title(color_by),
         missing_label = missing_label,
         valid_label = valid_label,
@@ -434,6 +453,7 @@ plot_NA_density.ProBatchFeatures <- function(
   missing_label = "Missing Value",
   valid_label = "Valid Value",
   palette = c(`Missing Value` = "#A92C23", `Valid Value` = "#345995"),
+  color_scheme = "brewer",
   col_vector = NULL,
   nrow = NULL,
   ncol = NULL,
@@ -475,7 +495,11 @@ plot_NA_density.ProBatchFeatures <- function(
     .pb_plot_missing_density(
         df = combined,
         palette = .pb_match_palette(palette, c(missing_label, valid_label)),
-        group_palette = .pb_missing_density_group_palette(combined, col_vector = col_vector),
+        color_scheme = .pb_resolve_missing_density_color_scheme(
+            color_scheme = color_scheme,
+            color_by = color_by,
+            col_vector = col_vector
+        ),
         group_label = .pb_missing_density_group_title(color_by),
         missing_label = missing_label,
         valid_label = valid_label,
@@ -728,7 +752,13 @@ plot_NA_frequency.ProBatchFeatures <- function(
     group_ids <- unname(apply(grouped_annotation, 1, function(values) {
         paste(sprintf("%s=%s", color_by, values), collapse = " | ")
     }))
+    group_keys <- if (length(color_by) == 1L) {
+        grouped_annotation[[color_by]]
+    } else {
+        group_ids
+    }
     group_sizes <- unname(vapply(group_indices, length, integer(1)))
+    grouped_annotation$.group_key <- group_keys
     grouped_annotation$.group_size <- group_sizes
     grouped_annotation$.group_label <- paste0(group_ids, " (n=", group_sizes, ")")
     rownames(grouped_annotation) <- group_ids
@@ -1142,7 +1172,7 @@ plot_NA_frequency.ProBatchFeatures <- function(
 
 .pb_plot_missing_density <- function(df,
                                      palette,
-                                     group_palette,
+                                     color_scheme,
                                      group_label,
                                      missing_label,
                                      valid_label,
@@ -1151,34 +1181,29 @@ plot_NA_frequency.ProBatchFeatures <- function(
                                      facet_scales = "free_y",
                                      density_params = list()) {
     if (".pb_density_group" %in% names(df)) {
+        n_groups <- length(unique(df$.pb_density_group))
         density_layer <- do.call(
             geom_density,
-            c(list(
-                mapping = aes(
-                    colour = .data$.pb_density_group,
-                    linetype = .data$Type,
-                    group = interaction(.data$.pb_density_group, .data$Type)
-                ),
-                na.rm = TRUE
-            ), density_params)
+            c(list(na.rm = TRUE), density_params)
         )
         linetype_values <- c(
             setNames("dashed", missing_label),
             setNames("solid", valid_label)
         )
-        p <- ggplot(df, aes(x = .data$mean)) +
-            density_layer +
-            labs(
-                x = "Intensity",
-                y = "Density",
-                colour = group_label,
-                linetype = "Value Type"
-            ) +
-            scale_colour_manual(
-                values = group_palette,
-                breaks = names(group_palette),
-                drop = FALSE
-            ) +
+        p <- ggplot(df, aes(
+            x = .data$mean,
+            linetype = .data$Type,
+            group = interaction(.data$.pb_density_group, .data$Type)
+        )) +
+            density_layer
+        p <- color_discrete(
+            color_scheme = color_scheme,
+            batch_col = ".pb_density_group",
+            n_batches = n_groups,
+            fill_or_color = "color",
+            gg = p
+        ) +
+            labs(x = "Intensity", y = "Density", colour = group_label, linetype = "Value Type") +
             scale_linetype_manual(
                 values = linetype_values,
                 breaks = c(missing_label, valid_label),
@@ -1200,7 +1225,7 @@ plot_NA_frequency.ProBatchFeatures <- function(
         p <- p + facet_wrap(~pbf_name, nrow = layout$nrow, ncol = layout$ncol, scales = facet_scales)
     }
 
-    p
+    p + .pb_missing_density_theme()
 }
 
 .pb_plot_missing_frequency <- function(freq_df,
@@ -1262,7 +1287,7 @@ plot_NA_frequency.ProBatchFeatures <- function(
             if (is.null(df) || !nrow(df)) {
                 return(NULL)
             }
-            df$.pb_density_group <- group_info$annotation$.group_label[[idx]]
+            df$.pb_density_group <- group_info$annotation$.group_key[[idx]]
             df
         })
         df_list <- Filter(Negate(is.null), df_list)
@@ -1287,14 +1312,6 @@ plot_NA_frequency.ProBatchFeatures <- function(
     df[is.finite(df$mean), , drop = FALSE]
 }
 
-.pb_missing_density_group_palette <- function(df, col_vector = NULL) {
-    if (!".pb_density_group" %in% names(df)) {
-        return(NULL)
-    }
-
-    .pb_build_annotation_colors(df$.pb_density_group, col_vector = col_vector)
-}
-
 .pb_missing_density_group_title <- function(color_by) {
     if (.pb_missing_grouping_disabled(color_by)) {
         return(NULL)
@@ -1304,6 +1321,35 @@ plot_NA_frequency.ProBatchFeatures <- function(
     }
 
     "Group"
+}
+
+.pb_resolve_missing_density_color_scheme <- function(color_scheme,
+                                                     color_by,
+                                                     col_vector = NULL) {
+    if (!is.null(col_vector)) {
+        return(col_vector)
+    }
+    if (is.null(color_scheme)) {
+        return("brewer")
+    }
+    if (is.list(color_scheme)) {
+        if (length(color_by) == 1L &&
+            !is.null(names(color_scheme)) &&
+            color_by %in% names(color_scheme)) {
+            return(color_scheme[[color_by]])
+        }
+        return("brewer")
+    }
+
+    color_scheme
+}
+
+.pb_missing_density_theme <- function() {
+    theme_bw() +
+        theme(
+            panel.grid.major = element_line(color = "grey92"),
+            panel.grid.minor = element_blank()
+        )
 }
 
 .pb_missing_frequency_df <- function(data_matrix, assay_nm) {

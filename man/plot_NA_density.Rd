@@ -16,6 +16,7 @@ plot_NA_density(x, ...)
   missing_label = "Missing Value",
   valid_label = "Valid Value",
   palette = c(`Missing Value` = "#A92C23", `Valid Value` = "#345995"),
+  color_scheme = "brewer",
   col_vector = NULL,
   ...
 )
@@ -28,6 +29,7 @@ plot_NA_density(x, ...)
   missing_label = "Missing Value",
   valid_label = "Valid Value",
   palette = c(`Missing Value` = "#A92C23", `Valid Value` = "#345995"),
+  color_scheme = "brewer",
   col_vector = NULL,
   nrow = NULL,
   ncol = NULL,
@@ -36,6 +38,10 @@ plot_NA_density(x, ...)
 )
 }
 \arguments{
+\item{x}{A data container. For the `ProBatchFeatures` method this must be a
+`ProBatchFeatures` object. The default method accepts any matrix-like input
+(including `SummarizedExperiment`).}
+
 \item{...}{Additional arguments forwarded to [ggplot2::geom_density()].}
 
 \item{sample_annotation}{Optional data frame with sample-level metadata. Row
@@ -58,8 +64,22 @@ without missing values.}
 \item{palette}{Named vector of colours mapped to `missing_label` and
 `valid_label` when `color_by` is not supplied.}
 
+\item{color_scheme}{Colour mapping used for grouped densities when
+`color_by` is supplied. Accepts `"brewer"` (default), a named vector of
+colours, or a named list such as returned by
+[sample_annotation_to_colors()].}
+
 \item{col_vector}{Optional vector of colours recycled across grouped density
-lines defined by `color_by`.}
+lines defined by `color_by`. Used as a simple fallback when
+`color_scheme` is not supplied explicitly.}
+
+\item{pbf_name}{Character scalar or vector with assay names to plot. When
+`NULL`, the most recent assay returned by [pb_current_assay()] is used.
+Only used by the `ProBatchFeatures` method.}
+
+\item{nrow, ncol}{Integers controlling the layout when multiple assays are
+plotted. If both are `NULL`, a roughly square layout is chosen
+automatically.}
 
 \item{facet_scales}{Scaling behaviour passed to [ggplot2::facet_wrap()] when
 multiple assays are plotted.}
