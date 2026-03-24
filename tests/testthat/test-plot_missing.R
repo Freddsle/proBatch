@@ -134,6 +134,56 @@ test_that(".pb_group_missing_matrix aggregates observed fractions by group", {
     )
 })
 
+test_that(".pb_group_missing_matrix binarizes grouped fractions at 0.5 when requested", {
+    grouped <- .pb_group_missing_matrix(
+        data_matrix = toy_matrix,
+        sample_annotation = toy_sa,
+        sample_id_col = "FullRunName",
+        color_by = "Condition",
+        drop_complete = FALSE,
+        force_binarization = TRUE
+    )
+
+    expected <- matrix(
+        c(
+            1, 1, 0,
+            1, 1, 1
+        ),
+        nrow = 3,
+        dimnames = list(
+            rownames(toy_matrix),
+            c("Condition=A", "Condition=B")
+        )
+    )
+
+    expect_equal(grouped$matrix, expected)
+})
+
+test_that(".pb_group_missing_matrix applies numeric binarization before drop_complete", {
+    grouped <- .pb_group_missing_matrix(
+        data_matrix = toy_matrix,
+        sample_annotation = toy_sa,
+        sample_id_col = "FullRunName",
+        color_by = "Condition",
+        drop_complete = TRUE,
+        force_binarization = 0.75
+    )
+
+    expected <- matrix(
+        c(
+            1, 0,
+            0, 1
+        ),
+        nrow = 2,
+        dimnames = list(
+            c("prot1", "prot3"),
+            c("Condition=A", "Condition=B")
+        )
+    )
+
+    expect_equal(grouped$matrix, expected)
+})
+
 test_that(".pb_group_missing_matrix supports multi-column grouping", {
     grouped <- .pb_group_missing_matrix(
         data_matrix = toy_matrix,
@@ -192,6 +242,19 @@ test_that("plot_grouped_NA_heatmap.default requires color_by", {
             draw = FALSE
         ),
         "require one or more metadata columns in `color_by`"
+    )
+})
+
+test_that("plot_grouped_NA_heatmap.default validates force_binarization", {
+    expect_error(
+        plot_grouped_NA_heatmap(
+            toy_matrix,
+            sample_annotation = toy_sa,
+            color_by = "Condition",
+            force_binarization = 1.1,
+            draw = FALSE
+        ),
+        "`force_binarization` must be FALSE, TRUE, or a single numeric value between 0 and 1."
     )
 })
 
