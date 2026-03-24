@@ -23,6 +23,7 @@ toy_matrix2 <- matrix(
 toy_sa <- data.frame(
     FullRunName = colnames(toy_matrix),
     Condition = c("A", "B", "B"),
+    Lab = c("L1", "L1", "L2"),
     Label = paste("Sample", seq_len(ncol(toy_matrix))),
     stringsAsFactors = FALSE
 )
@@ -103,6 +104,97 @@ test_that("plot_NA_heatmap.default supports multiple color_by columns", {
     expect_s3_class(res, "pheatmap")
 })
 
+test_that(".pb_group_missing_matrix aggregates observed fractions by group", {
+    grouped <- .pb_group_missing_matrix(
+        data_matrix = toy_matrix,
+        sample_annotation = toy_sa,
+        sample_id_col = "FullRunName",
+        color_by = "Condition",
+        drop_complete = FALSE
+    )
+
+    expected <- matrix(
+        c(
+            1, 1, 0,
+            0.5, 1, 1
+        ),
+        nrow = 3,
+        dimnames = list(
+            rownames(toy_matrix),
+            c("Condition=A", "Condition=B")
+        )
+    )
+
+    expect_equal(grouped$matrix, expected)
+    expect_equal(grouped$annotation$Condition, c("A", "B"))
+    expect_equal(grouped$annotation$.group_size, c(1L, 2L))
+    expect_equal(
+        grouped$annotation$.group_label,
+        c("Condition=A (n=1)", "Condition=B (n=2)")
+    )
+})
+
+test_that(".pb_group_missing_matrix supports multi-column grouping", {
+    grouped <- .pb_group_missing_matrix(
+        data_matrix = toy_matrix,
+        sample_annotation = toy_sa,
+        sample_id_col = "FullRunName",
+        color_by = c("Condition", "Lab"),
+        drop_complete = TRUE
+    )
+
+    expected <- matrix(
+        c(
+            1, 0,
+            0, 1,
+            1, 1
+        ),
+        nrow = 2,
+        dimnames = list(
+            c("prot1", "prot3"),
+            c(
+                "Condition=A | Lab=L1",
+                "Condition=B | Lab=L1",
+                "Condition=B | Lab=L2"
+            )
+        )
+    )
+
+    expect_equal(grouped$matrix, expected)
+    expect_equal(grouped$annotation$Condition, c("A", "B", "B"))
+    expect_equal(grouped$annotation$Lab, c("L1", "L1", "L2"))
+    expect_equal(grouped$annotation$.group_size, c(1L, 1L, 1L))
+})
+
+test_that("plot_grouped_NA_heatmap.default supports grouped observed fractions", {
+    skip_if_not_installed("pheatmap")
+
+    res <- plot_grouped_NA_heatmap(
+        toy_matrix,
+        sample_annotation = toy_sa,
+        color_by = c("Condition", "Lab"),
+        cluster_samples = FALSE,
+        cluster_features = FALSE,
+        show_row_dend = FALSE,
+        show_column_dend = FALSE,
+        drop_complete = FALSE,
+        draw = FALSE
+    )
+
+    expect_s3_class(res, "pheatmap")
+})
+
+test_that("plot_grouped_NA_heatmap.default requires color_by", {
+    expect_error(
+        plot_grouped_NA_heatmap(
+            toy_matrix,
+            sample_annotation = toy_sa,
+            draw = FALSE
+        ),
+        "require one or more metadata columns in `color_by`"
+    )
+})
+
 
 test_that("plot_NA_heatmap.ProBatchFeatures arranges multiple assays", {
     skip_if_not_installed("pheatmap")
@@ -145,6 +237,28 @@ test_that("plot_NA_heatmap.ProBatchFeatures accepts explicit main without collis
     )
 
     expect_s3_class(res, "pheatmap")
+})
+
+test_that("plot_grouped_NA_heatmap.ProBatchFeatures supports grouped observed fractions", {
+    skip_if_not_installed("pheatmap")
+    skip_if_not_installed("gridExtra")
+
+    res <- plot_grouped_NA_heatmap(
+        pbf_multi,
+        pbf_name = c(toy_assay, toy_assay_alt),
+        color_by = c("Condition", "Lab"),
+        cluster_samples = FALSE,
+        cluster_features = FALSE,
+        show_row_dend = FALSE,
+        show_column_dend = FALSE,
+        drop_complete = FALSE,
+        draw = FALSE
+    )
+
+    expect_type(res, "list")
+    expect_s3_class(res$grob, "gtable")
+    expect_length(res$heatmaps, 2L)
+    expect_true(all(vapply(res$heatmaps, inherits, logical(1), what = "pheatmap")))
 })
 
 
