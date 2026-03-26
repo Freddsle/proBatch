@@ -7,6 +7,21 @@ test_that(".pb_split_arg_by_assay keeps atomic vectors intact", {
     expect_true(all(vapply(res, identical, logical(1), vec)))
 })
 
+test_that(".pb_split_arg_by_assay can map atomic vectors per assay", {
+    assays <- paste0("assay", 1:4)
+    vec <- c("title1", "title2", "title3")
+    res <- proBatch:::`.pb_split_arg_by_assay`(
+        vec,
+        assays,
+        atomic_vector_mode = "per_assay"
+    )
+
+    expect_equal(res[[1]], "title1")
+    expect_equal(res[[2]], "title2")
+    expect_equal(res[[3]], "title3")
+    expect_equal(res[[4]], "title3")
+})
+
 test_that(".pb_split_arg_by_assay honours named vectors", {
     assays <- c("assay1", "assay2", "assay3")
     vec <- c(assay1 = "x", assay3 = "z")

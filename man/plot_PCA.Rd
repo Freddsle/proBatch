@@ -27,7 +27,11 @@
   point_alpha = 0.8,
   marginal_density = FALSE,
   x_nPC = NULL,
-  y_nPC = NULL
+  y_nPC = NULL,
+  pca_method = c("svd", "bpca"),
+  bpca_nPcs = NULL,
+  bpca_center = TRUE,
+  bpca_scale = c("none", "pareto", "vector", "uv")
 )
 
 \method{plot_PCA}{ProBatchFeatures}(
@@ -107,6 +111,20 @@ to override `PC_to_plot`.}
 \item{y_nPC}{Optional integer PC index for the y axis. Use together with `x_nPC`
 to override `PC_to_plot`.}
 
+\item{pca_method}{PCA backend used to calculate the embedding. `"svd"`
+preserves the current `prcomp()`-based behavior; `"bpca"` uses
+`pcaMethods::pca(method = "bpca")` and can estimate missing values
+internally.}
+
+\item{bpca_nPcs}{Number of components fitted by Bayesian PCA. If `NULL`,
+the largest requested PC index is used.}
+
+\item{bpca_center}{Logical indicating if variables should be centered before
+Bayesian PCA.}
+
+\item{bpca_scale}{Scaling used by Bayesian PCA. One of `"none"`,
+`"pareto"`, `"vector"`, or `"uv"`.}
+
 \item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
 
 \item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
@@ -152,6 +170,17 @@ pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
     color_by = "MS_batch", x_nPC = 2, y_nPC = 3,
     plot_title = "PCA (PC2 vs PC3)"
 )
+
+if (requireNamespace("pcaMethods", quietly = TRUE)) {
+    pca_plot <- plot_PCA(
+        example_proteome_matrix,
+        example_sample_annotation,
+        color_by = "MS_batch",
+        pca_method = "bpca",
+        bpca_nPcs = 5,
+        bpca_scale = "uv"
+    )
+}
 
 pca_file <- tempfile("pca_plot", fileext = ".png")
 pca_plot <- plot_PCA(matrix_test, example_sample_annotation,

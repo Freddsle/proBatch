@@ -252,6 +252,108 @@ test_that("pb_as_long reuses matrix_to_long and round-trips vs direct call", {
     expect_equal(long_a2[ord_a, , drop = FALSE], long_b2[ord_b, , drop = FALSE])
 })
 
+test_that("pb_subset_samples filters all assays using sample metadata", {
+    pb_test_load_example_data()
+
+    matrix_small <- example_proteome_matrix[1:10, 1:6, drop = FALSE]
+    sample_ids <- colnames(matrix_small)
+    sample_ann <- example_sample_annotation[
+        match(sample_ids, example_sample_annotation$FullRunName), ,
+        drop = FALSE
+    ]
+    sample_ann$SampleName <- sample_ann$FullRunName
+    sample_ann$Group <- c("Pool", "Study", "StPool", "Study", "Pool", "Study")
+
+    pbf <- suppressMessages(ProBatchFeatures(
+        data_matrix = matrix_small,
+        sample_annotation = sample_ann,
+        sample_id_col = "SampleName",
+        name = "feature::raw"
+    ))
+    pbf <- suppressMessages(pb_transform(
+        pbf,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    ))
+
+    keep_mask <- sample_ann$Group %in% c("Pool", "StPool")
+    expected_ids <- sample_ann$SampleName[keep_mask]
+
+    pbf_pool <- pb_subset_samples(
+        pbf,
+        sample_id_col = "SampleName",
+        subset_by = "Group",
+        subset_values = c("Pool", "StPool")
+    )
+
+    expect_s4_class(pbf_pool, "ProBatchFeatures")
+    expect_true(validObject(pbf_pool))
+    expect_identical(names(pbf_pool), names(pbf))
+    expect_identical(pb_current_assay(pbf_pool), pb_current_assay(pbf))
+    expect_identical(rownames(colData(pbf_pool)), expected_ids)
+    expect_identical(as.character(colData(pbf_pool)$Group), sample_ann$Group[keep_mask])
+
+    for (assay_name in names(pbf_pool)) {
+        expect_identical(
+            colnames(SummarizedExperiment::assay(pbf_pool[[assay_name]], "intensity")),
+            expected_ids
+        )
+    }
+})
+
+test_that("pb_subset_samples errors when the subset column is absent", {
+    pbf <- pb_test_make_pbf(n_rows = 10, n_cols = 4)
+
+    expect_error(
+        pb_subset_samples(
+            pbf,
+            sample_id_col = "FullRunName",
+            subset_by = "Group",
+            subset_values = "Pool"
+        ),
+        "Column 'Group' not found in `colData\\(object\\)`\\."
+    )
+})
+
+test_that("three-index sample subsetting preserves assays in ProBatchFeatures", {
+    pb_test_load_example_data()
+
+    matrix_small <- example_proteome_matrix[1:10, 1:6, drop = FALSE]
+    sample_ids <- colnames(matrix_small)
+    sample_ann <- example_sample_annotation[
+        match(sample_ids, example_sample_annotation$FullRunName), ,
+        drop = FALSE
+    ]
+
+    pbf <- suppressMessages(ProBatchFeatures(
+        data_matrix = matrix_small,
+        sample_annotation = sample_ann,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    ))
+    pbf <- suppressMessages(pb_transform(
+        pbf,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    ))
+
+    keep <- c(TRUE, FALSE, TRUE, FALSE, TRUE, FALSE)
+    subsetted <- pbf[, keep, , drop = FALSE]
+
+    expect_s4_class(subsetted, "ProBatchFeatures")
+    expect_identical(names(subsetted), names(pbf))
+    expect_identical(rownames(colData(subsetted)), sample_ids[keep])
+
+    for (assay_name in names(subsetted)) {
+        expect_identical(
+            colnames(SummarizedExperiment::assay(subsetted[[assay_name]], "intensity")),
+            sample_ids[keep]
+        )
+    }
+})
+
 test_that("internal logging helper updates oplog and chain", {
     pb_test_load_example_data()
 

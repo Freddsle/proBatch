@@ -7,7 +7,9 @@
     )
 }
 
-.pb_split_arg_by_assay <- function(arg, assays) {
+.pb_split_arg_by_assay <- function(arg, assays,
+                                   atomic_vector_mode = c("shared", "per_assay")) {
+    atomic_vector_mode <- match.arg(atomic_vector_mode)
     n <- length(assays)
     res <- vector("list", n)
 
@@ -26,8 +28,10 @@
 
     if (!list_like && is.atomic(arg)) {
         # Treat atomic vectors (e.g., character vectors of column names)
-        # as shared arguments unless explicitly named.
-        if (length(arg) > 1L && is.null(names(arg))) {
+        # as shared arguments unless explicitly named or requested otherwise.
+        if (atomic_vector_mode == "shared" &&
+            length(arg) > 1L &&
+            is.null(names(arg))) {
             for (i in seq_len(n)) {
                 res[[i]] <- arg
             }
@@ -69,7 +73,11 @@
 }
 
 .pb_resolve_titles <- function(assays, plot_title, default_fun = .pb_default_title) {
-    title_list <- .pb_split_arg_by_assay(plot_title, assays)
+    title_list <- .pb_split_arg_by_assay(
+        arg = plot_title,
+        assays = assays,
+        atomic_vector_mode = "per_assay"
+    )
     vapply(seq_along(assays), function(i) {
         val <- title_list[[i]]
         if (is.null(val) || length(val) == 0L) {

@@ -5,7 +5,7 @@
 \alias{ProBatchFeatures-subset}
 \title{Subset `ProBatchFeatures` objects without dropping metadata.}
 \usage{
-\S4method{[}{ProBatchFeatures,ANY,ANY,ANY}(x, i, j, ..., drop = TRUE)
+\S4method{[}{ProBatchFeatures,ANY,ANY,ANY}(x, i, j, k, ..., drop = TRUE)
 }
 \arguments{
 \item{x}{A `ProBatchFeatures` object.}

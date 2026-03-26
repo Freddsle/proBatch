@@ -1154,6 +1154,103 @@ prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
 #' @name plot_PVCA.df
 plot_PVCA.df <- function(df, ...) UseMethod("plot_PVCA.df")
 
+.pb_format_pc_axis_label <- function(pc_idx, variance_explained = NULL) {
+    variance_value <- variance_explained[pc_idx] %||% NA_real_
+
+    if (length(variance_value) == 1L &&
+        is.finite(variance_value) &&
+        !is.na(variance_value)) {
+        return(sprintf("PC%d (%.2f%%)", pc_idx, 100 * variance_value))
+    }
+
+    sprintf("PC%d", pc_idx)
+}
+
+.pb_compute_pca_embedding <- function(data_matrix,
+                                      PC_to_plot,
+                                      pca_method = c("svd", "bpca"),
+                                      bpca_nPcs = NULL,
+                                      bpca_center = TRUE,
+                                      bpca_scale = c("none", "pareto", "vector", "uv")) {
+    pca_method <- match.arg(pca_method)
+
+    if (pca_method == "svd") {
+        pr_comp_res <- prcomp(t(data_matrix))
+        variance_explained <- pr_comp_res$sdev^2
+        variance_explained <- variance_explained / sum(variance_explained)
+
+        if (any(PC_to_plot < 1L) || max(PC_to_plot) > ncol(pr_comp_res$x)) {
+            stop(sprintf(
+                "Requested PCs %s are out of range; available PCs = 1..%d",
+                paste(PC_to_plot, collapse = ", "),
+                ncol(pr_comp_res$x)
+            ))
+        }
+
+        return(list(
+            embedding_matrix = as.matrix(pr_comp_res$x[, PC_to_plot, drop = FALSE]),
+            variance_explained = variance_explained
+        ))
+    }
+
+    if (!requireNamespace("pcaMethods", quietly = TRUE)) {
+        stop(
+            "Package 'pcaMethods' is required for pca_method = 'bpca'; install it with BiocManager::install('pcaMethods').",
+            call. = FALSE
+        )
+    }
+
+    if (!is.logical(bpca_center) || length(bpca_center) != 1L || is.na(bpca_center)) {
+        stop("bpca_center must be TRUE or FALSE.")
+    }
+
+    if (is.null(bpca_scale)) {
+        bpca_scale <- "none"
+    }
+    bpca_scale <- match.arg(bpca_scale)
+
+    bpca_nPcs <- bpca_nPcs %||% max(PC_to_plot)
+    if (!is.numeric(bpca_nPcs) || length(bpca_nPcs) != 1L || is.na(bpca_nPcs) ||
+        bpca_nPcs < 1 || bpca_nPcs %% 1 != 0) {
+        stop("bpca_nPcs must be a positive integer.")
+    }
+    bpca_nPcs <- as.integer(bpca_nPcs)
+
+    if (bpca_nPcs < max(PC_to_plot)) {
+        stop("bpca_nPcs must be at least the largest requested PC index.")
+    }
+
+    bpca_input <- t(as.matrix(data_matrix))
+    storage.mode(bpca_input) <- "double"
+
+    bpca_res <- pcaMethods::pca(
+        object = bpca_input,
+        method = "bpca",
+        nPcs = bpca_nPcs,
+        center = bpca_center,
+        scale = bpca_scale,
+        completeObs = TRUE
+    )
+
+    score_matrix <- as.matrix(methods::slot(bpca_res, "scores"))
+    if (!ncol(score_matrix)) {
+        stop("Bayesian PCA did not return any score vectors.")
+    }
+
+    if (any(PC_to_plot < 1L) || max(PC_to_plot) > ncol(score_matrix)) {
+        stop(sprintf(
+            "Requested PCs %s are out of range; available PCs = 1..%d",
+            paste(PC_to_plot, collapse = ", "),
+            ncol(score_matrix)
+        ))
+    }
+
+    list(
+        embedding_matrix = score_matrix[, PC_to_plot, drop = FALSE],
+        variance_explained = methods::slot(bpca_res, "R2")
+    )
+}
+
 #' plot PCA plot
 #'
 #' @inheritParams proBatch
@@ -1175,6 +1272,16 @@ plot_PVCA.df <- function(df, ...) UseMethod("plot_PVCA.df")
 #'   marginal density plots grouped by `color_by`. If a column name is
 #'   provided, densities are grouped by that column. Numeric-like grouping
 #'   columns fall back to pooled marginals.
+#' @param pca_method PCA backend used to calculate the embedding. `"svd"`
+#'   preserves the current `prcomp()`-based behavior; `"bpca"` uses
+#'   `pcaMethods::pca(method = "bpca")` and can estimate missing values
+#'   internally.
+#' @param bpca_nPcs Number of components fitted by Bayesian PCA. If `NULL`,
+#'   the largest requested PC index is used.
+#' @param bpca_center Logical indicating if variables should be centered before
+#'   Bayesian PCA.
+#' @param bpca_scale Scaling used by Bayesian PCA. One of `"none"`,
+#'   `"pareto"`, `"vector"`, or `"uv"`.
 #' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
 #' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
@@ -1216,6 +1323,17 @@ plot_PVCA.df <- function(df, ...) UseMethod("plot_PVCA.df")
 #'     plot_title = "PCA (PC2 vs PC3)"
 #' )
 #'
+#' if (requireNamespace("pcaMethods", quietly = TRUE)) {
+#'     pca_plot <- plot_PCA(
+#'         example_proteome_matrix,
+#'         example_sample_annotation,
+#'         color_by = "MS_batch",
+#'         pca_method = "bpca",
+#'         bpca_nPcs = 5,
+#'         bpca_scale = "uv"
+#'     )
+#' }
+#'
 #' pca_file <- tempfile("pca_plot", fileext = ".png")
 #' pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
 #'     color_by = "DateTime", plot_title = "PCA colored by DateTime",
@@ -1239,7 +1357,14 @@ plot_PCA.default <- function(data_matrix,
                              theme_name = "classic",
                              base_size = 10, point_size = 3, point_alpha = 0.8,
                              marginal_density = FALSE,
-                             x_nPC = NULL, y_nPC = NULL) {
+                             x_nPC = NULL, y_nPC = NULL,
+                             pca_method = c("svd", "bpca"),
+                             bpca_nPcs = NULL,
+                             bpca_center = TRUE,
+                             bpca_scale = c("none", "pareto", "vector", "uv")) {
+    fill_missing_supplied <- !missing(fill_the_missing)
+    pca_method <- match.arg(pca_method)
+
     prep <- .pb_prepare_embedding_inputs(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
@@ -1247,7 +1372,11 @@ plot_PCA.default <- function(data_matrix,
         feature_id_col = feature_id_col,
         color_by = color_by,
         fill_the_missing = fill_the_missing,
-        warning_message = "PCA cannot operate with missing values in the matrix",
+        warning_message = if (pca_method == "svd") {
+            "PCA cannot operate with missing values in the matrix"
+        } else {
+            NULL
+        },
         allow_partial_annotation = FALSE,
         check_args = list(batch_col = color_by),
         drop_on_false = TRUE
@@ -1285,30 +1414,34 @@ plot_PCA.default <- function(data_matrix,
     }
     PC_to_plot <- as.integer(PC_to_plot)
 
-    # Compute PCA on samples (rows = samples); prcomp keeps rows order
-    # NOTE: center/scale left at defaults to match previous behavior
-    pr_comp_res <- prcomp(t(data_matrix))
-    # variance explained per PC
-    var_expl <- (pr_comp_res$sdev^2)
-    var_expl <- var_expl / sum(var_expl)
-
-    # Validate requested PCs
-    if (any(PC_to_plot < 1L) || max(PC_to_plot) > ncol(pr_comp_res$x)) {
-        stop(sprintf(
-            "Requested PCs %s are out of range; available PCs = 1..%d",
-            paste(PC_to_plot, collapse = ", "),
-            ncol(pr_comp_res$x)
-        ))
+    if (pca_method == "bpca" &&
+        fill_missing_supplied &&
+        !isFALSE(fill_the_missing) &&
+        anyNA(data_matrix)) {
+        data_matrix <- .pb_handle_missing_wrapper(
+            data_matrix = data_matrix,
+            warning_message = "Applying requested fill_the_missing before Bayesian PCA.",
+            fill_the_missing = fill_the_missing,
+            drop_on_false = TRUE
+        )
     }
 
-    # Build embedding matrix [n_samples x 2] in the same sample order
-    embedding_matrix <- as.matrix(pr_comp_res$x[, PC_to_plot, drop = FALSE])
+    pca_fit <- .pb_compute_pca_embedding(
+        data_matrix = data_matrix,
+        PC_to_plot = PC_to_plot,
+        pca_method = pca_method,
+        bpca_nPcs = bpca_nPcs,
+        bpca_center = bpca_center,
+        bpca_scale = bpca_scale
+    )
+    embedding_matrix <- pca_fit$embedding_matrix
+    var_expl <- pca_fit$variance_explained
 
     # Axis labels and title (consistent with helpers)
     axis_labels <- list(
-        title = "PCA",
-        x = sprintf("PC%d (%.2f%%)", PC_to_plot[1], 100 * var_expl[PC_to_plot[1]]),
-        y = sprintf("PC%d (%.2f%%)", PC_to_plot[2], 100 * var_expl[PC_to_plot[2]])
+        title = if (pca_method == "bpca") "Bayesian PCA" else "PCA",
+        x = .pb_format_pc_axis_label(PC_to_plot[1], var_expl),
+        y = .pb_format_pc_axis_label(PC_to_plot[2], var_expl)
     )
 
     # Pass theme_name = NULL so we apply theme with base_size after.

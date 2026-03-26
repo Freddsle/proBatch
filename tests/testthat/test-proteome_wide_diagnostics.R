@@ -110,6 +110,50 @@ test_that("plot_PCA warns on missing values and honors x/y PC selection", {
     expect_match(pca_xy$labels$y, "^PC3 ")
 })
 
+test_that("plot_PCA supports Bayesian PCA on incomplete matrices", {
+    skip_if_not_installed("pcaMethods")
+
+    pb_test_load_example_data()
+
+    color_list <- sample_annotation_to_colors(
+        example_sample_annotation,
+        sample_id_col = "FullRunName",
+        factor_columns = "MS_batch"
+    )
+
+    warnings_seen <- character()
+    pca_bpca <- withCallingHandlers(
+        plot_PCA(
+            example_proteome_matrix,
+            example_sample_annotation,
+            color_by = "MS_batch",
+            color_scheme = color_list[["MS_batch"]],
+            pca_method = "bpca",
+            bpca_nPcs = 3,
+            x_nPC = 2,
+            y_nPC = 3
+        ),
+        warning = function(w) {
+            warnings_seen <<- c(warnings_seen, conditionMessage(w))
+            invokeRestart("muffleWarning")
+        }
+    )
+
+    expect_s3_class(pca_bpca, "ggplot")
+    expect_match(pca_bpca$labels$x, "^PC2")
+    expect_match(pca_bpca$labels$y, "^PC3")
+    expect_false(any(grepl(
+        "PCA cannot operate with missing values in the matrix",
+        warnings_seen,
+        fixed = TRUE
+    )))
+    expect_false(any(grepl(
+        "filling missing values with -1",
+        warnings_seen,
+        fixed = TRUE
+    )))
+})
+
 test_that("plot_PCA supports marginal density plots", {
     pb_test_load_example_data()
 
