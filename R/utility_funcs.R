@@ -200,17 +200,9 @@ check_sample_consistency <- function(sample_annotation, sample_id_col, df_long,
 
 # -- Shared all-NA row/column helpers ----------------------------------------
 
-#' Detect and remove all-NA rows/columns from a matrix
-#'
-#' Returns the trimmed matrix plus index vectors needed to restore the
-#' original dimensions via \code{.pb_restore_allna()}.
-#'
-#' @param data_matrix numeric matrix (features x samples)
-#' @param label short string used in messages (e.g. \code{"omicsGMF imputation"})
-#' @return list with elements \code{matrix}, \code{orig_rownames},
-#'   \code{orig_colnames}, \code{all_na_rows}, \code{all_na_cols},
-#'   \code{needs_restore}.
-#' @keywords internal
+# Detect and remove all-NA rows/columns from a matrix.
+# Returns the trimmed matrix plus index vectors needed to restore the
+# original dimensions via .pb_restore_allna().
 .pb_strip_allna <- function(data_matrix, label = NULL) {
     all_na_rows <- which(rowSums(!is.na(data_matrix)) == 0L)
     all_na_cols <- which(colSums(!is.na(data_matrix)) == 0L)
@@ -248,12 +240,7 @@ check_sample_consistency <- function(sample_annotation, sample_id_col, df_long,
     info
 }
 
-#' Re-insert all-NA rows/columns removed by \code{.pb_strip_allna()}
-#'
-#' @param imputed numeric matrix (trimmed dimensions)
-#' @param strip_info list returned by \code{.pb_strip_allna()}
-#' @return numeric matrix with original dimensions (removed positions are NA)
-#' @keywords internal
+# Re-insert all-NA rows/columns removed by .pb_strip_allna().
 .pb_restore_allna <- function(imputed, strip_info) {
     if (!strip_info$needs_restore) {
         return(imputed)
