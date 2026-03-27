@@ -213,10 +213,22 @@ pb_register_step <- function(name, fun) {
     # Compare overlapping columns value-wise
     common_cols <- intersect(colnames(obj_cd), colnames(se_cd))
 
-    # helper equality on vectors (handles POSIXct / factor vs character)
+    # helper equality on vectors (handles POSIXct / factor vs character /
+    # factor-with-integer-like-levels vs integer)
     .vec_equal <- function(a, b) {
         if (inherits(a, "POSIXct") && inherits(b, "POSIXct")) {
             return(identical(as.numeric(a), as.numeric(b))) # ignore tz/attr differences
+        }
+        # factor <-> integer/numeric: PRONE normalization can coerce factor
+        # columns with integer-like levels to integer.  Treat them as equal
+        # when the numeric values match.
+        if ((is.factor(a) && is.numeric(b)) || (is.numeric(a) && is.factor(b))) {
+            fa <- if (is.factor(a)) a else b
+            nu <- if (is.factor(a)) b else a
+            fa_num <- suppressWarnings(as.numeric(as.character(fa)))
+            if (!anyNA(fa_num) || identical(is.na(fa_num), is.na(nu))) {
+                return(isTRUE(all.equal(fa_num, nu, check.attributes = FALSE)))
+            }
         }
         if (is.factor(a)) a <- as.character(a)
         if (is.factor(b)) b <- as.character(b)

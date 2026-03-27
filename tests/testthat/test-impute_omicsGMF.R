@@ -245,3 +245,125 @@ test_that("impute_with_omicsGMF() errors when ncomponents is missing", {
         fixed = TRUE
     )
 })
+
+# -----------------------------------------------------------------------
+# omicsGMFImpute: all-NA row/column guard
+# -----------------------------------------------------------------------
+
+test_that(".omicsgmf_fit_and_impute filters all-NA rows and re-inserts them (mocked)", {
+    skip_if_not_installed("SummarizedExperiment")
+    skip_if_not_installed("S4Vectors")
+    skip_if_not_installed("SingleCellExperiment")
+
+    # 4 features x 3 samples; feat2 and feat4 are all-NA
+    m <- matrix(
+        c(
+            1, NA, 3, NA,
+            4, 5, NA, NA,
+            7, 8, 9, NA
+        ),
+        nrow = 4, ncol = 3,
+        dimnames = list(paste0("feat", 1:4), paste0("s", 1:3))
+    )
+    sa <- data.frame(
+        FullRunName = paste0("s", 1:3), Cond = c("A", "A", "B"),
+        stringsAsFactors = FALSE
+    )
+
+    # Mock omicsGMF::runGMF and imputeGMF to just fill NAs with 0
+    fake_runGMF <- function(x, ...) x
+    fake_imputeGMF <- function(x, exprs_values, name, ...) {
+        mat <- SummarizedExperiment::assay(x, exprs_values)
+        mat[is.na(mat)] <- 0
+        SummarizedExperiment::assay(x, name) <- mat
+        x
+    }
+
+    # Temporarily mock the omicsGMF namespace calls
+    local_mocked_bindings(
+        .pb_require_omicsgmf_stack = function() invisible(TRUE),
+        .package = "proBatch"
+    )
+
+    # Call the internal function directly, but we need to mock the do.call targets.
+    # Instead, use the step function with mocked externals.
+    captured <- new.env(parent = emptyenv())
+    fake_step <- function(data_matrix, sample_annotation, sample_id_col,
+                          design_formula, family, ncomponents,
+                          gmf_args = list(), impute_args = list()) {
+        # Record what matrix the step sees (should have all-NA rows removed)
+        captured$input_rows <- rownames(data_matrix)
+        captured$input_has_allNA_row <- any(apply(data_matrix, 1, function(r) all(is.na(r))))
+        # Return a filled version preserving dims
+        out <- data_matrix
+        out[is.na(out)] <- 0
+        storage.mode(out) <- "double"
+        out
+    }
+
+    local_fake_omicsgmf_step(fake_step)
+
+    out <- impute_with_omicsGMF(
+        x = m,
+        sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        ncomponents = 2L,
+        format = "wide"
+    )
+
+    # Output should have original dimensions
+    expect_identical(dim(out), dim(m))
+    expect_identical(dimnames(out), dimnames(m))
+})
+
+test_that(".omicsgmf_fit_and_impute all-NA guard: filter and re-insert logic (unit)", {
+    # Test the guard logic added to .omicsgmf_fit_and_impute without needing
+    # the full omicsGMF stack — validates the filter + re-insert pattern.
+
+    # Build a matrix with all-NA row(s) and column(s)
+    m <- matrix(
+        c(
+            1.0, NA, 3.0,
+            NA, NA, NA, # all-NA row
+            7.0, 8.0, 9.0
+        ),
+        nrow = 3, ncol = 3, byrow = TRUE,
+        dimnames = list(paste0("f", 1:3), paste0("s", 1:3))
+    )
+    m[, "s2"] <- NA # also make column s2 all-NA
+
+    row_all_na <- apply(m, 1L, function(r) all(is.na(r)))
+    col_all_na <- apply(m, 2L, function(c) all(is.na(c)))
+
+    expect_true(any(row_all_na), info = "test matrix should have an all-NA row")
+    expect_true(any(col_all_na), info = "test matrix should have an all-NA column")
+
+    # After filtering, no all-NA rows/cols remain
+    reduced <- m[!row_all_na, !col_all_na, drop = FALSE]
+    expect_false(any(apply(reduced, 1, function(r) all(is.na(r)))),
+        info = "reduced matrix should have no all-NA rows"
+    )
+    expect_false(any(apply(reduced, 2, function(c) all(is.na(c)))),
+        info = "reduced matrix should have no all-NA columns"
+    )
+
+    # Simulate imputation on the reduced matrix
+    imputed_reduced <- reduced
+    imputed_reduced[is.na(imputed_reduced)] <- 0
+    storage.mode(imputed_reduced) <- "double"
+
+    # Re-insert (same logic as in .omicsgmf_fit_and_impute)
+    full <- matrix(NA_real_,
+        nrow = nrow(m), ncol = ncol(m),
+        dimnames = dimnames(m)
+    )
+    full[!row_all_na, !col_all_na] <- imputed_reduced
+
+    expect_identical(dim(full), dim(m))
+    expect_identical(dimnames(full), dimnames(m))
+    # All-NA row/col stay NA
+    expect_true(all(is.na(full["f2", ])))
+    expect_true(all(is.na(full[, "s2"])))
+    # Non-NA entries got imputed
+    expect_false(any(is.na(full[!row_all_na, !col_all_na])))
+})

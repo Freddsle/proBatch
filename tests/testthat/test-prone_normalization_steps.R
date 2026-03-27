@@ -771,3 +771,59 @@ test_that(".pb_prone_guess_norm_assay errors on ambiguous assay outputs", {
         "Unable to determine normalized assay returned by PRONE"
     )
 })
+
+# -----------------------------------------------------------------------
+# Verify PRONE normalization does not introduce all-NA rows/columns
+# -----------------------------------------------------------------------
+
+test_that("PRONE normalization step does not introduce all-NA rows when input has none", {
+    skip_if_not_installed("PRONE")
+
+    # Matrix with partial NAs but no all-NA rows or columns
+    dm <- matrix(
+        c(
+            10, NA, 30,
+            40, 50, NA,
+            70, 80, 90
+        ),
+        nrow = 3, byrow = TRUE,
+        dimnames = list(paste0("feat", 1:3), paste0("s", 1:3))
+    )
+    sa <- data.frame(
+        FullRunName = paste0("s", 1:3),
+        stringsAsFactors = FALSE
+    )
+
+    # Confirm no all-NA rows/cols initially
+    expect_false(any(apply(dm, 1, function(r) all(is.na(r)))))
+    expect_false(any(apply(dm, 2, function(c) all(is.na(c)))))
+
+    # Mock PRONE normalize to return a "normalized" assay
+    local_mocked_prone_normalize(function(se, methods, method, norm_method,
+                                          on_raw, ain, ains,
+                                          aout, combination_pattern, ...) {
+        nm <- methods %||% method %||% norm_method %||% "MockNorm"
+        mat <- SummarizedExperiment::assay(se, ain)
+        mat <- mat * 2 # simple transformation, preserves NAs
+        SummarizedExperiment::assay(se, nm) <- mat
+        se
+    })
+
+    res <- proBatch:::.prone_normalize_matrix_step(
+        data_matrix = dm,
+        sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        norm_method = "MockNorm",
+        assay_in = "raw"
+    )
+
+    # Output must not have new all-NA rows or columns
+    expect_false(any(apply(res, 1, function(r) all(is.na(r)))),
+        info = "PRONE normalization should not introduce all-NA rows"
+    )
+    expect_false(any(apply(res, 2, function(c) all(is.na(c)))),
+        info = "PRONE normalization should not introduce all-NA columns"
+    )
+    expect_identical(dim(res), dim(dm))
+    expect_identical(dimnames(res), dimnames(dm))
+})

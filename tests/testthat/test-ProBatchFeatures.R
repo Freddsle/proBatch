@@ -664,3 +664,67 @@ test_that("pb_transform honors final_name without colliding with pipeline-derive
     expect_true("feature::medianNorm_on_log2_on_raw" %in% names(pbf))
     expect_true("feature::medianNorm_zeroNA" %in% names(pbf))
 })
+
+# -----------------------------------------------------------------------
+# .pb_harmonize_colData: factor <-> integer coercion
+# -----------------------------------------------------------------------
+
+test_that(".pb_harmonize_colData accepts factor with integer-like levels vs integer", {
+    skip_if_not_installed("SummarizedExperiment")
+    skip_if_not_installed("S4Vectors")
+    skip_if_not_installed("QFeatures")
+    skip_if_not("as_ProBatchFeatures" %in% getNamespaceExports("proBatch"))
+
+    mat <- matrix(1:6, nrow = 2, dimnames = list(c("f1", "f2"), c("s1", "s2", "s3")))
+    sa <- S4Vectors::DataFrame(
+        FullRunName = c("s1", "s2", "s3"),
+        run.number  = factor(c("1", "2", "3"))
+    )
+    rownames(sa) <- sa$FullRunName
+
+    se_obj <- SummarizedExperiment::SummarizedExperiment(
+        assays = list(intensity = mat),
+        colData = sa
+    )
+
+    # Incoming SE has integer run.number (as PRONE's normalize_se would produce)
+    sa_int <- sa
+    sa_int$run.number <- as.integer(c(1, 2, 3))
+    se_incoming <- SummarizedExperiment::SummarizedExperiment(
+        assays = list(intensity = mat + 10),
+        colData = sa_int
+    )
+
+    # Should NOT error — factor("1","2","3") matches integer(1,2,3)
+    result <- proBatch:::.pb_harmonize_colData(se_obj, se_incoming, from_assay = "test")
+    expect_s4_class(result, "SummarizedExperiment")
+})
+
+test_that(".pb_harmonize_colData still rejects genuinely different factor vs integer", {
+    skip_if_not_installed("SummarizedExperiment")
+    skip_if_not_installed("S4Vectors")
+
+    mat <- matrix(1:6, nrow = 2, dimnames = list(c("f1", "f2"), c("s1", "s2", "s3")))
+    sa <- S4Vectors::DataFrame(
+        FullRunName = c("s1", "s2", "s3"),
+        run.number  = factor(c("1", "2", "3"))
+    )
+    rownames(sa) <- sa$FullRunName
+
+    se_obj <- SummarizedExperiment::SummarizedExperiment(
+        assays = list(intensity = mat),
+        colData = sa
+    )
+
+    sa_bad <- sa
+    sa_bad$run.number <- as.integer(c(10, 20, 30)) # different values
+    se_bad <- SummarizedExperiment::SummarizedExperiment(
+        assays = list(intensity = mat + 10),
+        colData = sa_bad
+    )
+
+    expect_error(
+        proBatch:::.pb_harmonize_colData(se_obj, se_bad, from_assay = "test"),
+        "Conflicting colData"
+    )
+})

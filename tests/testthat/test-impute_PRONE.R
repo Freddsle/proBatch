@@ -295,3 +295,56 @@ test_that("imputePRONE_dm pads missing feature rows returned by PRONE", {
     expect_true(all(is.na(res["featA", ])))
     expect_equal(res["featB", ], c(sample1 = 10, sample2 = 20))
 })
+
+# -----------------------------------------------------------------------
+# Verify PRONE imputation does not introduce all-NA rows/columns
+# -----------------------------------------------------------------------
+
+test_that("PRONEImpute does not introduce all-NA rows when input has none", {
+    skip_if_not_installed("PRONE")
+
+    # Matrix with partial NAs but no all-NA rows or columns
+    dm <- matrix(
+        c(
+            1, NA, 5,
+            4, 3, NA,
+            7, 8, 2
+        ),
+        nrow = 3, byrow = TRUE,
+        dimnames = list(paste0("feat", 1:3), paste0("s", 1:3))
+    )
+    sa <- data.frame(
+        FullRunName = paste0("s", 1:3),
+        stringsAsFactors = FALSE
+    )
+
+    # Confirm no all-NA rows/cols initially
+    expect_false(any(apply(dm, 1, function(r) all(is.na(r)))))
+    expect_false(any(apply(dm, 2, function(c) all(is.na(c)))))
+
+    # Mock PRONE to just return the input unchanged (identity imputation)
+    local_mocked_prone(function(se, ain, condition) {
+        imputed_name <- paste0(ain, "_imputed")
+        mat <- SummarizedExperiment::assay(se, ain)
+        mat[is.na(mat)] <- 0
+        SummarizedExperiment::assay(se, imputed_name) <- mat
+        se
+    })
+
+    res <- proBatch:::.prone_matrix_step(
+        data_matrix = dm,
+        sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        assay_in = "raw"
+    )
+
+    # Output must not have new all-NA rows or columns
+    expect_false(any(apply(res, 1, function(r) all(is.na(r)))),
+        info = "PRONEImpute should not introduce all-NA rows"
+    )
+    expect_false(any(apply(res, 2, function(c) all(is.na(c)))),
+        info = "PRONEImpute should not introduce all-NA columns"
+    )
+    expect_identical(dim(res), dim(dm))
+    expect_identical(dimnames(res), dimnames(dm))
+})
