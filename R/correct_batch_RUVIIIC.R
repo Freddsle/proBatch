@@ -213,7 +213,6 @@ correct_with_RUVIII_C <- function(
   ...
 ) {
     version <- match.arg(version)
-    handle_flag <- !is.null(fill_the_missing) || identical(fill_the_missing, FALSE)
     .run_matrix_method(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
@@ -334,7 +333,7 @@ correct_with_RUVIII_C <- function(
             if (length(missing_controls)) {
                 stop(
                     "negative_control_features missing from data_matrix",
-                    if (handle_flag) " after handling missing values" else "",
+                    if (!is.null(fill_the_missing)) " after handling missing values" else "",
                     ": ",
                     paste(missing_controls, collapse = ", ")
                 )

@@ -55,6 +55,9 @@ fit_nonlinear <- function(df_feature_batch,
         if (!is.null(qual_col) && (qual_col %in% names(df_feature_batch))) {
             warning("Imputed-value column present; fitting only to measured (non-imputed) values.")
             imputed_values <- df_feature_batch[[qual_col]] == qual_value
+            # Mask imputed entries as NA for fitting. R's copy-on-modify ensures
+            # the caller's data frame is not affected because `df_feature_batch`
+            # is a function argument (reference count > 1).
             df_feature_batch[[measure_col]][imputed_values] <- NA
         } else {
             stop("Imputed values should not be used, but no flag column specified.")

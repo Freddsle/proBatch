@@ -223,8 +223,14 @@ center_feature_batch <- function(
     }
 
     if (identical(format, "wide")) {
-        if (length(unique(sample_annotation[[sample_id_col]])) != ncol(x)) {
+        if (!is.matrix(x) || !is.numeric(x)) {
             stop("format='wide' requires a numeric matrix with features in rows and samples in columns.")
+        }
+        if (is.null(sample_annotation) || is.null(colnames(x))) {
+            stop("format='wide' requires `sample_annotation` and column names on the matrix.")
+        }
+        if (!all(colnames(x) %in% sample_annotation[[sample_id_col]])) {
+            stop("Not all matrix column names found in sample_annotation[[sample_id_col]].")
         }
         # Convert wide -> long
         df_long <- matrix_to_long(
@@ -996,8 +1002,7 @@ correct_batch_effects <- function(
                                          warning_message,
                                          qual_col = NULL,
                                          qual_value = NULL) {
-    handle_flag <- !is.null(fill_the_missing) || identical(fill_the_missing, FALSE)
-    if (!handle_flag) {
+    if (is.null(fill_the_missing)) {
         return(list(df_long = df_long, sample_annotation = sample_annotation))
     }
 
@@ -1209,105 +1214,26 @@ correct_batch_effects_df <- function(df_long, sample_annotation,
                                      qual_value = NULL,
                                      fill_the_missing = NULL,
                                      min_measurements = 8, ...) {
-    discrete_func <- match.arg(discrete_func)
-
-    sample_annotation[[batch_col]] <- as.factor(sample_annotation[[batch_col]])
-
-    original_cols <- names(df_long)
-
-    handled <- .handle_missing_for_batch_df(
-        df_long = df_long,
+    .Deprecated("correct_batch_effects")
+    correct_batch_effects(
+        x = df_long,
         sample_annotation = sample_annotation,
+        format = "long",
+        continuous_func = continuous_func,
+        discrete_func = match.arg(discrete_func),
+        batch_col = batch_col,
         feature_id_col = feature_id_col,
         sample_id_col = sample_id_col,
         measure_col = measure_col,
+        order_col = order_col,
+        keep_all = keep_all,
+        no_fit_imputed = no_fit_imputed,
+        qual_col = qual_col,
+        qual_value = qual_value,
         fill_the_missing = fill_the_missing,
-        warning_message = "Batch correction cannot operate with missing values in the matrix",
-        qual_col = if (no_fit_imputed) qual_col else NULL,
-        qual_value = if (no_fit_imputed) qual_value else NULL
+        min_measurements = min_measurements,
+        ...
     )
-    df_long <- handled$df_long
-    sample_annotation <- handled$sample_annotation
-
-    if (!is.null(continuous_func)) {
-        df_long <- adjust_batch_trend_df(
-            df_long = df_long,
-            sample_annotation = sample_annotation,
-            batch_col = batch_col,
-            feature_id_col = feature_id_col,
-            sample_id_col = sample_id_col,
-            measure_col = measure_col,
-            order_col = order_col,
-            keep_all = keep_all,
-            no_fit_imputed = no_fit_imputed,
-            qual_col = qual_col,
-            qual_value = qual_value,
-            fit_func = continuous_func,
-            min_measurements = min_measurements, ...
-        )
-    }
-
-    # TODO: re-implement in a functional programming
-    if (discrete_func == "MedianCentering") {
-        corrected_df <- center_feature_batch_medians_df(
-            df_long = df_long,
-            sample_annotation = sample_annotation,
-            sample_id_col = sample_id_col,
-            batch_col = batch_col,
-            feature_id_col = feature_id_col,
-            measure_col = measure_col,
-            no_fit_imputed = no_fit_imputed,
-            qual_col = qual_col,
-            qual_value = qual_value
-        )
-    }
-
-    if (discrete_func == "MeanCentering") {
-        corrected_df <- center_feature_batch_means_df(
-            df_long = df_long,
-            sample_annotation = sample_annotation,
-            sample_id_col = sample_id_col,
-            batch_col = batch_col,
-            feature_id_col = feature_id_col,
-            measure_col = measure_col,
-            no_fit_imputed = no_fit_imputed,
-            qual_col = qual_col,
-            qual_value = qual_value
-        )
-    }
-
-    if (discrete_func == "ComBat") {
-        # TODO: pick up the functional programming argument borrowing
-        corrected_df <- correct_with_ComBat_df(
-            df_long = df_long,
-            sample_annotation = sample_annotation,
-            feature_id_col = feature_id_col,
-            measure_col = measure_col,
-            sample_id_col = sample_id_col,
-            batch_col = batch_col,
-            par.prior = TRUE,
-            fill_the_missing = fill_the_missing
-        )
-        # TODO: fix for "no_fit_imputed" cases
-    }
-
-    old_measure_col <- paste("preBatchCorr", measure_col, sep = "_")
-    if (!is.null(continuous_func)) {
-        preFit_measure_col <- paste("preTrendFit", measure_col, sep = "_")
-        default_cols <- c(original_cols, old_measure_col, preFit_measure_col, "fit")
-    } else {
-        default_cols <- c(original_cols, old_measure_col)
-    }
-
-    minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
-    corrected_df <- subset_keep_cols(
-        corrected_df,
-        keep_all,
-        default_cols = default_cols,
-        minimal_cols = minimal_cols
-    )
-
-    return(corrected_df)
 }
 
 #'
@@ -1329,18 +1255,13 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
                                      no_fit_imputed = TRUE,
                                      fill_the_missing = NULL,
                                      ...) {
-    df_long <- matrix_to_long(
-        data_matrix,
-        feature_id_col = feature_id_col,
-        measure_col = measure_col,
-        sample_id_col = sample_id_col
-    )
-
-    corrected_df <- correct_batch_effects_df(
-        df_long,
-        sample_annotation,
+    .Deprecated("correct_batch_effects")
+    correct_batch_effects(
+        x = data_matrix,
+        sample_annotation = sample_annotation,
+        format = "wide",
         continuous_func = continuous_func,
-        discrete_func = discrete_func,
+        discrete_func = match.arg(discrete_func),
         batch_col = batch_col,
         feature_id_col = feature_id_col,
         sample_id_col = sample_id_col,
@@ -1349,19 +1270,8 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
         min_measurements = min_measurements,
         no_fit_imputed = no_fit_imputed,
         fill_the_missing = fill_the_missing,
-        qual_col = NULL,
-        qual_value = NULL,
-        keep_all = "default", ...
+        ...
     )
-    # Convert the corrected data frame back to matrix format
-    corrected_matrix <- long_to_matrix(
-        corrected_df,
-        sample_id_col = sample_id_col,
-        measure_col = measure_col,
-        feature_id_col = feature_id_col
-    )
-
-    return(corrected_matrix)
 }
 
 
@@ -1506,8 +1416,7 @@ correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
     }
 
     # optional NA handling
-    handle_flag <- !is.null(fill_the_missing) || identical(fill_the_missing, FALSE)
-    if (handle_flag && anyNA(data_matrix)) {
+    if (!is.null(fill_the_missing) && anyNA(data_matrix)) {
         data_matrix <- handle_missing_values(
             data_matrix,
             warning_message = missing_warning,

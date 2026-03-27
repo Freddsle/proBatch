@@ -324,13 +324,12 @@ normalize_sample_medians_df <- function(df_long,
         return(normalized_df)
     }
 
-    if (is.null(group_col) || !nzchar(group_col)) {
+    if (is.null(group_col) || !nzchar(group_col %||% "")) {
         stop("`group_col` must be provided when `inside_batch = TRUE`.")
     }
 
-    grouping_annotation <- sample_annotation
-    if (!is.null(grouping_annotation)) {
-        grouping_annotation <- as.data.frame(grouping_annotation)
+    if (!is.null(sample_annotation)) {
+        grouping_annotation <- as.data.frame(sample_annotation)
         if (!(group_col %in% names(grouping_annotation))) {
             stop("`group_col` not found in supplied `sample_annotation`.")
         }

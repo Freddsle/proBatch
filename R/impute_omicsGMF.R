@@ -378,26 +378,10 @@ estimate_omicsGMF_rank <- function(
     # any row or column is entirely NA.  Remove them before fitting and
     # re-insert as NA afterwards (same strategy as PRONEImpute).
     # ------------------------------------------------------------------
-    orig_rows <- rownames(data_matrix)
-    orig_cols <- colnames(data_matrix)
-
-    row_all_na <- apply(data_matrix, 1L, function(r) all(is.na(r)))
-    col_all_na <- apply(data_matrix, 2L, function(c) all(is.na(c)))
-
-    if (any(row_all_na)) {
-        message(
-            "omicsGMF imputation: removing ", sum(row_all_na),
-            " all-NA row(s) before fitting; they will remain NA in the output."
-        )
-        data_matrix <- data_matrix[!row_all_na, , drop = FALSE]
-    }
-    if (any(col_all_na)) {
-        message(
-            "omicsGMF imputation: removing ", sum(col_all_na),
-            " all-NA column(s) before fitting; they will remain NA in the output."
-        )
-        data_matrix <- data_matrix[, !col_all_na, drop = FALSE]
-        sample_df <- sample_df[!col_all_na, , drop = FALSE]
+    strip <- .pb_strip_allna(data_matrix, label = "omicsGMF imputation")
+    data_matrix <- strip$matrix
+    if (length(strip$all_na_cols)) {
+        sample_df <- sample_df[-strip$all_na_cols, , drop = FALSE]
     }
 
     if (!nrow(data_matrix) || !ncol(data_matrix)) {
@@ -447,16 +431,7 @@ estimate_omicsGMF_rank <- function(
     # ------------------------------------------------------------------
     # Re-insert all-NA rows/columns that were removed before fitting.
     # ------------------------------------------------------------------
-    if (any(row_all_na) || any(col_all_na)) {
-        full <- matrix(
-            NA_real_,
-            nrow = length(orig_rows),
-            ncol = length(orig_cols),
-            dimnames = list(orig_rows, orig_cols)
-        )
-        full[!row_all_na, !col_all_na] <- imputed
-        imputed <- full
-    }
+    imputed <- .pb_restore_allna(imputed, strip)
 
     list(
         sce = sce,

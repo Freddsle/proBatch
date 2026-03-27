@@ -114,8 +114,7 @@ setValidity("ProBatchFeatures", function(object) {
                                group_col = NULL,
                                inside_batch = FALSE,
                                fill_the_missing = NULL) {
-        handle_flag <- !is.null(fill_the_missing) || identical(fill_the_missing, FALSE)
-        if (handle_flag && anyNA(m)) {
+        if (!is.null(fill_the_missing) && anyNA(m)) {
             m <- handle_missing_values(
                 data_matrix = m,
                 warning_message = "Median normalization: applying requested missing value handling before centering.",

@@ -298,16 +298,8 @@ missForestImpute <- function(x, ...) {
     ##    missForest (per docs) needs at least one observed value per
     ##    variable; pure-NA columns/rows must be removed first.
     ## --------------------------------------------------------------
-    all_na_rows <- which(rowSums(!is.na(data_matrix)) == 0L)
-    all_na_cols <- which(colSums(!is.na(data_matrix)) == 0L)
-
-    core_mat <- data_matrix
-    if (length(all_na_rows)) {
-        core_mat <- core_mat[-all_na_rows, , drop = FALSE]
-    }
-    if (length(all_na_cols)) {
-        core_mat <- core_mat[, -all_na_cols, drop = FALSE]
-    }
+    strip <- .pb_strip_allna(data_matrix, label = "missForest()")
+    core_mat <- strip$matrix
 
     if (!nrow(core_mat) || !ncol(core_mat)) {
         stop("missForest(): no data left to impute after removing all-NA rows/columns.",
@@ -342,34 +334,13 @@ missForestImpute <- function(x, ...) {
     ## 5) reinsert removed all-NA rows/cols
     ##    (we keep them NA – we cannot fabricate signal)
     ## --------------------------------------------------------------
-    if (length(all_na_rows) || length(all_na_cols)) {
-        full_mat <- matrix(
-            NA_real_,
-            nrow = nrow(data_matrix),
-            ncol = ncol(data_matrix),
-            dimnames = list(feat_ids, sample_ids)
-        )
-
-        ## place the imputed core
-        r_idx <- seq_len(nrow(data_matrix))
-        c_idx <- seq_len(ncol(data_matrix))
-        if (length(all_na_rows)) {
-            r_idx <- r_idx[-all_na_rows]
-        }
-        if (length(all_na_cols)) {
-            c_idx <- c_idx[-all_na_cols]
-        }
-        full_mat[r_idx, c_idx] <- imputed_core
-
-        imputed <- full_mat
-
+    imputed <- .pb_restore_allna(imputed_core, strip)
+    if (strip$needs_restore) {
         warning(
             "missForest(): removed and reinserted ",
-            length(all_na_rows), " all-NA rows and ",
-            length(all_na_cols), " all-NA columns; these positions remain NA."
+            length(strip$all_na_rows), " all-NA rows and ",
+            length(strip$all_na_cols), " all-NA columns; these positions remain NA."
         )
-    } else {
-        imputed <- imputed_core
     }
 
     ## attach OOB diagnostics (does not break API)
