@@ -30,6 +30,11 @@
 #'   Must be in the range `[0, 1]`. If both `min_valid` and `pNA` are provided,
 #'   the stricter requirement is applied per group by enforcing the larger
 #'   minimum number of observed values implied by either threshold.
+#' @param mask_failing Logical scalar (used by `pb_groupfilterNA()` only).
+#'   When `TRUE` (default), values in groups that did not pass the missingness
+#'   threshold are set to `NA`. When `FALSE`, the original values in failing
+#'   groups are kept as-is (the feature is still retained if it passes in at
+#'   least one group).
 #' @param ... Additional parameters forwarded to the underlying
 #'   `QFeatures` method where applicable.
 #' @return `pb_zeroIsNA()`, `pb_infIsNA()`, `pb_filterNA()` and
@@ -38,6 +43,8 @@
 #'   (a `list` of `DataFrame`s).
 #' @details For grouped filtering, features are retained if they meet the
 #'   missingness criteria in at least one group defined by `group_cols`.
+#'   When `mask_failing = TRUE` (the default), the values in groups where
+#'   the feature did not pass the threshold are replaced with `NA`.
 #' @name pb_missing_helpers
 NULL
 
@@ -181,12 +188,16 @@ pb_groupfilterNA <- function(
   group_cols,
   min_valid = 2L,
   pNA = NULL,
+  mask_failing = TRUE,
   inplace = FALSE,
   final_name = NULL,
   ...
 ) {
     stopifnot(is(object, "ProBatchFeatures"))
-    stopifnot(is.logical(inplace), length(inplace) == 1L)
+    stopifnot(
+        is.logical(inplace), length(inplace) == 1L,
+        is.logical(mask_failing), length(mask_failing) == 1L
+    )
 
     if (missing(group_cols) || is.null(group_cols) || !length(group_cols)) {
         stop("`group_cols` must be provided and non-empty.", call. = FALSE)
@@ -274,6 +285,8 @@ pb_groupfilterNA <- function(
             )
         }
         keep_logical <- setNames(rep(FALSE, length(feature_ids)), feature_ids)
+        # Track per-group pass/fail for each feature (used by mask_failing)
+        group_pass <- list()
 
         if (length(feature_ids)) {
             for (grp_name in names(split_indices)) {
@@ -316,6 +329,7 @@ pb_groupfilterNA <- function(
                     c(list(tmp_obj, i = tmp_name, pNA = p_na), params)
                 )
                 keep_group <- rownames(filtered_tmp[[tmp_name]])
+                group_pass[[grp_name]] <- keep_group
                 if (length(keep_group)) {
                     common <- intersect(keep_group, names(keep_logical))
                     keep_logical[common] <- TRUE
@@ -325,6 +339,20 @@ pb_groupfilterNA <- function(
 
         keep_features <- names(keep_logical)[keep_logical]
         filtered_se <- current[keep_features, , drop = FALSE]
+
+        # Mask values in groups that did not pass the filter
+        if (mask_failing && length(keep_features)) {
+            mat <- SummarizedExperiment::assay(filtered_se)
+            for (grp_name in names(split_indices)) {
+                idx_cols <- split_indices[[grp_name]]
+                passed <- group_pass[[grp_name]]
+                failed_features <- setdiff(keep_features, passed)
+                if (length(failed_features)) {
+                    mat[failed_features, idx_cols] <- NA
+                }
+            }
+            SummarizedExperiment::assay(filtered_se) <- mat
+        }
         features_after <- nrow(filtered_se)
 
         if (inplace) {
@@ -347,6 +375,7 @@ pb_groupfilterNA <- function(
                 group_cols = group_cols,
                 min_valid = min_valid,
                 pNA = pNA,
+                mask_failing = mask_failing,
                 inplace = inplace
             ),
             params

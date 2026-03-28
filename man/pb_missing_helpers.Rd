@@ -23,6 +23,7 @@ pb_groupfilterNA(
   group_cols,
   min_valid = 2L,
   pNA = NULL,
+  mask_failing = TRUE,
   inplace = FALSE,
   final_name = NULL,
   ...
@@ -59,6 +60,12 @@ proportion of missing values allowed within each group to retain a feature.
 Must be in the range `[0, 1]`. If both `min_valid` and `pNA` are provided,
 the stricter requirement is applied per group by enforcing the larger
 minimum number of observed values implied by either threshold.}
+
+\item{mask_failing}{Logical scalar (used by `pb_groupfilterNA()` only).
+When `TRUE` (default), values in groups that did not pass the missingness
+threshold are set to `NA`. When `FALSE`, the original values in failing
+groups are kept as-is (the feature is still retained if it passes in at
+least one group).}
 }
 \value{
 `pb_zeroIsNA()`, `pb_infIsNA()`, `pb_filterNA()` and
@@ -76,4 +83,6 @@ consider re-running it with `store_fast_steps = TRUE`.
 \details{
 For grouped filtering, features are retained if they meet the
   missingness criteria in at least one group defined by `group_cols`.
+  When `mask_failing = TRUE` (the default), the values in groups where
+  the feature did not pass the threshold are replaced with `NA`.
 }
