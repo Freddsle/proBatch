@@ -1331,7 +1331,7 @@ correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
         data_matrix, sample_annotation,
         sample_id_col = sample_id_col,
         fill_the_missing = fill_the_missing,
-        missing_warning = "removeBatchEffect cannot operate with missing values in the matrix",
+        missing_warning = "removeBatchEffect: missing values detected; applying requested NA handling before modeling.",
         method_fun = function(data_matrix, sample_annotation) {
             if (!(batch_col %in% names(sample_annotation))) {
                 stop("Batch column is not present in sample_annotation")
@@ -1415,8 +1415,8 @@ correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
         stop("Input must be coercible to a numeric matrix for batch correction.")
     }
 
-    # optional NA handling
-    if (!is.null(fill_the_missing) && anyNA(data_matrix)) {
+    # optional NA handling (FALSE means "leave NAs alone", so skip entirely)
+    if (!is.null(fill_the_missing) && !isFALSE(fill_the_missing) && anyNA(data_matrix)) {
         data_matrix <- handle_missing_values(
             data_matrix,
             warning_message = missing_warning,

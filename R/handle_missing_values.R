@@ -3,8 +3,8 @@
 #' This function can either fill missing values with a specified value
 #' or remove rows (and columns, if applicable) with missing values.
 #' It is primarily intended for use prior to batch correction methods
-#' that cannot handle missing values, such as ComBat or limma's
-#' removeBatchEffect, or plotting functions that require complete data.
+#' that cannot handle missing values, such as ComBat,
+#' or plotting functions that require complete data.
 #'
 #' Semantics:
 #' - If there are no NAs: return input unchanged.
@@ -88,16 +88,11 @@ handle_missing_values <- function(data_matrix, warning_message, fill_the_missing
         # 5) Report removals
         post <- data_matrix
         removed_rows <- nrow(orig) - nrow(post)
-        if (removed_rows > 0) warning(sprintf("removed %d rows", removed_rows))
         removed_cols <- ncol(orig) - ncol(post)
-        if (removed_cols > 0) warning(sprintf("removed %d columns", removed_cols))
 
-        # Filling doesn't remove rows/cols; still report zeros to mirror previous behavior
-        message(sprintf(
-            "removed %d rows and %d columns",
-            removed_rows,
-            removed_cols
-        ))
+        if (removed_rows > 0 || removed_cols > 0) {
+            warning(sprintf("removed %d rows and %d columns", removed_rows, removed_cols))
+        }
         return(data_matrix)
     }
 
