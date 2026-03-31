@@ -25,8 +25,8 @@ A matrix with missing values handled as specified.
 This function can either fill missing values with a specified value
 or remove rows (and columns, if applicable) with missing values.
 It is primarily intended for use prior to batch correction methods
-that cannot handle missing values, such as ComBat or limma's
-removeBatchEffect, or plotting functions that require complete data.
+that cannot handle missing values, such as ComBat,
+or plotting functions that require complete data.
 }
 \details{
 Semantics:
