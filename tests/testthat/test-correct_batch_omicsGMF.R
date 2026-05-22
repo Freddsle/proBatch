@@ -334,14 +334,14 @@ test_that(".omicsgmf_correct_matrix_step preserves non-batch design terms when b
         "MS_batchb2" = c(1, 0, 1),
         "DietB:MS_batchb2" = c(0, 0, 1)
     )
+    # omicsGMF convention: Beta has one row per feature and one column per
+    # design term, so the modelled fixed-effect mean is X %*% t(Beta).
     Beta <- matrix(
         c(
-            1.0, 0.5,
-            0.1, 0.2,
-            -0.3, 0.4,
-            0.7, -0.6
+            1.0, 0.1, -0.3, 0.7,
+            0.5, 0.2, 0.4, -0.6
         ),
-        nrow = 4,
+        nrow = 2,
         byrow = TRUE
     )
     attr(gmf_results, "X") <- X
@@ -392,11 +392,12 @@ test_that(".omicsgmf_correct_matrix_step preserves non-batch design terms when b
 
     expect_matrix_like(out, m)
 
-    latent <- t(gmf_results %*% t(rotation))
-    X_no_batch <- X
-    X_no_batch[, "MS_batchb2"] <- 0
-    X_no_batch[, "DietB:MS_batchb2"] <- 0
-    expected <- latent + t(X_no_batch %*% Beta)
+    # New semantics: subtract only the batch-attributable part of the modelled
+    # mean (X[, batch] %*% t(Beta[, batch])) from the observed data.
+    batch_idx <- which(colnames(X) %in% c("MS_batchb2", "DietB:MS_batchb2"))
+    batch_mean <- X[, batch_idx, drop = FALSE] %*%
+        t(Beta[, batch_idx, drop = FALSE])
+    expected <- m - t(batch_mean)
     rownames(expected) <- rownames(m)
     colnames(expected) <- colnames(m)
 

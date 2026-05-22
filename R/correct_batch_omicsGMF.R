@@ -24,9 +24,10 @@
 #' @param design_formula Formula (or character string coercible to one) used to
 #'   build the omicsGMF design matrix from `sample_annotation`.
 #' @param batch_col Optional batch variable name present in `design_formula`.
-#'   If provided and omicsGMF stores design attributes (`X`, `Beta`) on the
-#'   reduced dimension, reconstruction preserves non-batch fixed effects by
-#'   adding `X_no_batch %*% Beta` to the latent component.
+#'   When provided and omicsGMF stores design attributes (`X`, `Beta`) on the
+#'   reduced dimension, only the batch-attributable part of the modelled mean
+#'   (`X[, batch] %*% t(Beta[, batch])`) is subtracted from the observed data,
+#'   matching the standard `limma::removeBatchEffect` semantics.
 #' @param family GLM family passed to omicsGMF (default: `gaussian()`).
 #' @param keep_all Columns retained in the long-format output; passed to [subset_keep_cols()].
 #' @param ... Optional named arguments. Use `gmf_args` and `impute_args` lists to
@@ -199,46 +200,50 @@ correct_with_omicsGMF <- function(
         )
     }
 
-    latent_component <- t(gmf_results %*% t(rotation_matrix))
-    reconstructed <- latent_component
+    # Latent-only reconstruction (features x samples). Used as a fallback when
+    # no batch column is supplied or omicsGMF design attributes are unavailable.
+    latent_only <- t(gmf_results %*% t(rotation_matrix))
 
-    # If batch_col is supplied, preserve non-batch fixed-effect terms from X %*% Beta.
-    if (!is.null(batch_col)) {
-        design_terms <- .omicsgmf_extract_design_terms(gmf_results)
-        if (is.null(design_terms)) {
-            warning(
-                "Could not access omicsGMF design attributes (X/Beta); returning latent-only reconstruction."
-            )
-        } else {
-            X <- design_terms$X
-            Beta <- design_terms$Beta
-
-            dims_ok <- nrow(X) == ncol(latent_component) &&
-                ncol(Beta) == nrow(latent_component)
-            if (!dims_ok) {
-                warning(
-                    "omicsGMF design attributes are incompatible with latent dimensions; returning latent-only reconstruction."
-                )
-            } else {
-                batch_idx <- .omicsgmf_match_batch_columns(colnames(X), batch_col)
-                if (!length(batch_idx)) {
-                    warning(
-                        "`batch_col` was not found among omicsGMF design columns; returning latent-only reconstruction."
-                    )
-                } else {
-                    X_keep <- X
-                    X_keep[, batch_idx] <- 0
-                    reconstructed <- latent_component + t(X_keep %*% Beta)
-                }
-            }
-        }
+    if (is.null(batch_col)) {
+        storage.mode(latent_only) <- "double"
+        return(latent_only)
     }
 
-    storage.mode(reconstructed) <- "double"
-    reconstructed
+    design_terms <- .omicsgmf_extract_design_terms(gmf_results, data_matrix)
+    if (is.null(design_terms)) {
+        warning(
+            "Could not access omicsGMF design attributes (X/Beta); returning latent-only reconstruction."
+        )
+        storage.mode(latent_only) <- "double"
+        return(latent_only)
+    }
+
+    X <- design_terms$X # n_samples x p
+    Beta <- design_terms$Beta # n_features x p
+
+    batch_idx <- .omicsgmf_match_batch_columns(colnames(X), batch_col)
+    if (!length(batch_idx)) {
+        warning(
+            "`batch_col` was not found among omicsGMF design columns; returning latent-only reconstruction."
+        )
+        storage.mode(latent_only) <- "double"
+        return(latent_only)
+    }
+
+    # Full omicsGMF modelled mean (samples x features) is:
+    #   X %*% t(Beta) + Gamma %*% t(Z) + sgd %*% t(rotation)
+    # Batch correction subtracts only the batch-attributable contribution
+    # X[, batch] %*% t(Beta[, batch]) from the observed data (limma-style).
+    batch_mean <- X[, batch_idx, drop = FALSE] %*%
+        t(Beta[, batch_idx, drop = FALSE])
+    # data_matrix is features x samples; transpose to align.
+    corrected <- data_matrix - t(batch_mean)
+
+    storage.mode(corrected) <- "double"
+    corrected
 }
 
-.omicsgmf_extract_design_terms <- function(gmf_results) {
+.omicsgmf_extract_design_terms <- function(gmf_results, data_matrix = NULL) {
     X <- attr(gmf_results, "X")
     Beta <- attr(gmf_results, "Beta")
     if (is.null(X) || is.null(Beta)) {
@@ -249,8 +254,15 @@ correct_with_omicsGMF <- function(
     if (!nrow(X) || !ncol(X) || !nrow(Beta) || !ncol(Beta)) {
         return(NULL)
     }
-    if (ncol(X) != nrow(Beta)) {
+    # Convention: Beta has one row per feature and one column per design term,
+    # matching omicsGMF's `attr(sgd, "Beta")` layout (X %*% t(Beta)).
+    if (ncol(X) != ncol(Beta)) {
         return(NULL)
+    }
+    if (!is.null(data_matrix)) {
+        if (nrow(X) != ncol(data_matrix) || nrow(Beta) != nrow(data_matrix)) {
+            return(NULL)
+        }
     }
     list(X = X, Beta = Beta)
 }
