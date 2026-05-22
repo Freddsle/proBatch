@@ -101,10 +101,10 @@ correct_with_mComBat <- function(
     message("Found ", nlevels(batch), " batches")
     n.batch <- nlevels(batch)
     batches <- list()
-    for (i in 1:n.batch) {
+    for (i in seq_len(n.batch)) {
         batches[[i]] <- which(batch == levels(batch)[i])
     }
-    n.batches <- sapply(batches, length)
+    n.batches <- vapply(batches, length, integer(1L))
     if (any(n.batches < 2L)) {
         small <- levels(batch)[n.batches < 2L]
         stop(
@@ -125,7 +125,7 @@ correct_with_mComBat <- function(
         cov_cols_idx <- integer(0L)
         cov_design <- NULL
     }
-    n.batches <- sapply(batches, length)
+    n.batches <- vapply(batches, length, integer(1L))
     n.array <- sum(n.batches)
     NAs <- any(is.na(dat))
     if (NAs) {
@@ -163,7 +163,7 @@ correct_with_mComBat <- function(
     # Build a p x n SD matrix: for each batch i, same per-gene SD across its columns
     sd.mat <- matrix(NA_real_, nrow = nrow(dat), ncol = ncol(dat)) # <<< CHANGED
     bad_features <- logical(nrow(dat))
-    for (i in 1:n.batch) { # <<< CHANGED
+    for (i in seq_len(n.batch)) { # <<< CHANGED
         idx <- batches[[i]] # <<< CHANGED
         sd.i <- sqrt(apply(resid[, idx, drop = FALSE], 1, var)) # <<< CHANGED
         # Guard against zero or NA within-batch SD (constant gene in batch),
@@ -184,7 +184,7 @@ correct_with_mComBat <- function(
 
 
     message("Fitting L/S model and finding priors")
-    batch.design <- design[, 1:n.batch, drop = FALSE]
+    batch.design <- design[, seq_len(n.batch), drop = FALSE]
 
     gamma.hat <- solve(t(batch.design) %*% batch.design) %*% t(batch.design) %*% t(as.matrix(s.data))
 
@@ -201,7 +201,7 @@ correct_with_mComBat <- function(
     gamma.star <- delta.star <- NULL
 
     message("Finding parametric adjustments")
-    for (i in 1:n.batch) {
+    for (i in seq_len(n.batch)) {
         temp <- sva:::it.sol(s.data[, batches[[i]]], gamma.hat[i, ], delta.hat[i, ], gamma.bar[i], t2[i], a.prior[i], b.prior[i])
 
         gamma.star <- rbind(gamma.star, temp[1, ])

@@ -280,8 +280,8 @@ correct_with_NormAE <- function(
         overlay_main <- file.path(overlay_dir, "__main__.py")
         cmd <- c(overlay_main, cli_args)
         overlay_log <- file.path(run_dir, "normae_overlay.log")
-        cat("Running command:", shQuote(python_bin), paste(cmd, collapse = " "), "\n")
-        cat("NormAE stdout/stderr log:", normalizePath(overlay_log, winslash = "/", mustWork = FALSE), "\n")
+        message("Running command: ", shQuote(python_bin), " ", paste(cmd, collapse = " "))
+        message("NormAE stdout/stderr log: ", normalizePath(overlay_log, winslash = "/", mustWork = FALSE))
         stat <- system2(python_bin, cmd, stdout = overlay_log, stderr = overlay_log, env = env)
         status <- if (length(stat)) as.integer(stat[[1L]]) else 0L
         if (!identical(status, 0L)) {
@@ -322,8 +322,8 @@ correct_with_NormAE <- function(
     run_try <- function(mod) {
         cmd <- c("-m", mod, cli_args)
         mod_log <- file.path(run_dir, paste0("normae_", gsub("[^A-Za-z0-9._-]", "_", mod), ".log"))
-        cat("Running command:", shQuote(python_bin), paste(cmd, collapse = " "), "\n")
-        cat("NormAE stdout/stderr log:", normalizePath(mod_log, winslash = "/", mustWork = FALSE), "\n")
+        message("Running command: ", shQuote(python_bin), " ", paste(cmd, collapse = " "))
+        message("NormAE stdout/stderr log: ", normalizePath(mod_log, winslash = "/", mustWork = FALSE))
         stat <- system2(python_bin, cmd, stdout = mod_log, stderr = mod_log, env = env)
         status <- if (length(stat)) as.integer(stat[[1L]]) else 0L
         if (is.na(status)) status <- NA_integer_

@@ -42,7 +42,7 @@
 #' @return A `ggplot` object.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' plot_NA_intensity(pbf, color_by = "Group")
 #' }
 #' @export

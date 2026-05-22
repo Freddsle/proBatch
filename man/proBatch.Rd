@@ -108,6 +108,9 @@ pdf and png format is supported}
 
 \item{base_size}{base font size}
 }
+\value{
+No return value.
+}
 \description{
 The proBatch package contains functions for analyzing and correcting batch
 effects (unwanted technical variation) from high-thoughput experiments.

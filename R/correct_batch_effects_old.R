@@ -1,6 +1,7 @@
 #' @title DEPRECATED: center_feature_batch_medians_dm
 #' @description Use [center_feature_batch()] with `format="wide", stat="medians"`.
 #' @inheritParams correct_batch_effects
+#' @return A numeric matrix of batch-corrected values (features \eqn{\times} samples).
 #' @export
 center_feature_batch_medians_dm <- function(data_matrix, sample_annotation,
                                             sample_id_col = "FullRunName",
@@ -19,6 +20,7 @@ center_feature_batch_medians_dm <- function(data_matrix, sample_annotation,
 #' @title DEPRECATED: center_feature_batch_means_dm
 #' @description Use [center_feature_batch()] with `format="wide", stat="means"`.
 #' @inheritParams correct_batch_effects
+#' @return A numeric matrix of batch-corrected values (features \eqn{\times} samples).
 #' @export
 center_feature_batch_means_dm <- function(data_matrix, sample_annotation,
                                           sample_id_col = "FullRunName",
@@ -37,6 +39,8 @@ center_feature_batch_means_dm <- function(data_matrix, sample_annotation,
 #' @title DEPRECATED: center_feature_batch_medians_df
 #' @description Use [center_feature_batch()] with `format="long", stat="medians"`.
 #' @inheritParams correct_batch_effects
+#' @return A data.frame in long format with batch-corrected values in \code{measure_col}
+#'   and original values preserved in \code{preBatchCorr_[measure_col]}.
 #' @export
 center_feature_batch_medians_df <- function(df_long, sample_annotation = NULL,
                                             sample_id_col = "FullRunName",
@@ -61,6 +65,8 @@ center_feature_batch_medians_df <- function(df_long, sample_annotation = NULL,
 #' @title DEPRECATED: center_feature_batch_means_df
 #' @description Use [center_feature_batch()] with `format="long", stat="means"`.
 #' @inheritParams correct_batch_effects
+#' @return A data.frame in long format with batch-corrected values in \code{measure_col}
+#'   and original values preserved in \code{preBatchCorr_[measure_col]}.
 #' @export
 center_feature_batch_means_df <- function(df_long, sample_annotation = NULL,
                                           sample_id_col = "FullRunName",
@@ -86,6 +92,8 @@ center_feature_batch_means_df <- function(df_long, sample_annotation = NULL,
 #' @title DEPRECATED: correct_with_ComBat_df
 #' @description Use [correct_with_ComBat()] with `format="long"`.
 #' @inheritParams correct_batch_effects
+#' @return A data.frame in long format with ComBat-corrected values in \code{measure_col}
+#'   and original values preserved in \code{preBatchCorr_[measure_col]}.
 #' @export
 correct_with_ComBat_df <- function(df_long, sample_annotation = NULL,
                                    feature_id_col = "peptide_group_label",
@@ -115,6 +123,7 @@ correct_with_ComBat_df <- function(df_long, sample_annotation = NULL,
 #' @title DEPRECATED: correct_with_ComBat_dm
 #' @description Use [correct_with_ComBat()] with `format="wide"`.
 #' @inheritParams correct_batch_effects
+#' @return A numeric matrix of ComBat-corrected values (features \eqn{\times} samples).
 #' @export
 correct_with_ComBat_dm <- function(data_matrix, sample_annotation = NULL,
                                    feature_id_col = "peptide_group_label",
@@ -138,6 +147,7 @@ correct_with_ComBat_dm <- function(data_matrix, sample_annotation = NULL,
 #' @title DEPRECATED: correct_batch_effects_df
 #' @description Use [correct_batch_effects()] with `format="long"`.
 #' @inheritParams correct_batch_effects
+#' @return A data.frame in long format with batch-corrected values in \code{measure_col}.
 #' @export
 correct_batch_effects_df <- function(df_long, sample_annotation,
                                      continuous_func = NULL,
@@ -175,6 +185,7 @@ correct_batch_effects_df <- function(df_long, sample_annotation,
 #' @title DEPRECATED: correct_batch_effects_dm
 #' @description Use [correct_batch_effects()] with `format="wide"`.
 #' @inheritParams correct_batch_effects
+#' @return A numeric matrix of batch-corrected values (features \eqn{\times} samples).
 #' @export
 correct_batch_effects_dm <- function(data_matrix, sample_annotation,
                                      continuous_func = NULL,
@@ -205,6 +216,7 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
 #' @title DEPRECATED: correct_with_removeBatchEffect_df
 #' @description Use [correct_with_removeBatchEffect()] with `format="long"`.
 #' @inheritParams correct_batch_effects
+#' @return A data.frame in long format with batch effects removed in \code{measure_col}.
 #' @export
 correct_with_removeBatchEffect_df <- function(df_long, sample_annotation = NULL,
                                               feature_id_col = "peptide_group_label",

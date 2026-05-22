@@ -96,6 +96,9 @@ included in \code{mod} for ComBat (biological or nuisance covariates).}
 \item{...}{Additional parameters passed to \code{adjust_batch_trend_df()} and
 the chosen \code{fit_func}.}
 }
+\value{
+A data.frame in long format with batch-corrected values in \code{measure_col}.
+}
 \description{
 Use [correct_batch_effects()] with `format="long"`.
 }

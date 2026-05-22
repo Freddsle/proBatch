@@ -93,7 +93,7 @@ A scatter plot with a spline-smoothed trend and per-group Spearman
 correlations is returned.
 }
 \examples{
-\dontrun{
+\donttest{
 plot_NA_intensity(pbf, color_by = "Group")
 }
 }

@@ -257,10 +257,10 @@ correct_with_RUVIII_C <- function(
                         control_features = negative_control_features
                     )
                 } else if (isTRUE(rep_force)) {
-                    warning(paste(
-                        "rep_force=TRUE: no technical replicates detected; constructing automatic PRPS-like",
+                    warning(
+                        "rep_force=TRUE: no technical replicates detected; constructing automatic PRPS-like ",
                         "pairs (without requiring prps_group_cols). Results may be unreliable; interpret with caution."
-                    ))
+                    )
                     # If no grouping supplied and no 'condition', create a single ALL group to permit pairing
                     grp_cols <- prps_group_cols
                     if (is.null(grp_cols)) {
@@ -279,11 +279,11 @@ correct_with_RUVIII_C <- function(
                         control_features = negative_control_features
                     )
                 } else {
-                    stop(paste(
+                    stop(
                         "No technical replicates detected (all replicate groups are size 1).",
                         "\n\tSet use_pseudorep = TRUE to construct PRPS pseudo-replicates,",
                         "\n\tor set rep_force = TRUE to force automatic PRPS-like pairing (NOT recommended)."
-                    ))
+                    )
                 }
 
                 if (!anyDuplicated(prps_ids[!is.na(prps_ids)])) {

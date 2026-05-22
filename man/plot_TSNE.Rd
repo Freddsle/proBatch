@@ -127,7 +127,7 @@ object. A ggplot scatter plot is produced by default, with optional
 Plotly-based rendering when requested.
 }
 \examples{
-\dontrun{
+\donttest{
 data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
 tsne_plot <- plot_TSNE(example_proteome_matrix, example_sample_annotation,
     color_by = "MS_batch", perplexity = 5, max_iter = 500

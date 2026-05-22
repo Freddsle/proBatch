@@ -54,6 +54,9 @@ matrix are permitted; however, the design (batch/covariates) must not contain NA
 \item{covariates_cols}{Optional character vector of \code{sample_annotation} columns
 included in \code{mod} for ComBat (biological or nuisance covariates).}
 }
+\value{
+A numeric matrix of ComBat-corrected values (features \eqn{\times} samples).
+}
 \description{
 Use [correct_with_ComBat()] with `format="wide"`.
 }

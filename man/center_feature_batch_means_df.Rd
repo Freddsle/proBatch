@@ -59,6 +59,10 @@ which means argument value has to be set to \code{m_score}.}
 this argument value has to be set to \code{2} (this is an \code{m_score}
 value for imputed values (requant values).}
 }
+\value{
+A data.frame in long format with batch-corrected values in \code{measure_col}
+  and original values preserved in \code{preBatchCorr_[measure_col]}.
+}
 \description{
 Use [center_feature_batch()] with `format="long", stat="means"`.
 }

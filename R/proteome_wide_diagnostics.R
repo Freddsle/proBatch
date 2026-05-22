@@ -1597,7 +1597,7 @@ plot_PCA <- function(x, ...) UseMethod("plot_PCA")
 #' @name plot_TSNE
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
 #' tsne_plot <- plot_TSNE(example_proteome_matrix, example_sample_annotation,
 #'     color_by = "MS_batch", perplexity = 5, max_iter = 500
@@ -1810,7 +1810,7 @@ plot_TSNE <- function(x, ...) UseMethod("plot_TSNE")
 #' @name plot_UMAP
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
 #' umap_plot <- plot_UMAP(example_proteome_matrix, example_sample_annotation,
 #'     color_by = "MS_batch", n_neighbors = 10

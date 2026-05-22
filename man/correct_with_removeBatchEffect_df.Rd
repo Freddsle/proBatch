@@ -59,6 +59,9 @@ values: all/default/minimal (which set of columns be kept).}
 \item{...}{Additional parameters passed to \code{adjust_batch_trend_df()} and
 the chosen \code{fit_func}.}
 }
+\value{
+A data.frame in long format with batch effects removed in \code{measure_col}.
+}
 \description{
 Use [correct_with_removeBatchEffect()] with `format="long"`.
 }

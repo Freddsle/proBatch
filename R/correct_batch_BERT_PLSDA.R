@@ -436,9 +436,10 @@ correct_with_PLSDA_batch <- function(x,
 
     # Clear early error & namespace hint
     if (is.null(sample_annotation)) {
+        effect_str <- if (!is.null(effect_col)) paste0(" and ", effect_col) else ""
         stop(
             "sample_annotation is required for PLSDA-batch (to supply ", batch_col,
-            if (!is.null(effect_col)) paste0(" and ", effect_col) else "", ")."
+            effect_str, ")."
         )
     }
 
@@ -753,7 +754,7 @@ correct_with_PLSDA_batch <- function(x,
     message("It is recommended (by PLSDA-batch) to select ncomp_bat that explains close to 100% of variance in $Y.")
     message(
         "Proportion of variance explained (%) for \n",
-        paste(capture.output(print(tab_pct, quote = FALSE, right = TRUE)), collapse = "\n")
+        paste(utils::capture.output(noquote(tab_pct)), collapse = "\n")
     )
 
     idx <- which(ycum >= 0.99)[1]
@@ -795,7 +796,7 @@ correct_with_PLSDA_batch <- function(x,
     message("It is recommended (by PLSDA-batch) to select ncomp_trt that explains close to 100% of variance in Y.")
     message(
         "Proportion of variance explained (%)\n",
-        paste(capture.output(print(tab_pct, quote = FALSE, right = TRUE)), collapse = "\n")
+        paste(utils::capture.output(noquote(tab_pct)), collapse = "\n")
     )
 
     idx <- which(ycum >= 0.99)[1]
@@ -808,7 +809,7 @@ correct_with_PLSDA_batch <- function(x,
 # ---- helpers (reused by sPLSDA tuning only) ----------------------------------
 
 .default_keepX_grid <- function(p) {
-    unique(sort(pmin(c(1:10, seq(20, 100, 10), seq(150, 500, 50), p), p)))
+    unique(sort(pmin(c(seq_len(10), seq(20, 100, 10), seq(150, 500, 50), p), p)))
 }
 
 # X: samples×features; accepts optional tuning args via function params

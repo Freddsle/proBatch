@@ -136,7 +136,7 @@ object. A ggplot representation is returned by default, with optional
 Plotly-based rendering when requested.
 }
 \examples{
-\dontrun{
+\donttest{
 data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
 umap_plot <- plot_UMAP(example_proteome_matrix, example_sample_annotation,
     color_by = "MS_batch", n_neighbors = 10

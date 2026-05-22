@@ -73,6 +73,10 @@ values: all/default/minimal (which set of columns be kept).}
 \item{covariates_cols}{Optional character vector of \code{sample_annotation} columns
 included in \code{mod} for ComBat (biological or nuisance covariates).}
 }
+\value{
+A data.frame in long format with ComBat-corrected values in \code{measure_col}
+  and original values preserved in \code{preBatchCorr_[measure_col]}.
+}
 \description{
 Use [correct_with_ComBat()] with `format="long"`.
 }

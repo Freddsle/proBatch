@@ -439,16 +439,16 @@ imputePRONE_dm <- function(x,
 }
 
 .pb_prone_impute_fun <- local({
-    override_fun <- NULL
+    cache <- new.env(parent = emptyenv())
     function() {
         opt_fun <- getOption("proBatch.prone_impute_se", NULL)
         if (is.function(opt_fun)) {
             return(opt_fun)
         }
-        if (is.null(override_fun)) {
-            override_fun <<- .pb_load_prone_impute()
+        if (is.null(cache$fun)) {
+            cache$fun <- .pb_load_prone_impute()
         }
-        override_fun
+        cache$fun
     }
 })
 
