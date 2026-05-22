@@ -243,25 +243,50 @@ normalize_sample_medians_dm <- function(data_matrix,
     reference_medians <- rep(NA_real_, ncol(data_matrix))
     split_indices <- split(seq_along(groups), groups, drop = FALSE)
 
-    for (idx in split_indices) {
+    skipped_groups <- character()
+    skipped_samples <- character()
+    for (grp_name in names(split_indices)) {
+        idx <- split_indices[[grp_name]]
         if (!length(idx)) {
             next
         }
         sub_matrix <- data_matrix[, idx, drop = FALSE]
         valid_rows <- rowSums(!is.na(sub_matrix)) > 0
-        if (!any(valid_rows)) {
+        global_median <- if (any(valid_rows)) {
+            median(sub_matrix[valid_rows, , drop = FALSE], na.rm = TRUE)
+        } else {
+            NA_real_
+        }
+        if (!any(valid_rows) || is.na(global_median)) {
+            skipped_groups <- c(skipped_groups, grp_name)
+            grp_samples <- colnames(data_matrix)[idx]
+            if (length(grp_samples)) {
+                skipped_samples <- c(skipped_samples, grp_samples)
+            }
             next
         }
         medians <- apply(sub_matrix[valid_rows, , drop = FALSE], 2, median, na.rm = TRUE)
-        global_median <- median(sub_matrix[valid_rows, , drop = FALSE], na.rm = TRUE)
-        if (is.na(global_median)) {
-            next
-        }
         adjustments <- global_median - medians
         adjustments[is.na(adjustments)] <- 0
         centered[, idx] <- sweep(sub_matrix, 2, adjustments, FUN = "+")
         sample_medians[idx] <- medians
         reference_medians[idx] <- global_median
+    }
+
+    if (length(skipped_groups)) {
+        # Surface silent partial normalization: samples in these groups were
+        # left at their original (un-normalized) values because the group had
+        # no observed values or an undefined global median.
+        warning(sprintf(
+            paste0(
+                "Inside-batch median centering skipped %d group(s) (%s); ",
+                "%d sample(s) left un-normalized%s."
+            ),
+            length(skipped_groups),
+            paste(skipped_groups, collapse = ", "),
+            length(skipped_samples),
+            if (length(skipped_samples)) paste0(": ", paste(skipped_samples, collapse = ", ")) else ""
+        ))
     }
 
     list(

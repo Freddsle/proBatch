@@ -910,10 +910,34 @@ correct_batch_effects <- function(
             sample_id_col  = sample_id_col
         )
 
-        if (!is.null(input_sample_ids) &&
-            !is.null(colnames(corrected_matrix)) &&
-            setequal(colnames(corrected_matrix), input_sample_ids)) {
-            corrected_matrix <- corrected_matrix[, input_sample_ids, drop = FALSE]
+        # Reorder columns to match input, and warn loudly when the corrected
+        # matrix has a different sample set than the input (silent misalignment
+        # is a common source of downstream errors when results are merged with
+        # external data by positional index).
+        out_samples <- colnames(corrected_matrix)
+        if (!is.null(input_sample_ids) && !is.null(out_samples)) {
+            if (setequal(out_samples, input_sample_ids)) {
+                corrected_matrix <- corrected_matrix[, input_sample_ids, drop = FALSE]
+            } else {
+                dropped <- setdiff(input_sample_ids, out_samples)
+                added <- setdiff(out_samples, input_sample_ids)
+                warning(sprintf(
+                    paste0(
+                        "Corrected matrix sample set differs from input: ",
+                        "%d sample(s) dropped%s; %d sample(s) added%s. ",
+                        "Surviving columns reordered to input order."
+                    ),
+                    length(dropped),
+                    if (length(dropped)) paste0(": ", paste(dropped, collapse = ", ")) else "",
+                    length(added),
+                    if (length(added)) paste0(": ", paste(added, collapse = ", ")) else ""
+                ))
+                surviving <- intersect(input_sample_ids, out_samples)
+                if (length(surviving)) {
+                    extras <- setdiff(out_samples, surviving)
+                    corrected_matrix <- corrected_matrix[, c(surviving, extras), drop = FALSE]
+                }
+            }
         }
 
         if (!is.null(input_feature_ids) &&

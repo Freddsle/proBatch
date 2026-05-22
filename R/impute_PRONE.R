@@ -347,9 +347,11 @@ imputePRONE_dm <- function(x,
             !anyDuplicated(current_cols) &&
             setequal(expected_cols, current_cols)) {
             out <- out[, expected_cols, drop = FALSE]
-        } else if (ncol(out) == length(expected_cols)) {
-            colnames(out) <- expected_cols
         } else {
+            # Both sides have valid colnames but they do not set-equal. We must
+            # NOT silently overwrite by position: PRONE may have re-ordered
+            # samples, in which case a positional re-label would misalign
+            # every sample without any warning.
             stop(
                 "PRONE imputation returned columns that cannot be aligned to the original samples.",
                 call. = FALSE
