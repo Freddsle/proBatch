@@ -41,9 +41,10 @@ matrix in wide format.}
 build the omicsGMF design matrix from `sample_annotation`.}
 
 \item{batch_col}{Optional batch variable name present in `design_formula`.
-If provided and omicsGMF stores design attributes (`X`, `Beta`) on the
-reduced dimension, reconstruction preserves non-batch fixed effects by
-adding `X_no_batch %*% Beta` to the latent component.}
+When provided and omicsGMF stores design attributes (`X`, `Beta`) on the
+reduced dimension, only the batch-attributable part of the modelled mean
+(`X[, batch] %*% t(Beta[, batch])`) is subtracted from the observed data,
+matching the standard `limma::removeBatchEffect` semantics.}
 
 \item{family}{GLM family passed to omicsGMF (default: `gaussian()`).}
 

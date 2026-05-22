@@ -105,6 +105,14 @@ correct_with_mComBat <- function(
         batches[[i]] <- which(batch == levels(batch)[i])
     }
     n.batches <- sapply(batches, length)
+    if (any(n.batches < 2L)) {
+        small <- levels(batch)[n.batches < 2L]
+        stop(
+            "m-ComBat requires at least 2 samples per batch; ",
+            "batch(es) with <2 samples: ", paste(small, collapse = ", "),
+            call. = FALSE
+        )
+    }
     n.array <- sum(n.batches)
     design <- cbind(batchmod, mod)
     check <- apply(design, 2, function(x) all(x == 1))
@@ -154,11 +162,23 @@ correct_with_mComBat <- function(
     var.batch <- apply(resid[, batch == center, drop = FALSE], 1, var) # <<< CHANGED
     # Build a p x n SD matrix: for each batch i, same per-gene SD across its columns
     sd.mat <- matrix(NA_real_, nrow = nrow(dat), ncol = ncol(dat)) # <<< CHANGED
+    bad_features <- logical(nrow(dat))
     for (i in 1:n.batch) { # <<< CHANGED
         idx <- batches[[i]] # <<< CHANGED
         sd.i <- sqrt(apply(resid[, idx, drop = FALSE], 1, var)) # <<< CHANGED
+        # Guard against zero or NA within-batch SD (constant gene in batch),
+        # which would propagate Inf/NaN through Z = resid / sd.mat.
+        bad_features <- bad_features | !is.finite(sd.i) | sd.i == 0
+        sd.i[!is.finite(sd.i) | sd.i == 0] <- 1
         sd.mat[, idx] <- sd.i %*% t(rep(1, length(idx))) # <<< CHANGED
     } # <<< CHANGED
+    if (any(bad_features)) {
+        warning(
+            "m-ComBat: ", sum(bad_features),
+            " feature(s) had zero within-batch variance and will be left unchanged.",
+            call. = FALSE
+        )
+    }
     # standardized data: Z_{ijg} = (Y - alpha_{ig} - X beta_g) / sigma_{ig}
     s.data <- resid / sd.mat # <<< CHANGED
 
@@ -170,7 +190,7 @@ correct_with_mComBat <- function(
 
     delta.hat <- NULL
     for (i in batches) {
-        delta.hat <- rbind(delta.hat, apply(s.data[, i], 1, var, na.rm = T))
+        delta.hat <- rbind(delta.hat, apply(s.data[, i, drop = FALSE], 1, var, na.rm = TRUE))
     }
 
     gamma.bar <- apply(gamma.hat, 1, mean)
@@ -209,6 +229,12 @@ correct_with_mComBat <- function(
     }
 
     bayesdata <- (bayesdata * scale_mat) + deterministic
+
+    # Leave zero-within-batch-variance features untouched (avoid silent NaN/Inf
+    # that would otherwise originate from the standardization step).
+    if (any(bad_features)) {
+        bayesdata[bad_features, ] <- dat[bad_features, ]
+    }
 
     # TODO: Check if needed to enforce covariate preservation
     # if (has_covariates) {
