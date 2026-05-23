@@ -434,6 +434,7 @@
                                          batch = NULL,
                                          condition = NULL,
                                          refs = NULL,
+                                         fill_the_missing = NULL,
                                          ...) {
     if (is.null(colnames(data_matrix))) {
         stop("PRONE normalization requires matrix column names (sample identifiers).")
@@ -454,7 +455,7 @@
         data_matrix = data_matrix,
         sample_annotation = sample_annotation_local,
         sample_id_col = sample_id_col_local,
-        fill_the_missing = NULL,
+        fill_the_missing = fill_the_missing,
         missing_warning = "PRONE normalization requires sample identifiers.",
         method_fun = function(data_matrix, sample_annotation) {
             sample_ids_local <- colnames(data_matrix)

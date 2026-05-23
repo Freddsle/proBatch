@@ -20,8 +20,10 @@
 #'   \code{BPPARAM}) to control parallel execution (see \code{?BiocParallel}).
 #' @param BPPARAM Optional \code{BiocParallelParam} object for BERT. When \code{NULL}, the wrapper does not
 #'   set a default and \code{BERT::BERT()} uses its own default.
-#' @param ... Additional arguments passed to \code{BERT::BERT()}. Note that by default the wrapper sets
-#'   \code{referencename = " "} (a single space) unless you override it via \code{...}.
+#' @param ... Optional named arguments. Use \code{bert_args = list(...)} to forward
+#'   additional arguments to \code{BERT::BERT()}. By default the wrapper sets
+#'   \code{referencename = " "} (a single space) unless overridden via
+#'   \code{bert_args$referencename}.
 #' @param keep_all For long output, columns retained (as in other correct_* functions).
 #'
 #' @details
@@ -60,22 +62,25 @@ correct_with_BERT <- function(
     .pb_requireNamespace("BERT")
     format <- match.arg(format)
     bert_method <- match.arg(bert_method)
+    dots <- list(...)
+
+    fixed_args <- list(
+        sample_annotation = sample_annotation,
+        sample_id_col     = sample_id_col,
+        batch_col         = batch_col,
+        covariates_cols   = covariates_cols,
+        bert_method       = bert_method,
+        combatmode        = combatmode,
+        cores             = cores,
+        BPPARAM           = BPPARAM
+    )
 
     if (identical(format, "wide")) {
         if (!is.matrix(x)) stop("format='wide' requires a numeric matrix.")
-        corrected_matrix <- .bert_matrix_step(
-            data_matrix       = x,
-            sample_annotation = sample_annotation,
-            sample_id_col     = sample_id_col,
-            batch_col         = batch_col,
-            covariates_cols   = covariates_cols,
-            bert_method       = bert_method,
-            combatmode        = combatmode,
-            cores             = cores,
-            BPPARAM           = BPPARAM,
-            ...
-        )
-        return(corrected_matrix)
+        return(do.call(
+            .bert_matrix_step,
+            c(list(data_matrix = x), fixed_args, dots)
+        ))
     }
 
     # LONG -> matrix
@@ -89,21 +94,13 @@ correct_with_BERT <- function(
         error_message = "format='long' requires a data.frame."
     )
     df_long <- prep$df_long
-    sample_annotation <- prep$sample_annotation
+    fixed_args$sample_annotation <- prep$sample_annotation
     data_matrix <- prep$data_matrix
     original_cols <- prep$original_cols
 
-    corrected_matrix <- .bert_matrix_step(
-        data_matrix       = data_matrix,
-        sample_annotation = sample_annotation,
-        sample_id_col     = sample_id_col,
-        batch_col         = batch_col,
-        covariates_cols   = covariates_cols,
-        bert_method       = bert_method,
-        combatmode        = combatmode,
-        cores             = cores,
-        BPPARAM           = BPPARAM,
-        ...
+    corrected_matrix <- do.call(
+        .bert_matrix_step,
+        c(list(data_matrix = data_matrix), fixed_args, dots)
     )
 
     .post_correction_to_long(
@@ -187,7 +184,7 @@ correct_with_BERT <- function(
   cores = NULL,
   BPPARAM = NULL,
   reference_name = " ",
-  ...
+  bert_args = list()
 ) {
     bert_method <- match.arg(bert_method)
 
@@ -207,18 +204,18 @@ correct_with_BERT <- function(
         sample_id_col = sample_id_col
     )
 
-    dots <- list(...)
-    if (!is.null(dots$referencename)) {
+    # `bert_args` carries user-supplied BERT::BERT() arguments; pull out the few
+    # names we need to inspect locally, leave the rest to forward as-is.
+    extra <- as.list(bert_args)
+    if (!is.null(extra$referencename)) {
         if (missing(reference_name) || identical(reference_name, " ")) {
-            reference_name <- dots$referencename
+            reference_name <- extra$referencename
         }
-        dots$referencename <- NULL
+        extra$referencename <- NULL
     }
-    labelname <- dots$labelname
-    samplename <- dots$samplename
-    if (!is.null(dots$samplename)) {
-        dots$samplename <- NULL
-    }
+    labelname <- extra$labelname
+    samplename <- extra$samplename
+    extra$samplename <- NULL
     if (is.null(samplename) || !nzchar(samplename)) {
         samplename <- "Sample"
     }
@@ -300,8 +297,9 @@ correct_with_BERT <- function(
         }
     }
 
-    # Call BERT; allow user to pass parallel settings & extra args
-    bert_args <- list(
+    # Build the BERT::BERT() call: proBatch-controlled args first, then any
+    # remaining user-supplied entries from `bert_args` (now in `extra`).
+    bert_call <- list(
         data = df_bert,
         method = bert_method,
         batchname = batch_col,
@@ -309,18 +307,20 @@ correct_with_BERT <- function(
         covariatename = covariates_cols
     )
     if (!is.null(combatmode)) {
-        bert_args$combatmode <- combatmode
+        bert_call$combatmode <- combatmode
     }
     if (!is.null(reference_name)) {
-        bert_args$referencename <- reference_name
+        bert_call$referencename <- reference_name
     }
     if (!is.null(cores)) {
-        bert_args$cores <- cores
+        bert_call$cores <- cores
     }
     if (!is.null(BPPARAM)) {
-        bert_args$BPPARAM <- BPPARAM
+        bert_call$BPPARAM <- BPPARAM
     }
-    res <- do.call(BERT::BERT, c(bert_args, dots))
+    # User-supplied entries never overwrite the args we set explicitly.
+    extra <- extra[setdiff(names(extra), names(bert_call))]
+    res <- do.call(BERT::BERT, c(bert_call, extra))
     if (!is.null(samplename) && (samplename %in% names(res))) {
         res <- res[match(sample_order, res[[samplename]]), , drop = FALSE]
     }
@@ -351,33 +351,35 @@ correct_with_BERT <- function(
   cores = NULL,
   BPPARAM = NULL,
   reference_name = " ",
-  ...
+  fill_the_missing = NULL,
+  bert_args = list()
 ) {
-    # Coerce to numeric matrix (do NOT impute; BERT tolerates NA)
-    # But check that after NA removal it's still numeric and has >=2 features
-    if (!is.matrix(data_matrix)) {
-        data_matrix <- as.matrix(data_matrix)
-    }
-    if (!is.numeric(data_matrix)) {
-        stop("Input must be coercible to a numeric matrix for BERT correction.")
-    }
-    storage.mode(data_matrix) <- "double"
-    if (sum(rowSums(!is.na(data_matrix)) > 0L) < 2L) {
-        stop("BERT requires at least two not-NA features.")
-    }
+    bert_method <- match.arg(bert_method)
 
-    .run_BERT_core(
-        data_matrix       = data_matrix,
+    .run_matrix_method(
+        data_matrix = data_matrix,
         sample_annotation = sample_annotation,
-        sample_id_col     = sample_id_col,
-        batch_col         = batch_col,
-        covariates_cols   = covariates_cols,
-        bert_method       = match.arg(bert_method),
-        combatmode        = combatmode,
-        cores             = cores,
-        BPPARAM           = BPPARAM,
-        reference_name    = reference_name,
-        ...
+        sample_id_col = sample_id_col,
+        fill_the_missing = fill_the_missing,
+        missing_warning = "BERT correction removed rows/columns while handling missing values.",
+        method_fun = function(data_matrix, sample_annotation) {
+            if (sum(rowSums(!is.na(data_matrix)) > 0L) < 2L) {
+                stop("BERT requires at least two not-NA features.")
+            }
+            .run_BERT_core(
+                data_matrix       = data_matrix,
+                sample_annotation = sample_annotation,
+                sample_id_col     = sample_id_col,
+                batch_col         = batch_col,
+                covariates_cols   = covariates_cols,
+                bert_method       = bert_method,
+                combatmode        = combatmode,
+                cores             = cores,
+                BPPARAM           = BPPARAM,
+                reference_name    = reference_name,
+                bert_args         = bert_args
+            )
+        }
     )
 }
 
@@ -404,6 +406,11 @@ correct_with_BERT <- function(
 #'   to keep NA entries untouched, or supply a numeric value to impute prior to correction.
 #' @param max.iter,tol Passed to PLSDAbatch; max iterations and tolerance for convergence.
 #' @param run_splsda Logical; if \code{TRUE} runs sPLSDA correction.
+#' @param ... Optional named arguments. Use \code{plsda_args = list(...)} to forward
+#'   additional arguments to \code{PLSDAbatch::PLSDA_batch()}; tuning controls for
+#'   the internal \code{mixOmics::tune.splsda()} call can also be supplied via
+#'   \code{plsda_args} as \code{tune.seed}, \code{tune.folds}, \code{tune.nrepeat},
+#'   and \code{test.keepX}.
 #' @return A batch-corrected matrix (features x samples) for \code{format="wide"};
 #'   for \code{format="long"} returns a long data.frame with \code{measure_col} corrected.
 #' @seealso \link[PLSDAbatch]{PLSDA_batch} for details.
@@ -451,27 +458,30 @@ correct_with_PLSDA_batch <- function(x,
         stop("balance must be a single logical or \"auto\".")
     }
 
+    dots <- list(...)
+    fixed_args <- list(
+        sample_annotation = sample_annotation,
+        sample_id_col     = sample_id_col,
+        batch_col         = batch_col,
+        effect_col        = effect_col,
+        ncomp_trt         = ncomp_trt,
+        ncomp_bat         = ncomp_bat,
+        keepX_trt         = keepX_trt,
+        keepX_bat         = keepX_bat,
+        balance           = balance,
+        near_zero_var     = near_zero_var,
+        max.iter          = max.iter,
+        tol               = tol,
+        run_splsda        = run_splsda,
+        fill_the_missing  = fill_the_missing
+    )
+
     if (identical(format, "wide")) {
         if (!is.matrix(x)) stop("format='wide' requires a numeric matrix.")
-        corrected_matrix <- .plsda_matrix_step(
-            data_matrix       = x,
-            sample_annotation = sample_annotation,
-            sample_id_col     = sample_id_col,
-            batch_col         = batch_col,
-            effect_col        = effect_col,
-            ncomp_trt         = ncomp_trt,
-            ncomp_bat         = ncomp_bat,
-            keepX_trt         = keepX_trt,
-            keepX_bat         = keepX_bat,
-            balance           = balance,
-            near_zero_var     = near_zero_var,
-            max.iter          = max.iter,
-            tol               = tol,
-            run_splsda        = run_splsda,
-            fill_the_missing  = fill_the_missing,
-            ...
-        )
-        return(corrected_matrix)
+        return(do.call(
+            .plsda_matrix_step,
+            c(list(data_matrix = x), fixed_args, dots)
+        ))
     }
 
     # LONG -> matrix
@@ -487,27 +497,13 @@ correct_with_PLSDA_batch <- function(x,
         error_message = "format='long' requires a data.frame."
     )
     df_long <- prep$df_long
-    sample_annotation <- prep$sample_annotation
+    fixed_args$sample_annotation <- prep$sample_annotation
     data_matrix <- prep$data_matrix
     original_cols <- prep$original_cols
 
-    corrected_matrix <- .plsda_matrix_step(
-        data_matrix = data_matrix,
-        sample_annotation = sample_annotation,
-        sample_id_col = sample_id_col,
-        batch_col = batch_col,
-        effect_col = effect_col,
-        ncomp_trt = ncomp_trt,
-        ncomp_bat = ncomp_bat,
-        keepX_trt = keepX_trt,
-        keepX_bat = keepX_bat,
-        balance = balance,
-        near_zero_var = near_zero_var,
-        max.iter = max.iter,
-        tol = tol,
-        run_splsda = run_splsda,
-        fill_the_missing = fill_the_missing,
-        ...
+    corrected_matrix <- do.call(
+        .plsda_matrix_step,
+        c(list(data_matrix = data_matrix), fixed_args, dots)
     )
 
     .post_correction_to_long(
@@ -517,8 +513,8 @@ correct_with_PLSDA_batch <- function(x,
     )
 }
 
-.splsda_matrix_step <- function(run_splsda = TRUE, ...) {
-    .plsda_matrix_step(run_splsda = run_splsda, ...)
+.splsda_matrix_step <- function(data_matrix, ..., run_splsda = TRUE) {
+    .plsda_matrix_step(data_matrix = data_matrix, run_splsda = run_splsda, ...)
 }
 
 
@@ -537,7 +533,7 @@ correct_with_PLSDA_batch <- function(x,
   tol = 1e-06,
   run_splsda = FALSE,
   fill_the_missing = NULL,
-  ...
+  plsda_args = list()
 ) {
     .run_matrix_method(
         data_matrix = data_matrix,
@@ -565,7 +561,7 @@ correct_with_PLSDA_batch <- function(x,
                 max.iter = max.iter,
                 tol = tol,
                 run_splsda = run_splsda,
-                ...
+                plsda_args = plsda_args
             )
         }
     )
@@ -587,7 +583,7 @@ correct_with_PLSDA_batch <- function(x,
   max.iter = 500,
   tol = 1e-06,
   run_splsda = FALSE,
-  ...
+  plsda_args = list()
 ) {
     stopifnot(is.matrix(data_matrix))
     if (is.null(sample_annotation)) stop("sample_annotation is required.")
@@ -638,7 +634,10 @@ correct_with_PLSDA_batch <- function(x,
     }
 
     # --- sPLSDA tuning of keepX_trt if requested ---
-    dots <- list(...)
+    # `plsda_args` carries user-supplied PLSDA_batch() arguments and a few
+    # tuning controls for the internal `mixOmics::tune.splsda()` call. We
+    # consume the tuning keys here, then forward the remainder to PLSDA_batch().
+    dots <- as.list(plsda_args)
     if (!is.null(keepX_trt) && length(keepX_trt) != ncomp_trt) {
         stop("keepX_trt must be NULL or a numeric vector of length ncomp_trt.")
     }
@@ -685,22 +684,22 @@ correct_with_PLSDA_batch <- function(x,
     if (ncomp_bat < 1L) stop("ncomp_bat must be a positive integer.")
 
     # --- fit PLSDA-batch (pass tol and max.iter) ---
-    fit <- do.call(
-        PLSDAbatch::PLSDA_batch,
-        c(list(
-            X = X,
-            Y.trt = Y.trt,
-            Y.bat = Y.bat,
-            ncomp.trt = ncomp_trt,
-            ncomp.bat = ncomp_bat,
-            keepX.trt = if (is.null(keepX_trt)) rep(ncol(X), ncomp_trt) else keepX_trt,
-            keepX.bat = if (is.null(keepX_bat)) rep(ncol(X), ncomp_bat) else keepX_bat,
-            max.iter = max.iter,
-            tol = tol,
-            near.zero.var = near_zero_var,
-            balance = bal
-        ), dots)
+    plsda_call <- list(
+        X = X,
+        Y.trt = Y.trt,
+        Y.bat = Y.bat,
+        ncomp.trt = ncomp_trt,
+        ncomp.bat = ncomp_bat,
+        keepX.trt = if (is.null(keepX_trt)) rep(ncol(X), ncomp_trt) else keepX_trt,
+        keepX.bat = if (is.null(keepX_bat)) rep(ncol(X), ncomp_bat) else keepX_bat,
+        max.iter = max.iter,
+        tol = tol,
+        near.zero.var = near_zero_var,
+        balance = bal
     )
+    # User-supplied entries never overwrite the args we set explicitly.
+    dots <- dots[setdiff(names(dots), names(plsda_call))]
+    fit <- do.call(PLSDAbatch::PLSDA_batch, c(plsda_call, dots))
 
     corrected <- fit$X.nobatch # samples x features
     out <- t(corrected) # back to features x samples

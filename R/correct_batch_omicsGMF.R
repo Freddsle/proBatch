@@ -143,7 +143,8 @@ correct_with_omicsGMF <- function(
   family = gaussian(),
   ncomponents,
   gmf_args = list(),
-  impute_args = list()
+  impute_args = list(),
+  fill_the_missing = NULL
 ) {
     .pb_require_omicsgmf_stack()
 
@@ -153,7 +154,7 @@ correct_with_omicsGMF <- function(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
-        fill_the_missing = NULL,
+        fill_the_missing = fill_the_missing,
         missing_warning = "omicsGMF correction removed rows/columns while handling missing values.",
         method_fun = function(data_matrix, sample_annotation) {
             fit <- .omicsgmf_fit_and_impute(

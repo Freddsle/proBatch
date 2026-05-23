@@ -348,3 +348,35 @@ test_that("PRONEImpute does not introduce all-NA rows when input has none", {
     expect_identical(dim(res), dim(dm))
     expect_identical(dimnames(res), dimnames(dm))
 })
+
+# -------------------------
+# Regression test: fill_the_missing pass-through
+# -------------------------
+
+test_that(".prone_matrix_step forwards fill_the_missing to .run_matrix_method", {
+    skip_if_not_installed("PRONE")
+
+    m <- matrix(
+        as.numeric(1:6),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2", "s3"))
+    )
+
+    captured <- new.env(parent = emptyenv())
+    testthat::local_mocked_bindings(
+        .run_matrix_method = function(data_matrix, sample_annotation, sample_id_col,
+                                      fill_the_missing, missing_warning, method_fun, ...) {
+            captured$fill_the_missing <- fill_the_missing
+            data_matrix
+        },
+        .package = "proBatch"
+    )
+
+    # Explicit FALSE used to raise "unused argument" before the fix
+    proBatch:::.prone_matrix_step(
+        data_matrix = m,
+        sample_id_col = "FullRunName",
+        fill_the_missing = FALSE
+    )
+    expect_identical(captured$fill_the_missing, FALSE)
+})

@@ -66,8 +66,10 @@ the wrapper leaves worker selection to \code{BERT::BERT()}. Provide \code{cores}
 \item{BPPARAM}{Optional \code{BiocParallelParam} object for BERT. When \code{NULL}, the wrapper does not
 set a default and \code{BERT::BERT()} uses its own default.}
 
-\item{...}{Additional arguments passed to \code{BERT::BERT()}. Note that by default the wrapper sets
-\code{referencename = " "} (a single space) unless you override it via \code{...}.}
+\item{...}{Optional named arguments. Use \code{bert_args = list(...)} to forward
+additional arguments to \code{BERT::BERT()}. By default the wrapper sets
+\code{referencename = " "} (a single space) unless overridden via
+\code{bert_args$referencename}.}
 }
 \value{
 If \code{format="wide"}, a corrected numeric matrix (features×samples).

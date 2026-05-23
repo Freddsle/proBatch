@@ -435,3 +435,93 @@ test_that("correct_with_omicsGMF validates format argument before dispatch (mock
         ignore.case = TRUE
     )
 })
+
+
+# -------------------------
+# Regression tests: omicsGMFcor fill_the_missing pass-through
+# -------------------------
+
+test_that(".omicsgmf_correct_matrix_step accepts and forwards fill_the_missing", {
+    m <- matrix(
+        as.numeric(1:6),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2", "s3"))
+    )
+    sa <- data.frame(
+        FullRunName = c("s1", "s2", "s3"),
+        MS_batch = c("B1", "B1", "B2"),
+        stringsAsFactors = FALSE
+    )
+
+    captured <- new.env(parent = emptyenv())
+    testthat::local_mocked_bindings(
+        .pb_require_omicsgmf_stack = function(...) invisible(TRUE),
+        .run_matrix_method = function(data_matrix, sample_annotation, sample_id_col,
+                                      fill_the_missing, missing_warning, method_fun, ...) {
+            captured$fill_the_missing <- fill_the_missing
+            captured$data_matrix <- data_matrix
+            data_matrix
+        },
+        .package = "proBatch"
+    )
+
+    # Default — fill_the_missing = NULL
+    proBatch:::.omicsgmf_correct_matrix_step(
+        data_matrix = m, sample_annotation = sa,
+        sample_id_col = "FullRunName", batch_col = "MS_batch",
+        ncomponents = 2L
+    )
+    expect_null(captured$fill_the_missing)
+
+    # Explicit FALSE — used to raise "unused argument" before the fix
+    proBatch:::.omicsgmf_correct_matrix_step(
+        data_matrix = m, sample_annotation = sa,
+        sample_id_col = "FullRunName", batch_col = "MS_batch",
+        ncomponents = 2L,
+        fill_the_missing = FALSE
+    )
+    expect_identical(captured$fill_the_missing, FALSE)
+
+    # "remove" policy is forwarded as-is
+    proBatch:::.omicsgmf_correct_matrix_step(
+        data_matrix = m, sample_annotation = sa,
+        sample_id_col = "FullRunName", batch_col = "MS_batch",
+        ncomponents = 2L,
+        fill_the_missing = "remove"
+    )
+    expect_identical(captured$fill_the_missing, "remove")
+})
+
+test_that("correct_with_omicsGMF forwards fill_the_missing to the matrix step", {
+    m <- matrix(
+        as.numeric(1:9),
+        nrow = 3,
+        dimnames = list(paste0("f", 1:3), paste0("s", 1:3))
+    )
+    sa <- data.frame(
+        FullRunName = paste0("s", 1:3),
+        MS_batch = c("B1", "B1", "B2"),
+        stringsAsFactors = FALSE
+    )
+
+    captured <- new.env(parent = emptyenv())
+    fake_step <- function(data_matrix, sample_annotation, sample_id_col,
+                          design_formula, batch_col = NULL, family,
+                          ncomponents, gmf_args = list(), impute_args = list(),
+                          fill_the_missing = NULL, ...) {
+        captured$fill_the_missing <- fill_the_missing
+        data_matrix
+    }
+    local_fake_omicsgmf_correct_step(fake_step)
+
+    correct_with_omicsGMF(
+        x = m, sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        design_formula = ~1,
+        batch_col = "MS_batch",
+        ncomponents = 2L,
+        fill_the_missing = FALSE,
+        format = "wide"
+    )
+    expect_identical(captured$fill_the_missing, FALSE)
+})

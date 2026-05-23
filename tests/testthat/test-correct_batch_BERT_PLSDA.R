@@ -101,8 +101,7 @@ test_that(".run_BERT_core builds BERT input consistent with manual pipeline", {
         sample_id_col = "ric_id",
         batch_col = "batch",
         bert_method = "ComBat",
-        labelname = "label",
-        referencename = "REF"
+        bert_args = list(labelname = "label", referencename = "REF")
     )
 
     sa_aligned <- proBatch:::.align_sample_annotation(
@@ -485,4 +484,311 @@ test_that("correct_with_PLSDAbatch(wide)", {
     expect_identical(dim(out), dim(m))
     expect_identical(dimnames(out), dimnames(m))
     expect_identical(storage.mode(out), "double")
+})
+
+
+# -------------------------
+# Regression tests: .splsda_matrix_step positional dispatch
+# -------------------------
+
+test_that(".splsda_matrix_step binds data_matrix as the first positional arg", {
+    m <- matrix(
+        as.numeric(1:6),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2", "s3"))
+    )
+    sa <- data.frame(
+        FullRunName = c("s1", "s2", "s3"),
+        MS_batch = c("B1", "B1", "B2"),
+        stringsAsFactors = FALSE
+    )
+
+    captured <- new.env(parent = emptyenv())
+    testthat::local_mocked_bindings(
+        .plsda_matrix_step = function(data_matrix, sample_annotation, run_splsda = FALSE, ...) {
+            captured$data_matrix <- data_matrix
+            captured$sample_annotation <- sample_annotation
+            captured$run_splsda <- run_splsda
+            data_matrix + 1
+        },
+        .package = "proBatch"
+    )
+
+    # Simulate dispatcher: data_matrix as first positional argument.
+    # Before the fix this would bind the matrix to run_splsda and leave
+    # data_matrix unset, raising "argument 'data_matrix' is missing".
+    out <- proBatch:::.splsda_matrix_step(
+        m,
+        sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        batch_col = "MS_batch"
+    )
+
+    expect_identical(captured$data_matrix, m)
+    expect_true(isTRUE(captured$run_splsda))
+    expect_equal(out, m + 1, tolerance = 1e-12)
+})
+
+test_that(".plsda_matrix_step still accepts data_matrix positionally (canonical step)", {
+    m <- matrix(
+        as.numeric(1:6),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2", "s3"))
+    )
+    sa <- data.frame(
+        FullRunName = c("s1", "s2", "s3"),
+        MS_batch = c("B1", "B1", "B2"),
+        stringsAsFactors = FALSE
+    )
+
+    captured <- new.env(parent = emptyenv())
+    testthat::local_mocked_bindings(
+        .run_matrix_method = function(data_matrix, sample_annotation, sample_id_col,
+                                      fill_the_missing, missing_warning, method_fun, ...) {
+            captured$data_matrix <- data_matrix
+            captured$fill_the_missing <- fill_the_missing
+            data_matrix
+        },
+        .package = "proBatch"
+    )
+
+    out <- proBatch:::.plsda_matrix_step(
+        m,
+        sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        batch_col = "MS_batch"
+    )
+
+    expect_identical(captured$data_matrix, m)
+    expect_identical(out, m)
+})
+
+
+# -------------------------
+# Regression tests: .bert_matrix_step fill_the_missing pass-through
+# -------------------------
+
+local_fake_bert_run_core <- function(fake_core) {
+    caller_env <- parent.frame()
+    testthat::local_mocked_bindings(
+        .pb_requireNamespace = function(pkg) invisible(TRUE),
+        .run_BERT_core       = fake_core,
+        .package             = "proBatch",
+        .env                 = caller_env
+    )
+}
+
+test_that(".bert_matrix_step accepts fill_the_missing = FALSE without unused-argument error", {
+    m <- matrix(
+        c(
+            1, NA, 3, 7,
+            4, 5, 6, 8
+        ),
+        nrow = 2, byrow = TRUE,
+        dimnames = list(c("f1", "f2"), c("s1", "s2", "s3", "s4"))
+    )
+    sa <- data.frame(
+        FullRunName = c("s1", "s2", "s3", "s4"),
+        MS_batch = c("B1", "B1", "B2", "B2"),
+        stringsAsFactors = FALSE
+    )
+
+    captured <- new.env(parent = emptyenv())
+    fake_core <- function(data_matrix, ...) {
+        captured$data_matrix <- data_matrix
+        captured$dots <- list(...)
+        storage.mode(data_matrix) <- "double"
+        data_matrix + 10
+    }
+    local_fake_bert_run_core(fake_core)
+
+    out <- proBatch:::.bert_matrix_step(
+        data_matrix = m,
+        sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        batch_col = "MS_batch",
+        fill_the_missing = FALSE
+    )
+
+    # fill_the_missing = FALSE leaves NAs in place
+    expect_identical(dim(out), dim(m))
+    expect_identical(dimnames(out), dimnames(m))
+    # fill_the_missing must be consumed before reaching the core
+    expect_false("fill_the_missing" %in% names(captured$dots))
+    expect_true(anyNA(captured$data_matrix))
+})
+
+test_that(".bert_matrix_step with fill_the_missing = 'remove' drops incomplete features", {
+    m <- matrix(
+        c(
+            1, NA, 3, 7, # f1 has NA, should be dropped
+            4, 5, 6, 8, # f2 complete
+            9, 10, 11, 12 # f3 complete
+        ),
+        nrow = 3, byrow = TRUE,
+        dimnames = list(c("f1", "f2", "f3"), c("s1", "s2", "s3", "s4"))
+    )
+    sa <- data.frame(
+        FullRunName = c("s1", "s2", "s3", "s4"),
+        MS_batch = c("B1", "B1", "B2", "B2"),
+        stringsAsFactors = FALSE
+    )
+
+    captured <- new.env(parent = emptyenv())
+    fake_core <- function(data_matrix, ...) {
+        captured$data_matrix <- data_matrix
+        storage.mode(data_matrix) <- "double"
+        data_matrix
+    }
+    local_fake_bert_run_core(fake_core)
+
+    out <- suppressWarnings(proBatch:::.bert_matrix_step(
+        data_matrix = m,
+        sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        batch_col = "MS_batch",
+        fill_the_missing = "remove"
+    ))
+
+    # f1 (incomplete) should have been removed before reaching the core
+    expect_false("f1" %in% rownames(captured$data_matrix))
+    expect_true(all(rownames(out) %in% c("f2", "f3")))
+    # Resulting features are a subset of complete-case features of the input
+    complete_feats <- rownames(m)[rowSums(is.na(m)) == 0]
+    expect_true(all(rownames(out) %in% complete_feats))
+})
+
+# -------------------------
+# Regression tests: third-party arg forwarding via bert_args / plsda_args
+# -------------------------
+
+test_that(".run_BERT_core rejects unknown kwargs at the proBatch boundary", {
+    testthat::skip_if_not_installed("BERT")
+
+    m <- matrix(
+        as.numeric(1:8),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2", "s3", "s4"))
+    )
+    sa <- data.frame(
+        FullRunName = c("s1", "s2", "s3", "s4"),
+        MS_batch = c("B1", "B1", "B2", "B2"),
+        stringsAsFactors = FALSE
+    )
+
+    expect_error(
+        proBatch:::.run_BERT_core(
+            data_matrix = m,
+            sample_annotation = sa,
+            sample_id_col = "FullRunName",
+            batch_col = "MS_batch",
+            spurious_kwarg = 42
+        ),
+        "unused argument"
+    )
+})
+
+test_that(".run_BERT_core forwards bert_args entries to BERT::BERT", {
+    testthat::skip_if_not_installed("BERT")
+
+    m <- matrix(
+        as.numeric(1:8),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2", "s3", "s4"))
+    )
+    sa <- data.frame(
+        FullRunName = c("s1", "s2", "s3", "s4"),
+        MS_batch = c("B1", "B1", "B2", "B2"),
+        stringsAsFactors = FALSE
+    )
+
+    captured <- new.env(parent = emptyenv())
+    testthat::local_mocked_bindings(
+        BERT = function(data, method, combatmode = NULL, batchname, samplename,
+                        covariatename, referencename, ...) {
+            captured$args <- list(...)
+            data
+        },
+        .package = "BERT"
+    )
+
+    proBatch:::.run_BERT_core(
+        data_matrix = m,
+        sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        batch_col = "MS_batch",
+        bert_args = list(verify = TRUE)
+    )
+
+    expect_true(isTRUE(captured$args$verify))
+})
+
+test_that(".run_PLSDA_core rejects unknown kwargs at the proBatch boundary", {
+    testthat::skip_if_not_installed("PLSDAbatch")
+
+    m <- matrix(
+        as.numeric(1:12),
+        nrow = 3,
+        dimnames = list(c("f1", "f2", "f3"), c("s1", "s2", "s3", "s4"))
+    )
+    sa <- data.frame(
+        FullRunName = c("s1", "s2", "s3", "s4"),
+        MS_batch = c("B1", "B1", "B2", "B2"),
+        Condition = c("A", "B", "A", "B"),
+        stringsAsFactors = FALSE
+    )
+
+    expect_error(
+        proBatch:::.run_PLSDA_core(
+            data_matrix = m,
+            sample_annotation = sa,
+            sample_id_col = "FullRunName",
+            batch_col = "MS_batch",
+            effect_col = "Condition",
+            ncomp_trt = 1L,
+            ncomp_bat = 1L,
+            spurious_kwarg = 42
+        ),
+        "unused argument"
+    )
+})
+
+test_that(".run_PLSDA_core forwards plsda_args entries to PLSDAbatch::PLSDA_batch", {
+    testthat::skip_if_not_installed("PLSDAbatch")
+
+    m <- matrix(
+        as.numeric(1:12),
+        nrow = 3,
+        dimnames = list(c("f1", "f2", "f3"), c("s1", "s2", "s3", "s4"))
+    )
+    sa <- data.frame(
+        FullRunName = c("s1", "s2", "s3", "s4"),
+        MS_batch = c("B1", "B1", "B2", "B2"),
+        Condition = c("A", "B", "A", "B"),
+        stringsAsFactors = FALSE
+    )
+
+    captured <- new.env(parent = emptyenv())
+    testthat::local_mocked_bindings(
+        PLSDA_batch = function(X, Y.trt, Y.bat, ncomp.trt, ncomp.bat,
+                               keepX.trt, keepX.bat, max.iter, tol,
+                               near.zero.var, balance, ...) {
+            captured$args <- list(...)
+            list(X.nobatch = X)
+        },
+        .package = "PLSDAbatch"
+    )
+
+    proBatch:::.run_PLSDA_core(
+        data_matrix = m,
+        sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        batch_col = "MS_batch",
+        effect_col = "Condition",
+        ncomp_trt = 1L,
+        ncomp_bat = 1L,
+        plsda_args = list(scale = TRUE)
+    )
+
+    expect_true(isTRUE(captured$args$scale))
 })

@@ -78,6 +78,12 @@ to keep NA entries untouched, or supply a numeric value to impute prior to corre
 \item{keep_all}{For long format, columns to retain (see \code{subset_keep_cols()}).}
 
 \item{run_splsda}{Logical; if \code{TRUE} runs sPLSDA correction.}
+
+\item{...}{Optional named arguments. Use \code{plsda_args = list(...)} to forward
+additional arguments to \code{PLSDAbatch::PLSDA_batch()}; tuning controls for
+the internal \code{mixOmics::tune.splsda()} call can also be supplied via
+\code{plsda_args} as \code{tune.seed}, \code{tune.folds}, \code{tune.nrepeat},
+and \code{test.keepX}.}
 }
 \value{
 A batch-corrected matrix (features x samples) for \code{format="wide"};

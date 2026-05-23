@@ -235,7 +235,8 @@ imputePRONE_dm <- function(x,
                                sample_annotation = NULL,
                                sample_id_col = "FullRunName",
                                condition_col = NULL,
-                               assay_in = "raw") {
+                               assay_in = "raw",
+                               fill_the_missing = NULL) {
     .pb_requireNamespace("PRONE")
 
     if (!is.matrix(data_matrix)) {
@@ -261,7 +262,7 @@ imputePRONE_dm <- function(x,
         data_matrix = data_matrix,
         sample_annotation = sample_annotation_local,
         sample_id_col = sample_id_col_local,
-        fill_the_missing = NULL,
+        fill_the_missing = fill_the_missing,
         missing_warning = "PRONE imputation cannot operate without sample identifiers.",
         method_fun = function(data_matrix, sample_annotation) {
             original_data_matrix <- data_matrix

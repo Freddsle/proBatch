@@ -260,18 +260,12 @@ missForestImpute <- function(x, ...) {
 #' @keywords internal
 .missforest_matrix_step <- function(
   data_matrix,
-  sample_annotation, # not used, for API symmetry
+  sample_annotation = NULL, # not used, for API symmetry
   sample_id_col = "FullRunName", # not used, for API symmetry
   missforest_args = list(),
-  ...
+  fill_the_missing = NULL
 ) {
     .pb_requireNamespace("missForest")
-
-    # If ... contains agruments, merge them into missforest_args
-    extra_args <- list(...)
-    if (length(extra_args)) {
-        missforest_args <- modifyList(missforest_args, extra_args)
-    }
 
     # 0) accept the pipeline's "list(missforest_args = ...)" shape
     if (length(missforest_args) == 1L && !is.null(missforest_args$missforest_args)) {
@@ -287,6 +281,21 @@ missForestImpute <- function(x, ...) {
         stop("missForest imputation requires matrix column names (sample identifiers).",
             call. = FALSE
         )
+    }
+
+    # Optional NA pre-handling (FALSE means "leave NAs alone"; mirrors
+    # .run_matrix_method() — missForest itself imputes any remaining NAs).
+    if (!is.null(fill_the_missing) && !isFALSE(fill_the_missing) && anyNA(data_matrix)) {
+        data_matrix <- handle_missing_values(
+            data_matrix,
+            warning_message = "missForest imputation removed rows/columns while handling missing values.",
+            fill_the_missing = fill_the_missing
+        )
+        if (!nrow(data_matrix) || !ncol(data_matrix)) {
+            stop("No data remaining after handling missing values for missForest imputation.",
+                call. = FALSE
+            )
+        }
     }
 
     ## preserve names

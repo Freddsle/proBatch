@@ -367,3 +367,46 @@ test_that(".omicsgmf_fit_and_impute all-NA guard: filter and re-insert logic (un
     # Non-NA entries got imputed
     expect_false(any(is.na(full[!row_all_na, !col_all_na])))
 })
+
+# -------------------------
+# Regression tests: fill_the_missing pass-through (matrix steps)
+# -------------------------
+
+test_that(".omicsgmf_rank_matrix_step and .omicsgmf_matrix_step forward fill_the_missing", {
+    m <- matrix(
+        as.numeric(1:6),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2", "s3"))
+    )
+    sa <- data.frame(
+        FullRunName = c("s1", "s2", "s3"),
+        stringsAsFactors = FALSE
+    )
+
+    captured <- new.env(parent = emptyenv())
+    testthat::local_mocked_bindings(
+        .pb_require_omicsgmf_stack = function(...) invisible(TRUE),
+        .run_matrix_method = function(data_matrix, sample_annotation, sample_id_col,
+                                      fill_the_missing, missing_warning, method_fun, ...) {
+            captured$fill_the_missing <- fill_the_missing
+            data_matrix
+        },
+        .package = "proBatch"
+    )
+
+    # Rank step: explicit FALSE used to raise "unused argument" before the fix
+    proBatch:::.omicsgmf_rank_matrix_step(
+        data_matrix = m, sample_annotation = sa,
+        sample_id_col = "FullRunName", max_rank = 2L,
+        fill_the_missing = FALSE
+    )
+    expect_identical(captured$fill_the_missing, FALSE)
+
+    # Imputation step
+    proBatch:::.omicsgmf_matrix_step(
+        data_matrix = m, sample_annotation = sa,
+        sample_id_col = "FullRunName", ncomponents = 1L,
+        fill_the_missing = "remove"
+    )
+    expect_identical(captured$fill_the_missing, "remove")
+})

@@ -320,7 +320,7 @@ estimate_omicsGMF_rank <- function(
   family = gaussian(),
   max_rank = 10,
   rank_args = list(),
-  ...
+  fill_the_missing = NULL
 ) {
     .pb_require_omicsgmf_stack()
 
@@ -330,7 +330,7 @@ estimate_omicsGMF_rank <- function(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
-        fill_the_missing = NULL,
+        fill_the_missing = fill_the_missing,
         missing_warning = "omicsGMF rank estimation removed rows/columns while handling missing values.",
         method_fun = function(data_matrix, sample_annotation) {
             sample_df <- as.data.frame(sample_annotation)
@@ -449,7 +449,8 @@ estimate_omicsGMF_rank <- function(
   family = gaussian(),
   ncomponents,
   gmf_args = list(),
-  impute_args = list()
+  impute_args = list(),
+  fill_the_missing = NULL
 ) {
     .pb_require_omicsgmf_stack()
 
@@ -459,7 +460,7 @@ estimate_omicsGMF_rank <- function(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
-        fill_the_missing = NULL,
+        fill_the_missing = fill_the_missing,
         missing_warning = "omicsGMF imputation removed rows/columns while handling missing values.",
         method_fun = function(data_matrix, sample_annotation) {
             fit <- .omicsgmf_fit_and_impute(

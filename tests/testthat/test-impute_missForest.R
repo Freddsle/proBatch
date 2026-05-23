@@ -246,3 +246,56 @@ testthat::test_that(".missforest_matrix_step() errors when columns have no names
         fixed = TRUE
     )
 })
+
+# -------------------------
+# Regression test: fill_the_missing pass-through
+# -------------------------
+
+test_that(".missforest_matrix_step honours fill_the_missing for NA pre-handling", {
+    skip_if_not_installed("missForest")
+
+    m <- matrix(
+        c(1, NA, 3, 4, 5, 6),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2", "s3"))
+    )
+
+    # FALSE => leave NAs alone (missForest will impute them); should NOT raise
+    # "unused argument" — regression guard for the new formal.
+    captured <- new.env(parent = emptyenv())
+    testthat::local_mocked_bindings(
+        handle_missing_values = function(matrix, warning_message, fill_the_missing) {
+            captured$called <- TRUE
+            matrix
+        },
+        .package = "proBatch"
+    )
+    # missForest input/output is samples x features (transposed wrt proBatch)
+    fake_mf <- list(ximp = as.data.frame(matrix(
+        c(1, 2, 3, 4, 5, 6),
+        nrow = 3,
+        dimnames = list(c("s1", "s2", "s3"), c("f1", "f2"))
+    )))
+
+    with_mocked_bindings(
+        missForest = function(xmis, ...) fake_mf,
+        .package = "missForest",
+        code = {
+            expect_no_error(
+                proBatch:::.missforest_matrix_step(
+                    data_matrix = m,
+                    fill_the_missing = FALSE
+                )
+            )
+            # FALSE short-circuits the pre-handler
+            expect_null(captured$called)
+
+            # "remove" routes through handle_missing_values()
+            proBatch:::.missforest_matrix_step(
+                data_matrix = m,
+                fill_the_missing = "remove"
+            )
+            expect_true(isTRUE(captured$called))
+        }
+    )
+})
