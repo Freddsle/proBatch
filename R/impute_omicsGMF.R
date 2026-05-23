@@ -412,6 +412,17 @@ estimate_omicsGMF_rank <- function(
 
     sce <- do.call(omicsGMF::runGMF, gmf_call)
 
+    # sgdGMF::set.mat.X strips column names from the design matrix before
+    # fitting, and omicsGMF:::.calculate_gmf restores only rownames on
+    # attr(reducedDim, "X"), not colnames.  Restore the original model-matrix
+    # column names here so that .omicsgmf_reconstruct_corrected_matrix can
+    # match batch columns by name (e.g. "lablab2" matches batch_col = "lab").
+    rd <- SingleCellExperiment::reducedDim(sce, dimred_name)
+    if (!is.null(attr(rd, "X")) && is.null(colnames(attr(rd, "X")))) {
+        colnames(attr(rd, "X")) <- colnames(X)
+        SingleCellExperiment::reducedDim(sce, dimred_name) <- rd
+    }
+
     imputed_name <- impute_args$name %||% "omicsGMF_imputed"
     impute_call <- modifyList(
         list(
