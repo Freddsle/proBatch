@@ -216,7 +216,7 @@ test_that("Direct PRONE normalization matches proBatch PRONE steps for complex m
 
         step_name <- .resolve_prone_step_name(method)
         pb_args <- c(
-            list(sample_id_col = "FullRunName"),
+            list(sample_id_col = "FullRunName", assay_in = "raw"),
             method_params[[method]]
         )
         pb_mat <- .to_numeric_matrix(pb_eval(
@@ -335,7 +335,7 @@ test_that("Direct PRONE sequential normalization matches proBatch PRONE step cha
         chain_methods,
         function(method) {
             c(
-                list(sample_id_col = "FullRunName"),
+                list(sample_id_col = "FullRunName", assay_in = "raw"),
                 method_params[[method]]
             )
         }
@@ -682,7 +682,7 @@ test_that("PRONE normalization supports backends that use `ains`", {
         object = pbf,
         from = "feature::raw",
         steps = step_name,
-        params_list = list(list(sample_id_col = "FullRunName"))
+        params_list = list(list(sample_id_col = "FullRunName", assay_in = "raw"))
     )
 
     expect_true(is.matrix(out))
