@@ -108,8 +108,15 @@ setValidity("ProBatchFeatures", function(object) {
 .pb_step_registry <- local({
     reg <- new.env(parent = emptyenv())
     # sensible defaults; replace with proBatch functions if you prefer
-    reg$log2 <- function(m, pseudo = 1) log2(m + pseudo)
-    reg$log <- function(m, base = exp(1), pseudo = 1) log(m + pseudo, base = base)
+    reg$log2 <- function(m, log_base = 2, offset = 1, pseudo = NULL) {
+        eff_offset <- if (!is.null(pseudo)) pseudo else offset
+        log(m + eff_offset, base = log_base)
+    }
+    reg$log <- function(m, log_base = NULL, base = exp(1), offset = 1, pseudo = NULL) {
+        eff_base <- if (!is.null(log_base)) log_base else base
+        eff_offset <- if (!is.null(pseudo)) pseudo else offset
+        log(m + eff_offset, base = eff_base)
+    }
     reg$medianNorm <- function(m,
                                sample_annotation = NULL,
                                sample_id_col = "FullRunName",
@@ -1038,7 +1045,8 @@ pb_transform <- function(
         store_this <- if (store_intermediate) {
             TRUE
         } else if (is_ephemeral_fast) {
-            store_fast_steps
+            # An explicit final_name means the caller wants this assay stored
+            if (is_final && !is.null(final_name)) TRUE else store_fast_steps
         } else if (is_final) {
             TRUE
         } else if (is_fast) {
@@ -1069,7 +1077,8 @@ pb_transform <- function(
     }
     # Rename final assay if requested and it exists
     if (!is.null(final_name) && !is.null(last_assay) && last_assay %in% names(object) &&
-        !identical(last_assay, final_name)) {
+        !identical(last_assay, final_name) &&
+        !identical(last_assay, from)) {
         names(object)[match(last_assay, names(object))] <- final_name
         last_assay <- final_name
         if (nrow(object@oplog)) {

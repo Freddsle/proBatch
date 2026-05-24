@@ -728,3 +728,25 @@ test_that(".pb_harmonize_colData still rejects genuinely different factor vs int
         "Conflicting colData"
     )
 })
+
+test_that("pb_transform with log2 and final_name stores transformed (not raw) values", {
+    pb_test_load_example_data()
+
+    m <- matrix(c(100, 200, 300, 400, 500, 600),
+        nrow = 3,
+        dimnames = list(paste0("P", 1:3), paste0("S", 1:2))
+    )
+    sa <- data.frame(file = c("S1", "S2"), row.names = c("S1", "S2"))
+    pbf <- ProBatchFeatures(m, sa, sample_id_col = "file", level = "PGs")
+
+    pbf2 <- pb_transform(pbf,
+        from = "PGs::raw", steps = "log2",
+        params_list = list(list(log_base = 2, offset = 1)),
+        final_name = "PGs::log2_on_raw"
+    )
+
+    mat <- pb_assay_matrix(pbf2, "PGs::log2_on_raw")
+
+    expect_true("PGs::log2_on_raw" %in% names(pbf2))
+    expect_equal(mat, log2(m + 1), tolerance = 1e-6)
+})
