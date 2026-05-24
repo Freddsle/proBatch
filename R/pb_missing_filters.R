@@ -45,6 +45,8 @@
 #'   missingness criteria in at least one group defined by `group_cols`.
 #'   When `mask_failing = TRUE` (the default), the values in groups where
 #'   the feature did not pass the threshold are replaced with `NA`.
+#'   `inplace = TRUE` drops any QFeatures assay links on the modified assay
+#'   (row counts change after filtering). Use `inplace = FALSE` to preserve them.
 #' @name pb_missing_helpers
 NULL
 
@@ -153,12 +155,23 @@ pb_filterNA <- function(
         message("  Features before filtering:\t", length(object[[nm]]))
         if (inplace) {
             prior <- object
-            object <- do.call(filterNA, c(list(object, i = nm), params))
+            has_links <- nm %in% names(object@assayLinks)
+            suppressWarnings(
+                object <- do.call(filterNA, c(list(object, i = nm), params))
+            )
+            if (has_links) {
+                warning(
+                    "In-place filtering of assay '", nm,
+                    "' removed QFeatures assay links. ",
+                    "Use `inplace = FALSE` to preserve them.",
+                    call. = FALSE
+                )
+            }
             object <- .as_ProBatchFeatures(object, from = prior)
             to_nm <- nm
             message("  Features after filtering:\t", length(object[[nm]]))
         } else {
-            filtered_obj <- do.call(filterNA, c(list(object, i = nm), params))
+            filtered_obj <- suppressWarnings(do.call(filterNA, c(list(object, i = nm), params)))
             filtered_obj <- .as_ProBatchFeatures(filtered_obj, from = object)
             filtered <- filtered_obj[[nm]]
             new_nm <- .pb_unique_assay_name(object, final_name[[idx]])
@@ -357,7 +370,16 @@ pb_groupfilterNA <- function(
 
         if (inplace) {
             prior <- object
-            object[[nm]] <- filtered_se
+            has_links <- nm %in% names(object@assayLinks)
+            suppressWarnings(object[[nm]] <- filtered_se)
+            if (has_links) {
+                warning(
+                    "In-place filtering of assay '", nm,
+                    "' removed QFeatures assay links. ",
+                    "Use `inplace = FALSE` to preserve them.",
+                    call. = FALSE
+                )
+            }
             object <- .as_ProBatchFeatures(object, from = prior)
             to_nm <- nm
             message("  Features after filtering:\t", features_after)

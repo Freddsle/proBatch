@@ -85,4 +85,6 @@ For grouped filtering, features are retained if they meet the
   missingness criteria in at least one group defined by `group_cols`.
   When `mask_failing = TRUE` (the default), the values in groups where
   the feature did not pass the threshold are replaced with `NA`.
+  `inplace = TRUE` drops any QFeatures assay links on the modified assay
+  (row counts change after filtering). Use `inplace = FALSE` to preserve them.
 }
