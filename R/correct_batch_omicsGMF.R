@@ -201,13 +201,27 @@ correct_with_omicsGMF <- function(
         )
     }
 
+    # Attach the omicsGMF latent representation to the returned matrix as
+    # attributes so that downstream evaluators (PCA-vs-latent k-means,
+    # 1:k factor-count curves, etc.) can recover the scores/loadings without
+    # re-fitting. Attributes survive matrix operations and the default
+    # in-memory pb_transform backend; they would NOT survive an HDF5 backend.
+    attach_latents <- function(m) {
+        attr(m, "omicsGMF_scores") <- unclass(gmf_results) # samples x ncomp
+        attr(m, "omicsGMF_loadings") <- rotation_matrix # features x ncomp
+        attr(m, "omicsGMF_design_X") <- attr(gmf_results, "X", exact = TRUE)
+        attr(m, "omicsGMF_design_Beta") <- attr(gmf_results, "Beta", exact = TRUE)
+        attr(m, "omicsGMF_dimred_name") <- attr(gmf_results, "name", exact = TRUE) %||% "omicsGMF"
+        m
+    }
+
     # Latent-only reconstruction (features x samples). Used as a fallback when
     # no batch column is supplied or omicsGMF design attributes are unavailable.
     latent_only <- t(gmf_results %*% t(rotation_matrix))
 
     if (is.null(batch_col)) {
         storage.mode(latent_only) <- "double"
-        return(latent_only)
+        return(attach_latents(latent_only))
     }
 
     design_terms <- .omicsgmf_extract_design_terms(gmf_results, data_matrix)
@@ -216,7 +230,7 @@ correct_with_omicsGMF <- function(
             "Could not access omicsGMF design attributes (X/Beta); returning latent-only reconstruction."
         )
         storage.mode(latent_only) <- "double"
-        return(latent_only)
+        return(attach_latents(latent_only))
     }
 
     X <- design_terms$X # n_samples x p
@@ -228,7 +242,7 @@ correct_with_omicsGMF <- function(
             "`batch_col` was not found among omicsGMF design columns; returning latent-only reconstruction."
         )
         storage.mode(latent_only) <- "double"
-        return(latent_only)
+        return(attach_latents(latent_only))
     }
 
     # Full omicsGMF modelled mean (samples x features) is:
@@ -241,7 +255,7 @@ correct_with_omicsGMF <- function(
     corrected <- data_matrix - t(batch_mean)
 
     storage.mode(corrected) <- "double"
-    corrected
+    attach_latents(corrected)
 }
 
 .omicsgmf_extract_design_terms <- function(gmf_results, data_matrix = NULL) {

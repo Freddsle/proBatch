@@ -273,7 +273,13 @@ test_that(".omicsgmf_correct_matrix_step reconstructs from GMF components (mocke
     expected <- t(gmf_results %*% t(rotation))
     rownames(expected) <- rownames(m)
     colnames(expected) <- colnames(m)
-    expect_equal(out, expected, tolerance = 1e-12)
+    # Strip omicsGMF_* latent attributes that are now attached for downstream
+    # consumers; this test only verifies numeric reconstruction.
+    out_numeric <- out
+    for (a in grep("^omicsGMF_", names(attributes(out_numeric)), value = TRUE)) {
+        attr(out_numeric, a) <- NULL
+    }
+    expect_equal(out_numeric, expected, tolerance = 1e-12)
 
     expect_matrix_like(captured$data_matrix, m)
     expect_equal(captured$data_matrix, m, tolerance = 1e-12)
@@ -401,7 +407,13 @@ test_that(".omicsgmf_correct_matrix_step preserves non-batch design terms when b
     rownames(expected) <- rownames(m)
     colnames(expected) <- colnames(m)
 
-    expect_equal(out, expected, tolerance = 1e-12)
+    # Strip omicsGMF_* latent attributes that are now attached for downstream
+    # consumers; this test only verifies numeric reconstruction.
+    out_numeric <- out
+    for (a in grep("^omicsGMF_", names(attributes(out_numeric)), value = TRUE)) {
+        attr(out_numeric, a) <- NULL
+    }
+    expect_equal(out_numeric, expected, tolerance = 1e-12)
 })
 
 test_that("correct_with_omicsGMF validates format argument before dispatch (mocked)", {
@@ -524,4 +536,102 @@ test_that("correct_with_omicsGMF forwards fill_the_missing to the matrix step", 
         format = "wide"
     )
     expect_identical(captured$fill_the_missing, FALSE)
+})
+
+# -------------------------
+# Latent attributes are attached to the corrected matrix
+# -------------------------
+
+test_that(".omicsgmf_reconstruct_corrected_matrix attaches latent attributes (latent-only path)", {
+    gmf_results <- matrix(
+        c(1, 0, 0, 1, 0.5, 0.5),
+        nrow = 3, ncol = 2,
+        dimnames = list(NULL, c("comp1", "comp2"))
+    )
+    rotation <- matrix(
+        c(0.6, 0.4, 0.3, 0.7),
+        nrow = 2, ncol = 2,
+        dimnames = list(c("f1", "f2"), c("comp1", "comp2"))
+    )
+    attr(gmf_results, "rotation") <- rotation
+
+    data_matrix <- matrix(
+        c(1, 4, 2, 5, 3, 6),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2", "s3"))
+    )
+
+    out <- proBatch:::`.omicsgmf_reconstruct_corrected_matrix`(
+        gmf_results = gmf_results,
+        data_matrix = data_matrix,
+        batch_col = NULL
+    )
+
+    expect_true(is.matrix(out))
+    expect_identical(dim(out), dim(data_matrix))
+
+    expect_true(!is.null(attr(out, "omicsGMF_scores")),
+        info = "omicsGMF_scores attribute must be present"
+    )
+    expect_true(!is.null(attr(out, "omicsGMF_loadings")),
+        info = "omicsGMF_loadings attribute must be present"
+    )
+    expect_identical(attr(out, "omicsGMF_dimred_name"), "omicsGMF")
+
+    scores <- attr(out, "omicsGMF_scores")
+    loadings <- attr(out, "omicsGMF_loadings")
+    expect_identical(dim(scores), dim(gmf_results))
+    expect_identical(dim(loadings), dim(rotation))
+})
+
+test_that(".omicsgmf_reconstruct_corrected_matrix attaches latent attributes (batch-subtracted path)", {
+    n_samples <- 3L
+    n_features <- 2L
+    n_comp <- 2L
+
+    gmf_results <- matrix(
+        c(1, 0, 0, 1, 0.5, 0.5),
+        nrow = n_samples, ncol = n_comp,
+        dimnames = list(NULL, c("comp1", "comp2"))
+    )
+    rotation <- matrix(
+        c(0.6, 0.4, 0.3, 0.7),
+        nrow = n_features, ncol = n_comp,
+        dimnames = list(c("f1", "f2"), c("comp1", "comp2"))
+    )
+    attr(gmf_results, "rotation") <- rotation
+
+    X <- matrix(
+        c(1, 1, 1, 0, 1, 0),
+        nrow = n_samples, ncol = 2,
+        dimnames = list(NULL, c("(Intercept)", "MS_batchB2"))
+    )
+    Beta <- matrix(
+        c(1, 0.5, 0.2, 0.8),
+        nrow = n_features, ncol = 2,
+        dimnames = list(c("f1", "f2"), c("(Intercept)", "MS_batchB2"))
+    )
+    attr(gmf_results, "X") <- X
+    attr(gmf_results, "Beta") <- Beta
+
+    data_matrix <- matrix(
+        c(1, 4, 2, 5, 3, 6),
+        nrow = n_features,
+        dimnames = list(c("f1", "f2"), c("s1", "s2", "s3"))
+    )
+
+    out <- proBatch:::`.omicsgmf_reconstruct_corrected_matrix`(
+        gmf_results = gmf_results,
+        data_matrix = data_matrix,
+        batch_col = "MS_batch"
+    )
+
+    expect_true(is.matrix(out))
+    expect_true(!is.null(attr(out, "omicsGMF_scores")))
+    expect_true(!is.null(attr(out, "omicsGMF_loadings")))
+    expect_identical(dim(attr(out, "omicsGMF_scores")), c(n_samples, n_comp))
+    expect_identical(dim(attr(out, "omicsGMF_loadings")), c(n_features, n_comp))
+    # design terms also carried through
+    expect_identical(attr(out, "omicsGMF_design_X"), X)
+    expect_identical(attr(out, "omicsGMF_design_Beta"), Beta)
 })

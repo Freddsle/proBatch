@@ -483,7 +483,23 @@ estimate_omicsGMF_rank <- function(
                 gmf_args = gmf_args,
                 impute_args = impute_args
             )
-            fit$imputed
+
+            # Attach the omicsGMF latent representation to the imputed matrix
+            # as attributes so downstream evaluators (PCA-vs-latent k-means,
+            # 1:k factor-count curves, etc.) can recover scores/loadings
+            # without re-fitting. Attributes survive matrix operations and
+            # the default in-memory pb_transform backend; they would NOT
+            # survive an HDF5 backend.
+            imputed <- fit$imputed
+            gmf_results <- SingleCellExperiment::reducedDim(fit$sce, fit$dimred_name)
+            if (!is.null(gmf_results)) {
+                attr(imputed, "omicsGMF_scores") <- unclass(gmf_results)
+                attr(imputed, "omicsGMF_loadings") <- attr(gmf_results, "rotation", exact = TRUE)
+                attr(imputed, "omicsGMF_design_X") <- attr(gmf_results, "X", exact = TRUE)
+                attr(imputed, "omicsGMF_design_Beta") <- attr(gmf_results, "Beta", exact = TRUE)
+                attr(imputed, "omicsGMF_dimred_name") <- fit$dimred_name
+            }
+            imputed
         }
     )
 }

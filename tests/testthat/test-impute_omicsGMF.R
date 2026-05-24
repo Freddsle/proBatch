@@ -410,3 +410,84 @@ test_that(".omicsgmf_rank_matrix_step and .omicsgmf_matrix_step forward fill_the
     )
     expect_identical(captured$fill_the_missing, "remove")
 })
+
+# -------------------------
+# Latent attributes are attached to the imputed matrix
+# -------------------------
+
+test_that(".omicsgmf_matrix_step attaches omicsGMF latent attributes to imputed matrix", {
+    skip_if_not_installed("SingleCellExperiment")
+    skip_if_not_installed("SummarizedExperiment")
+    skip_if_not_installed("S4Vectors")
+
+    m <- matrix(
+        as.numeric(1:6),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2", "s3"))
+    )
+    sa <- data.frame(
+        FullRunName = c("s1", "s2", "s3"),
+        stringsAsFactors = FALSE
+    )
+
+    gmf_results <- matrix(
+        c(1, 0, 0, 1, 0.5, 0.5),
+        nrow = 3, ncol = 2,
+        dimnames = list(NULL, c("comp1", "comp2"))
+    )
+    rotation <- matrix(
+        c(0.6, 0.4, 0.3, 0.7),
+        nrow = 2, ncol = 2,
+        dimnames = list(c("f1", "f2"), c("comp1", "comp2"))
+    )
+    attr(gmf_results, "rotation") <- rotation
+
+    fake_sce <- SingleCellExperiment::SingleCellExperiment(
+        assays = list(omicsGMF_input = m),
+        colData = S4Vectors::DataFrame(FullRunName = colnames(m))
+    )
+    SingleCellExperiment::reducedDim(fake_sce, "omicsGMF") <- gmf_results
+
+    imputed_mat <- m
+    imputed_mat[] <- as.double(seq_along(m))
+
+    fake_fit <- function(data_matrix, sample_annotation, design_formula,
+                         family, ncomponents, gmf_args, impute_args) {
+        list(
+            sce = fake_sce,
+            dimred_name = "omicsGMF",
+            imputed = imputed_mat,
+            imputed_assay = "omicsGMF_imputed"
+        )
+    }
+
+    testthat::local_mocked_bindings(
+        .pb_require_omicsgmf_stack = function(...) invisible(TRUE),
+        .omicsgmf_fit_and_impute = fake_fit,
+        .package = "proBatch"
+    )
+
+    out <- proBatch:::`.omicsgmf_matrix_step`(
+        data_matrix = m,
+        sample_annotation = sa,
+        sample_id_col = "FullRunName",
+        ncomponents = 2L,
+        design_formula = ~1,
+        family = gaussian(),
+        gmf_args = list(),
+        impute_args = list()
+    )
+
+    expect_true(is.matrix(out))
+    expect_identical(dim(out), dim(m))
+
+    expect_true(!is.null(attr(out, "omicsGMF_scores")),
+        info = "omicsGMF_scores must be attached to imputed matrix"
+    )
+    expect_true(!is.null(attr(out, "omicsGMF_loadings")),
+        info = "omicsGMF_loadings must be attached to imputed matrix"
+    )
+    expect_identical(attr(out, "omicsGMF_dimred_name"), "omicsGMF")
+    expect_identical(dim(attr(out, "omicsGMF_scores")), c(3L, 2L))
+    expect_identical(dim(attr(out, "omicsGMF_loadings")), c(2L, 2L))
+})
