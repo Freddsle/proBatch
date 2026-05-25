@@ -43,6 +43,8 @@
         safe_register("omicsgmfcor", .omicsgmf_correct_matrix_step)
         safe_register("omicsGMFImpute", .omicsgmf_matrix_step)
         safe_register("omicsgmfimpute", .omicsgmf_matrix_step)
+        safe_register("omicsGMFimpcorr", function(...) .omicsgmf_correct_matrix_step(..., use_imputed = TRUE))
+        safe_register("omicsgmfimpcorr", function(...) .omicsgmf_correct_matrix_step(..., use_imputed = TRUE))
     }
 
     if (.pb_requireNamespace("PRONE", only_info = TRUE)) {

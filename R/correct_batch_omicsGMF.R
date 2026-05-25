@@ -144,7 +144,8 @@ correct_with_omicsGMF <- function(
   ncomponents,
   gmf_args = list(),
   impute_args = list(),
-  fill_the_missing = NULL
+  fill_the_missing = NULL,
+  use_imputed = FALSE
 ) {
     .pb_require_omicsgmf_stack()
 
@@ -176,8 +177,9 @@ correct_with_omicsGMF <- function(
             }
             reconstructed <- .omicsgmf_reconstruct_corrected_matrix(
                 gmf_results = gmf_results,
-                data_matrix = data_matrix,
-                batch_col = batch_col
+                data_matrix = if (isTRUE(use_imputed)) fit$imputed else data_matrix,
+                batch_col = batch_col,
+                fallback_to_data = isTRUE(use_imputed)
             )
 
             if (!is.null(rownames(data_matrix))) {
@@ -192,7 +194,9 @@ correct_with_omicsGMF <- function(
     )
 }
 
-.omicsgmf_reconstruct_corrected_matrix <- function(gmf_results, data_matrix, batch_col = NULL) {
+.omicsgmf_reconstruct_corrected_matrix <- function(gmf_results, data_matrix,
+                                                   batch_col = NULL,
+                                                   fallback_to_data = FALSE) {
     rotation_matrix <- attr(gmf_results, "rotation")
     if (is.null(rotation_matrix)) {
         stop(
@@ -215,13 +219,18 @@ correct_with_omicsGMF <- function(
         m
     }
 
-    # Latent-only reconstruction (features x samples). Used as a fallback when
-    # no batch column is supplied or omicsGMF design attributes are unavailable.
-    latent_only <- t(gmf_results %*% t(rotation_matrix))
+    # Fallback when no batch contribution can be subtracted. With
+    # fallback_to_data = TRUE (impute+correct) return the input matrix
+    # (= fit$imputed) so the imputation is preserved; otherwise keep the
+    # historical correct_with_omicsGMF behaviour of latent-only reconstruction.
+    fallback_matrix <- function() {
+        m <- if (isTRUE(fallback_to_data)) data_matrix else t(gmf_results %*% t(rotation_matrix))
+        storage.mode(m) <- "double"
+        attach_latents(m)
+    }
 
     if (is.null(batch_col)) {
-        storage.mode(latent_only) <- "double"
-        return(attach_latents(latent_only))
+        return(fallback_matrix())
     }
 
     design_terms <- .omicsgmf_extract_design_terms(gmf_results, data_matrix)
@@ -229,8 +238,7 @@ correct_with_omicsGMF <- function(
         warning(
             "Could not access omicsGMF design attributes (X/Beta); returning latent-only reconstruction."
         )
-        storage.mode(latent_only) <- "double"
-        return(attach_latents(latent_only))
+        return(fallback_matrix())
     }
 
     X <- design_terms$X # n_samples x p
@@ -241,8 +249,7 @@ correct_with_omicsGMF <- function(
         warning(
             "`batch_col` was not found among omicsGMF design columns; returning latent-only reconstruction."
         )
-        storage.mode(latent_only) <- "double"
-        return(attach_latents(latent_only))
+        return(fallback_matrix())
     }
 
     # Full omicsGMF modelled mean (samples x features) is:
@@ -331,4 +338,20 @@ correct_with_omicsGMF <- function(
     )
 
     which(has_batch)
+}
+
+#' Impute and batch-correct with omicsGMF in one fit
+#'
+#' Thin wrapper around [correct_with_omicsGMF()] that reuses the same fit but
+#' subtracts the batch-attributable mean from the imputed matrix instead of the
+#' raw (NA-containing) one. The returned data therefore has missing values
+#' filled in *and* batch effects removed from a single omicsGMF fit.
+#'
+#' @inheritParams correct_with_omicsGMF
+#' @return Same shape as [correct_with_omicsGMF()]: a numeric matrix
+#'   (`format = "wide"`) or a long `data.frame` (`format = "long"`).
+#' @seealso [correct_with_omicsGMF()], [impute_with_omicsGMF()]
+#' @export
+impute_and_correct_with_omicsGMF <- function(x, ...) {
+    correct_with_omicsGMF(x = x, ..., use_imputed = TRUE)
 }

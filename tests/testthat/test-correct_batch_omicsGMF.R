@@ -635,3 +635,124 @@ test_that(".omicsgmf_reconstruct_corrected_matrix attaches latent attributes (ba
     expect_identical(attr(out, "omicsGMF_design_X"), X)
     expect_identical(attr(out, "omicsGMF_design_Beta"), Beta)
 })
+
+# -------------------------
+# impute_and_correct_with_omicsGMF: reuse + fallback semantics
+# -------------------------
+
+test_that("impute_and_correct_with_omicsGMF delegates to correct_with_omicsGMF with use_imputed = TRUE", {
+    testthat::skip_if_not_installed("SingleCellExperiment")
+    testthat::skip_if_not_installed("SummarizedExperiment")
+    testthat::skip_if_not_installed("S4Vectors")
+
+    m <- matrix(c(1, NA, 2, 5, 3, 6),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2", "s3"))
+    )
+    sa <- data.frame(
+        FullRunName = c("s1", "s2", "s3"),
+        MS_batch = c("b1", "b2", "b2"),
+        stringsAsFactors = FALSE
+    )
+
+    # Imputed matrix the fake fit returns.
+    imputed <- matrix(c(1, 10, 2, 5, 3, 6),
+        nrow = 2,
+        dimnames = dimnames(m)
+    )
+
+    gmf_results <- matrix(c(1, 0, 0, 1, 0.5, 0.5),
+        nrow = 3, ncol = 2,
+        dimnames = list(NULL, c("c1", "c2"))
+    )
+    rotation <- matrix(c(0.6, 0.4, 0.3, 0.7),
+        nrow = 2, ncol = 2,
+        dimnames = list(c("f1", "f2"), c("c1", "c2"))
+    )
+    attr(gmf_results, "rotation") <- rotation
+    X <- cbind("(Intercept)" = c(1, 1, 1), "MS_batchb2" = c(0, 1, 1))
+    Beta <- matrix(c(1, 0.5, 0.2, 0.8),
+        nrow = 2, ncol = 2,
+        dimnames = list(c("f1", "f2"), c("(Intercept)", "MS_batchb2"))
+    )
+    attr(gmf_results, "X") <- X
+    attr(gmf_results, "Beta") <- Beta
+
+    fake_sce <- SingleCellExperiment::SingleCellExperiment(
+        assays = list(dummy = matrix(0, nrow = nrow(m), ncol = ncol(m))),
+        colData = S4Vectors::DataFrame(FullRunName = colnames(m))
+    )
+    SingleCellExperiment::reducedDim(fake_sce, "GMF") <- gmf_results
+
+    fake_fit <- function(data_matrix, sample_annotation, design_formula,
+                         family, ncomponents, gmf_args, impute_args) {
+        list(
+            sce = fake_sce, dimred_name = "GMF",
+            imputed = imputed, imputed_assay = "omicsGMF_imputed"
+        )
+    }
+
+    testthat::local_mocked_bindings(
+        .pb_requireNamespace = function(...) invisible(TRUE),
+        .omicsgmf_fit_and_impute = fake_fit,
+        .package = "proBatch"
+    )
+
+    out <- impute_and_correct_with_omicsGMF(
+        x = m, sample_annotation = sa, sample_id_col = "FullRunName",
+        design_formula = ~MS_batch, batch_col = "MS_batch",
+        ncomponents = 2L, format = "wide"
+    )
+
+    # Should equal imputed - batch_mean (operating on the imputed matrix, not raw).
+    batch_idx <- which(colnames(X) == "MS_batchb2")
+    batch_mean <- X[, batch_idx, drop = FALSE] %*% t(Beta[, batch_idx, drop = FALSE])
+    expected <- imputed - t(batch_mean)
+    out_numeric <- out
+    for (a in grep("^omicsGMF_", names(attributes(out_numeric)), value = TRUE)) {
+        attr(out_numeric, a) <- NULL
+    }
+    expect_equal(out_numeric, expected, tolerance = 1e-12)
+    expect_false(any(is.na(out_numeric)))
+})
+
+test_that(".omicsgmf_reconstruct_corrected_matrix fallback_to_data preserves imputed values when no batch", {
+    gmf_results <- matrix(c(1, 0, 0, 1, 0.5, 0.5),
+        nrow = 3, ncol = 2,
+        dimnames = list(NULL, c("c1", "c2"))
+    )
+    rotation <- matrix(c(0.6, 0.4, 0.3, 0.7),
+        nrow = 2, ncol = 2,
+        dimnames = list(c("f1", "f2"), c("c1", "c2"))
+    )
+    attr(gmf_results, "rotation") <- rotation
+
+    imputed <- matrix(c(1, 10, 2, 5, 3, 6),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2", "s3"))
+    )
+
+    # fallback_to_data = TRUE -> returns the input (imputed) matrix.
+    out_imp <- proBatch:::`.omicsgmf_reconstruct_corrected_matrix`(
+        gmf_results = gmf_results, data_matrix = imputed,
+        batch_col = NULL, fallback_to_data = TRUE
+    )
+    out_imp_num <- out_imp
+    for (a in grep("^omicsGMF_", names(attributes(out_imp_num)), value = TRUE)) {
+        attr(out_imp_num, a) <- NULL
+    }
+    expect_equal(out_imp_num, imputed, tolerance = 1e-12)
+
+    # Default (FALSE) keeps historical latent-only fallback (not equal to input).
+    out_latent <- proBatch:::`.omicsgmf_reconstruct_corrected_matrix`(
+        gmf_results = gmf_results, data_matrix = imputed, batch_col = NULL
+    )
+    out_latent_num <- out_latent
+    for (a in grep("^omicsGMF_", names(attributes(out_latent_num)), value = TRUE)) {
+        attr(out_latent_num, a) <- NULL
+    }
+    expected_latent <- t(gmf_results %*% t(rotation))
+    # Inner reconstruction does not restore sample (column) names; the caller
+    # .omicsgmf_correct_matrix_step does. Compare numerics only.
+    expect_equal(unname(out_latent_num), unname(expected_latent), tolerance = 1e-12)
+})

@@ -125,15 +125,17 @@ impute_with_omicsGMF <- function(
         if (!is.matrix(x)) {
             stop("format = 'wide' requires a numeric matrix.", call. = FALSE)
         }
-        return(.omicsgmf_matrix_step(
-            data_matrix = x,
-            sample_annotation = sample_annotation,
-            sample_id_col = sample_id_col,
-            design_formula = design_formula,
-            family = family,
-            ncomponents = ncomponents,
-            ...
-        ))
+        return(do.call(.omicsgmf_matrix_step, c(
+            list(
+                data_matrix = x,
+                sample_annotation = sample_annotation,
+                sample_id_col = sample_id_col,
+                design_formula = design_formula,
+                family = family,
+                ncomponents = ncomponents
+            ),
+            dots
+        )))
     }
 
     prep <- .pb_prepare_long_matrix(
@@ -159,15 +161,17 @@ impute_with_omicsGMF <- function(
         )
     }
 
-    imputed_matrix <- .omicsgmf_matrix_step(
-        data_matrix = data_matrix,
-        sample_annotation = sample_annotation,
-        sample_id_col = sample_id_col,
-        design_formula = design_formula,
-        family = family,
-        ncomponents = ncomponents,
-        ...
-    )
+    imputed_matrix <- do.call(.omicsgmf_matrix_step, c(
+        list(
+            data_matrix = data_matrix,
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
+            design_formula = design_formula,
+            family = family,
+            ncomponents = ncomponents
+        ),
+        dots
+    ))
 
     .post_correction_to_long(
         corrected_matrix = imputed_matrix,
@@ -279,7 +283,7 @@ estimate_omicsGMF_rank <- function(
             design_formula = design_formula,
             family = family,
             max_rank = max_rank,
-            ...
+            rank_args = list(...)
         ))
     }
 
