@@ -1,0 +1,148 @@
+version = 1
+
+[[relations]]
+id = "governed_by"
+description = "Specifications whose requirements apply to the artifact."
+
+[[relations]]
+id = "governs"
+description = "Project artifacts governed by the specification."
+
+[[relations]]
+id = "tested_by"
+description = "Testthat files that verify the R source file."
+
+[[relations]]
+id = "tests"
+description = "R source files verified by the testthat file."
+
+################################
+# Specification governance
+################################
+
+[[rules]]
+relation = "governed_by"
+input = { type = "all", items = [
+    { type = "glob", pattern = "@/specs/{**spec_path}.md" },
+    { type = "not", item = { type = "one_of", artifacts = ["@/specs/meta/general.md"] } },
+] }
+output = { type = "files", pattern = "@/specs/meta/general.md" }
+
+[[rules]]
+relation = "governs"
+input = { type = "one_of", artifacts = ["@/specs/meta/general.md"] }
+output = { type = "difference", include = { type = "files", pattern = "@/specs/**/*.md" }, exclude = { type = "list", artifacts = ["@/specs/meta/general.md"] } }
+
+[[rules]]
+relation = "governed_by"
+input = { type = "one_of", artifacts = ["@/AGENTS.md"] }
+output = { type = "files", pattern = "@/specs/**/*.md" }
+
+[[rules]]
+relation = "governs"
+input = { type = "glob", pattern = "@/specs/{**spec_path}.md" }
+output = { type = "files", pattern = "@/AGENTS.md" }
+
+[[rules]]
+relation = "governed_by"
+input = { type = "any", items = [
+    { type = "glob", pattern = "@/R/{*source}.R" },
+    { type = "glob", pattern = "@/tests/{**test_path}.R" },
+    { type = "glob", pattern = "@/vignettes/{*vignette}.Rmd" },
+    { type = "glob", pattern = "@/workflows/{*workflow}.donna.md" },
+    { type = "glob", pattern = "@/bin/depemesh/{*helper}.R" },
+    { type = "one_of", artifacts = ["@/.Rbuildignore", "@/depmesh.toml", "@/donna.toml"] },
+] }
+output = { type = "files", pattern = "@/specs/behavior/files_relations.md" }
+
+[[rules]]
+relation = "governs"
+input = { type = "one_of", artifacts = ["@/specs/behavior/files_relations.md"] }
+output = { type = "union", items = [
+    { type = "files", pattern = "@/R/*.R" },
+    { type = "files", pattern = "@/tests/**/*.R" },
+    { type = "files", pattern = "@/vignettes/*.Rmd" },
+    { type = "files", pattern = "@/workflows/*.donna.md" },
+    { type = "files", pattern = "@/bin/depemesh/*.R" },
+    { type = "files", pattern = "@/.Rbuildignore" },
+    { type = "files", pattern = "@/depmesh.toml" },
+    { type = "files", pattern = "@/donna.toml" },
+] }
+
+[[rules]]
+relation = "governed_by"
+input = { type = "any", items = [
+    { type = "glob", pattern = "@/workflows/{*workflow}.donna.md" },
+    { type = "one_of", artifacts = ["@/donna.toml"] },
+] }
+output = { type = "files", pattern = "@/specs/general/workflows.md" }
+
+[[rules]]
+relation = "governs"
+input = { type = "one_of", artifacts = ["@/specs/general/workflows.md"] }
+output = { type = "union", items = [
+    { type = "files", pattern = "@/workflows/*.donna.md" },
+    { type = "files", pattern = "@/donna.toml" },
+] }
+
+################################
+# R source and test ownership
+################################
+
+[[rules]]
+relation = "tested_by"
+input = { type = "glob", pattern = "@/R/{*module}.R" }
+output = { type = "files", pattern = "@/tests/testthat/test-{module}.R" }
+
+[[rules]]
+relation = "tests"
+input = { type = "glob", pattern = "@/tests/testthat/test-{*module}.R" }
+output = { type = "files", pattern = "@/R/{module}.R" }
+
+[[rules]]
+relation = "tested_by"
+input = { type = "one_of", artifacts = ["@/R/correct_batch_effects.R"] }
+output = { type = "files", pattern = "@/tests/testthat/test-correct_batch_effect.R" }
+
+[[rules]]
+relation = "tests"
+input = { type = "one_of", artifacts = ["@/tests/testthat/test-correct_batch_effect.R"] }
+output = { type = "files", pattern = "@/R/correct_batch_effects.R" }
+
+[[rules]]
+relation = "tested_by"
+input = { type = "one_of", artifacts = ["@/R/correlation-based_diagnostics.R"] }
+output = { type = "files", pattern = "@/tests/testthat/test-correlation_based_diagnostics.R" }
+
+[[rules]]
+relation = "tests"
+input = { type = "one_of", artifacts = ["@/tests/testthat/test-correlation_based_diagnostics.R"] }
+output = { type = "files", pattern = "@/R/correlation-based_diagnostics.R" }
+
+[[rules]]
+relation = "tested_by"
+input = { type = "one_of", artifacts = ["@/R/pb_missing_filters.R"] }
+output = { type = "files", pattern = "@/tests/testthat/test-pb_missing_helpers.R" }
+
+[[rules]]
+relation = "tests"
+input = { type = "one_of", artifacts = ["@/tests/testthat/test-pb_missing_helpers.R"] }
+output = { type = "files", pattern = "@/R/pb_missing_filters.R" }
+
+[[rules]]
+relation = "tested_by"
+input = { type = "one_of", artifacts = [
+    "@/R/ProBatchFeatures.R",
+    "@/R/correct_batch_effects.R",
+    "@/R/zzz_helpers.R",
+] }
+output = { type = "files", pattern = "@/tests/testthat/test-batch_effect_steps.R" }
+
+[[rules]]
+relation = "tests"
+input = { type = "one_of", artifacts = ["@/tests/testthat/test-batch_effect_steps.R"] }
+output = { type = "list", artifacts = [
+    "@/R/ProBatchFeatures.R",
+    "@/R/correct_batch_effects.R",
+    "@/R/zzz_helpers.R",
+] }

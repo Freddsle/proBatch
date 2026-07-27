@@ -26,3 +26,6 @@ Dockerfile
 Renviron.bioc
 .dockerignore
 proBatch_*.tar.gz
+
+# Donna runtime state
+/.session/donna/
