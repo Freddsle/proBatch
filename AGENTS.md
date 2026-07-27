@@ -89,6 +89,13 @@ Follow these rules:
   instructions, or Donna itself.
 - Keep every permanent workflow under `workflows/` synchronized with the
   workflow catalog and its Depmesh governance relations.
+- Name workflows in the BEC E. coli migration family with the next unused
+  zero-padded `NNN_` prefix, preserving numeric execution order and never
+  renumbering an existing workflow.
+- Leave both review action requests in every BEC foundation or per-commit child,
+  and the report-review request in the residual child, pending until the
+  maintainer explicitly resumes after manual analysis and any manual commit.
+  Agents must not create or amend those commits.
 - Copy action-request IDs and next-operation IDs exactly from Donna's output;
   never invent them.
 - Do not run `donna -p llm new-session` unless resetting the active session is
