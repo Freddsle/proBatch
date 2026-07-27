@@ -29,3 +29,6 @@ proBatch_*.tar.gz
 
 # Donna runtime state
 /.session/donna/
+# pixi environments
+.pixi/*
+!.pixi/config.toml
