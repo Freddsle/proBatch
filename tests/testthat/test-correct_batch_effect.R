@@ -324,16 +324,29 @@ test_that("deprecated batch-correction wrappers select their default method", {
         ),
         "deprecated"
     )
+    expect_warning(
+        dm_remove_result <- correct_batch_effects_dm(
+            data_matrix,
+            annotation,
+            discrete_func = "removeBatchEffect",
+            fill_the_missing = FALSE
+        ),
+        "deprecated"
+    )
 
     expect_identical(df_result, df_long)
     expect_identical(dm_result, data_matrix)
-    expect_length(forwarded, 2L)
+    expect_identical(dm_remove_result, data_matrix)
+    expect_length(forwarded, 3L)
     expect_identical(forwarded[[1L]]$format, "long")
     expect_identical(forwarded[[2L]]$format, "wide")
+    expect_identical(forwarded[[3L]]$format, "wide")
     expect_identical(forwarded[[1L]]$discrete_func, "MedianCentering")
     expect_identical(forwarded[[2L]]$discrete_func, "MedianCentering")
+    expect_identical(forwarded[[3L]]$discrete_func, "removeBatchEffect")
     expect_false(forwarded[[1L]]$fill_the_missing)
     expect_false(forwarded[[2L]]$fill_the_missing)
+    expect_false(forwarded[[3L]]$fill_the_missing)
 })
 
 

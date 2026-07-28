@@ -1695,7 +1695,10 @@ correct_batch_effects_df <- function(df_long, sample_annotation,
 #' @export
 correct_batch_effects_dm <- function(data_matrix, sample_annotation,
                                      continuous_func = NULL,
-                                     discrete_func = c("MedianCentering", "MeanCentering", "ComBat"),
+                                     discrete_func = c(
+                                         "MedianCentering", "MeanCentering",
+                                         "ComBat", "removeBatchEffect"
+                                     ),
                                      batch_col = "MS_batch",
                                      feature_id_col = "peptide_group_label",
                                      sample_id_col = "FullRunName",
