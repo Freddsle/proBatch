@@ -39,6 +39,14 @@ Every workflow artifact MUST pass `donna -p llm validate <artifact-id>` and SHOU
 
 Any workflow that drafts, proposes, creates, or amends a commit message MUST require compliance with `./specs/general/commits.md`. A workflow MUST NOT create or rewrite a commit unless the initiating request explicitly authorizes that Git action.
 
+## Workflow reports
+
+Permanent workflow output intended for later human action MUST be written as a Markdown report under `./workflows/reports/`. Reports MUST NOT use the `.donna.md` extension and MUST NOT be listed in the workflow catalog, because they are workflow output rather than workflows.
+
+A finding that no remaining workflow resolves MUST be recorded as an entry in an open-questions report rather than left only in Donna session notes, which are cleared with the session.
+
+`./workflows/reports/bec-ecoli-core-open-questions.md` owns the maintainer decisions left open by the BEC E. coli core migration. Each entry MUST identify the affected artifacts, the evidence, the effect, the workflows checked for coverage, and the candidate resolutions.
+
 ## Workflow catalog
 
 ### Bootstrap project specifications

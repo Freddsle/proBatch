@@ -1,0 +1,134 @@
+# BEC E. coli Core Migration — Open Questions
+
+## Purpose
+
+This document records issues found during the BEC E. coli core migration that
+**no workflow in the ordered migration resolves**. Each entry needs a manual
+maintainer decision after the migration finishes.
+
+Workflows `002` through `032` were scanned for coverage of every entry below;
+none of them touch these artifacts or dependency names.
+
+## How to use this document
+
+- Add an entry when a review finds a defect or inconsistency that falls outside
+  the scope of the remaining ordered workflows.
+- Keep one `<!-- open-question id=<kebab-id> status=<open|resolved> area=<area> -->`
+  marker per entry so entries stay countable.
+- Set `status=resolved` and record the resolution instead of deleting an entry.
+
+## Open questions
+
+### Undeclared `reshape2` used by a focused test
+
+<!-- open-question id=reshape2-undeclared status=open area=dependencies -->
+
+- Found: `002_foundation_core_api` source review (2026-07-28).
+- Artifacts: `./DESCRIPTION`, `./tests/testthat/test-correct_batch_effect.R`.
+- Evidence: the foundation port removed `reshape2` from `Imports`, but the same
+  port added a call to `reshape2::dcast()` in the correction test. `reshape2`
+  now appears in neither `Imports` nor `Suggests`.
+- Effect: `R CMD check` reports an undeclared package used in tests.
+- Coverage: no later workflow reads or edits
+  `tests/testthat/test-correct_batch_effect.R` for dependency purposes, and no
+  workflow mentions `reshape2`.
+- Options: (a) add `reshape2` to `Suggests`; (b) rewrite the test to use an
+  already-declared package such as `tidyr` or `data.table`; (c) build the matrix
+  with the package's own `long_to_matrix()`.
+- Decision: _pending_.
+
+### `plyr` declared in `DESCRIPTION` but absent from `pixi.toml`
+
+<!-- open-question id=plyr-missing-from-pixi status=open area=environment -->
+
+- Found: `002_foundation_core_api` source review (2026-07-28).
+- Artifacts: `./DESCRIPTION`, `./pixi.toml`.
+- Evidence: the port added `plyr` to `Imports` for `plyr::arrange()` in
+  `R/plot_split_violinplot.R`, but `pixi.toml` has no `r-plyr` entry. The
+  package currently resolves only transitively through `r-reshape2`.
+- Effect: the development environment silently depends on a transitive package;
+  removing `r-reshape2` from `pixi.toml` would break the build.
+- Coverage: no workflow references `pixi.toml`, and no specification governs it.
+- Options: (a) add an explicit `r-plyr` pin to `pixi.toml`; (b) replace the
+  single `plyr::arrange()` call with `dplyr::arrange()` and drop `plyr` from
+  `Imports`.
+- Decision: _pending_.
+
+### `pixi.toml` still pins `r-reshape2` after the package dependency was dropped
+
+<!-- open-question id=pixi-stale-reshape2 status=open area=environment -->
+
+- Found: `002_foundation_core_api` source review (2026-07-28).
+- Artifacts: `./pixi.toml`, `./DESCRIPTION`.
+- Evidence: `reshape2` is no longer a package dependency, but `pixi.toml` still
+  pins `r-reshape2 = ">=1.4.5,<2"`.
+- Effect: the environment and the package manifest disagree. Resolution depends
+  on the outcome of `reshape2-undeclared`.
+- Coverage: no workflow references `pixi.toml`.
+- Decision: _pending; resolve together with `reshape2-undeclared`._
+
+### `pixi.toml` is outside the specification and Depmesh model
+
+<!-- open-question id=pixi-ungoverned status=open area=governance -->
+
+- Found: `002_foundation_core_api` source review (2026-07-28).
+- Artifacts: `./pixi.toml`, `./depmesh.toml`, `./specs/behavior/files_relations.md`.
+- Evidence: `depmesh.toml` governs `DESCRIPTION`-adjacent artifacts only through
+  R source, test, vignette, workflow, `.Rbuildignore`, `depmesh.toml`, and
+  `donna.toml` rules. `pixi.toml` and `DESCRIPTION` have no relation, so a
+  dependency change in one is never surfaced when the other is edited.
+- Effect: dependency drift between the package manifest and the development
+  environment is invisible to Depmesh queries.
+- Options: (a) add a Depmesh relation pairing `DESCRIPTION` with `pixi.toml`;
+  (b) accept `pixi.toml` as maintainer-owned and document that explicitly.
+- Decision: _pending._
+
+### Focused tests without a Depmesh `tests` relation
+
+<!-- open-question id=depmesh-unmapped-tests status=open area=governance -->
+
+- Found: `002_foundation_core_api` source review (2026-07-28).
+- Artifacts: `./tests/testthat/test-ProBatchFeatures_links.R`,
+  `./tests/testthat/test-explained_variance_plots.R`,
+  `./R/batch_correction_helpers.R`, `./R/pbf_input_helpers.R`,
+  `./tests/testthat/helper-example-data.R`, `./depmesh.toml`.
+- Evidence: `depmesh -p llm deps` returns only `governed_by` for these files.
+  `test-ProBatchFeatures_links.R` covers `R/ProBatchFeatures.R` but its filename
+  does not match the conventional `test-{module}.R` mapping.
+  `test-explained_variance_plots.R` has no matching `R/explained_variance_plots.R`
+  because the retained core PVCA behavior lives in `R/proteome_wide_diagnostics.R`.
+  `R/batch_correction_helpers.R` and `R/pbf_input_helpers.R` have no `tested_by`
+  edge. `helper-example-data.R` is a testthat helper and is not expected to map.
+- Effect: dependency discovery under-reports test coverage for these sources.
+- Coverage: no later workflow edits `depmesh.toml`.
+- Options: (a) add explicit `one_of`/`list` rules to `depmesh.toml` as already
+  done for `test-correct_batch_effect.R` and `test-batch_effect_steps.R`;
+  (b) rename the test files to match the conventional mapping.
+- Decision: _pending._
+
+### Roxygen documentation and `NAMESPACE` regeneration owed
+
+<!-- open-question id=roxygen-regeneration status=open area=documentation -->
+
+- Found: `002_foundation_core_api` source review (2026-07-28).
+- Artifacts: `./R/design_diagnostics.R`, `./R/metadata_diagnostics.R`, and the
+  other ported sources.
+- Evidence: the migration adds exported functions with Roxygen comments, but
+  `man/**` and `NAMESPACE` are maintainer-owned generated output that agents
+  must never write.
+- Effect: generated documentation and the namespace lag behind the sources until
+  the maintainer regenerates them.
+- Coverage: `017_4540aca9182c_generated_missing_docs` is the explicit
+  generated-only exception in the family, but regeneration itself stays manual.
+- Decision: _pending; regenerate with devtools once the migration completes._
+
+## Environment limitations (informational)
+
+These are sandbox properties, not project defects. They are recorded so a future
+review does not misread them as regressions.
+
+- `preprocessCore::normalize.quantiles()` cannot create a native worker thread in
+  the agent sandbox (`pthread_create()` code 22). Quantile normalization tests
+  must be run by the maintainer outside the sandbox.
+- `BiocParallel` socket discovery is unavailable in the agent sandbox.
+  Registering `BiocParallel::SerialParam()` makes the ComBat-focused tests run.

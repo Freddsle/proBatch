@@ -50,6 +50,7 @@ input = { type = "any", items = [
     { type = "glob", pattern = "@/tests/{**test_path}.R" },
     { type = "glob", pattern = "@/vignettes/{*vignette}.Rmd" },
     { type = "glob", pattern = "@/workflows/{*workflow}.donna.md" },
+    { type = "glob", pattern = "@/workflows/reports/{*report}.md" },
     { type = "glob", pattern = "@/bin/depemesh/{*helper}.R" },
     { type = "one_of", artifacts = ["@/.Rbuildignore", "@/depmesh.toml", "@/donna.toml"] },
 ] }
@@ -63,6 +64,7 @@ output = { type = "union", items = [
     { type = "files", pattern = "@/tests/**/*.R" },
     { type = "files", pattern = "@/vignettes/*.Rmd" },
     { type = "files", pattern = "@/workflows/*.donna.md" },
+    { type = "files", pattern = "@/workflows/reports/*.md" },
     { type = "files", pattern = "@/bin/depemesh/*.R" },
     { type = "files", pattern = "@/.Rbuildignore" },
     { type = "files", pattern = "@/depmesh.toml" },
@@ -73,6 +75,7 @@ output = { type = "union", items = [
 relation = "governed_by"
 input = { type = "any", items = [
     { type = "glob", pattern = "@/workflows/{*workflow}.donna.md" },
+    { type = "glob", pattern = "@/workflows/reports/{*report}.md" },
     { type = "one_of", artifacts = ["@/donna.toml"] },
 ] }
 output = { type = "files", pattern = "@/specs/general/workflows.md" }
@@ -82,6 +85,7 @@ relation = "governs"
 input = { type = "one_of", artifacts = ["@/specs/general/workflows.md"] }
 output = { type = "union", items = [
     { type = "files", pattern = "@/workflows/*.donna.md" },
+    { type = "files", pattern = "@/workflows/reports/*.md" },
     { type = "files", pattern = "@/donna.toml" },
 ] }
 
