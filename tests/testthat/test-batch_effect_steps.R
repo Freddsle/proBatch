@@ -27,7 +27,8 @@ test_that("pb_transform applies combat step via registry", {
         sample_annotation = as.data.frame(colData(pbf)),
         batch_col = "MS_batch",
         sample_id_col = "FullRunName",
-        par.prior = TRUE
+        par.prior = TRUE,
+        fill_the_missing = "error"
     )
 
     pbf2 <- pb_transform(
@@ -79,7 +80,8 @@ test_that("pb_transform applies limmaRBE step via registry", {
     params <- list(
         sample_annotation = as.data.frame(colData(pbf)),
         batch_col = "MS_batch",
-        covariates_cols = c("Diet", "Sex")
+        covariates_cols = c("Diet", "Sex"),
+        fill_the_missing = "error"
     )
 
     pbf2 <- pb_transform(
@@ -126,17 +128,16 @@ test_that("medianNorm step handles fill_the_missing via pb_transform", {
     params <- list(
         sample_annotation = as.data.frame(colData(pbf)),
         sample_id_col = "FullRunName",
-        fill_the_missing = 0
+        fill_the_missing = "fill",
+        fill_value = 0
     )
 
-    suppressWarnings(
-        pbf2 <- pb_transform(
-            pbf,
-            from = "feature::raw",
-            steps = "medianNorm",
-            params_list = list(params),
-            store_fast_steps = TRUE
-        )
+    pbf2 <- pb_transform(
+        pbf,
+        from = "feature::raw",
+        steps = "medianNorm",
+        params_list = list(params),
+        store_fast_steps = TRUE
     )
 
     assay_name <- "feature::medianNorm_on_raw"
@@ -149,7 +150,8 @@ test_that("medianNorm step handles fill_the_missing via pb_transform", {
     median_idx <- which(as.character(log$step) == "medianNorm")
     expect_gt(length(median_idx), 0L)
     median_entry <- log[median_idx[length(median_idx)], , drop = FALSE]
-    expect_identical(median_entry$params[[1]]$fill_the_missing, 0)
+    expect_identical(median_entry$params[[1]]$fill_the_missing, "fill")
+    expect_identical(median_entry$params[[1]]$fill_value, 0)
 })
 
 test_that("loessLimmaRBE step is registered", {
@@ -210,7 +212,7 @@ test_that("pb_transform applies loessLimmaRBE step via registry", {
         sample_id_col = "FullRunName",
         order_col = "order",
         covariates_cols = valid_covariates,
-        fill_the_missing = FALSE,
+        fill_the_missing = "keep",
         min_measurements = 6,
         no_fit_imputed = FALSE,
         span = 1
@@ -247,7 +249,7 @@ test_that("pb_transform applies loessLimmaRBE step via registry", {
             sample_id_col = "FullRunName",
             order_col = "order",
             covariates_cols = valid_covariates,
-            fill_the_missing = FALSE,
+            fill_the_missing = "keep",
             min_measurements = 6,
             no_fit_imputed = FALSE,
             span = 1

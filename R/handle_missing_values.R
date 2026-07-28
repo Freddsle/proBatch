@@ -1,121 +1,154 @@
-#' Handle missing values in a data matrix
+.pb_normalize_missing_policy <- function(
+  missing,
+  fill_value = NULL,
+  argument = "missing"
+) {
+    choices <- c("error", "keep", "drop_features", "fill")
+    legacy <- NULL
+
+    if (is.null(missing)) {
+        stop(
+            "`", argument, " = NULL` is ambiguous. Use one of ",
+            paste(sprintf('"%s"', choices), collapse = ", "),
+            " and supply `fill_value` only with \"fill\".",
+            call. = FALSE
+        )
+    }
+
+    if (isFALSE(missing)) {
+        legacy <- "FALSE"
+        missing <- "keep"
+    } else if (is.numeric(missing)) {
+        if (length(missing) != 1L || is.na(missing) || !is.finite(missing)) {
+            stop(
+                "A legacy numeric `", argument,
+                "` must be one finite, non-missing value.",
+                call. = FALSE
+            )
+        }
+        if (!is.null(fill_value)) {
+            stop(
+                "Do not supply `fill_value` together with a legacy numeric `",
+                argument, "`; use `", argument, " = \"fill\"` instead.",
+                call. = FALSE
+            )
+        }
+        legacy <- "numeric"
+        fill_value <- missing
+        missing <- "fill"
+    } else if (is.character(missing) && length(missing) == 1L &&
+        !is.na(missing) && missing %in% c("remove", "rm", "REMOVE")) {
+        legacy <- missing
+        missing <- "drop_features"
+    } else if (!is.character(missing) || length(missing) != 1L ||
+        is.na(missing) || !(missing %in% choices)) {
+        stop(
+            "`", argument, "` must be one of ",
+            paste(sprintf('"%s"', choices), collapse = ", "),
+            ".",
+            call. = FALSE
+        )
+    }
+
+    if (!is.null(legacy)) {
+        replacement <- if (identical(legacy, "numeric")) {
+            paste0(
+                "`", argument, " = \"fill\"` with `fill_value = ",
+                format(fill_value), "`"
+            )
+        } else {
+            paste0("`", argument, " = \"", missing, "\"`")
+        }
+        warning(
+            "Legacy `", argument, " = ", legacy,
+            "` is deprecated; use ", replacement, ".",
+            call. = FALSE
+        )
+    }
+
+    if (identical(missing, "fill")) {
+        if (!is.numeric(fill_value) || length(fill_value) != 1L ||
+            is.na(fill_value) || !is.finite(fill_value)) {
+            stop(
+                "`fill_value` must be one finite, non-missing numeric value ",
+                "when `", argument, " = \"fill\"`.",
+                call. = FALSE
+            )
+        }
+    } else if (!is.null(fill_value)) {
+        stop(
+            "`fill_value` is only valid when `", argument, " = \"fill\"`.",
+            call. = FALSE
+        )
+    }
+
+    list(policy = missing, fill_value = fill_value)
+}
+
+#' Handle missing values in a numeric matrix
 #'
-#' This function can either fill missing values with a specified value
-#' or remove rows (and columns, if applicable) with missing values.
-#' It is primarily intended for use prior to batch correction methods
-#' that cannot handle missing values, such as ComBat, or plotting functions
-#' that require complete data.
+#' Applies the package-wide missing-value policy used before matrix-oriented
+#' batch correction. Feature dropping never removes sample columns, including
+#' when the input happens to be square and symmetric.
 #'
-#' Semantics:
-#' - If there are no NAs: return input unchanged.
-#' - If fill_the_missing is explicitly FALSE: do nothing (keep NAs).
-#' - If fill_the_missing is missing (argument not supplied) or one of
-#'   "remove","rm","REMOVE": remove rows with any NA; if the matrix is
-#'   square and symmetric (na.rm=TRUE), remove matching rows AND columns
-#'   using the same row keep-mask.
-#' - Otherwise: if non-numeric or NA, coerce to 0 with a warning; then fill NAs.
-#' @param data_matrix A numeric matrix with features in rows and samples in columns.
-#' @param warning_message A character string with a warning shown if missing values are found.
-#' @param fill_the_missing A control value:
-#'   - FALSE: do nothing (keep NAs).
-#'   - Missing (arg not supplied) or "remove"/"rm"/"REMOVE": remove rows with any NA
-#'     (and matching columns if square & symmetric).
-#'   - Numeric scalar: fill NAs with this value.
-#'   - Non-numeric: coerced to 0 with a warning and used to fill NAs.
-#' @return A matrix with missing values handled as specified.
+#' @param data_matrix Numeric feature-by-sample matrix.
+#' @param warning_message Error message used when missing values are present
+#'   under the default \code{"error"} policy.
+#' @param fill_the_missing One of \code{"error"}, \code{"keep"},
+#'   \code{"drop_features"}, or \code{"fill"}. For one release,
+#'   \code{FALSE}, a numeric scalar, and \code{"remove"}, \code{"rm"}, or
+#'   \code{"REMOVE"} are translated with a deprecation warning. Explicit
+#'   \code{NULL} is an error.
+#' @param fill_value Finite numeric scalar used only with
+#'   \code{fill_the_missing = "fill"}.
+#'
+#' @return A numeric matrix with the requested missing-value policy applied.
 #' @export
 #' @examples
 #' mat <- matrix(c(1, NA, 3, 4), nrow = 2)
-#' suppressWarnings(proBatch:::handle_missing_values(
+#' handle_missing_values(
 #'     mat,
 #'     warning_message = "demo",
-#'     fill_the_missing = 0
-#' ))
-handle_missing_values <- function(data_matrix, warning_message, fill_the_missing = NULL) {
-    # 1) Validate input and coerce to matrix
-    if (!is.matrix(data_matrix)) {
-        warning("Coercing input to matrix")
-        data_matrix <- as.matrix(data_matrix)
+#'     fill_the_missing = "fill",
+#'     fill_value = 0
+#' )
+handle_missing_values <- function(
+  data_matrix,
+  warning_message,
+  fill_the_missing = "error",
+  fill_value = NULL
+) {
+    if (!is.matrix(data_matrix) || !is.numeric(data_matrix)) {
+        stop("`data_matrix` must be a numeric matrix.", call. = FALSE)
     }
-    orig <- data_matrix
 
-    # 2) If no NAs, return early
-    if (!anyNA(orig)) {
+    policy <- .pb_normalize_missing_policy(
+        fill_the_missing,
+        fill_value = fill_value,
+        argument = "fill_the_missing"
+    )
+    if (!anyNA(data_matrix)) {
         return(data_matrix)
     }
 
-    # There ARE NAs
-    warning(warning_message)
-
-    # 3) EXPLICIT no-op branch: FALSE => keep NAs, do nothing
-    if (isFALSE(fill_the_missing)) {
-        warning("`fill_the_missing` is FALSE: keeping missing values unchanged")
+    if (identical(policy$policy, "error")) {
+        stop(warning_message, call. = FALSE)
+    }
+    if (identical(policy$policy, "keep")) {
         return(data_matrix)
     }
-
-    # 4) REMOVAL branch: old default (missing arg) OR explicit "remove" token
-    removal_tokens <- c("remove", "rm", "REMOVE")
-    removal_requested <- missing(fill_the_missing) || is.null(fill_the_missing) ||
-        (is.character(fill_the_missing) && length(fill_the_missing) == 1L &&
-            fill_the_missing %in% removal_tokens)
-
-    if (removal_requested) {
-        nr <- nrow(data_matrix)
-        nc <- ncol(data_matrix)
-
-        # Define row-wise completeness
-        keep_rows <- complete.cases(data_matrix)
-
-        if (nr == nc && isSymmetric(data_matrix, na.rm = TRUE)) {
-            # Square & (NA-tolerant) symmetric: remove rows AND the corresponding columns
-            if (!any(keep_rows)) {
-                warning("All rows contain missing values; returning 0x0 matrix")
-                data_matrix <- data_matrix[FALSE, FALSE, drop = FALSE]
-            } else {
-                message("Removing rows and corresponding columns with missing values (square & symmetric)")
-                data_matrix <- data_matrix[keep_rows, keep_rows, drop = FALSE]
-            }
-        } else {
-            # Non-square OR square but not symmetric: remove only rows with any NA
-            if (nr == nc && !isSymmetric(data_matrix, na.rm = TRUE)) {
-                warning("Matrix is square but not symmetric; removing rows with missing values")
-            } else {
-                message("Removing rows with missing values")
-            }
-            data_matrix <- data_matrix[keep_rows, , drop = FALSE]
+    if (identical(policy$policy, "drop_features")) {
+        kept <- data_matrix[complete.cases(data_matrix), , drop = FALSE]
+        removed_rows <- nrow(data_matrix) - nrow(kept)
+        if (removed_rows > 0L) {
+            warning(
+                sprintf("removed %d rows and 0 columns", removed_rows),
+                call. = FALSE
+            )
         }
-
-        # 5) Report removals
-        post <- data_matrix
-        removed_rows <- nrow(orig) - nrow(post)
-        removed_cols <- ncol(orig) - ncol(post)
-
-        if (removed_rows > 0 || removed_cols > 0) {
-            warning(sprintf(
-                "removed %d rows and %d columns",
-                removed_rows,
-                removed_cols
-            ))
-        }
-        return(data_matrix)
+        return(kept)
     }
 
-    # 6) any other specified value
-    fill_val <- fill_the_missing
-    if (!is.numeric(fill_val) || length(fill_val) != 1L || is.na(fill_val)) {
-        warning("filling value is not a finite numeric scalar; coercing to 0")
-        fill_val <- 0
-    }
-    warning(sprintf("filling missing values with %s", as.character(fill_val)))
-    nas <- is.na(data_matrix)
-    if (any(nas)) {
-        data_matrix[nas] <- fill_val
-    }
-
-    message(sprintf(
-        "replaced values in %d rows and %d columns",
-        sum(rowSums(nas) > 0),
-        sum(colSums(nas) > 0)
-    ))
-    return(data_matrix)
+    data_matrix[is.na(data_matrix)] <- policy$fill_value
+    data_matrix
 }

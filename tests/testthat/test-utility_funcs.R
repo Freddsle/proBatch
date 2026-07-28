@@ -106,3 +106,77 @@ test_that("adjust_units leaves inch units unchanged", {
     expect_equal(res$width, 1)
     expect_equal(res$height, 2)
 })
+
+test_that("long-matrix preparation forwards canonical missing policy", {
+    long <- data.frame(
+        Feature = rep(c("f1", "f2"), times = 2),
+        FullRunName = rep(c("s1", "s2"), each = 2),
+        Intensity = c(1, 2, NA_real_, 4),
+        stringsAsFactors = FALSE
+    )
+    annotation <- data.frame(
+        FullRunName = c("s1", "s2"),
+        row.names = c("s1", "s2"),
+        stringsAsFactors = FALSE
+    )
+
+    filled <- expect_silent(proBatch:::.pb_prepare_long_matrix(
+        df_long = long,
+        sample_annotation = annotation,
+        sample_id_col = "FullRunName",
+        feature_id_col = "Feature",
+        measure_col = "Intensity",
+        fill_the_missing = "fill",
+        fill_value = 0,
+        warning_message = "missing values"
+    ))
+
+    expect_false(anyNA(filled$data_matrix))
+    expect_true(is.na(
+        filled$df_long$Intensity[
+            filled$df_long$Feature == "f1" &
+                filled$df_long$FullRunName == "s2"
+        ]
+    ))
+    expect_identical(unname(filled$data_matrix["f1", "s2"]), 0)
+
+    qualified <- long
+    qualified$Intensity[3] <- 3
+    qualified$quality <- c("ok", "ok", "masked", "ok")
+    filled_mask <- suppressMessages(proBatch:::.pb_prepare_long_matrix(
+        df_long = qualified,
+        sample_annotation = annotation,
+        sample_id_col = "FullRunName",
+        feature_id_col = "Feature",
+        measure_col = "Intensity",
+        fill_the_missing = "fill",
+        fill_value = 0,
+        warning_message = "missing values",
+        qual_col = "quality",
+        qual_value = "masked"
+    ))
+    expect_false(anyNA(filled_mask$data_matrix))
+    expect_identical(unname(filled_mask$data_matrix["f1", "s2"]), 0)
+    expect_identical(
+        filled_mask$df_long$Intensity[
+            filled_mask$df_long$Feature == "f1" &
+                filled_mask$df_long$FullRunName == "s2"
+        ],
+        3
+    )
+
+    kept <- suppressMessages(proBatch:::.pb_prepare_long_matrix(
+        df_long = qualified,
+        sample_annotation = annotation,
+        sample_id_col = "FullRunName",
+        feature_id_col = "Feature",
+        measure_col = "Intensity",
+        fill_the_missing = "keep",
+        warning_message = "missing values",
+        qual_col = "quality",
+        qual_value = "masked"
+    ))
+
+    expect_identical(kept$df_long$Intensity, qualified$Intensity)
+    expect_true(anyNA(kept$data_matrix))
+})

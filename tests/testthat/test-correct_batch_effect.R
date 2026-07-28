@@ -127,7 +127,12 @@ test_that("correct_with_ComBat_df", {
     data(example_sample_annotation, package = "proBatch")
 
     short_df <- example_proteome[example_proteome[["peptide_group_label"]] %in% c("10062_NVGVSFYADKPEVTQEQK_3", "10063_NVGVSFYADKPEVTQEQKK_3"), ]
-    combat_df <- correct_with_ComBat(short_df, example_sample_annotation, format = "long")
+    combat_df <- correct_with_ComBat(
+        short_df,
+        example_sample_annotation,
+        format = "long",
+        fill_the_missing = "error"
+    )
 
     # Example: using ComBat directly
     example_matrix <- reshape2::dcast(short_df, peptide_group_label ~ FullRunName, value.var = "Intensity")
@@ -190,6 +195,7 @@ test_that("ComBat entry points forward supported engine arguments", {
         data_matrix,
         annotation,
         format = "wide",
+        fill_the_missing = "error",
         mean.only = TRUE,
         ref.batch = "b1"
     )
@@ -198,12 +204,14 @@ test_that("ComBat entry points forward supported engine arguments", {
         annotation,
         feature_id_col = "Feature",
         format = "long",
+        fill_the_missing = "error",
         mean.only = TRUE,
         ref.batch = "b1"
     )
     compatibility <- suppressWarnings(correct_with_ComBat_dm(
         data_matrix,
         annotation,
+        fill_the_missing = "error",
         mean.only = TRUE,
         ref.batch = "b1"
     ))
@@ -235,7 +243,7 @@ test_that("batch annotation alignment rejects duplicate identifiers", {
     )
 })
 
-test_that("false keeps missing values without preprocessing warnings", {
+test_that("canonical keep bypasses missing-value preprocessing", {
     data_matrix <- matrix(
         c(1, NA_real_, 3, 4),
         nrow = 2,
@@ -252,7 +260,7 @@ test_that("false keeps missing values without preprocessing warnings", {
         data_matrix,
         annotation,
         sample_id_col = "FullRunName",
-        fill_the_missing = FALSE,
+        fill_the_missing = "keep",
         missing_warning = "missing values would be handled",
         method_fun = function(data_matrix, sample_annotation) data_matrix
     ))
@@ -271,7 +279,7 @@ test_that("false keeps missing values without preprocessing warnings", {
         feature_id_col = "Feature",
         sample_id_col = "FullRunName",
         measure_col = "Intensity",
-        fill_the_missing = FALSE,
+        fill_the_missing = "keep",
         warning_message = "missing values would be handled"
     ))
 
@@ -280,10 +288,13 @@ test_that("false keeps missing values without preprocessing warnings", {
 })
 
 test_that("removeBatchEffect maps keep, drop, and fill missing outcomes", {
-    engine_inputs <- list()
+    engine_calls <- list()
     testthat::local_mocked_bindings(
         removeBatchEffect = function(x, batch, design, ...) {
-            engine_inputs[[length(engine_inputs) + 1L]] <<- x
+            engine_calls[[length(engine_calls) + 1L]] <<- list(
+                matrix = x,
+                dots = list(...)
+            )
             x
         },
         .package = "proBatch"
@@ -310,18 +321,48 @@ test_that("removeBatchEffect maps keep, drop, and fill missing outcomes", {
         stringsAsFactors = FALSE
     )
 
+    expect_error(
+        correct_with_removeBatchEffect(
+            data_matrix,
+            annotation,
+            format = "wide"
+        ),
+        "cannot operate with missing values"
+    )
+    expect_error(
+        correct_with_removeBatchEffect(
+            df_long,
+            annotation,
+            feature_id_col = "Feature",
+            format = "long"
+        ),
+        "cannot operate with missing values"
+    )
+
+    complete_matrix <- data_matrix
+    complete_matrix[is.na(complete_matrix)] <- 0
+    expect_error(
+        correct_with_removeBatchEffect(
+            complete_matrix,
+            annotation,
+            format = "wide",
+            fill_the_missing = NULL
+        ),
+        "NULL.*ambiguous"
+    )
+
     kept_wide <- expect_silent(correct_with_removeBatchEffect(
         data_matrix,
         annotation,
         format = "wide",
-        fill_the_missing = FALSE
+        fill_the_missing = "keep"
     ))
     kept_long <- expect_silent(correct_with_removeBatchEffect(
         df_long,
         annotation,
         feature_id_col = "Feature",
         format = "long",
-        fill_the_missing = FALSE
+        fill_the_missing = "keep"
     ))
 
     expect_identical(kept_wide, data_matrix)
@@ -333,30 +374,23 @@ test_that("removeBatchEffect maps keep, drop, and fill missing outcomes", {
             annotation,
             feature_id_col = "Feature",
             format = "long",
-            fill_the_missing = "remove"
+            fill_the_missing = "drop_features"
         ),
-        c(
-            "applying requested NA handling before modeling",
-            "removed 1 rows and 0 columns"
-        ),
+        "removed 1 rows and 0 columns",
         fixed = TRUE
     )
 
     expect_identical(unique(dropped$Feature), "f2")
 
-    filled <- pb_test_expect_warnings(
+    filled <- expect_silent(
         correct_with_removeBatchEffect(
             df_long,
             annotation,
             feature_id_col = "Feature",
             format = "long",
-            fill_the_missing = 0
-        ),
-        c(
-            "applying requested NA handling before modeling",
-            "filling missing values with 0"
-        ),
-        fixed = TRUE
+            fill_the_missing = "fill",
+            fill_value = 0
+        )
     )
 
     filled_value <- filled$Intensity[
@@ -364,7 +398,167 @@ test_that("removeBatchEffect maps keep, drop, and fill missing outcomes", {
     ]
     expect_identical(filled_value, 0)
     expect_false(anyNA(filled$Intensity))
-    expect_length(engine_inputs, 4L)
+    expect_true(is.na(filled$preBatchCorr_Intensity[
+        filled$Feature == "f1" & filled$FullRunName == "s2"
+    ]))
+
+    legacy_keep <- pb_test_expect_warnings(
+        correct_with_removeBatchEffect(
+            data_matrix,
+            annotation,
+            format = "wide",
+            fill_the_missing = FALSE
+        ),
+        "deprecated.*keep"
+    )
+    expect_identical(legacy_keep, data_matrix)
+
+    expect_length(engine_calls, 5L)
+    for (call in engine_calls) {
+        expect_false("fill_value" %in% names(call$dots))
+    }
+})
+
+test_that("unified centering fills working values without rewriting provenance", {
+    df_long <- data.frame(
+        Feature = rep(c("f1", "f2"), times = 2),
+        FullRunName = rep(c("s1", "s2"), each = 2),
+        Intensity = c(1, 2, NA_real_, 4),
+        stringsAsFactors = FALSE
+    )
+    annotation <- data.frame(
+        FullRunName = c("s1", "s2"),
+        MS_batch = c("b1", "b2"),
+        stringsAsFactors = FALSE
+    )
+
+    for (method in c("MedianCentering", "MeanCentering")) {
+        corrected <- expect_silent(correct_batch_effects(
+            df_long,
+            annotation,
+            format = "long",
+            discrete_func = method,
+            feature_id_col = "Feature",
+            fill_the_missing = "fill",
+            fill_value = 0,
+            no_fit_imputed = FALSE
+        ))
+
+        missing_row <- corrected$Feature == "f1" &
+            corrected$FullRunName == "s2"
+        expect_false(is.na(corrected$Intensity[missing_row]))
+        expect_true(is.na(corrected$preBatchCorr_Intensity[missing_row]))
+
+        corrected_keys <- paste(corrected$Feature, corrected$FullRunName)
+        input_keys <- paste(df_long$Feature, df_long$FullRunName)
+        expected_original <- df_long$Intensity[
+            match(corrected_keys, input_keys)
+        ]
+        expect_equal(
+            corrected$preBatchCorr_Intensity,
+            expected_original
+        )
+    }
+})
+
+test_that("continuous correction provenance is policy independent", {
+    testthat::local_mocked_bindings(
+        adjust_batch_trend_df = function(df_long, measure_col, ...) {
+            df_long[[paste0("preTrendFit_", measure_col)]] <-
+                df_long[[measure_col]]
+            df_long$fit <- 10
+            df_long[[measure_col]] <- df_long[[measure_col]] + df_long$fit
+            df_long
+        },
+        .package = "proBatch"
+    )
+
+    df_long <- data.frame(
+        Feature = rep(c("f1", "f2"), times = 4),
+        FullRunName = rep(paste0("s", 1:4), each = 2),
+        Intensity = seq_len(8),
+        stringsAsFactors = FALSE
+    )
+    annotation <- data.frame(
+        FullRunName = paste0("s", 1:4),
+        MS_batch = rep(c("b1", "b2"), each = 2),
+        stringsAsFactors = FALSE
+    )
+
+    corrected <- lapply(c("error", "keep"), function(policy) {
+        expect_silent(correct_batch_effects(
+            df_long,
+            annotation,
+            format = "long",
+            continuous_func = "mock_trend",
+            discrete_func = "MedianCentering",
+            feature_id_col = "Feature",
+            fill_the_missing = policy,
+            no_fit_imputed = FALSE
+        ))
+    })
+
+    input_keys <- paste(df_long$Feature, df_long$FullRunName)
+    for (result in corrected) {
+        result_keys <- paste(result$Feature, result$FullRunName)
+        expect_equal(
+            result$preBatchCorr_Intensity,
+            df_long$Intensity[match(result_keys, input_keys)]
+        )
+    }
+    expect_equal(
+        corrected[[1L]]$preBatchCorr_Intensity,
+        corrected[[2L]]$preBatchCorr_Intensity
+    )
+})
+
+test_that("ComBat applies canonical fill policy before engine dispatch", {
+    engine_calls <- list()
+    testthat::local_mocked_bindings(
+        run_ComBat_core = function(...) {
+            arguments <- list(...)
+            engine_calls[[length(engine_calls) + 1L]] <<- arguments
+            arguments$data_matrix
+        },
+        .package = "proBatch"
+    )
+
+    data_matrix <- matrix(
+        c(1, 2, NA_real_, 4, 5, 6, 7, 8),
+        nrow = 2,
+        dimnames = list(
+            c("f1", "f2"),
+            c("s1", "s2", "s3", "s4")
+        )
+    )
+    annotation <- data.frame(
+        FullRunName = colnames(data_matrix),
+        MS_batch = rep(c("b1", "b2"), each = 2),
+        row.names = colnames(data_matrix),
+        stringsAsFactors = FALSE
+    )
+
+    expect_error(
+        correct_with_ComBat(
+            data_matrix,
+            annotation,
+            format = "wide"
+        ),
+        "ComBat cannot operate with missing values"
+    )
+
+    filled <- expect_silent(correct_with_ComBat(
+        data_matrix,
+        annotation,
+        format = "wide",
+        fill_the_missing = "fill",
+        fill_value = 0
+    ))
+
+    expect_false(anyNA(filled))
+    expect_identical(unname(filled[1, 2]), 0)
+    expect_length(engine_calls, 1L)
+    expect_false("fill_value" %in% names(engine_calls[[1L]]))
 })
 
 # test_that("center_feature_batch_means_df", {
@@ -393,6 +587,7 @@ test_that("correct_batch_effects_df wrapper", {
         span = 0.7,
         min_measurements = 8,
         no_fit_imputed = FALSE,
+        fill_the_missing = "keep",
         format = "long"
     )
 
@@ -405,6 +600,7 @@ test_that("correct_batch_effects_dm returns matrix", {
 
     corrected <- correct_batch_effects(example_proteome_matrix, example_sample_annotation,
         discrete_func = "MedianCentering", no_fit_imputed = FALSE,
+        fill_the_missing = "keep",
         format = "wide"
     )
 
@@ -444,7 +640,7 @@ test_that("deprecated batch-correction wrappers select their default method", {
         df_result <- correct_batch_effects_df(
             df_long,
             annotation,
-            fill_the_missing = FALSE
+            fill_the_missing = "keep"
         ),
         "deprecated"
     )
@@ -452,7 +648,7 @@ test_that("deprecated batch-correction wrappers select their default method", {
         dm_result <- correct_batch_effects_dm(
             data_matrix,
             annotation,
-            fill_the_missing = FALSE
+            fill_the_missing = "keep"
         ),
         "deprecated"
     )
@@ -461,7 +657,7 @@ test_that("deprecated batch-correction wrappers select their default method", {
             data_matrix,
             annotation,
             discrete_func = "removeBatchEffect",
-            fill_the_missing = FALSE
+            fill_the_missing = "keep"
         ),
         "deprecated"
     )
@@ -476,9 +672,9 @@ test_that("deprecated batch-correction wrappers select their default method", {
     expect_identical(forwarded[[1L]]$discrete_func, "MedianCentering")
     expect_identical(forwarded[[2L]]$discrete_func, "MedianCentering")
     expect_identical(forwarded[[3L]]$discrete_func, "removeBatchEffect")
-    expect_false(forwarded[[1L]]$fill_the_missing)
-    expect_false(forwarded[[2L]]$fill_the_missing)
-    expect_false(forwarded[[3L]]$fill_the_missing)
+    expect_identical(forwarded[[1L]]$fill_the_missing, "keep")
+    expect_identical(forwarded[[2L]]$fill_the_missing, "keep")
+    expect_identical(forwarded[[3L]]$fill_the_missing, "keep")
 })
 
 

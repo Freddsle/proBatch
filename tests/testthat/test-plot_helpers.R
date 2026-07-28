@@ -67,3 +67,40 @@ test_that(".pb_resolve_assays_for_input supports filtering and deduplication", {
         c("assay1", "assay2")
     )
 })
+
+test_that(".pb_handle_missing_wrapper preserves diagnostic legacy policies", {
+    symmetric <- diag(3)
+    dimnames(symmetric) <- list(paste0("f", 1:3), paste0("f", 1:3))
+    symmetric[1, 3] <- NA_real_
+    symmetric[3, 1] <- NA_real_
+
+    removed <- pb_test_expect_warnings(
+        suppressMessages(proBatch:::.pb_handle_missing_wrapper(
+            data_matrix = symmetric,
+            warning_message = "diagnostic requires complete data",
+            fill_the_missing = NULL
+        )),
+        c(
+            "diagnostic requires complete data",
+            "removed 2 rows and 2 columns"
+        ),
+        fixed = TRUE
+    )
+    expect_identical(dim(removed), c(1L, 1L))
+    expect_identical(rownames(removed), "f2")
+    expect_identical(colnames(removed), "f2")
+
+    filled <- pb_test_expect_warnings(
+        suppressMessages(proBatch:::.pb_handle_missing_wrapper(
+            data_matrix = matrix(c(1, NA_real_), nrow = 1),
+            warning_message = "diagnostic requires complete data",
+            fill_the_missing = 0
+        )),
+        c(
+            "diagnostic requires complete data",
+            "filling missing values with 0"
+        ),
+        fixed = TRUE
+    )
+    expect_identical(unname(filled), matrix(c(1, 0), nrow = 1))
+})

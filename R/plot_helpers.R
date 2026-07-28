@@ -468,14 +468,80 @@
     }
 
     if (isFALSE(fill_the_missing) && isTRUE(drop_on_false)) {
-        data_matrix <- data_matrix[complete.cases(data_matrix), , drop = FALSE]
+        return(data_matrix[complete.cases(data_matrix), , drop = FALSE])
     }
 
-    handle_missing_values(
-        data_matrix = data_matrix,
-        warning_message = warning_message,
-        fill_the_missing = fill_the_missing
-    )
+    # Diagnostic APIs retain their legacy missing-value controls while batch
+    # correction adopts the canonical policy vocabulary.
+    warning(warning_message)
+    if (isFALSE(fill_the_missing)) {
+        warning("`fill_the_missing` is FALSE: keeping missing values unchanged")
+        return(data_matrix)
+    }
+
+    removal_requested <- is.null(fill_the_missing) ||
+        (is.character(fill_the_missing) &&
+            length(fill_the_missing) == 1L &&
+            fill_the_missing %in% c("remove", "rm", "REMOVE"))
+    if (removal_requested) {
+        original <- data_matrix
+        keep_rows <- complete.cases(data_matrix)
+        if (nrow(data_matrix) == ncol(data_matrix) &&
+            isSymmetric(data_matrix, na.rm = TRUE)) {
+            if (!any(keep_rows)) {
+                warning("All rows contain missing values; returning 0x0 matrix")
+                data_matrix <- data_matrix[FALSE, FALSE, drop = FALSE]
+            } else {
+                message(
+                    "Removing rows and corresponding columns with missing ",
+                    "values (square & symmetric)"
+                )
+                data_matrix <- data_matrix[keep_rows, keep_rows, drop = FALSE]
+            }
+        } else {
+            if (nrow(data_matrix) == ncol(data_matrix) &&
+                !isSymmetric(data_matrix, na.rm = TRUE)) {
+                warning(
+                    "Matrix is square but not symmetric; removing rows with ",
+                    "missing values"
+                )
+            } else {
+                message("Removing rows with missing values")
+            }
+            data_matrix <- data_matrix[keep_rows, , drop = FALSE]
+        }
+
+        removed_rows <- nrow(original) - nrow(data_matrix)
+        removed_cols <- ncol(original) - ncol(data_matrix)
+        if (removed_rows > 0L || removed_cols > 0L) {
+            warning(sprintf(
+                "removed %d rows and %d columns",
+                removed_rows,
+                removed_cols
+            ))
+        }
+        return(data_matrix)
+    }
+
+    fill_value <- fill_the_missing
+    if (!is.numeric(fill_value) ||
+        length(fill_value) != 1L ||
+        is.na(fill_value)) {
+        warning("filling value is not a finite numeric scalar; coercing to 0")
+        fill_value <- 0
+    }
+    warning(sprintf(
+        "filling missing values with %s",
+        as.character(fill_value)
+    ))
+    missing <- is.na(data_matrix)
+    data_matrix[missing] <- fill_value
+    message(sprintf(
+        "replaced values in %d rows and %d columns",
+        sum(rowSums(missing) > 0),
+        sum(colSums(missing) > 0)
+    ))
+    data_matrix
 }
 
 .pb_resolve_color_list <- function(color_list,

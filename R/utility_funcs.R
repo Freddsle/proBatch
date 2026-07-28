@@ -112,14 +112,15 @@ check_sample_consistency <- function(sample_annotation, sample_id_col, df_long,
                                     feature_id_col,
                                     measure_col,
                                     batch_col = NULL,
-                                    fill_the_missing = NULL,
+                                    fill_the_missing = "error",
                                     warning_message = NULL,
                                     qual_col = NULL,
                                     qual_value = NULL,
                                     merge = FALSE,
                                     check_samples = TRUE,
                                     error_message = "format='long' requires a data.frame.",
-                                    error_call = TRUE) {
+                                    error_call = TRUE,
+                                    fill_value = NULL) {
     if (!is.data.frame(df_long)) {
         stop(error_message, call. = error_call)
     }
@@ -134,6 +135,7 @@ check_sample_consistency <- function(sample_annotation, sample_id_col, df_long,
         )
     }
 
+    data_matrix <- NULL
     if (!is.null(warning_message)) {
         handled <- .handle_missing_for_batch_df(
             df_long = df_long,
@@ -142,22 +144,26 @@ check_sample_consistency <- function(sample_annotation, sample_id_col, df_long,
             sample_id_col = sample_id_col,
             measure_col = measure_col,
             fill_the_missing = fill_the_missing,
+            fill_value = fill_value,
             warning_message = warning_message,
             qual_col = qual_col,
             qual_value = qual_value
         )
         df_long <- handled$df_long
         sample_annotation <- handled$sample_annotation
+        data_matrix <- handled$data_matrix
     }
 
-    data_matrix <- long_to_matrix(
-        df_long,
-        feature_id_col = feature_id_col,
-        measure_col = measure_col,
-        sample_id_col = sample_id_col,
-        qual_col = qual_col,
-        qual_value = qual_value
-    )
+    if (is.null(data_matrix)) {
+        data_matrix <- long_to_matrix(
+            df_long,
+            feature_id_col = feature_id_col,
+            measure_col = measure_col,
+            sample_id_col = sample_id_col,
+            qual_col = qual_col,
+            qual_value = qual_value
+        )
+    }
 
     list(
         df_long = df_long,
