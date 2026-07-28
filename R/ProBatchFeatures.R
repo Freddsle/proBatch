@@ -1356,6 +1356,7 @@ pb_add_level <- function(
 #' @param x A `ProBatchFeatures` object.
 #' @param i Row indices passed to the underlying `QFeatures` subset.
 #' @param j Column indices passed to the underlying `QFeatures` subset.
+#' @param k Assay indices passed to the underlying `QFeatures` subset.
 #' @param ... Additional arguments forwarded to the next method.
 #' @param drop Logical flag controlling dimension dropping; defaults to `TRUE`.
 #'
@@ -1365,12 +1366,99 @@ pb_add_level <- function(
 #' @export
 setMethod(
     "[",
-    signature(x = "ProBatchFeatures", i = "ANY", j = "ANY", drop = "ANY"),
-    function(x, i, j, ..., drop = TRUE) {
-        out <- callNextMethod()
+    c("ProBatchFeatures", "ANY", "ANY", "ANY"),
+    function(x, i, j, k, ..., drop = TRUE) {
+        out <- callNextMethod(
+            x = x,
+            i = i,
+            j = j,
+            k = k,
+            ...,
+            drop = drop
+        )
         .as_ProBatchFeatures(out, from = x)
     }
 )
+
+#' Subset samples using `ProBatchFeatures` metadata.
+#'
+#' Resolve sample metadata from `colData(object)`, build a column mask, and
+#' delegate to the subclass-preserving `[` method so every assay is subset
+#' consistently.
+#'
+#' @param object A `ProBatchFeatures` object.
+#' @param sample_id_col Character scalar naming the sample identifier column in
+#'   `colData(object)`. When the column is absent, row names are used.
+#' @param subset_by Character scalar naming the metadata column used for
+#'   filtering. Defaults to `sample_id_col`.
+#' @param subset_values Values to retain from `subset_by`.
+#'
+#' @return A `ProBatchFeatures` object restricted to the selected samples.
+#' @examples
+#' data(example_proteome_matrix, package = "proBatch")
+#' data(example_sample_annotation, package = "proBatch")
+#' sample_annotation <- example_sample_annotation
+#' sample_annotation$Group <- rep(
+#'     c("Pool", "Study"),
+#'     length.out = nrow(sample_annotation)
+#' )
+#' pbf <- ProBatchFeatures(
+#'     data_matrix = example_proteome_matrix,
+#'     sample_annotation = sample_annotation,
+#'     sample_id_col = "FullRunName"
+#' )
+#' pb_subset_samples(
+#'     pbf,
+#'     sample_id_col = "FullRunName",
+#'     subset_by = "Group",
+#'     subset_values = "Pool"
+#' )
+#' @export
+pb_subset_samples <- function(object,
+                              sample_id_col = "FullRunName",
+                              subset_by = sample_id_col,
+                              subset_values) {
+    if (!is(object, "ProBatchFeatures")) {
+        stop("`object` must be a `ProBatchFeatures` object.", call. = FALSE)
+    }
+    if (!is.character(sample_id_col) ||
+        length(sample_id_col) != 1L ||
+        is.na(sample_id_col) ||
+        !nzchar(sample_id_col)) {
+        stop(
+            "`sample_id_col` must be a non-empty character scalar.",
+            call. = FALSE
+        )
+    }
+    if (!is.character(subset_by) ||
+        length(subset_by) != 1L ||
+        is.na(subset_by) ||
+        !nzchar(subset_by)) {
+        stop(
+            "`subset_by` must be a non-empty character scalar.",
+            call. = FALSE
+        )
+    }
+    if (missing(subset_values)) {
+        stop("`subset_values` must be provided.", call. = FALSE)
+    }
+
+    sample_annotation <- .pb_default_sample_annotation(
+        object = object,
+        sample_id_col = sample_id_col
+    )
+    if (!subset_by %in% colnames(sample_annotation)) {
+        stop(
+            "Column '",
+            subset_by,
+            "' not found in `colData(object)`.",
+            call. = FALSE
+        )
+    }
+
+    keep <- sample_annotation[[subset_by]] %in% subset_values
+    object[, keep, , drop = FALSE]
+}
 
 # ---------------------------
 # Show
