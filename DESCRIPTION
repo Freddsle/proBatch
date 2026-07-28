@@ -50,6 +50,7 @@ Imports:
     RColorBrewer,
     rlang,
     scales,
+    splines,
     stats,
     sva,
     tidyr,

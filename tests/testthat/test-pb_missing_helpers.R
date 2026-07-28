@@ -413,3 +413,99 @@ test_that("pb_missing helpers error on non-materialised assays with guidance", {
         fixed = TRUE
     )
 })
+
+
+# ------------------------------------------------------------------
+# pb_groupfilterNA: mask_failing parameter
+# ------------------------------------------------------------------
+
+.mask_mat <- matrix(
+    c(
+        1, 2, 3, 4,
+        NA, 7, 5, 6,
+        8, 9, NA, 10
+    ),
+    nrow = 3, byrow = TRUE,
+    dimnames = list(paste0("f", 1:3), paste0("s", 1:4))
+)
+.mask_sa <- data.frame(
+    Batch = rep(c("B1", "B2"), each = 2),
+    stringsAsFactors = FALSE
+)
+
+test_that("pb_groupfilterNA masks values in failing groups by default", {
+    pbf <- make_test_pbf(.mask_mat, sa_extra = .mask_sa)
+    assay_name <- pb_current_assay(pbf)
+
+    res <- suppressMessages(pb_groupfilterNA(
+        pbf,
+        group_cols = "Batch",
+        min_valid = 2L,
+        inplace = TRUE
+    ))
+
+    filtered <- assay(res[[assay_name]], "intensity")
+    expect_identical(rownames(filtered), c("f1", "f2", "f3"))
+
+    expect_true(is.na(filtered["f2", "s1"]))
+    expect_true(is.na(filtered["f2", "s2"]))
+    expect_equal(filtered["f2", "s3"], 5)
+    expect_equal(filtered["f2", "s4"], 6)
+
+    expect_equal(filtered["f3", "s1"], 8)
+    expect_equal(filtered["f3", "s2"], 9)
+    expect_true(is.na(filtered["f3", "s3"]))
+    expect_true(is.na(filtered["f3", "s4"]))
+
+    expect_equal(as.numeric(filtered["f1", ]), c(1, 2, 3, 4))
+
+    log <- get_operation_log(res)
+    expect_identical(log$params[[1]]$mask_failing, TRUE)
+})
+
+test_that("pb_groupfilterNA keeps failing-group values when masking is disabled", {
+    pbf <- make_test_pbf(.mask_mat, sa_extra = .mask_sa)
+    assay_name <- pb_current_assay(pbf)
+
+    res <- suppressMessages(pb_groupfilterNA(
+        pbf,
+        group_cols = "Batch",
+        min_valid = 2L,
+        mask_failing = FALSE,
+        inplace = TRUE
+    ))
+
+    filtered <- assay(res[[assay_name]], "intensity")
+    expect_identical(rownames(filtered), c("f1", "f2", "f3"))
+
+    expect_true(is.na(filtered["f2", "s1"]))
+    expect_equal(filtered["f2", "s2"], 7)
+    expect_equal(filtered["f2", "s3"], 5)
+    expect_equal(filtered["f2", "s4"], 6)
+
+    expect_equal(filtered["f3", "s1"], 8)
+    expect_equal(filtered["f3", "s2"], 9)
+    expect_true(is.na(filtered["f3", "s3"]))
+    expect_equal(filtered["f3", "s4"], 10)
+
+    log <- get_operation_log(res)
+    expect_identical(log$params[[1]]$mask_failing, FALSE)
+})
+
+test_that("pb_groupfilterNA preserves positional inplace compatibility", {
+    pbf <- make_test_pbf(.mask_mat, sa_extra = .mask_sa)
+
+    res <- suppressMessages(pb_groupfilterNA(
+        pbf,
+        NULL,
+        "Batch",
+        2L,
+        NULL,
+        TRUE
+    ))
+
+    expect_identical(names(res), names(pbf))
+    log <- get_operation_log(res)
+    expect_identical(log$params[[1]]$inplace, TRUE)
+    expect_identical(log$params[[1]]$mask_failing, TRUE)
+})
