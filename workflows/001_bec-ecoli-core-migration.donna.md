@@ -6,7 +6,7 @@ kind = "donna.lib.workflow"
 start_operation_id = "verify_inputs"
 ```
 
-Analyze the BEC E. coli branch and the stopped split implementation, create a numbered workflow for every selected source commit, run those workflows in order with two maintainer review pauses each, and finish with a structured residual split review.
+Analyze the BEC E. coli branch and the stopped split implementation, preserve one ordered manifest position for every selected source commit, run numbered workflows only for core-relevant positions with two maintainer review pauses each, record companion-only positions as deterministic reference skips, and finish with a structured residual split review.
 
 ## Verify Inputs
 
@@ -125,7 +125,7 @@ The base `ba6ee246eace090e71baa7aba302ca64e76ddb32` entered the BEC branch as th
 
 Choose the migration universe explicitly:
 
-1. Recommended: create one foundation workflow for the core-owned API present at the synchronizing merge, then one workflow for each of the 29 linear commits after that merge. This preserves the requested per-commit review for work actually made after the base synchronization while still migrating the accumulated core API. With this scope, `{{ donna.lib.goto("analyze_post_sync_history") }}`.
+1. Recommended: create one foundation workflow for the core-owned API present at the synchronizing merge, then preserve one ordered position for each of the 29 linear commits after that merge. Materialize executable children only for core-relevant positions, while retaining unambiguously companion-only commits as reference skips. This preserves per-commit review where core work exists while still accounting for the complete source history. With this scope, `{{ donna.lib.goto("analyze_post_sync_history") }}`.
 2. Literal Git difference: create one workflow for every one of the 312 commits reachable from the tip but not the base, including the 282 older divergent commits and merge histories. With this scope, `{{ donna.lib.goto("analyze_full_difference") }}`.
 3. If neither scope represents the intended history, `{{ donna.lib.goto("blocked") }}` and report the exact alternative ref/range or ordering rule required.
 
@@ -146,7 +146,7 @@ kind = "donna.lib.request_action"
 6. Analyze the exact output of `git rev-list --reverse --topo-order 5cd1d2f373ae3f515bad4702d6524fe44e1ed8ab..e2bb18547c73f1c471fc1afcb3facbd8bea5fa92`, parent before child and oldest to newest. It must contain 29 commits, begin with `42544a21f10ca6960d3e4c44d2833f764054d721`, and end with `e2bb18547c73f1c471fc1afcb3facbd8bea5fa92`. For every commit record the full SHA, parent, date, complete subject and body, non-generated changed files, relevant hunks and intent, core/companion/mixed classification, core functions affected, focused tests, package dependencies, and stopped-split comparison targets.
 7. At hunk level, separate core behavior from all 26 companion-owned exports. This includes provider-specific PRONE, BERT, NormAE, PLSDA, RUVIIIC, mComBat, omicsGMF, and missForest adapters plus `calculate_classification_metrics`, `calculate_variance_partition`, `prepare_variance_partition_df`, `plot_variance_partition`, `plot_variance_partition.df`, `plot_intragroup_variation`, `plot_TSNE`, and `plot_UMAP`. Retain independent core hunks from mixed files such as `R/proteome_wide_diagnostics.R`.
 8. Account explicitly for the load-order ambiguity from `correct_batch_effects_old.R`; determine effective behavior rather than choosing by filename recency.
-9. Write the persistent ordered manifest to `{{ donna.lib.path("@/workflows/bec-ecoli-core-migration-manifest.md") }}`. Include one foundation entry, 29 commit entries, and a final residual-review entry. Each entry must state why it is included, skipped, or split. Add the exact machine-readable header `<!-- donna-migration scope=post-sync numbered=32 children=31 commits=29 -->`. Add one machine-readable entry per child, in numeric order, using `<!-- donna-entry kind=<foundation|commit|residual> id=<unique-id> workflow=@/workflows/<numbered-file>.donna.md sha=<full-commit-or-dash> -->`. Use `kind=commit` and the full source SHA for exactly the 29 commit entries.
+9. Write the persistent ordered manifest to `{{ donna.lib.path("@/workflows/bec-ecoli-core-migration-manifest.md") }}`. Include one foundation entry, 29 commit entries, and a final residual-review entry. Each entry must state why it is executable, reference-only, skipped, or split. Add the exact machine-readable header `<!-- donna-migration scope=post-sync last-prefix=032 entries=31 workflows=24 commits=29 references=7 -->`. Add one machine-readable entry per allocated child position, in numeric order, using `<!-- donna-entry kind=<foundation|commit|residual> id=<unique-id> slot=<NNN> mode=<workflow|reference-only> workflow=<artifact-id-or-dash> sha=<full-commit-or-dash> -->`. Use `kind=commit` and the full source SHA for exactly the 29 commit entries. Slots `005`, `018`, `024`, `025`, `026`, `029`, and `030` must use `mode=reference-only workflow=-`; all other positions must use `mode=workflow`, including the generated-only core-documentation entry at slot `017`.
 10. When the audit is complete and every source commit is accounted for exactly once, `{{ donna.lib.goto("materialize_workflows") }}`.
 11. If any commit, ownership decision, or source identity remains ambiguous, `{{ donna.lib.goto("blocked") }}`.
 
@@ -163,7 +163,7 @@ kind = "donna.lib.request_action"
 4. For every commit record the full SHA, parents, date, subject and body, non-generated changed files, relevant hunks and intent, core/companion/mixed classification, core functions affected, tests, dependencies, and stopped-split comparison targets.
 5. Exclude all 26 companion-owned exports named in the post-synchronization analysis at hunk level while retaining independent core hunks from mixed commits. Do not cherry-pick commits wholesale.
 6. Account explicitly for the effective installed behavior and load-order ambiguity from `correct_batch_effects_old.R`.
-7. Write the persistent ordered manifest to `{{ donna.lib.path("@/workflows/bec-ecoli-core-migration-manifest.md") }}` with all 312 commits and one final residual-review entry. Explain the chosen topological order and merge comparators. Add the exact machine-readable header `<!-- donna-migration scope=full-difference numbered=314 children=313 commits=312 -->` and one machine-readable child entry in the same format required by the post-synchronization path. Use `kind=commit` and the full source SHA for exactly the 312 commit entries.
+7. Write the persistent ordered manifest to `{{ donna.lib.path("@/workflows/bec-ecoli-core-migration-manifest.md") }}` with all 312 commits and one final residual-review entry. Explain the chosen topological order and merge comparators. Add the exact machine-readable header `<!-- donna-migration scope=full-difference last-prefix=314 entries=313 workflows=313 commits=312 references=0 -->` and one machine-readable entry in the same slot/mode format required by the post-synchronization path. Use `mode=workflow`, `kind=commit`, and the full source SHA for exactly the 312 commit entries.
 8. When every commit is accounted for exactly once, `{{ donna.lib.goto("materialize_workflows") }}`.
 9. If the DAG cannot be linearized without changing the intended review semantics, `{{ donna.lib.goto("blocked") }}`.
 
@@ -175,8 +175,8 @@ kind = "donna.lib.request_action"
 ```
 
 1. Read `{{ donna.lib.path("@/workflows/bec-ecoli-core-migration-manifest.md") }}` and query Depmesh for every artifact that will be edited.
-2. Allocate zero-padded three-digit prefixes in manifest order after this `001_` parent. Use a unique 12-hexadecimal-character commit abbreviation and filenames of the form `NNN_<12-char-sha>_<concise-slug>.donna.md` for commit workflows. If the chosen manifest has a foundation entry, use the next prefix for `NNN_foundation_core_api.donna.md`. Give the final residual workflow the next unused prefix. Never renumber an existing workflow.
-3. Create one permanent child workflow for every manifest commit, including commits classified as companion-only, metadata-only, generated-only, or otherwise not transferable. A skipped commit still requires evidence and maintainer review.
+2. Allocate zero-padded three-digit slots in manifest order after this `001_` parent. Use a unique 12-hexadecimal-character commit abbreviation and filenames of the form `NNN_<12-char-sha>_<concise-slug>.donna.md` for executable commit workflows. If the chosen manifest has a foundation entry, use the next slot for `NNN_foundation_core_api.donna.md`. Give the final residual workflow the last allocated slot. Never renumber or reuse an allocated slot, including one reserved by a reference-only entry.
+3. Create permanent child workflows only for entries with `mode=workflow`. For the selected post-synchronization manifest, slots `005`, `018`, `024`, `025`, `026`, `029`, and `030` are exact companion-only `mode=reference-only workflow=-` records and must have no artifacts, catalog entries, or maintainer pauses. Keep slot `017` executable as the explicit generated-only core-documentation exception. A reference-only commit retains its full pinned evidence and concise disposition in the manifest and receives only a deterministic `reference-only` progress outcome when reached.
 4. Every foundation or commit child must implement this control flow with stable operation IDs:
    - inspect the exact pinned commit/tree and recheck core ownership;
    - query all Depmesh relations before editing destination artifacts;
@@ -191,12 +191,12 @@ kind = "donna.lib.request_action"
    - after resume, run `reverify_split_adjustment` so maintainer edits are checked before finish, routing failures back through repair;
    - finish with an outcome that the parent can record.
 5. Child workflows must be safe to resume and rerun: detect already-equivalent code, preserve unrelated user changes, never cherry-pick, never create or amend a commit, never draft a commit message unless asked, and never read, edit, generate, lint, validate, enumerate, or diff-review `man/`. Make documentation changes only in Roxygen2 comments under `R/`; leave `NAMESPACE` and documentation generation to the maintainer. Treat both external repositories as immutable and require every source and split comparison to use pinned Git object commands or a read-only `/tmp` archive. Forbid checkout, switch, reset, stash, clean, and all writes in the external repositories.
-6. Each child must name its exact source SHA and comparator, relevant core functions and hunks, expected destination files, focused tests, stopped-split files, dependency questions, and known skip rationale from the manifest.
+6. Each executable child must name its exact source SHA and comparator, relevant core functions and hunks, expected destination files, focused tests, stopped-split files, dependency questions, and known skip rationale from the manifest.
 7. Create the final residual workflow with a deterministic inventory check and repair loop followed by an explicit `review_residual_reports` action that remains pending until the developer resumes. It must read the pinned `a04c9a29a3a4ba9f719d3b9c778616f3dd77903b:SPLIT_ATTEMPT.md`, account for the overall non-generated `ba6ee246eace090e71baa7aba302ca64e76ddb32..29a7478dc7deea846a2c1ff1abd25a881e6f87db` split including preflight `49cee7cc978fbb149c262a5a783face32dd1d135`, and use pinned Git objects to build an exhaustive editable/reference path inventory for `e2bb18547c73f1c471fc1afcb3facbd8bea5fa92..29a7478dc7deea846a2c1ff1abd25a881e6f87db`, excluding `man/**` and generated `NAMESPACE`. Its deterministic inventory operation must use ID `verify_residual_inventory`. The immutable delta contains 99 paths: 11 added, 38 deleted, and 50 modified, with name-status SHA-256 `28828d60c51178f042ca3f2389255bb69527ef18cc5aa4c5cdd8e4b687274b38`. Account for every path exactly once, compare it with the completed core, and classify it as `required`, `recommended`, `equivalent`, `excluded`, or `decision`. In the residual review report, include exactly one marker per path, in Git name-status order, using `<!-- split-path status=<A|D|M> path=<path> class=<classification> -->`; the extracted status/path lines must reproduce the pinned count and checksum. Add exactly one `<!-- bench-api symbol=<exact-name> disposition=companion -->` marker for each of the 26 companion-owned exports. Explicitly assess the split-only `R/identifiers.R`, `R/matrix_adapter.R`, `R/registry.R`, and `R/step_result.R` layers; `tests/testthat/helper-source-root.R`, `test-identifiers.R`, `test-lineage.R`, `test-matrix_adapter.R`, `test-registry.R`, `test-step_result.R`, and `test-symbol-ownership.R`; the new `pb_apply_matrix_method`, `pb_step_result`, and `pb_unregister_steps` APIs; all 26 companion-owned exports; provider ownership removals; duplicate-definition consolidation; and retained/deleted test coverage. In the remaining-change plan, add exactly one `<!-- plan-path path=<path> class=<required|recommended|decision> destination=<nonspace-target> order=<positive-integer> reason=<nonspace-reason-key> -->` marker for every residual path with an actionable class, and explain each marker with a concise destination, reason, dependency/test impact, and execution order. If no actionable paths exist, include exactly `<!-- plan-empty -->`. It must create:
    - `{{ donna.lib.path("@/workflows/reports/bec-ecoli-core-residual-review.md") }}`
    - `{{ donna.lib.path("@/workflows/reports/bec-ecoli-core-remaining-change-plan.md") }}`
    The reports must be concise, logically structured, and include source symbol/path, destination, originating evidence, reason, dependencies, tests, ordering, and explicit exclusions.
-8. Add every exact permanent child artifact to `{{ donna.lib.path("@/specs/general/workflows.md") }}` with state `implementation in progress` and update `{{ donna.lib.path("@/AGENTS.md") }}` for the allocated sequence and maintainer-controlled pauses. Existing Depmesh wildcard governance should be verified; change it only if the new artifacts are not discovered.
+8. Add every exact permanent child artifact to `{{ donna.lib.path("@/specs/general/workflows.md") }}` with state `implementation in progress`; do not catalog reference-only records as workflows. Update `{{ donna.lib.path("@/AGENTS.md") }}` for executable and reserved slots plus maintainer-controlled pauses. Existing Depmesh wildcard governance should be verified; change it only if the remaining artifacts are not discovered.
 9. When all workflows and catalog entries exist, `{{ donna.lib.goto("validate_workflows") }}`.
 10. If a workflow cannot be made specific enough for safe independent execution, `{{ donna.lib.goto("blocked") }}`.
 
@@ -226,25 +226,30 @@ tip="e2bb18547c73f1c471fc1afcb3facbd8bea5fa92"
 
 test -f "$manifest"
 
-mapfile -t headers < <(grep -E '^<!-- donna-migration scope=(post-sync|full-difference) numbered=[0-9]+ children=[0-9]+ commits=[0-9]+ -->$' "$manifest")
-test "$(grep -Ec '^<!-- donna-migration scope=(post-sync|full-difference) numbered=[0-9]+ children=[0-9]+ commits=[0-9]+ -->$' "$manifest")" -eq 1
-read -r scope numbered_count child_count commit_count < <(
+header_pattern='^<!-- donna-migration scope=(post-sync|full-difference) last-prefix=[0-9]{3} entries=[0-9]+ workflows=[0-9]+ commits=[0-9]+ references=[0-9]+ -->$'
+mapfile -t headers < <(grep -E "$header_pattern" "$manifest")
+test "$(grep -Ec "$header_pattern" "$manifest")" -eq 1
+read -r scope last_prefix entry_count workflow_count commit_count reference_count < <(
     printf '%s\n' "${headers[0]}" |
-        sed -E 's/^<!-- donna-migration scope=([^ ]+) numbered=([0-9]+) children=([0-9]+) commits=([0-9]+) -->$/\1 \2 \3 \4/'
+        sed -E 's/^<!-- donna-migration scope=([^ ]+) last-prefix=([0-9]{3}) entries=([0-9]+) workflows=([0-9]+) commits=([0-9]+) references=([0-9]+) -->$/\1 \2 \3 \4 \5 \6/'
 )
 
 case "$scope" in
     post-sync)
-        test "$numbered_count" -eq 32
-        test "$child_count" -eq 31
+        test "$last_prefix" = "032"
+        test "$entry_count" -eq 31
+        test "$workflow_count" -eq 24
         test "$commit_count" -eq 29
+        test "$reference_count" -eq 7
         source_range="$sync_merge..$tip"
         expected_foundations=1
         ;;
     full-difference)
-        test "$numbered_count" -eq 314
-        test "$child_count" -eq 313
+        test "$last_prefix" = "314"
+        test "$entry_count" -eq 313
+        test "$workflow_count" -eq 313
         test "$commit_count" -eq 312
+        test "$reference_count" -eq 0
         source_range="$base..$tip"
         expected_foundations=0
         ;;
@@ -253,70 +258,120 @@ case "$scope" in
         ;;
 esac
 
-entry_pattern='^<!-- donna-entry kind=(foundation|commit|residual) id=[a-z0-9-]+ workflow=@/workflows/[0-9]{3}_[a-z0-9_-]+\.donna\.md sha=(-|[0-9a-f]{40}) -->$'
+entry_pattern='^<!-- donna-entry kind=(foundation|commit|residual) id=[a-z0-9-]+ slot=[0-9]{3} mode=(workflow|reference-only) workflow=(-|@/workflows/[0-9]{3}_[a-z0-9_-]+\.donna\.md) sha=(-|[0-9a-f]{40}) -->$'
 mapfile -t entries < <(grep -E "$entry_pattern" "$manifest")
-test "$(grep -Ec "$entry_pattern" "$manifest")" -eq "$child_count"
-test "$(grep -c '^<!-- donna-entry ' "$manifest")" -eq "$child_count"
+test "$(grep -Ec "$entry_pattern" "$manifest")" -eq "$entry_count"
+test "$(grep -c '^<!-- donna-entry ' "$manifest")" -eq "$entry_count"
 
 entry_ids=()
+entry_slots=()
 entry_kinds=()
+entry_modes=()
 entry_workflows=()
+workflow_artifacts=()
+workflow_kinds=()
 manifest_shas=()
+reference_ids=()
+reference_slots=()
+reference_shas=()
 foundation_count=0
 residual_count=0
+actual_workflow_count=0
+actual_reference_count=0
 
-for entry in "${entries[@]}"; do
+for index in "${!entries[@]}"; do
+    entry="${entries[$index]}"
     kind="$(printf '%s\n' "$entry" | sed -E 's/^<!-- donna-entry kind=([^ ]+) .*/\1/')"
-    entry_id="$(printf '%s\n' "$entry" | sed -E 's/.* id=([^ ]+) workflow=.*/\1/')"
+    entry_id="$(printf '%s\n' "$entry" | sed -E 's/.* id=([^ ]+) slot=.*/\1/')"
+    slot="$(printf '%s\n' "$entry" | sed -E 's/.* slot=([0-9]{3}) mode=.*/\1/')"
+    mode="$(printf '%s\n' "$entry" | sed -E 's/.* mode=([^ ]+) workflow=.*/\1/')"
     artifact="$(printf '%s\n' "$entry" | sed -E 's/.* workflow=([^ ]+) sha=.*/\1/')"
     sha="$(printf '%s\n' "$entry" | sed -E 's/.* sha=([^ ]+) -->$/\1/')"
-    workflow="${artifact#@/}"
+    expected_slot="$(printf '%03d' "$((index + 2))")"
 
+    test "$slot" = "$expected_slot"
     entry_ids+=("$entry_id")
+    entry_slots+=("$slot")
     entry_kinds+=("$kind")
+    entry_modes+=("$mode")
     entry_workflows+=("$artifact")
-    test -f "$workflow"
 
     case "$kind" in
         foundation)
             foundation_count=$((foundation_count + 1))
             test "$sha" = "-"
+            test "$mode" = "workflow"
             ;;
         commit)
             test "$sha" != "-"
             manifest_shas+=("$sha")
-            grep -Fq "$sha" "$workflow"
-            abbreviation="${sha:0:12}"
-            printf '%s\n' "$workflow" |
-                grep -Eq "^workflows/[0-9]{3}_${abbreviation}_[a-z0-9_-]+\\.donna\\.md$"
             ;;
         residual)
             residual_count=$((residual_count + 1))
             test "$sha" = "-"
+            test "$mode" = "workflow"
+            ;;
+    esac
+
+    case "$mode" in
+        workflow)
+            actual_workflow_count=$((actual_workflow_count + 1))
+            test "$artifact" != "-"
+            workflow="${artifact#@/}"
+            test -f "$workflow"
+            filename="${workflow#workflows/}"
+            test "${filename%%_*}" = "$slot"
+            grep -Fq "29a7478dc7deea846a2c1ff1abd25a881e6f87db" "$workflow"
+            workflow_artifacts+=("$artifact")
+            workflow_kinds+=("$kind")
+
+            if test "$kind" = "commit"; then
+                grep -Fq "$sha" "$workflow"
+                abbreviation="${sha:0:12}"
+                printf '%s\n' "$workflow" |
+                    grep -Eq "^workflows/${slot}_${abbreviation}_[a-z0-9_-]+\\.donna\\.md$"
+            fi
+            ;;
+        reference-only)
+            actual_reference_count=$((actual_reference_count + 1))
+            test "$kind" = "commit"
+            test "$artifact" = "-"
+            test "$(find workflows -maxdepth 1 -type f -name "${slot}_*.donna.md" -print | wc -l)" -eq 0
+            reference_ids+=("$entry_id")
+            reference_slots+=("$slot")
+            reference_shas+=("$sha")
             ;;
     esac
 done
 
+test "$actual_workflow_count" -eq "$workflow_count"
+test "$actual_reference_count" -eq "$reference_count"
 test "$foundation_count" -eq "$expected_foundations"
 test "$residual_count" -eq 1
+test "$(printf '%s\n' "${entry_ids[@]}" | sort -u | wc -l)" -eq "$entry_count"
+test "$(printf '%s\n' "${entry_slots[@]}" | sort -u | wc -l)" -eq "$entry_count"
+test "$(printf '%s\n' "${workflow_artifacts[@]}" | sort -u | wc -l)" -eq "$workflow_count"
 test "$(printf '%s\n' "${manifest_shas[@]}" | grep -Ec '^[0-9a-f]{40}$')" -eq "$commit_count"
-test "$(printf '%s\n' "${entry_ids[@]}" | sort -u | wc -l)" -eq "$child_count"
-test "$(printf '%s\n' "${entry_workflows[@]}" | sort -u | wc -l)" -eq "$child_count"
 test "$(printf '%s\n' "${manifest_shas[@]}" | sort -u | wc -l)" -eq "$commit_count"
 test "$(printf '%s\n' "${manifest_shas[@]}" | cut -c1-12 | sort -u | wc -l)" -eq "$commit_count"
 
 if test "$scope" = "post-sync"; then
     test "${entry_kinds[0]}" = "foundation"
+    test "${entry_modes[0]}" = "workflow"
     test "${entry_workflows[0]}" = "@/workflows/002_foundation_core_api.donna.md"
     grep -Fq "$sync_merge" "${entry_workflows[0]#@/}"
     grep -Fq "$base" "${entry_workflows[0]#@/}"
     for ((index = 1; index <= commit_count; index += 1)); do
         test "${entry_kinds[$index]}" = "commit"
     done
-    test "${entry_kinds[$((child_count - 1))]}" = "residual"
+    test "${entry_kinds[$((entry_count - 1))]}" = "residual"
+    test "${reference_slots[*]}" = "005 018 024 025 026 029 030"
+    test "${reference_shas[*]}" = "65f70a46c4cf44e2717744aeafbf8acbe83b0378 b8a262b4256966d60e1e8452ebde7a1bf471b4af 4a06d99949114b2804b8d34492a288872fb611ed 6601232c69b44c507f2e9f63d256836e655f7973 96d38eb7449e4d38c0d6a3fffd66e17f145f669f 0b3c3b55403f2bb7342a37236dd30f3d9b3544e9 20e76c9b9b28c0ec98faa63c3f9382c1347301b9"
+    test "$(grep -Fxc '<!-- donna-entry kind=commit id=post-sync-015-4540aca9-generated-missing-docs slot=017 mode=workflow workflow=@/workflows/017_4540aca9182c_generated_missing_docs.donna.md sha=4540aca9182c6708fe9bda0b8fc33d2cf8c13e57 -->' "$manifest")" -eq 1
 else
     for ((index = 0; index < commit_count; index += 1)); do
         test "${entry_kinds[$index]}" = "commit"
+        test "${entry_modes[$index]}" = "workflow"
     done
     test "${entry_kinds[$commit_count]}" = "residual"
 fi
@@ -328,19 +383,19 @@ for index in "${!expected_shas[@]}"; do
 done
 
 mapfile -t numbered_files < <(find workflows -maxdepth 1 -type f -name '[0-9][0-9][0-9]_*.donna.md' -print | sort)
-test "$(printf '%s\n' "${numbered_files[@]}" | grep -Ec '^workflows/[0-9]{3}_[a-z0-9_-]+\.donna\.md$')" -eq "$numbered_count"
+numbered_count="$(printf '%s\n' "${numbered_files[@]}" | wc -l)"
+test "$numbered_count" -eq "$((workflow_count + 1))"
 test "${numbered_files[0]}" = "workflows/001_bec-ecoli-core-migration.donna.md"
-
+expected_numbered_files=("workflows/001_bec-ecoli-core-migration.donna.md")
+for artifact in "${workflow_artifacts[@]}"; do
+    expected_numbered_files+=("${artifact#@/}")
+done
 for index in "${!numbered_files[@]}"; do
-    expected_prefix="$(printf '%03d' "$((index + 1))")"
-    filename="${numbered_files[$index]#workflows/}"
-    test "${filename%%_*}" = "$expected_prefix"
+    test "${numbered_files[$index]}" = "${expected_numbered_files[$index]}"
 done
 
-for index in "${!entry_workflows[@]}"; do
-    test "${entry_workflows[$index]}" = "@/${numbered_files[$((index + 1))]}"
-done
-
+catalog_pattern='^- Artifact: `\./workflows/[0-9]{3}_[a-z0-9_-]+\.donna\.md`$'
+test "$(grep -Ec "$catalog_pattern" "$catalog")" -eq "$((workflow_count + 1))"
 governs_output="$(depmesh -p llm dependencies --relation governs @/specs/general/workflows.md)"
 for workflow in "${numbered_files[@]}"; do
     artifact="@/${workflow}"
@@ -366,10 +421,9 @@ for workflow in "${numbered_files[@]}"; do
     donna -p llm render "$artifact" --mode view >/dev/null
 done
 
-for index in "${!entry_workflows[@]}"; do
-    workflow="${entry_workflows[$index]#@/}"
-    kind="${entry_kinds[$index]}"
-    grep -Fq "29a7478dc7deea846a2c1ff1abd25a881e6f87db" "$workflow"
+for index in "${!workflow_artifacts[@]}"; do
+    workflow="${workflow_artifacts[$index]#@/}"
+    kind="${workflow_kinds[$index]}"
 
     if test "$kind" = "foundation" || test "$kind" = "commit"; then
         test "$(grep -Fxc 'id = "review_bec_port"' "$workflow")" -eq 1
@@ -422,8 +476,8 @@ kind = "donna.lib.request_action"
 
 The manifest, numbered child workflows, catalog entries, and agent guidance validate and render successfully.
 
-1. Confirm and report the manifest-to-child-to-catalog bijection, exact expected count, gap-free numeric prefixes, unique entry IDs and commit SHAs, parent-before-child SHA order, exact Depmesh governance, and validation/render result.
-2. Confirm every foundation/commit child has both maintainer review gates and both post-resume reverification gates, and the residual child has a deterministic 99-path inventory gate, repair loop, and explicit report-review gate.
+1. Confirm and report the exact slot accounting: 31 ordered entries through prefix `032`, 24 executable children, seven reference-only entries with reserved gaps, 25 numbered workflow artifacts including the parent, unique entry IDs and commit SHAs, parent-before-child SHA order, exact manifest-to-executable-child-to-catalog mapping, exact Depmesh governance, and validation/render result.
+2. Confirm every executable foundation/commit child has both maintainer review gates and both post-resume reverification gates, slot `017` remains executable, every reference-only slot has no workflow or catalog artifact, and the residual child has a deterministic 99-path inventory gate, repair loop, and explicit report-review gate.
 3. Report the selected scope, classifications, generated files, catalog changes, and validation results to the developer.
 4. Give the developer time to inspect and manually commit the workflow suite separately from package implementation changes.
 5. Do not create or amend that commit, and do not complete this action request until the developer explicitly asks to resume.
@@ -438,13 +492,14 @@ id = "run_next_commit_workflow"
 kind = "donna.lib.request_action"
 ```
 
-1. Read the ordered manifest and `.session/donna/bec-ecoli-core-migration-progress.md`, creating the progress file with `apply_patch` if it does not yet exist. Record a completed child exactly once with `<!-- donna-complete id=<manifest-entry-id> workflow=<artifact-id> outcome=<source-and-split|source-only|split-only|no-change|reports> source-commit=<40-hex-or-none> split-commit=<40-hex-or-none> -->`. The commit fields are destination-repository commits confirmed by the developer at the corresponding manual review pauses, not the immutable reference commits. Use `none` when that stage produced no developer commit. Foundation and commit children may use only the first four outcomes, consistently with which review commits exist; reserve `reports` for the residual child, with `source-commit=none` and its developer-confirmed report commit (or `none`) in `split-commit`.
-2. Select exactly the first unfinished foundation or commit workflow in numeric order. Run it as a child with `donna -p llm run @/workflows/<exact-numbered-name>.donna.md`.
-3. Complete the child before completing this parent action request. The child will stop twice for the developer to inspect and manually commit. Never complete either child review request until the developer explicitly asks to resume.
-4. After the child finishes and both post-resume verification gates pass, record its exact workflow, SHA or foundation snapshot, source-stage result, split-stage result, verification, developer-confirmed commits or no-change decisions, and the required machine-readable completion marker in the session progress file.
-5. If another foundation or commit workflow remains, `{{ donna.lib.goto("run_next_commit_workflow") }}`.
-6. If every foundation and commit workflow has finished, `{{ donna.lib.goto("run_residual_workflow") }}`.
-7. If a child reports an unresolved blocker, `{{ donna.lib.goto("blocked") }}`.
+1. Read the ordered manifest and `.session/donna/bec-ecoli-core-migration-progress.md`, creating the progress file with `apply_patch` if it does not yet exist. Record each processed position exactly once with `<!-- donna-complete id=<manifest-entry-id> slot=<NNN> workflow=<artifact-id-or-dash> outcome=<source-and-split|source-only|split-only|no-change|reference-only|reports> source-commit=<40-hex-or-none> split-commit=<40-hex-or-none> -->`. The commit fields are destination-repository commits confirmed by the developer at the corresponding manual review pauses, not the immutable reference commits. Use `none` when that stage produced no developer commit. Executable foundation and commit children may use only the first four outcomes, consistently with which review commits exist. A reference-only entry must use `workflow=- outcome=reference-only source-commit=none split-commit=none`; reserve `reports` for the residual child, with `source-commit=none` and its developer-confirmed report commit (or `none`) in `split-commit`.
+2. Select exactly the first unfinished foundation or commit position in manifest order. If it has `mode=reference-only`, verify that it is one of the seven allowed slot/SHA records, add its deterministic reference-only completion marker with `apply_patch`, do not run Donna or modify package artifacts, and `{{ donna.lib.goto("run_next_commit_workflow") }}`.
+3. If the selected position has `mode=workflow`, run its exact child with `donna -p llm run @/workflows/<exact-numbered-name>.donna.md`.
+4. Complete an executable child before completing this parent action request. The child will stop twice for the developer to inspect and manually commit. Never complete either child review request until the developer explicitly asks to resume.
+5. After the executable child finishes and both post-resume verification gates pass, record its exact workflow, SHA or foundation snapshot, source-stage result, split-stage result, verification, developer-confirmed commits or no-change decisions, and the required machine-readable completion marker in the session progress file.
+6. If another foundation or commit position remains, `{{ donna.lib.goto("run_next_commit_workflow") }}`.
+7. If every foundation and commit position has either an executable completion or a reference-only completion, `{{ donna.lib.goto("run_residual_workflow") }}`.
+8. If a child reports an unresolved blocker, `{{ donna.lib.goto("blocked") }}`.
 
 ## Run Residual Workflow
 
@@ -455,7 +510,7 @@ kind = "donna.lib.request_action"
 
 1. Run the final numbered residual split workflow from the manifest as a child.
 2. Complete the child, including its report review gate, before completing this parent action request.
-3. Confirm both required report files exist, then record the residual entry with `outcome=reports`, `source-commit=none`, and the developer-confirmed report commit—or `split-commit=none` for an explicit no-new-commit decision—in the same machine-readable completion-marker schema.
+3. Confirm both required report files exist, then record the residual entry with its exact slot and workflow, `outcome=reports`, `source-commit=none`, and the developer-confirmed report commit—or `split-commit=none` for an explicit no-new-commit decision—in the same machine-readable completion-marker schema.
 4. If the residual review and reports are complete, `{{ donna.lib.goto("verify_completion") }}`.
 5. If the residual review is blocked, `{{ donna.lib.goto("blocked") }}`.
 
@@ -491,35 +546,30 @@ test -s "$residual_report"
 test -s "$remaining_plan"
 test -f "$progress"
 
-entry_pattern='^<!-- donna-entry kind=(foundation|commit|residual) id=[a-z0-9-]+ workflow=@/workflows/[0-9]{3}_[a-z0-9_-]+\.donna\.md sha=(-|[0-9a-f]{40}) -->$'
-completion_pattern='^<!-- donna-complete id=[a-z0-9-]+ workflow=@/workflows/[0-9]{3}_[a-z0-9_-]+\.donna\.md outcome=(source-and-split|source-only|split-only|no-change|reports) source-commit=(none|[0-9a-f]{40}) split-commit=(none|[0-9a-f]{40}) -->$'
-mapfile -t entries < <(grep -E "$entry_pattern" "$manifest")
-mapfile -t completions < <(grep -E "$completion_pattern" "$progress")
-entry_count="$(grep -Ec "$entry_pattern" "$manifest")"
-test "$entry_count" -gt 0
-test "$(grep -c '^<!-- donna-entry ' "$manifest")" -eq "$entry_count"
-test "$(grep -Ec "$completion_pattern" "$progress")" -eq "$entry_count"
-test "$(grep -c '^<!-- donna-complete ' "$progress")" -eq "$entry_count"
-
-mapfile -t headers < <(grep -E '^<!-- donna-migration scope=(post-sync|full-difference) numbered=[0-9]+ children=[0-9]+ commits=[0-9]+ -->$' "$manifest")
-test "$(grep -Ec '^<!-- donna-migration scope=(post-sync|full-difference) numbered=[0-9]+ children=[0-9]+ commits=[0-9]+ -->$' "$manifest")" -eq 1
-read -r scope expected_numbered_count child_count commit_count < <(
+header_pattern='^<!-- donna-migration scope=(post-sync|full-difference) last-prefix=[0-9]{3} entries=[0-9]+ workflows=[0-9]+ commits=[0-9]+ references=[0-9]+ -->$'
+mapfile -t headers < <(grep -E "$header_pattern" "$manifest")
+test "$(grep -Ec "$header_pattern" "$manifest")" -eq 1
+read -r scope last_prefix entry_count workflow_count commit_count reference_count < <(
     printf '%s\n' "${headers[0]}" |
-        sed -E 's/^<!-- donna-migration scope=([^ ]+) numbered=([0-9]+) children=([0-9]+) commits=([0-9]+) -->$/\1 \2 \3 \4/'
+        sed -E 's/^<!-- donna-migration scope=([^ ]+) last-prefix=([0-9]{3}) entries=([0-9]+) workflows=([0-9]+) commits=([0-9]+) references=([0-9]+) -->$/\1 \2 \3 \4 \5 \6/'
 )
 
 case "$scope" in
     post-sync)
-        test "$expected_numbered_count" -eq 32
-        test "$child_count" -eq 31
+        test "$last_prefix" = "032"
+        test "$entry_count" -eq 31
+        test "$workflow_count" -eq 24
         test "$commit_count" -eq 29
+        test "$reference_count" -eq 7
         source_range="$sync_merge..$tip"
         expected_foundations=1
         ;;
     full-difference)
-        test "$expected_numbered_count" -eq 314
-        test "$child_count" -eq 313
+        test "$last_prefix" = "314"
+        test "$entry_count" -eq 313
+        test "$workflow_count" -eq 313
         test "$commit_count" -eq 312
+        test "$reference_count" -eq 0
         source_range="$base..$tip"
         expected_foundations=0
         ;;
@@ -527,74 +577,132 @@ case "$scope" in
         exit 1
         ;;
 esac
-test "$entry_count" -eq "$child_count"
+
+entry_pattern='^<!-- donna-entry kind=(foundation|commit|residual) id=[a-z0-9-]+ slot=[0-9]{3} mode=(workflow|reference-only) workflow=(-|@/workflows/[0-9]{3}_[a-z0-9_-]+\.donna\.md) sha=(-|[0-9a-f]{40}) -->$'
+completion_pattern='^<!-- donna-complete id=[a-z0-9-]+ slot=[0-9]{3} workflow=(-|@/workflows/[0-9]{3}_[a-z0-9_-]+\.donna\.md) outcome=(source-and-split|source-only|split-only|no-change|reference-only|reports) source-commit=(none|[0-9a-f]{40}) split-commit=(none|[0-9a-f]{40}) -->$'
+mapfile -t entries < <(grep -E "$entry_pattern" "$manifest")
+mapfile -t completions < <(grep -E "$completion_pattern" "$progress")
+test "$(grep -Ec "$entry_pattern" "$manifest")" -eq "$entry_count"
+test "$(grep -c '^<!-- donna-entry ' "$manifest")" -eq "$entry_count"
+test "$(grep -Ec "$completion_pattern" "$progress")" -eq "$entry_count"
+test "$(grep -c '^<!-- donna-complete ' "$progress")" -eq "$entry_count"
 
 entry_ids=()
+entry_slots=()
 entry_kinds=()
+entry_modes=()
 entry_workflows=()
+workflow_artifacts=()
 manifest_shas=()
+reference_slots=()
+reference_shas=()
 foundation_count=0
 residual_count=0
+actual_workflow_count=0
+actual_reference_count=0
 review_commits=()
 review_commit_count=0
 
 for index in "${!entries[@]}"; do
-    entry_kind="$(printf '%s\n' "${entries[$index]}" | sed -E 's/^<!-- donna-entry kind=([^ ]+) .*/\1/')"
-    entry_id="$(printf '%s\n' "${entries[$index]}" | sed -E 's/.* id=([^ ]+) workflow=.*/\1/')"
-    entry_workflow="$(printf '%s\n' "${entries[$index]}" | sed -E 's/.* workflow=([^ ]+) sha=.*/\1/')"
-    entry_sha="$(printf '%s\n' "${entries[$index]}" | sed -E 's/.* sha=([^ ]+) -->$/\1/')"
-    workflow="${entry_workflow#@/}"
-    completion_id="$(printf '%s\n' "${completions[$index]}" | sed -E 's/.* id=([^ ]+) workflow=.*/\1/')"
-    completion_workflow="$(printf '%s\n' "${completions[$index]}" | sed -E 's/.* workflow=([^ ]+) outcome=.*/\1/')"
-    completion_outcome="$(printf '%s\n' "${completions[$index]}" | sed -E 's/.* outcome=([^ ]+) source-commit=.*/\1/')"
-    source_review_commit="$(printf '%s\n' "${completions[$index]}" | sed -E 's/.* source-commit=([^ ]+) split-commit=.*/\1/')"
-    split_review_commit="$(printf '%s\n' "${completions[$index]}" | sed -E 's/.* split-commit=([^ ]+) -->$/\1/')"
-    entry_ids+=("$entry_id")
-    entry_kinds+=("$entry_kind")
-    entry_workflows+=("$entry_workflow")
-    test -f "$workflow"
-    grep -Fq "$split_implementation" "$workflow"
+    entry="${entries[$index]}"
+    completion="${completions[$index]}"
+    entry_kind="$(printf '%s\n' "$entry" | sed -E 's/^<!-- donna-entry kind=([^ ]+) .*/\1/')"
+    entry_id="$(printf '%s\n' "$entry" | sed -E 's/.* id=([^ ]+) slot=.*/\1/')"
+    entry_slot="$(printf '%s\n' "$entry" | sed -E 's/.* slot=([0-9]{3}) mode=.*/\1/')"
+    entry_mode="$(printf '%s\n' "$entry" | sed -E 's/.* mode=([^ ]+) workflow=.*/\1/')"
+    entry_workflow="$(printf '%s\n' "$entry" | sed -E 's/.* workflow=([^ ]+) sha=.*/\1/')"
+    entry_sha="$(printf '%s\n' "$entry" | sed -E 's/.* sha=([^ ]+) -->$/\1/')"
+    completion_id="$(printf '%s\n' "$completion" | sed -E 's/.* id=([^ ]+) slot=.*/\1/')"
+    completion_slot="$(printf '%s\n' "$completion" | sed -E 's/.* slot=([0-9]{3}) workflow=.*/\1/')"
+    completion_workflow="$(printf '%s\n' "$completion" | sed -E 's/.* workflow=([^ ]+) outcome=.*/\1/')"
+    completion_outcome="$(printf '%s\n' "$completion" | sed -E 's/.* outcome=([^ ]+) source-commit=.*/\1/')"
+    source_review_commit="$(printf '%s\n' "$completion" | sed -E 's/.* source-commit=([^ ]+) split-commit=.*/\1/')"
+    split_review_commit="$(printf '%s\n' "$completion" | sed -E 's/.* split-commit=([^ ]+) -->$/\1/')"
+    expected_slot="$(printf '%03d' "$((index + 2))")"
+
+    test "$entry_slot" = "$expected_slot"
     test "$completion_id" = "$entry_id"
+    test "$completion_slot" = "$entry_slot"
     test "$completion_workflow" = "$entry_workflow"
+    entry_ids+=("$entry_id")
+    entry_slots+=("$entry_slot")
+    entry_kinds+=("$entry_kind")
+    entry_modes+=("$entry_mode")
+    entry_workflows+=("$entry_workflow")
 
     case "$entry_kind" in
         foundation)
             foundation_count=$((foundation_count + 1))
             test "$entry_sha" = "-"
-            test "$(grep -Fxc 'id = "review_bec_port"' "$workflow")" -eq 1
-            test "$(grep -Fxc 'id = "reverify_bec_port"' "$workflow")" -eq 1
-            test "$(grep -Fxc 'id = "review_split_adjustment"' "$workflow")" -eq 1
-            test "$(grep -Fxc 'id = "reverify_split_adjustment"' "$workflow")" -eq 1
+            test "$entry_mode" = "workflow"
             ;;
         commit)
             test "$entry_sha" != "-"
             manifest_shas+=("$entry_sha")
-            grep -Fq "$entry_sha" "$workflow"
-            abbreviation="${entry_sha:0:12}"
-            printf '%s\n' "$workflow" |
-                grep -Eq "^workflows/[0-9]{3}_${abbreviation}_[a-z0-9_-]+\\.donna\\.md$"
-            test "$(grep -Fxc 'id = "review_bec_port"' "$workflow")" -eq 1
-            test "$(grep -Fxc 'id = "reverify_bec_port"' "$workflow")" -eq 1
-            test "$(grep -Fxc 'id = "review_split_adjustment"' "$workflow")" -eq 1
-            test "$(grep -Fxc 'id = "reverify_split_adjustment"' "$workflow")" -eq 1
             ;;
         residual)
             residual_count=$((residual_count + 1))
             test "$entry_sha" = "-"
-            test "$(grep -Fxc 'id = "verify_residual_inventory"' "$workflow")" -eq 1
-            test "$(grep -Fxc 'id = "review_residual_reports"' "$workflow")" -eq 1
+            test "$entry_mode" = "workflow"
             ;;
     esac
 
-    case "$entry_kind:$completion_outcome" in
-        foundation:source-and-split|foundation:source-only|foundation:split-only|foundation:no-change)
+    case "$entry_mode" in
+        workflow)
+            actual_workflow_count=$((actual_workflow_count + 1))
+            test "$entry_workflow" != "-"
+            workflow="${entry_workflow#@/}"
+            test -f "$workflow"
+            filename="${workflow#workflows/}"
+            test "${filename%%_*}" = "$entry_slot"
+            grep -Fq "$split_implementation" "$workflow"
+            workflow_artifacts+=("$entry_workflow")
+
+            case "$entry_kind" in
+                foundation)
+                    test "$(grep -Fxc 'id = "review_bec_port"' "$workflow")" -eq 1
+                    test "$(grep -Fxc 'id = "reverify_bec_port"' "$workflow")" -eq 1
+                    test "$(grep -Fxc 'id = "review_split_adjustment"' "$workflow")" -eq 1
+                    test "$(grep -Fxc 'id = "reverify_split_adjustment"' "$workflow")" -eq 1
+                    ;;
+                commit)
+                    grep -Fq "$entry_sha" "$workflow"
+                    abbreviation="${entry_sha:0:12}"
+                    printf '%s\n' "$workflow" |
+                        grep -Eq "^workflows/${entry_slot}_${abbreviation}_[a-z0-9_-]+\\.donna\\.md$"
+                    test "$(grep -Fxc 'id = "review_bec_port"' "$workflow")" -eq 1
+                    test "$(grep -Fxc 'id = "reverify_bec_port"' "$workflow")" -eq 1
+                    test "$(grep -Fxc 'id = "review_split_adjustment"' "$workflow")" -eq 1
+                    test "$(grep -Fxc 'id = "reverify_split_adjustment"' "$workflow")" -eq 1
+                    ;;
+                residual)
+                    test "$(grep -Fxc 'id = "verify_residual_inventory"' "$workflow")" -eq 1
+                    test "$(grep -Fxc 'id = "review_residual_reports"' "$workflow")" -eq 1
+                    ;;
+            esac
+
+            case "$entry_kind:$completion_outcome" in
+                foundation:source-and-split|foundation:source-only|foundation:split-only|foundation:no-change)
+                    ;;
+                commit:source-and-split|commit:source-only|commit:split-only|commit:no-change)
+                    ;;
+                residual:reports)
+                    ;;
+                *)
+                    exit 1
+                    ;;
+            esac
             ;;
-        commit:source-and-split|commit:source-only|commit:split-only|commit:no-change)
-            ;;
-        residual:reports)
-            ;;
-        *)
-            exit 1
+        reference-only)
+            actual_reference_count=$((actual_reference_count + 1))
+            test "$entry_kind" = "commit"
+            test "$entry_workflow" = "-"
+            test "$completion_outcome" = "reference-only"
+            test "$source_review_commit" = "none"
+            test "$split_review_commit" = "none"
+            test "$(find workflows -maxdepth 1 -type f -name "${entry_slot}_*.donna.md" -print | wc -l)" -eq 0
+            reference_slots+=("$entry_slot")
+            reference_shas+=("$entry_sha")
             ;;
     esac
 
@@ -611,7 +719,7 @@ for index in "${!entries[@]}"; do
             test "$source_review_commit" = "none"
             test "$split_review_commit" != "none"
             ;;
-        no-change)
+        no-change|reference-only)
             test "$source_review_commit" = "none"
             test "$split_review_commit" = "none"
             ;;
@@ -648,26 +756,34 @@ for ((index = 1; index < review_commit_count; index += 1)); do
     git merge-base --is-ancestor "${review_commits[$((index - 1))]}" "${review_commits[$index]}"
 done
 
+test "$actual_workflow_count" -eq "$workflow_count"
+test "$actual_reference_count" -eq "$reference_count"
 test "$foundation_count" -eq "$expected_foundations"
 test "$residual_count" -eq 1
+test "$(printf '%s\n' "${entry_ids[@]}" | sort -u | wc -l)" -eq "$entry_count"
+test "$(printf '%s\n' "${entry_slots[@]}" | sort -u | wc -l)" -eq "$entry_count"
+test "$(printf '%s\n' "${workflow_artifacts[@]}" | sort -u | wc -l)" -eq "$workflow_count"
 test "$(printf '%s\n' "${manifest_shas[@]}" | grep -Ec '^[0-9a-f]{40}$')" -eq "$commit_count"
-test "$(printf '%s\n' "${entry_ids[@]}" | sort -u | wc -l)" -eq "$child_count"
-test "$(printf '%s\n' "${entry_workflows[@]}" | sort -u | wc -l)" -eq "$child_count"
 test "$(printf '%s\n' "${manifest_shas[@]}" | sort -u | wc -l)" -eq "$commit_count"
 test "$(printf '%s\n' "${manifest_shas[@]}" | cut -c1-12 | sort -u | wc -l)" -eq "$commit_count"
 
 if test "$scope" = "post-sync"; then
     test "${entry_kinds[0]}" = "foundation"
+    test "${entry_modes[0]}" = "workflow"
     test "${entry_workflows[0]}" = "@/workflows/002_foundation_core_api.donna.md"
     grep -Fq "$sync_merge" "${entry_workflows[0]#@/}"
     grep -Fq "$base" "${entry_workflows[0]#@/}"
     for ((index = 1; index <= commit_count; index += 1)); do
         test "${entry_kinds[$index]}" = "commit"
     done
-    test "${entry_kinds[$((child_count - 1))]}" = "residual"
+    test "${entry_kinds[$((entry_count - 1))]}" = "residual"
+    test "${reference_slots[*]}" = "005 018 024 025 026 029 030"
+    test "${reference_shas[*]}" = "65f70a46c4cf44e2717744aeafbf8acbe83b0378 b8a262b4256966d60e1e8452ebde7a1bf471b4af 4a06d99949114b2804b8d34492a288872fb611ed 6601232c69b44c507f2e9f63d256836e655f7973 96d38eb7449e4d38c0d6a3fffd66e17f145f669f 0b3c3b55403f2bb7342a37236dd30f3d9b3544e9 20e76c9b9b28c0ec98faa63c3f9382c1347301b9"
+    test "$(grep -Fxc '<!-- donna-entry kind=commit id=post-sync-015-4540aca9-generated-missing-docs slot=017 mode=workflow workflow=@/workflows/017_4540aca9182c_generated_missing_docs.donna.md sha=4540aca9182c6708fe9bda0b8fc33d2cf8c13e57 -->' "$manifest")" -eq 1
 else
     for ((index = 0; index < commit_count; index += 1)); do
         test "${entry_kinds[$index]}" = "commit"
+        test "${entry_modes[$index]}" = "workflow"
     done
     test "${entry_kinds[$commit_count]}" = "residual"
 fi
@@ -679,16 +795,15 @@ for index in "${!expected_shas[@]}"; do
 done
 
 mapfile -t numbered_files < <(find workflows -maxdepth 1 -type f -name '[0-9][0-9][0-9]_*.donna.md' -print | sort)
-actual_numbered_count="$(printf '%s\n' "${numbered_files[@]}" | wc -l)"
-test "$actual_numbered_count" -eq "$expected_numbered_count"
+numbered_count="$(printf '%s\n' "${numbered_files[@]}" | wc -l)"
+test "$numbered_count" -eq "$((workflow_count + 1))"
 test "${numbered_files[0]}" = "workflows/001_bec-ecoli-core-migration.donna.md"
-for index in "${!numbered_files[@]}"; do
-    expected_prefix="$(printf '%03d' "$((index + 1))")"
-    filename="${numbered_files[$index]#workflows/}"
-    test "${filename%%_*}" = "$expected_prefix"
+expected_numbered_files=("workflows/001_bec-ecoli-core-migration.donna.md")
+for artifact in "${workflow_artifacts[@]}"; do
+    expected_numbered_files+=("${artifact#@/}")
 done
-for index in "${!entry_workflows[@]}"; do
-    test "${entry_workflows[$index]}" = "@/${numbered_files[$((index + 1))]}"
+for index in "${!numbered_files[@]}"; do
+    test "${numbered_files[$index]}" = "${expected_numbered_files[$index]}"
 done
 
 split_marker_pattern='^<!-- split-path status=(A|D|M) path=[^ ]+ class=(required|recommended|equivalent|excluded|decision) -->$'
@@ -803,7 +918,7 @@ kind = "donna.lib.request_action"
 ```
 
 1. Before editing the governed catalog, query all Depmesh relations for `{{ donna.lib.path("@/specs/general/workflows.md") }}` and every numbered workflow, and inspect every returned dependency.
-2. Use the manifest and validated progress records to update the parent, every completed foundation/commit child, and the residual child from `implementation in progress` to `implemented` in the catalog. Do not change unrelated planned or implemented workflows.
+2. Use the manifest and validated progress records to update the parent, every completed executable foundation/commit child, and the residual child from `implementation in progress` to `implemented` in the catalog. Reference-only records have no catalog artifacts or states. Do not change unrelated planned or implemented workflows.
 3. Re-query Depmesh for the catalog and every numbered workflow, validate and render all workflows, and run generated-file-excluding diff checks.
 4. Report only the final catalog/governance changes to the developer and give them time to inspect and manually commit this completion separately. The residual reports and progress records already passed `verify_completion`; do not edit them during this pause. Route any requested report, manifest, or progress correction through `repair_completion` so all completeness checks and this final review pause repeat.
 5. Do not create or amend that commit, and do not complete this action request until the developer explicitly resumes.
@@ -845,35 +960,30 @@ test -f "$progress"
 test -s "$residual_report"
 test -s "$remaining_plan"
 
-entry_pattern='^<!-- donna-entry kind=(foundation|commit|residual) id=[a-z0-9-]+ workflow=@/workflows/[0-9]{3}_[a-z0-9_-]+\.donna\.md sha=(-|[0-9a-f]{40}) -->$'
-completion_pattern='^<!-- donna-complete id=[a-z0-9-]+ workflow=@/workflows/[0-9]{3}_[a-z0-9_-]+\.donna\.md outcome=(source-and-split|source-only|split-only|no-change|reports) source-commit=(none|[0-9a-f]{40}) split-commit=(none|[0-9a-f]{40}) -->$'
-mapfile -t entries < <(grep -E "$entry_pattern" "$manifest")
-mapfile -t completions < <(grep -E "$completion_pattern" "$progress")
-entry_count="$(grep -Ec "$entry_pattern" "$manifest")"
-test "$entry_count" -gt 0
-test "$(grep -c '^<!-- donna-entry ' "$manifest")" -eq "$entry_count"
-test "$(grep -Ec "$completion_pattern" "$progress")" -eq "$entry_count"
-test "$(grep -c '^<!-- donna-complete ' "$progress")" -eq "$entry_count"
-
-mapfile -t headers < <(grep -E '^<!-- donna-migration scope=(post-sync|full-difference) numbered=[0-9]+ children=[0-9]+ commits=[0-9]+ -->$' "$manifest")
-test "$(grep -Ec '^<!-- donna-migration scope=(post-sync|full-difference) numbered=[0-9]+ children=[0-9]+ commits=[0-9]+ -->$' "$manifest")" -eq 1
-read -r scope expected_numbered_count child_count commit_count < <(
+header_pattern='^<!-- donna-migration scope=(post-sync|full-difference) last-prefix=[0-9]{3} entries=[0-9]+ workflows=[0-9]+ commits=[0-9]+ references=[0-9]+ -->$'
+mapfile -t headers < <(grep -E "$header_pattern" "$manifest")
+test "$(grep -Ec "$header_pattern" "$manifest")" -eq 1
+read -r scope last_prefix entry_count workflow_count commit_count reference_count < <(
     printf '%s\n' "${headers[0]}" |
-        sed -E 's/^<!-- donna-migration scope=([^ ]+) numbered=([0-9]+) children=([0-9]+) commits=([0-9]+) -->$/\1 \2 \3 \4/'
+        sed -E 's/^<!-- donna-migration scope=([^ ]+) last-prefix=([0-9]{3}) entries=([0-9]+) workflows=([0-9]+) commits=([0-9]+) references=([0-9]+) -->$/\1 \2 \3 \4 \5 \6/'
 )
 
 case "$scope" in
     post-sync)
-        test "$expected_numbered_count" -eq 32
-        test "$child_count" -eq 31
+        test "$last_prefix" = "032"
+        test "$entry_count" -eq 31
+        test "$workflow_count" -eq 24
         test "$commit_count" -eq 29
+        test "$reference_count" -eq 7
         source_range="$sync_merge..$tip"
         expected_foundations=1
         ;;
     full-difference)
-        test "$expected_numbered_count" -eq 314
-        test "$child_count" -eq 313
+        test "$last_prefix" = "314"
+        test "$entry_count" -eq 313
+        test "$workflow_count" -eq 313
         test "$commit_count" -eq 312
+        test "$reference_count" -eq 0
         source_range="$base..$tip"
         expected_foundations=0
         ;;
@@ -881,74 +991,132 @@ case "$scope" in
         exit 1
         ;;
 esac
-test "$entry_count" -eq "$child_count"
+
+entry_pattern='^<!-- donna-entry kind=(foundation|commit|residual) id=[a-z0-9-]+ slot=[0-9]{3} mode=(workflow|reference-only) workflow=(-|@/workflows/[0-9]{3}_[a-z0-9_-]+\.donna\.md) sha=(-|[0-9a-f]{40}) -->$'
+completion_pattern='^<!-- donna-complete id=[a-z0-9-]+ slot=[0-9]{3} workflow=(-|@/workflows/[0-9]{3}_[a-z0-9_-]+\.donna\.md) outcome=(source-and-split|source-only|split-only|no-change|reference-only|reports) source-commit=(none|[0-9a-f]{40}) split-commit=(none|[0-9a-f]{40}) -->$'
+mapfile -t entries < <(grep -E "$entry_pattern" "$manifest")
+mapfile -t completions < <(grep -E "$completion_pattern" "$progress")
+test "$(grep -Ec "$entry_pattern" "$manifest")" -eq "$entry_count"
+test "$(grep -c '^<!-- donna-entry ' "$manifest")" -eq "$entry_count"
+test "$(grep -Ec "$completion_pattern" "$progress")" -eq "$entry_count"
+test "$(grep -c '^<!-- donna-complete ' "$progress")" -eq "$entry_count"
 
 entry_ids=()
+entry_slots=()
 entry_kinds=()
+entry_modes=()
 entry_workflows=()
+workflow_artifacts=()
 manifest_shas=()
+reference_slots=()
+reference_shas=()
 foundation_count=0
 residual_count=0
+actual_workflow_count=0
+actual_reference_count=0
 review_commits=()
 review_commit_count=0
-for index in "${!entries[@]}"; do
-    entry_kind="$(printf '%s\n' "${entries[$index]}" | sed -E 's/^<!-- donna-entry kind=([^ ]+) .*/\1/')"
-    entry_id="$(printf '%s\n' "${entries[$index]}" | sed -E 's/.* id=([^ ]+) workflow=.*/\1/')"
-    entry_workflow="$(printf '%s\n' "${entries[$index]}" | sed -E 's/.* workflow=([^ ]+) sha=.*/\1/')"
-    entry_sha="$(printf '%s\n' "${entries[$index]}" | sed -E 's/.* sha=([^ ]+) -->$/\1/')"
-    workflow="${entry_workflow#@/}"
-    completion_id="$(printf '%s\n' "${completions[$index]}" | sed -E 's/.* id=([^ ]+) workflow=.*/\1/')"
-    completion_workflow="$(printf '%s\n' "${completions[$index]}" | sed -E 's/.* workflow=([^ ]+) outcome=.*/\1/')"
-    completion_outcome="$(printf '%s\n' "${completions[$index]}" | sed -E 's/.* outcome=([^ ]+) source-commit=.*/\1/')"
-    source_review_commit="$(printf '%s\n' "${completions[$index]}" | sed -E 's/.* source-commit=([^ ]+) split-commit=.*/\1/')"
-    split_review_commit="$(printf '%s\n' "${completions[$index]}" | sed -E 's/.* split-commit=([^ ]+) -->$/\1/')"
-    entry_ids+=("$entry_id")
-    entry_kinds+=("$entry_kind")
-    entry_workflows+=("$entry_workflow")
-    test -f "$workflow"
-    grep -Fq "$split_implementation" "$workflow"
 
+for index in "${!entries[@]}"; do
+    entry="${entries[$index]}"
+    completion="${completions[$index]}"
+    entry_kind="$(printf '%s\n' "$entry" | sed -E 's/^<!-- donna-entry kind=([^ ]+) .*/\1/')"
+    entry_id="$(printf '%s\n' "$entry" | sed -E 's/.* id=([^ ]+) slot=.*/\1/')"
+    entry_slot="$(printf '%s\n' "$entry" | sed -E 's/.* slot=([0-9]{3}) mode=.*/\1/')"
+    entry_mode="$(printf '%s\n' "$entry" | sed -E 's/.* mode=([^ ]+) workflow=.*/\1/')"
+    entry_workflow="$(printf '%s\n' "$entry" | sed -E 's/.* workflow=([^ ]+) sha=.*/\1/')"
+    entry_sha="$(printf '%s\n' "$entry" | sed -E 's/.* sha=([^ ]+) -->$/\1/')"
+    completion_id="$(printf '%s\n' "$completion" | sed -E 's/.* id=([^ ]+) slot=.*/\1/')"
+    completion_slot="$(printf '%s\n' "$completion" | sed -E 's/.* slot=([0-9]{3}) workflow=.*/\1/')"
+    completion_workflow="$(printf '%s\n' "$completion" | sed -E 's/.* workflow=([^ ]+) outcome=.*/\1/')"
+    completion_outcome="$(printf '%s\n' "$completion" | sed -E 's/.* outcome=([^ ]+) source-commit=.*/\1/')"
+    source_review_commit="$(printf '%s\n' "$completion" | sed -E 's/.* source-commit=([^ ]+) split-commit=.*/\1/')"
+    split_review_commit="$(printf '%s\n' "$completion" | sed -E 's/.* split-commit=([^ ]+) -->$/\1/')"
+    expected_slot="$(printf '%03d' "$((index + 2))")"
+
+    test "$entry_slot" = "$expected_slot"
     test "$completion_id" = "$entry_id"
+    test "$completion_slot" = "$entry_slot"
     test "$completion_workflow" = "$entry_workflow"
+    entry_ids+=("$entry_id")
+    entry_slots+=("$entry_slot")
+    entry_kinds+=("$entry_kind")
+    entry_modes+=("$entry_mode")
+    entry_workflows+=("$entry_workflow")
 
     case "$entry_kind" in
         foundation)
             foundation_count=$((foundation_count + 1))
             test "$entry_sha" = "-"
-            test "$(grep -Fxc 'id = "review_bec_port"' "$workflow")" -eq 1
-            test "$(grep -Fxc 'id = "reverify_bec_port"' "$workflow")" -eq 1
-            test "$(grep -Fxc 'id = "review_split_adjustment"' "$workflow")" -eq 1
-            test "$(grep -Fxc 'id = "reverify_split_adjustment"' "$workflow")" -eq 1
+            test "$entry_mode" = "workflow"
             ;;
         commit)
             test "$entry_sha" != "-"
             manifest_shas+=("$entry_sha")
-            grep -Fq "$entry_sha" "$workflow"
-            abbreviation="${entry_sha:0:12}"
-            printf '%s\n' "$workflow" |
-                grep -Eq "^workflows/[0-9]{3}_${abbreviation}_[a-z0-9_-]+\\.donna\\.md$"
-            test "$(grep -Fxc 'id = "review_bec_port"' "$workflow")" -eq 1
-            test "$(grep -Fxc 'id = "reverify_bec_port"' "$workflow")" -eq 1
-            test "$(grep -Fxc 'id = "review_split_adjustment"' "$workflow")" -eq 1
-            test "$(grep -Fxc 'id = "reverify_split_adjustment"' "$workflow")" -eq 1
             ;;
         residual)
             residual_count=$((residual_count + 1))
             test "$entry_sha" = "-"
-            test "$(grep -Fxc 'id = "verify_residual_inventory"' "$workflow")" -eq 1
-            test "$(grep -Fxc 'id = "review_residual_reports"' "$workflow")" -eq 1
+            test "$entry_mode" = "workflow"
             ;;
     esac
 
-    case "$entry_kind:$completion_outcome" in
-        foundation:source-and-split|foundation:source-only|foundation:split-only|foundation:no-change)
+    case "$entry_mode" in
+        workflow)
+            actual_workflow_count=$((actual_workflow_count + 1))
+            test "$entry_workflow" != "-"
+            workflow="${entry_workflow#@/}"
+            test -f "$workflow"
+            filename="${workflow#workflows/}"
+            test "${filename%%_*}" = "$entry_slot"
+            grep -Fq "$split_implementation" "$workflow"
+            workflow_artifacts+=("$entry_workflow")
+
+            case "$entry_kind" in
+                foundation)
+                    test "$(grep -Fxc 'id = "review_bec_port"' "$workflow")" -eq 1
+                    test "$(grep -Fxc 'id = "reverify_bec_port"' "$workflow")" -eq 1
+                    test "$(grep -Fxc 'id = "review_split_adjustment"' "$workflow")" -eq 1
+                    test "$(grep -Fxc 'id = "reverify_split_adjustment"' "$workflow")" -eq 1
+                    ;;
+                commit)
+                    grep -Fq "$entry_sha" "$workflow"
+                    abbreviation="${entry_sha:0:12}"
+                    printf '%s\n' "$workflow" |
+                        grep -Eq "^workflows/${entry_slot}_${abbreviation}_[a-z0-9_-]+\\.donna\\.md$"
+                    test "$(grep -Fxc 'id = "review_bec_port"' "$workflow")" -eq 1
+                    test "$(grep -Fxc 'id = "reverify_bec_port"' "$workflow")" -eq 1
+                    test "$(grep -Fxc 'id = "review_split_adjustment"' "$workflow")" -eq 1
+                    test "$(grep -Fxc 'id = "reverify_split_adjustment"' "$workflow")" -eq 1
+                    ;;
+                residual)
+                    test "$(grep -Fxc 'id = "verify_residual_inventory"' "$workflow")" -eq 1
+                    test "$(grep -Fxc 'id = "review_residual_reports"' "$workflow")" -eq 1
+                    ;;
+            esac
+
+            case "$entry_kind:$completion_outcome" in
+                foundation:source-and-split|foundation:source-only|foundation:split-only|foundation:no-change)
+                    ;;
+                commit:source-and-split|commit:source-only|commit:split-only|commit:no-change)
+                    ;;
+                residual:reports)
+                    ;;
+                *)
+                    exit 1
+                    ;;
+            esac
             ;;
-        commit:source-and-split|commit:source-only|commit:split-only|commit:no-change)
-            ;;
-        residual:reports)
-            ;;
-        *)
-            exit 1
+        reference-only)
+            actual_reference_count=$((actual_reference_count + 1))
+            test "$entry_kind" = "commit"
+            test "$entry_workflow" = "-"
+            test "$completion_outcome" = "reference-only"
+            test "$source_review_commit" = "none"
+            test "$split_review_commit" = "none"
+            test "$(find workflows -maxdepth 1 -type f -name "${entry_slot}_*.donna.md" -print | wc -l)" -eq 0
+            reference_slots+=("$entry_slot")
+            reference_shas+=("$entry_sha")
             ;;
     esac
 
@@ -965,7 +1133,7 @@ for index in "${!entries[@]}"; do
             test "$source_review_commit" = "none"
             test "$split_review_commit" != "none"
             ;;
-        no-change)
+        no-change|reference-only)
             test "$source_review_commit" = "none"
             test "$split_review_commit" = "none"
             ;;
@@ -1002,26 +1170,34 @@ for ((index = 1; index < review_commit_count; index += 1)); do
     git merge-base --is-ancestor "${review_commits[$((index - 1))]}" "${review_commits[$index]}"
 done
 
+test "$actual_workflow_count" -eq "$workflow_count"
+test "$actual_reference_count" -eq "$reference_count"
 test "$foundation_count" -eq "$expected_foundations"
 test "$residual_count" -eq 1
+test "$(printf '%s\n' "${entry_ids[@]}" | sort -u | wc -l)" -eq "$entry_count"
+test "$(printf '%s\n' "${entry_slots[@]}" | sort -u | wc -l)" -eq "$entry_count"
+test "$(printf '%s\n' "${workflow_artifacts[@]}" | sort -u | wc -l)" -eq "$workflow_count"
 test "$(printf '%s\n' "${manifest_shas[@]}" | grep -Ec '^[0-9a-f]{40}$')" -eq "$commit_count"
-test "$(printf '%s\n' "${entry_ids[@]}" | sort -u | wc -l)" -eq "$child_count"
-test "$(printf '%s\n' "${entry_workflows[@]}" | sort -u | wc -l)" -eq "$child_count"
 test "$(printf '%s\n' "${manifest_shas[@]}" | sort -u | wc -l)" -eq "$commit_count"
 test "$(printf '%s\n' "${manifest_shas[@]}" | cut -c1-12 | sort -u | wc -l)" -eq "$commit_count"
 
 if test "$scope" = "post-sync"; then
     test "${entry_kinds[0]}" = "foundation"
+    test "${entry_modes[0]}" = "workflow"
     test "${entry_workflows[0]}" = "@/workflows/002_foundation_core_api.donna.md"
     grep -Fq "$sync_merge" "${entry_workflows[0]#@/}"
     grep -Fq "$base" "${entry_workflows[0]#@/}"
     for ((index = 1; index <= commit_count; index += 1)); do
         test "${entry_kinds[$index]}" = "commit"
     done
-    test "${entry_kinds[$((child_count - 1))]}" = "residual"
+    test "${entry_kinds[$((entry_count - 1))]}" = "residual"
+    test "${reference_slots[*]}" = "005 018 024 025 026 029 030"
+    test "${reference_shas[*]}" = "65f70a46c4cf44e2717744aeafbf8acbe83b0378 b8a262b4256966d60e1e8452ebde7a1bf471b4af 4a06d99949114b2804b8d34492a288872fb611ed 6601232c69b44c507f2e9f63d256836e655f7973 96d38eb7449e4d38c0d6a3fffd66e17f145f669f 0b3c3b55403f2bb7342a37236dd30f3d9b3544e9 20e76c9b9b28c0ec98faa63c3f9382c1347301b9"
+    test "$(grep -Fxc '<!-- donna-entry kind=commit id=post-sync-015-4540aca9-generated-missing-docs slot=017 mode=workflow workflow=@/workflows/017_4540aca9182c_generated_missing_docs.donna.md sha=4540aca9182c6708fe9bda0b8fc33d2cf8c13e57 -->' "$manifest")" -eq 1
 else
     for ((index = 0; index < commit_count; index += 1)); do
         test "${entry_kinds[$index]}" = "commit"
+        test "${entry_modes[$index]}" = "workflow"
     done
     test "${entry_kinds[$commit_count]}" = "residual"
 fi
@@ -1131,18 +1307,15 @@ fi
 
 mapfile -t numbered_files < <(find workflows -maxdepth 1 -type f -name '[0-9][0-9][0-9]_*.donna.md' -print | sort)
 numbered_count="$(printf '%s\n' "${numbered_files[@]}" | wc -l)"
-test "$numbered_count" -eq "$expected_numbered_count"
-test "$numbered_count" -eq "$((child_count + 1))"
+test "$numbered_count" -eq "$((workflow_count + 1))"
 test "${numbered_files[0]}" = "workflows/001_bec-ecoli-core-migration.donna.md"
 test "$(printf '%s\n' "${numbered_files[@]}" | grep -Ec '^workflows/[0-9]{3}_[a-z0-9_-]+\.donna\.md$')" -eq "$numbered_count"
-
-for index in "${!numbered_files[@]}"; do
-    expected_prefix="$(printf '%03d' "$((index + 1))")"
-    filename="${numbered_files[$index]#workflows/}"
-    test "${filename%%_*}" = "$expected_prefix"
+expected_numbered_files=("workflows/001_bec-ecoli-core-migration.donna.md")
+for artifact in "${workflow_artifacts[@]}"; do
+    expected_numbered_files+=("${artifact#@/}")
 done
-for index in "${!entry_workflows[@]}"; do
-    test "${entry_workflows[$index]}" = "@/${numbered_files[$((index + 1))]}"
+for index in "${!numbered_files[@]}"; do
+    test "${numbered_files[$index]}" = "${expected_numbered_files[$index]}"
 done
 
 catalog_pattern='^- Artifact: `\./workflows/[0-9]{3}_[a-z0-9_-]+\.donna\.md`$'

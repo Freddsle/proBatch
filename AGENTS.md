@@ -89,13 +89,30 @@ Follow these rules:
   instructions, or Donna itself.
 - Keep every permanent workflow under `workflows/` synchronized with the
   workflow catalog and its Depmesh governance relations.
-- Name workflows in the BEC E. coli migration family with the next unused
-  zero-padded `NNN_` prefix, preserving numeric execution order and never
-  renumbering an existing workflow.
-- Leave both review action requests in every BEC foundation or per-commit child,
-  and the report-review request in the residual child, pending until the
-  maintainer explicitly resumes after manual analysis and any manual commit.
-  Agents must not create or amend those commits.
+- Name workflows in the BEC E. coli migration family with the next
+  never-allocated zero-padded `NNN_` prefix, preserving numeric execution
+  order, never reusing a reserved or removed slot, and never renumbering an
+  existing workflow.
+- For the active recommended BEC post-synchronization migration, preserve all
+  allocated slots from `001_` through `032_`: `001_` is the parent, `002_` is
+  the foundation, `003_` through `031_` map to the 29 source commits in
+  manifest order, and `032_` is the residual split review. Prefixes `005_`,
+  `018_`, `024_`, `025_`, `026_`, `029_`, and `030_` are reserved for
+  manifest-only companion references and intentionally have no workflow
+  artifacts. Do not execute those references or create an ordinary workflow
+  completion for them; when reached, record only the parent-defined
+  `reference-only` progress outcome with no source or split commit. Do not
+  insert another workflow into their slots, renumber later workflows, or reuse
+  any prefix in this family. Keep `017_` executable as the explicit
+  generated-only core-documentation exception.
+- Leave the parent generated-workflow review and final catalog review pending
+  until the maintainer explicitly resumes after manual analysis and any manual
+  commit. Agents must not stage, create, or amend either commit.
+- Leave both review action requests in every executable BEC foundation or
+  per-commit child, and the report-review request in the residual child,
+  pending until the maintainer explicitly resumes after manual analysis and
+  any manual commit. Reference-only manifest records have no review action
+  requests. Agents must not stage, create, or amend those commits.
 - Copy action-request IDs and next-operation IDs exactly from Donna's output;
   never invent them.
 - Do not run `donna -p llm new-session` unless resetting the active session is
