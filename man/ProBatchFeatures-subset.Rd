@@ -5,7 +5,7 @@
 \alias{ProBatchFeatures-subset}
 \title{Subset `ProBatchFeatures` objects without dropping metadata.}
 \usage{
-\S4method{[}{ProBatchFeatures,ANY,ANY,ANY}(x, i, j, ..., drop = TRUE)
+\S4method{[}{ProBatchFeatures,ANY,ANY,ANY}(x, i, j, k, ..., drop = TRUE)
 }
 \arguments{
 \item{x}{A `ProBatchFeatures` object.}
@@ -13,6 +13,8 @@
 \item{i}{Row indices passed to the underlying `QFeatures` subset.}
 
 \item{j}{Column indices passed to the underlying `QFeatures` subset.}
+
+\item{k}{Assay indices passed to the underlying `QFeatures` subset.}
 
 \item{...}{Additional arguments forwarded to the next method.}
 

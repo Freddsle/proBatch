@@ -24,6 +24,7 @@ plot_grouped_NA_heatmap(x, ...)
   drop_complete = TRUE,
   draw = TRUE,
   main = NULL,
+  force_binarization = FALSE,
   ...
 )
 
@@ -45,6 +46,7 @@ plot_grouped_NA_heatmap(x, ...)
   ncol = NULL,
   draw = TRUE,
   use_subset = TRUE,
+  force_binarization = FALSE,
   ...
 )
 }
@@ -66,7 +68,8 @@ the assay column names.}
 
 \item{color_by}{One or more column names in `sample_annotation` used both to
 define the sample groups and to annotate the grouped heatmap columns.
-`.group_size` and `.group_label` are reserved for generated group metadata.}
+`.group_key`, `.group_size`, and `.group_label` are reserved for generated
+group metadata.}
 
 \item{label_by}{Optional grouping column used for the grouped column labels.
 The default, `NULL`, displays generated labels containing all grouping
@@ -93,6 +96,12 @@ without plotting. For multiple assays, the arranged grob is returned
 invisibly when `draw = TRUE`.}
 
 \item{main}{Optional title passed to [pheatmap::pheatmap()] for single assays.}
+
+\item{force_binarization}{Optional threshold used to binarize grouped
+observed fractions. Use `FALSE` (default) to retain fractions, `TRUE` to
+use `0.5`, or a single numeric value in `[0, 1]` to mark group cells with
+observed fraction greater than or equal to the threshold as present and
+lower values as missing.}
 
 \item{pbf_name}{Character scalar or vector with assay names to plot. When
 `NULL`, the most recent assay returned by [pb_current_assay()] is used.
