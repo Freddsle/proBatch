@@ -15,7 +15,8 @@ none of them touch these artifacts or dependency names.
   the scope of the remaining ordered workflows.
 - Keep one `<!-- open-question id=<kebab-id> status=<open|resolved> area=<area> -->`
   marker per entry so entries stay countable.
-- Set `status=resolved` and record the resolution instead of deleting an entry.
+- Remove an entry once the maintainer has resolved it, so every entry left in
+  this document still needs a decision. The resolving commit is the record.
 
 ## Open questions
 
@@ -105,55 +106,6 @@ none of them touch these artifacts or dependency names.
   done for `test-correct_batch_effect.R` and `test-batch_effect_steps.R`;
   (b) rename the test files to match the conventional mapping.
 - Decision: _pending._
-
-### Roxygen documentation and `NAMESPACE` regeneration owed
-
-<!-- open-question id=roxygen-regeneration status=open area=documentation -->
-
-- Found: `002_foundation_core_api` source review (2026-07-28); blocking symptom
-  identified during the split review (2026-07-28).
-- Artifacts: `./R/design_diagnostics.R`, `./R/metadata_diagnostics.R`,
-  `./R/proBatch.R`, `./R/correlation-based_diagnostics.R`, and the other ported
-  sources.
-- Evidence: the migration adds exported functions and new import declarations in
-  Roxygen comments, but `man/**` and `NAMESPACE` are maintainer-owned generated
-  output that agents must never write. Commit
-  `f4d689651c2c3c0e09b2d724db9ca614afb42049` added both the
-  `@importFrom tidyr complete nest unnest pivot_longer` declaration in
-  `R/proBatch.R` and the unqualified `pivot_longer()` calls in
-  `R/correlation-based_diagnostics.R`, so the generated namespace predates the
-  import it needs.
-- Effect: generated documentation and the namespace lag behind the sources until
-  the maintainer regenerates them. This already blocks the test suite:
-  `tests/testthat/test-correlation_based_diagnostics.R` reports nine errors of
-  the form `could not find function "pivot_longer"`. The failure is stale
-  generated output rather than a source defect, and a later review must not read
-  it as a regression. Confirmed against an unmodified `HEAD` worktree on
-  2026-07-28: the same nine errors occur without any working-tree change.
-- Also owed after `003_42544a21f10c_pvca_impl_dedup` (2026-07-28):
-  `R/proteome_wide_diagnostics.R` documents the newly activated `stacked_bar`,
-  `stacked_plot_title`, `sort_stacked`, `category_order`, `path_to_save_results`,
-  and `add_values` parameters, so the PVCA manual pages are stale as well.
-- Also owed after the `003` split stage (2026-07-28): the same file now carries
-  an explicit `@method plot_PVCA df` tag and a `@details` block beside the
-  retained `@export` and `@rawNamespace export(plot_PVCA.df)` tags. The S3
-  registration and usage section of the `plot_PVCA.df` manual page therefore
-  need regeneration before the generated output can be trusted to match the
-  source.
-- Also owed after `006_4e4e9811503c_grouped_na_heatmaps` (2026-07-28):
-  `R/plot_missing.R` adds a whole new public generic. `NAMESPACE` has no
-  `export(plot_grouped_NA_heatmap)` and neither
-  `S3method(plot_grouped_NA_heatmap,default)` nor
-  `S3method(plot_grouped_NA_heatmap,ProBatchFeatures)`, and `man/` has no
-  `plot_grouped_NA_heatmap.Rd`. This is the first migrated commit whose new API
-  is entirely absent from the generated output rather than merely stale, so
-  `proBatch::plot_grouped_NA_heatmap()` stays unreachable for users and
-  `R CMD check` reports an undocumented export until regeneration. The focused
-  tests still pass because `test_check()` evaluates them inside the package
-  namespace.
-- Coverage: `017_4540aca9182c_generated_missing_docs` is the explicit
-  generated-only exception in the family, but regeneration itself stays manual.
-- Decision: _pending; regenerate with devtools once the migration completes._
 
 ### Breaking identifier contract has no `NEWS` entry or release-version decision
 
