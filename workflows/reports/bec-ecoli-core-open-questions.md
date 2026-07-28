@@ -125,6 +125,11 @@ none of them touch these artifacts or dependency names.
   no release note and no version signal that a public contract changed. Later
   children in this migration are expected to add further breaking changes to the
   same unreleased version.
+- Also missing after `006`, `009`, `010`, and `011` (2026-07-28): the same
+  `v2.1.0` section documents none of the migrated public APIs, including
+  `plot_grouped_NA_heatmap()`, the `force_binarization` heatmap threshold, the
+  grouped-density `sample_annotation`/`color_by`/`col_vector`/`color_scheme`
+  parameters of `plot_NA_density()`, and `pb_subset_samples()`.
 - Coverage: no workflow from `003` through `032` reads or edits `NEWS`; only the
   manifest and `002` mention it. `022_72d11d1f7f92_version_variancepartition` is
   the only later workflow that edits `DESCRIPTION`, and it is limited to
@@ -172,6 +177,37 @@ none of them touch these artifacts or dependency names.
   single-definition test; (b) keep the duplicates until `013` and `016` run and
   resolve them there, accepting the risk of editing the shadowed copy;
   (c) resolve after the migration as a separate cleanup.
+- Decision: _pending._
+
+### Bayesian PCA and `pcaMethods` skipped by an explicit core-policy decision
+
+<!-- open-question id=bpca-pcamethods-skipped status=open area=api -->
+
+- Found: `011_6d3c15e41905_subset_and_bpca` source review (2026-07-28).
+- Artifacts: `./R/proteome_wide_diagnostics.R`, `./DESCRIPTION`,
+  `./tests/testthat/test-proteome_wide_diagnostics.R`.
+- Evidence: source commit `6d3c15e419058d264b61ac43c27e95e0d635ca01` adds
+  `.pb_compute_pca_embedding()` and `.pb_format_pc_axis_label()`, the public
+  `pca_method`, `bpca_nPcs`, `bpca_center`, and `bpca_scale` parameters of
+  `plot_PCA.default()`, and optional `pcaMethods` in `Suggests`. Slot `011`
+  deliberately ported none of it: omitting `fill_the_missing` preserves missing
+  values for BPCA while explicitly supplying its existing default `-1` pre-fills
+  them, so nominally equivalent calls differ only by argument-supply state; the
+  proposed API hides imputation and the fitted model behind four
+  backend-specific parameters; and the only source test is conditional on an
+  optional dependency that the project Pixi environment does not provide and
+  asserts the plot surface rather than the fit.
+- Effect: `plot_PCA()` stays SVD-only and still requires complete matrices, so
+  missing-aware PCA remains unavailable in lean core. The skip is a reviewed
+  policy choice, not an oversight, but it was recorded only in gitignored
+  session notes.
+- Coverage: no workflow from `012` through `031` mentions `plot_PCA`, BPCA, or
+  `pcaMethods`, and `032_residual_split_review` audits the stopped split, which
+  is also SVD-only.
+- Options: (a) keep core SVD-only; (b) design an explicit missing-policy-aware
+  embedding API with fit-level tests and adopt `pcaMethods` in `Suggests`;
+  (c) port the source implementation unchanged and accept the
+  argument-supply-dependent missing-value semantics.
 - Decision: _pending._
 
 ## Environment limitations (informational)
