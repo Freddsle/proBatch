@@ -332,22 +332,25 @@ test_that(".pb_group_missing_matrix distinguishes missing and literal NA labels"
 })
 
 test_that(".pb_group_missing_matrix protects generated metadata columns", {
-    reserved_annotation <- data.frame(
-        .group_size = c("small", "large", "large"),
-        row.names = colnames(toy_matrix),
-        stringsAsFactors = FALSE
-    )
+    for (reserved_name in c(".group_key", ".group_size", ".group_label")) {
+        reserved_annotation <- data.frame(
+            value = c("small", "large", "large"),
+            row.names = colnames(toy_matrix),
+            stringsAsFactors = FALSE
+        )
+        names(reserved_annotation) <- reserved_name
 
-    expect_error(
-        .pb_group_missing_matrix(
-            data_matrix = toy_matrix,
-            sample_annotation = reserved_annotation,
-            sample_id_col = NULL,
-            color_by = ".group_size",
-            drop_complete = FALSE
-        ),
-        "reserved names"
-    )
+        expect_error(
+            .pb_group_missing_matrix(
+                data_matrix = toy_matrix,
+                sample_annotation = reserved_annotation,
+                sample_id_col = NULL,
+                color_by = reserved_name,
+                drop_complete = FALSE
+            ),
+            "reserved names"
+        )
+    }
 })
 
 test_that(".pb_group_missing_matrix accepts a grouping column named No", {
@@ -592,8 +595,8 @@ test_that("plot_NA_density.default supports grouped densities", {
             "Missing Value"
         ),
         .pb_density_group = c(
-            rep("Condition=A (n=1)", 2L),
-            rep("Condition=B (n=2)", 3L)
+            rep("A", 2L),
+            rep("B", 3L)
         ),
         stringsAsFactors = FALSE
     )
@@ -601,6 +604,46 @@ test_that("plot_NA_density.default supports grouped densities", {
     expect_equal(grouped_data, expected, ignore_attr = TRUE)
     expect_equal(density_plot$labels$colour, "Condition")
     expect_equal(density_plot$labels$linetype, "Value Type")
+})
+
+test_that("plot_NA_density.default keeps colliding group keys distinct", {
+    collision_annotation <- data.frame(
+        Group = c(NA_character_, "<missing>", "other"),
+        row.names = colnames(toy_matrix),
+        stringsAsFactors = FALSE
+    )
+    density_data <- .pb_missing_density_df(
+        data_matrix = toy_matrix,
+        assay_nm = "",
+        missing_label = "Missing Value",
+        valid_label = "Valid Value",
+        sample_annotation = collision_annotation,
+        color_by = "Group"
+    )
+    group_keys <- unique(density_data$.pb_density_group)
+
+    expect_false(anyNA(group_keys))
+    expect_setequal(
+        group_keys,
+        c("<missing>", "<missing> #1", "other")
+    )
+
+    collision_scheme <- setNames(
+        c("#111111", "#222222", "#333333"),
+        c("<missing>", "<missing> #1", "other")
+    )
+    density_plot <- plot_NA_density(
+        toy_matrix,
+        sample_annotation = collision_annotation,
+        color_by = "Group",
+        color_scheme = collision_scheme
+    )
+    built <- suppressWarnings(ggplot_build(density_plot))
+
+    expect_setequal(
+        unique(built$data[[1L]]$colour),
+        unname(collision_scheme)
+    )
 })
 
 test_that("plot_NA_density.default forwards density parameters", {
@@ -646,10 +689,74 @@ test_that("plot_NA_density.ProBatchFeatures supports grouped densities", {
     )
     expect_setequal(
         unique(density_plot$data$.pb_density_group),
-        c("Condition=A (n=1)", "Condition=B (n=2)")
+        c("A", "B")
     )
     expect_equal(density_plot$labels$colour, "Condition")
     expect_equal(density_plot$labels$linetype, "Value Type")
+})
+
+test_that("plot_NA_density.default applies grouped color schemes", {
+    named_plot <- plot_NA_density(
+        toy_matrix,
+        sample_annotation = toy_sa,
+        sample_id_col = "FullRunName",
+        color_by = "Condition",
+        color_scheme = c(B = "#222222", A = "#111111")
+    )
+    named_built <- suppressWarnings(ggplot_build(named_plot))
+
+    expect_setequal(
+        unique(named_built$data[[1L]]$colour),
+        c("#111111", "#222222")
+    )
+    named_scale <- named_built$plot$scales$get_scales("colour")
+    expect_equal(
+        unname(named_scale$map(c("A", "B"))),
+        c("#111111", "#222222")
+    )
+
+    brewer_plot <- plot_NA_density(
+        toy_matrix,
+        sample_annotation = toy_sa,
+        sample_id_col = "FullRunName",
+        color_by = "Condition",
+        color_scheme = "brewer"
+    )
+    brewer_built <- suppressWarnings(ggplot_build(brewer_plot))
+
+    expect_setequal(
+        unique(brewer_built$data[[1L]]$colour),
+        c("#E41A1C", "#377EB8")
+    )
+
+    override_plot <- plot_NA_density(
+        toy_matrix,
+        sample_annotation = toy_sa,
+        sample_id_col = "FullRunName",
+        color_by = "Condition",
+        color_scheme = c(A = "#111111", B = "#222222"),
+        col_vector = "#333333"
+    )
+    override_built <- suppressWarnings(ggplot_build(override_plot))
+
+    expect_equal(unique(override_built$data[[1L]]$colour), "#333333")
+})
+
+test_that("plot_NA_density.ProBatchFeatures accepts color scheme lists", {
+    density_plot <- plot_NA_density(
+        pbf_multi,
+        pbf_name = c(toy_assay, toy_assay_alt),
+        color_by = "Condition",
+        color_scheme = list(
+            Condition = c(B = "#222222", A = "#111111")
+        )
+    )
+    built <- suppressWarnings(ggplot_build(density_plot))
+
+    expect_setequal(
+        unique(built$data[[1L]]$colour),
+        c("#111111", "#222222")
+    )
 })
 
 
