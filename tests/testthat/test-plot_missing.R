@@ -459,10 +459,13 @@ test_that("multiple requested heatmaps remain arranged with one surviving assay"
 
     plot_file <- tempfile(fileext = ".pdf")
     grDevices::pdf(plot_file)
-    on.exit({
-        grDevices::dev.off()
-        unlink(plot_file)
-    }, add = TRUE)
+    on.exit(
+        {
+            grDevices::dev.off()
+            unlink(plot_file)
+        },
+        add = TRUE
+    )
 
     expect_warning(
         res <- plot_grouped_NA_heatmap(
