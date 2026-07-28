@@ -3,12 +3,10 @@ test_that("numeric fill replaces missing values", {
     mat <- example_proteome_matrix[8:10, 1:3]
     index_missing <- which(is.na(mat), arr.ind = TRUE)
 
-    expect_warning(
-        expect_warning(
-            res <- handle_missing_values(mat, "warn", fill_the_missing = -1),
-            "warn"
-        ),
-        "filling missing values with"
+    pb_test_expect_warnings(
+        res <- handle_missing_values(mat, "warn", fill_the_missing = -1),
+        c("warn", "filling missing values with"),
+        fixed = TRUE
     )
 
     expect_true(!any(is.na(res)))
@@ -18,13 +16,9 @@ test_that("numeric fill replaces missing values", {
 
 test_that("rows with NAs removed for rectangular matrix", {
     mat <- matrix(c(1, 2, NA, 3, 4, 5), nrow = 3, byrow = TRUE)
-    expect_warning(
-        expect_warning(
-            res <- handle_missing_values(mat, "warn"),
-            "warn",
-            fixed = TRUE
-        ),
-        "removed 1 rows",
+    pb_test_expect_warnings(
+        res <- handle_missing_values(mat, "warn"),
+        c("warn", "removed 1 rows"),
         fixed = TRUE
     )
     expect_equal(nrow(res), 2)
@@ -41,17 +35,13 @@ test_that("symmetric square matrix removes rows and columns with NAs", {
         nrow = 3, byrow = TRUE,
         dimnames = list(paste0("r", 1:3), paste0("c", 1:3))
     )
-    expect_warning(
-        expect_warning(
-            expect_warning(
-                res <- handle_missing_values(mat, "warn"),
-                "removed 2 rows",
-                fixed = TRUE
-            ),
+    pb_test_expect_warnings(
+        res <- handle_missing_values(mat, "warn"),
+        c(
+            "removed 2 rows",
             "Matrix is square but not symmetric",
-            fixed = TRUE
+            "warn"
         ),
-        "warn",
         fixed = TRUE
     )
 
@@ -62,17 +52,13 @@ test_that("symmetric square matrix removes rows and columns with NAs", {
 
 test_that("square but non-symmetric matrix removes rows only", {
     mat <- matrix(c(1, 2, 3, NA), nrow = 2, byrow = TRUE)
-    expect_warning(
-        expect_warning(
-            expect_warning(
-                res <- handle_missing_values(mat, "warn"),
-                "Matrix is square but not symmetric",
-                fixed = TRUE
-            ),
+    pb_test_expect_warnings(
+        res <- handle_missing_values(mat, "warn"),
+        c(
+            "Matrix is square but not symmetric",
             "removed 1 rows",
-            fixed = TRUE
+            "warn"
         ),
-        "warn",
         fixed = TRUE
     )
     expect_equal(dim(res), c(1, 2))
@@ -91,17 +77,13 @@ test_that("all rows incomplete leads to empty matrix", {
         dimnames = list(paste0("r", 1:3), paste0("c", 1:3))
     )
 
-    expect_warning(
-        expect_warning(
-            expect_warning(
-                res <- handle_missing_values(mat, "warn"),
-                "Matrix is square but not symmetric",
-                fixed = TRUE
-            ),
+    pb_test_expect_warnings(
+        res <- handle_missing_values(mat, "warn"),
+        c(
+            "Matrix is square but not symmetric",
             "warn",
-            fixed = TRUE
+            "removed 3 rows"
         ),
-        "removed 3 rows",
         fixed = TRUE
     )
     expect_equal(dim(res), c(0, 3))
@@ -114,17 +96,14 @@ test_that("non-numeric fill replaces missing values with 0", {
 
     expect_true(any(is.na(mat)))
 
-    expect_warning(
-        expect_warning(
-            expect_warning(
-                res <- handle_missing_values(mat, "warn", fill_the_missing = "a"),
-                "filling value is not a finite numeric scalar",
-                fixed = TRUE
-            ),
+    pb_test_expect_warnings(
+        res <- handle_missing_values(mat, "warn", fill_the_missing = "a"),
+        c(
+            "filling value is not a finite numeric scalar",
             "warn",
-            fixed = TRUE
+            "filling missing values with 0"
         ),
-        "filling missing values with 0",
+        fixed = TRUE
     )
 
     expect_true(!any(is.na(res)))

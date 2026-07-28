@@ -24,14 +24,15 @@ test_that("protein_corrplot_plots", {
         ),
         "The following columns will not be mapped to colors: peptide_group_label, ProteinName"
     )
-
-    corrplot <- plot_protein_corrplot(
-        example_proteome_matrix,
-        protein_name = "Haao",
-        peptide_annotation = example_peptide_annotation,
-        protein_col = "Gene",
-        cluster_rows = TRUE, cluster_cols = TRUE,
-        color_list = color_list
+    suppressWarnings(
+        corrplot <- plot_protein_corrplot(
+            example_proteome_matrix,
+            protein_name = "Haao",
+            peptide_annotation = example_peptide_annotation,
+            protein_col = "Gene",
+            cluster_rows = TRUE, cluster_cols = TRUE,
+            color_list = color_list
+        )
     )
 
     expect_equal(corrplot$tree_row$method, "complete", ignore_attr = TRUE)
@@ -44,8 +45,7 @@ test_that("protein_corrplot_plots", {
 
 
 test_that("sample_corr_heatmap", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     specified_samples <- example_sample_annotation$FullRunName[
         which(example_sample_annotation$order %in% 110:115)
@@ -78,8 +78,7 @@ test_that("sample_corr_heatmap", {
 
 
 test_that("sample_distribution_plot", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_test <- example_proteome_matrix[1:20, ]
     sample_dist <- plot_sample_corr_distribution(matrix_test,
@@ -98,8 +97,7 @@ test_that("sample_distribution_plot", {
 })
 
 test_that("calculate_sample_corr_distribution", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix_test <- example_proteome_matrix[1:20, ]
     corr_distribution <- calculate_sample_corr_distr(
@@ -138,4 +136,333 @@ test_that("peptide_distribution_plots", {
 
     expect_s3_class(peptide_dist$plot_env$corr_distribution, "data.frame")
     expect_equal(peptide_dist$plot_env$median_same_prot, 0.7337642, tolerance = 1e-6)
+})
+
+make_corr_pbf_fixture <- function() {
+    pb_test_load_example_data()
+    data(example_peptide_annotation, package = "proBatch")
+
+    matrix_small <- example_proteome_matrix[1:120, 1:20]
+    sample_ann <- example_sample_annotation[
+        match(colnames(matrix_small), example_sample_annotation$FullRunName),
+    ]
+    pbf <- suppressMessages(ProBatchFeatures(
+        data_matrix = matrix_small,
+        sample_annotation = sample_ann,
+        sample_id_col = "FullRunName",
+        name = "feature::raw"
+    ))
+    pbf <- suppressMessages(pb_transform(
+        pbf,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    ))
+
+    assay_name <- pb_current_assay(pbf)
+    matrix_log <- suppressMessages(pb_assay_matrix(pbf, assay = assay_name))
+    peptide_ann <- example_peptide_annotation[
+        match(rownames(matrix_log), example_peptide_annotation$peptide_group_label),
+    ]
+    peptide_ann <- peptide_ann[!is.na(peptide_ann$peptide_group_label), , drop = FALSE]
+
+    list(
+        pbf = pbf,
+        matrix_small = matrix_small,
+        sample_ann = sample_ann,
+        peptide_ann = peptide_ann
+    )
+}
+
+test_that("sample correlation diagnostics accept PBF with rowname-only annotation", {
+    fixture <- make_corr_pbf_fixture()
+    pbf <- fixture$pbf
+    matrix_small <- fixture$matrix_small
+    sample_ann <- fixture$sample_ann
+
+    sample_ann_row <- sample_ann
+    rownames(sample_ann_row) <- sample_ann_row$FullRunName
+    sample_ann_row$FullRunName <- NULL
+
+    sample_corr_df <- calculate_sample_corr_distr(
+        pbf,
+        sample_annotation = sample_ann_row,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag"
+    )
+    expect_s3_class(sample_corr_df, "data.frame")
+    expect_true("correlation" %in% names(sample_corr_df))
+
+    sample_corr_plot <- plot_sample_corr_distribution(
+        pbf,
+        sample_annotation = sample_ann_row,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag",
+        plot_param = "batch_replicate"
+    )
+    expect_s3_class(sample_corr_plot, "ggplot")
+
+    sample_corr_heatmap <- plot_sample_corr_heatmap(
+        pbf,
+        sample_annotation = sample_ann_row,
+        samples_to_plot = colnames(matrix_small)[1:6],
+        sample_id_col = "FullRunName",
+        pbf_name = pb_current_assay(pbf)
+    )
+    expect_s3_class(sample_corr_heatmap, "pheatmap")
+})
+
+test_that("calculate_sample_corr_distr() supports explicit PBF assay selection", {
+    fixture <- make_corr_pbf_fixture()
+    pbf <- fixture$pbf
+    sample_ann <- fixture$sample_ann
+
+    current_assay <- pb_current_assay(pbf)
+    raw_assay <- names(pbf)[1]
+
+    corr_default <- calculate_sample_corr_distr(
+        pbf,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag"
+    )
+    corr_current <- calculate_sample_corr_distr(
+        pbf,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag",
+        pbf_name = current_assay
+    )
+    expect_equal(corr_default$correlation, corr_current$correlation)
+
+    corr_raw <- calculate_sample_corr_distr(
+        pbf,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag",
+        pbf_name = raw_assay
+    )
+    corr_raw_expected <- calculate_sample_corr_distr(
+        pb_assay_matrix(pbf, assay = raw_assay),
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag"
+    )
+    expect_equal(corr_raw$correlation, corr_raw_expected$correlation)
+})
+
+test_that("plot_sample_corr_distribution() supports explicit PBF assay selection", {
+    fixture <- make_corr_pbf_fixture()
+    pbf <- fixture$pbf
+    sample_ann <- fixture$sample_ann
+
+    current_assay <- pb_current_assay(pbf)
+    raw_assay <- names(pbf)[1]
+
+    plot_default <- plot_sample_corr_distribution(
+        pbf,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag",
+        plot_param = "batch_replicate"
+    )
+    plot_current <- plot_sample_corr_distribution(
+        pbf,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag",
+        plot_param = "batch_replicate",
+        pbf_name = current_assay
+    )
+    expect_equal(
+        plot_default$plot_env$corr_distribution$correlation,
+        plot_current$plot_env$corr_distribution$correlation
+    )
+
+    plot_raw <- plot_sample_corr_distribution(
+        pbf,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag",
+        plot_param = "batch_replicate",
+        pbf_name = raw_assay
+    )
+    plot_raw_expected <- plot_sample_corr_distribution(
+        pb_assay_matrix(pbf, assay = raw_assay),
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = "EarTag",
+        plot_param = "batch_replicate"
+    )
+    expect_equal(
+        plot_raw$plot_env$corr_distribution$correlation,
+        plot_raw_expected$plot_env$corr_distribution$correlation
+    )
+})
+
+test_that("plot_sample_corr_heatmap() supports explicit PBF assay selection", {
+    skip_if_not_installed("gridExtra")
+    fixture <- make_corr_pbf_fixture()
+    pbf <- fixture$pbf
+    sample_ann <- fixture$sample_ann
+
+    current_assay <- pb_current_assay(pbf)
+    raw_assay <- names(pbf)[1]
+    samples_subset <- sample_ann$FullRunName[1:6]
+
+    heatmap_default <- suppressWarnings(plot_sample_corr_heatmap(
+        pbf,
+        sample_annotation = sample_ann,
+        samples_to_plot = samples_subset,
+        sample_id_col = "FullRunName",
+        cluster_rows = TRUE,
+        cluster_cols = TRUE
+    ))
+    expect_false(inherits(heatmap_default, "pheatmap"))
+
+    heatmap_current <- suppressWarnings(plot_sample_corr_heatmap(
+        pbf,
+        sample_annotation = sample_ann,
+        samples_to_plot = samples_subset,
+        sample_id_col = "FullRunName",
+        cluster_rows = TRUE,
+        cluster_cols = TRUE,
+        pbf_name = current_assay
+    ))
+    expect_s3_class(heatmap_current, "pheatmap")
+
+    heatmap_raw <- plot_sample_corr_heatmap(
+        pbf,
+        sample_annotation = sample_ann,
+        samples_to_plot = samples_subset,
+        sample_id_col = "FullRunName",
+        cluster_rows = TRUE,
+        cluster_cols = TRUE,
+        pbf_name = raw_assay
+    )
+    heatmap_raw_expected <- plot_sample_corr_heatmap(
+        pb_assay_matrix(pbf, assay = raw_assay),
+        sample_annotation = sample_ann,
+        samples_to_plot = samples_subset,
+        sample_id_col = "FullRunName",
+        cluster_rows = TRUE,
+        cluster_cols = TRUE
+    )
+    expect_equal(heatmap_raw$tree_row$height, heatmap_raw_expected$tree_row$height)
+    expect_equal(heatmap_raw$tree_col$height, heatmap_raw_expected$tree_col$height)
+})
+
+test_that("calculate_peptide_corr_distr() supports explicit PBF assay selection", {
+    fixture <- make_corr_pbf_fixture()
+    pbf <- fixture$pbf
+    peptide_ann <- fixture$peptide_ann
+
+    current_assay <- pb_current_assay(pbf)
+    raw_assay <- names(pbf)[1]
+
+    corr_default <- calculate_peptide_corr_distr(
+        pbf,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene"
+    )
+    corr_current <- calculate_peptide_corr_distr(
+        pbf,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene",
+        pbf_name = current_assay
+    )
+    expect_equal(corr_default$correlation, corr_current$correlation)
+
+    corr_raw <- calculate_peptide_corr_distr(
+        pbf,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene",
+        pbf_name = raw_assay
+    )
+    corr_raw_expected <- calculate_peptide_corr_distr(
+        pb_assay_matrix(pbf, assay = raw_assay),
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene"
+    )
+    expect_equal(corr_raw$correlation, corr_raw_expected$correlation)
+})
+
+test_that("plot_peptide_corr_distribution() supports explicit PBF assay selection", {
+    fixture <- make_corr_pbf_fixture()
+    pbf <- fixture$pbf
+    peptide_ann <- fixture$peptide_ann
+
+    current_assay <- pb_current_assay(pbf)
+    raw_assay <- names(pbf)[1]
+
+    plot_default <- plot_peptide_corr_distribution(
+        pbf,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene"
+    )
+    plot_current <- plot_peptide_corr_distribution(
+        pbf,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene",
+        pbf_name = current_assay
+    )
+    expect_equal(
+        plot_default$plot_env$corr_distribution$correlation,
+        plot_current$plot_env$corr_distribution$correlation
+    )
+
+    plot_raw <- plot_peptide_corr_distribution(
+        pbf,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene",
+        pbf_name = raw_assay
+    )
+    plot_raw_expected <- plot_peptide_corr_distribution(
+        pb_assay_matrix(pbf, assay = raw_assay),
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene"
+    )
+    expect_equal(
+        plot_raw$plot_env$corr_distribution$correlation,
+        plot_raw_expected$plot_env$corr_distribution$correlation
+    )
+})
+
+test_that("peptide correlation diagnostics accept PBF with rowname-only annotation", {
+    fixture <- make_corr_pbf_fixture()
+    pbf <- fixture$pbf
+    peptide_ann <- fixture$peptide_ann
+    rownames(peptide_ann) <- peptide_ann$peptide_group_label
+    peptide_ann$peptide_group_label <- NULL
+
+    peptide_corr_df <- calculate_peptide_corr_distr(
+        pbf,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene"
+    )
+    expect_s3_class(peptide_corr_df, "data.frame")
+    expect_true("same_protein" %in% names(peptide_corr_df))
+
+    peptide_corr_plot <- plot_peptide_corr_distribution(
+        pbf,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene"
+    )
+    expect_s3_class(peptide_corr_plot, "ggplot")
+
+    gene_counts <- table(peptide_corr_df$Gene1)
+    gene_target <- names(gene_counts[gene_counts >= 2])[1]
+    if (!length(gene_target) || is.na(gene_target)) {
+        skip("Need at least one protein with >=2 peptides for correlation heatmap.")
+    }
+
+    protein_corrplot <- suppressWarnings(plot_protein_corrplot(
+        pbf,
+        protein_name = gene_target,
+        peptide_annotation = peptide_ann,
+        protein_col = "Gene",
+        cluster_rows = TRUE,
+        cluster_cols = TRUE
+    ))
+    expect_s3_class(protein_corrplot, "pheatmap")
 })

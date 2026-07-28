@@ -732,3 +732,149 @@ test_that("pb_assay_matrix and pb_as_long compute fast logged assays on demand",
     ord <- order(long_fast$Feature, long_fast$Sample)
     expect_equal(long_fast[ord, ], manual_long[ord, ], ignore_attr = TRUE)
 })
+
+test_that("as_ProBatchFeatures wraps single-assay QFeatures with renaming", {
+    skip_if_not_installed("QFeatures")
+
+    pb_test_load_example_data()
+
+    sample_order <- match(
+        colnames(example_proteome_matrix),
+        example_sample_annotation$FullRunName
+    )
+    expect_false(anyNA(sample_order))
+    cd <- S4Vectors::DataFrame(
+        example_sample_annotation[sample_order, , drop = FALSE]
+    )
+    rownames(cd) <- example_sample_annotation$FullRunName[sample_order]
+
+    se <- SummarizedExperiment::SummarizedExperiment(
+        assays  = list(intensity = example_proteome_matrix),
+        colData = cd
+    )
+
+    qf <- QFeatures::QFeatures(
+        experiments = list(peptideRaw = se),
+        colData = cd
+    )
+
+    pbf <- as_ProBatchFeatures(qf, level = "peptide")
+
+    expect_s4_class(pbf, "ProBatchFeatures")
+    expect_true(validObject(pbf))
+    expect_identical(names(pbf), "peptide::raw")
+    expect_identical(pb_current_assay(pbf), "peptide::raw")
+    expect_identical(get_chain(pbf), character())
+    expect_identical(nrow(get_operation_log(pbf)), 0L)
+    expect_equal(
+        pb_assay_matrix(pbf),
+        as.matrix(SummarizedExperiment::assay(qf[[1]])),
+        ignore_attr = TRUE
+    )
+    cd_pbf <- as.data.frame(colData(pbf))
+    cd_qf <- as.data.frame(colData(qf))
+    expect_equal(cd_pbf[names(cd_qf)], cd_qf, ignore_attr = TRUE)
+    expect_true("sample_id" %in% names(cd_pbf))
+    expect_identical(cd_pbf$sample_id, rownames(SummarizedExperiment::colData(qf)))
+
+    qf2 <- QFeatures::QFeatures(
+        experiments = list(peptideRaw = se),
+        colData = cd
+    )
+    pbf2 <- as_ProBatchFeatures(qf2, level = "peptide", pipeline = "custom")
+    expect_identical(names(pbf2), "peptide::custom")
+})
+
+test_that("as_ProBatchFeatures warns on multi-assay naming mismatches", {
+    skip_if_not_installed("QFeatures")
+
+    pb_test_load_example_data()
+
+    sample_order <- match(
+        colnames(example_proteome_matrix),
+        example_sample_annotation$FullRunName
+    )
+    expect_false(anyNA(sample_order))
+    cd <- S4Vectors::DataFrame(
+        example_sample_annotation[sample_order, , drop = FALSE]
+    )
+    rownames(cd) <- example_sample_annotation$FullRunName[sample_order]
+
+    se1 <- SummarizedExperiment::SummarizedExperiment(
+        assays  = list(intensity = example_proteome_matrix),
+        colData = cd
+    )
+    se2 <- SummarizedExperiment::SummarizedExperiment(
+        assays  = list(intensity = example_proteome_matrix),
+        colData = cd
+    )
+
+    qf_multi <- QFeatures::QFeatures(
+        experiments = list(peptideRaw = se1, proteinNorm = se2),
+        colData = cd
+    )
+
+    expect_warning(
+        as_ProBatchFeatures(qf_multi),
+        "Some assay names do not follow"
+    )
+})
+
+
+test_that("pb_transform honors final_name without colliding with pipeline-derived assay", {
+    pb_test_load_example_data()
+
+    pbf <- ProBatchFeatures(
+        data_matrix = example_proteome_matrix,
+        sample_annotation = example_sample_annotation,
+        sample_id_col = "FullRunName",
+        name = "raw"
+    )
+
+    pbf <- pb_transform(
+        pbf,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    )
+
+    pbf <- pb_transform(
+        pbf,
+        from = "feature::log2_on_raw",
+        steps = "medianNorm",
+        params_list = list(list(
+            sample_annotation = example_sample_annotation,
+            sample_id_col = "FullRunName"
+        ))
+    )
+
+    expect_true("feature::medianNorm_on_log2_on_raw" %in% names(pbf))
+
+
+    suppressWarnings(
+        pbf <- pb_transform(
+            pbf,
+            from = "feature::log2_on_raw",
+            steps = "medianNorm",
+            final_name = "feature::medianNorm_zeroNA",
+            params_list = list(list(
+                sample_annotation = example_sample_annotation,
+                sample_id_col = "FullRunName",
+                fill_the_missing = 0
+            ))
+        )
+    )
+
+    expect_true("feature::medianNorm_on_log2_on_raw" %in% names(pbf))
+    expect_true("feature::medianNorm_zeroNA" %in% names(pbf))
+})
+
+test_that("registry inspection reports available core steps", {
+    expect_true(pb_has_step("medianNorm"))
+    expect_false(pb_has_step("not-a-step"))
+    expect_identical(pb_list_steps("^median"), "medianNorm")
+
+    details <- pb_list_steps("^median", details = TRUE)
+    expect_s4_class(details, "DataFrame")
+    expect_identical(as.character(details$step), "medianNorm")
+})

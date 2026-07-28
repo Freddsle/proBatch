@@ -11,6 +11,15 @@ compute_cv <- function(data, measure_col, group_vars, cv_name) {
 #'
 #' @inheritParams proBatch
 #' @inheritParams transform_raw_data
+#' @param df_long data frame where each row is a single feature in a single
+#'   sample, or a `ProBatchFeatures` object.
+#' @param sample_annotation data frame with sample-level metadata. When
+#'   `df_long` is a data frame, this argument is optional but required for
+#'   batch/replicate-aware calculations. When `df_long` is a
+#'   `ProBatchFeatures` object and `sample_annotation` is not provided,
+#'   `as.data.frame(colData(df_long))` is used.
+#' @param pbf_name Assay name used when `df_long` is a `ProBatchFeatures`
+#'   object. If `NULL`, [pb_current_assay()] is used.
 #' @param biospecimen_id_col column in \code{sample_annotation}
 #' that defines a unique bio ID, which is usually a
 #' combination of conditions or groups.
@@ -18,7 +27,13 @@ compute_cv <- function(data, measure_col, group_vars, cv_name) {
 #'  create new \code{biospecimen_id} column
 #' @param unlog (logical) whether to reverse log transformation of the original data
 #'
-#' @return data frame with Total CV for each feature & (optionally) per-batch CV
+#' @return data frame with replicate-level CV values:
+#'   \itemize{
+#'   \item \code{CV_total}: per \code{feature_id_col} and \code{biospecimen_id_col}
+#'   (and per \code{Step}, if present),
+#'   \item \code{CV_perBatch}: additionally stratified by \code{batch_col}
+#'   when provided.
+#'   }
 #' @export
 #'
 #' @examples
@@ -33,7 +48,25 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
                                  sample_id_col = "FullRunName",
                                  measure_col = "Intensity", batch_col = NULL,
                                  biospecimen_id_col = NULL,
-                                 unlog = TRUE, log_base = 2, offset = 0) {
+                                 unlog = TRUE, log_base = 2, offset = 0,
+                                 pbf_name = NULL) {
+    if (is(df_long, "ProBatchFeatures")) {
+        if (is.null(sample_id_col)) {
+            message("sample_id_col is not specified, using FullRunName as default")
+            sample_id_col <- "FullRunName"
+        }
+        prep <- .pb_prepare_long_inputs(
+            df_long = df_long,
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
+            feature_id_col = feature_id_col,
+            measure_col = measure_col,
+            pbf_name = pbf_name
+        )
+        df_long <- prep$df_long
+        sample_annotation <- prep$sample_annotation
+    }
+
     # Handle sample_annotation and check for sample_id_col
     if (!is.null(sample_annotation) && is.null(sample_id_col)) {
         message("sample_id_col is not specified, using FullRunName as default")
@@ -92,8 +125,10 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
     base_group <- feature_id_col
     step_group <- if (has_step) "Step" else NULL
 
-    perbatch_groups <- c(base_group, batch_col, step_group) %>% compact()
-    total_groups <- c(base_group, step_group) %>% compact()
+    # Estimate CV across technical replicates of each biospecimen, and
+    # optionally stratify by batch for per-batch diagnostics.
+    total_groups <- c(base_group, biospecimen_id_col, step_group) %>% compact()
+    perbatch_groups <- c(base_group, biospecimen_id_col, batch_col, step_group) %>% compact()
 
     # Compute per-batch CV (if batch_col given)
     if (!is.null(batch_col)) {
@@ -105,7 +140,14 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
     df_long <- compute_cv(df_long, measure_col, total_groups, "CV_total")
 
     # Final select + distinct
-    select_cols <- c(feature_id_col, if (has_step) "Step", "CV_total", if (!is.null(batch_col)) "CV_perBatch")
+    select_cols <- c(
+        feature_id_col,
+        biospecimen_id_col,
+        if (!is.null(batch_col)) batch_col,
+        if (has_step) "Step",
+        "CV_total",
+        if (!is.null(batch_col)) "CV_perBatch"
+    )
     CV_df <- df_long %>%
         select(all_of(select_cols)) %>%
         distinct()
@@ -119,6 +161,10 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
 #'
 #' @param CV_df data frame with Total CV for each feature & (optionally) per-batch CV
 #' @param log_y_scale (logical) whether to display the CV on log-scale
+#' @param batch_col optional batch column in \code{CV_df}; used when plotting
+#'   \code{CV_perBatch}.
+#' @param value_col which CV column to plot: \code{"auto"} (default),
+#'   \code{"CV_total"}, or \code{"CV_perBatch"}.
 #'
 #' @return ggplot object
 #' @examples
@@ -130,19 +176,51 @@ calculate_feature_CV <- function(df_long, sample_annotation = NULL,
 #' @export
 plot_CV_distr.df <- function(CV_df,
                              plot_title = NULL,
-                             filename = NULL, theme = "classic", log_y_scale = TRUE) {
-    if ("Step" %in% names(CV_df)) {
-        gg <- ggplot(CV_df, aes(x = !!sym("Step"), y = !!sym("CV_total"))) +
+                             filename = NULL, theme = "classic", log_y_scale = TRUE,
+                             batch_col = NULL,
+                             value_col = c("auto", "CV_total", "CV_perBatch")) {
+    hide_single_x <- FALSE
+    value_col <- match.arg(value_col)
+    if (identical(value_col, "auto")) {
+        if (!is.null(batch_col) && "CV_perBatch" %in% names(CV_df)) {
+            value_col <- "CV_perBatch"
+        } else {
+            value_col <- "CV_total"
+        }
+    }
+    if (!value_col %in% names(CV_df)) {
+        stop("Selected `value_col` ('", value_col, "') is not available in `CV_df`.")
+    }
+
+    if (identical(value_col, "CV_perBatch")) {
+        if (is.null(batch_col) || !nzchar(batch_col)) {
+            stop("Provide `batch_col` to plot per-batch CV.")
+        }
+        if (!batch_col %in% names(CV_df)) {
+            stop("Batch column '", batch_col, "' was not found in `CV_df`.")
+        }
+        gg <- ggplot(CV_df, aes(x = !!sym(batch_col), y = !!sym(value_col))) +
+            geom_boxplot()
+        if ("Step" %in% names(CV_df)) {
+            gg <- gg + facet_wrap(~Step, scales = "free_y")
+        }
+    } else if ("Step" %in% names(CV_df)) {
+        gg <- ggplot(CV_df, aes(x = !!sym("Step"), y = !!sym(value_col))) +
             geom_boxplot()
     } else {
-        gg <- ggplot(CV_df, aes(y = CV_total)) +
-            geom_boxplot()
+        gg <- ggplot(CV_df, aes(x = factor("all"), y = !!sym(value_col))) +
+            geom_boxplot() +
+            xlab(NULL)
+        hide_single_x <- TRUE
     }
     if (!is.null(plot_title)) {
         gg <- gg + ggtitle(plot_title)
     }
     if (theme == "classic") {
         gg <- gg + theme_classic()
+    }
+    if (hide_single_x) {
+        gg <- gg + theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
     }
     if (log_y_scale) {
         gg <- gg + scale_y_log10()
@@ -167,6 +245,9 @@ plot_CV_distr.df <- function(CV_df,
 #'  Tip: if such ID is absent, but can be defined from several columns,
 #'  create new \code{biospecimen_id} column
 #' @param unlog (logical) whether to reverse log transformation of the original data
+#' @details
+#' If `batch_col` is supplied and per-batch CV is available, `plot_CV_distr()`
+#' plots `CV_perBatch` across batches. Otherwise it plots `CV_total`.
 #'
 #' @return \code{ggplot} object with the boxplot of CVs on one or several steps
 #' @export
@@ -188,7 +269,8 @@ plot_CV_distr <- function(df_long, sample_annotation = NULL,
                           log_base = 2,
                           offset = 1,
                           plot_title = NULL,
-                          filename = NULL, theme = "classic") {
+                          filename = NULL, theme = "classic",
+                          pbf_name = NULL) {
     CV_df <- calculate_feature_CV(
         df_long = df_long,
         sample_annotation = sample_annotation,
@@ -199,16 +281,24 @@ plot_CV_distr <- function(df_long, sample_annotation = NULL,
         biospecimen_id_col = biospecimen_id_col,
         unlog = unlog,
         log_base = log_base,
-        offset = offset
+        offset = offset,
+        pbf_name = pbf_name
     )
+    value_col_plot <- if (!is.null(batch_col) && "CV_perBatch" %in% names(CV_df)) {
+        "CV_perBatch"
+    } else {
+        "CV_total"
+    }
+
     # keep only finite CV values - check, message, and filter
-    if (any(!is.finite(CV_df$CV_total))) {
+    if (any(!is.finite(CV_df[[value_col_plot]]))) {
         message(
-            "Some CV values are not finite, filtering them out - number of such features: ",
-            sum(!is.finite(CV_df$CV_total))
+            "Some CV values are not finite in ", value_col_plot,
+            ", filtering them out - number of such rows: ",
+            sum(!is.finite(CV_df[[value_col_plot]]))
         )
         CV_df <- CV_df %>%
-            filter(is.finite(CV_total))
+            filter(is.finite(.data[[value_col_plot]]))
     }
     # Check if CV_df is empty
     if (nrow(CV_df) == 0) {
@@ -218,7 +308,9 @@ plot_CV_distr <- function(df_long, sample_annotation = NULL,
     gg <- plot_CV_distr.df(
         CV_df,
         plot_title = plot_title, filename = filename,
-        theme = theme
+        theme = theme,
+        batch_col = batch_col,
+        value_col = value_col_plot
     )
     return(gg)
 }

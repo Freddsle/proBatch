@@ -82,10 +82,30 @@ setValidity("ProBatchFeatures", function(object) {
     # sensible defaults; replace with proBatch functions if you prefer
     reg$log2 <- function(m, pseudo = 1) log2(m + pseudo)
     reg$log <- function(m, base = exp(1), pseudo = 1) log(m + pseudo, base = base)
-    reg$medianNorm <- function(m) {
-        # center each sample by its median
-        med <- apply(m, 2, median, na.rm = TRUE)
-        sweep(m, 2, med, FUN = "-")
+    reg$medianNorm <- function(m,
+                               sample_annotation = NULL,
+                               sample_id_col = "FullRunName",
+                               group_col = NULL,
+                               inside_batch = FALSE,
+                               fill_the_missing = NULL) {
+        handle_flag <- !is.null(fill_the_missing) || identical(fill_the_missing, FALSE)
+        if (handle_flag && anyNA(m)) {
+            m <- handle_missing_values(
+                data_matrix = m,
+                warning_message = "Median normalization: applying requested missing value handling before centering.",
+                fill_the_missing = fill_the_missing
+            )
+            if (!nrow(m) || !ncol(m)) {
+                stop("No data remaining after handling missing values for median normalization")
+            }
+        }
+        normalize_sample_medians_dm(
+            data_matrix = m,
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
+            group_col = group_col,
+            inside_batch = inside_batch
+        )
     }
     reg
 })
@@ -344,6 +364,141 @@ ProBatchFeatures_from_long <- function(
     )
 }
 
+#' Coerce a QFeatures object into ProBatchFeatures
+#'
+#' Wraps an existing \code{QFeatures} instance into the \code{ProBatchFeatures} subclass,
+#' initializing the operation log and optional assay renaming when a single assay is present.
+#'
+#' @param object A \code{QFeatures} object to wrap.
+#' @param level Character scalar used as the default level when renaming a single assay.
+#' @param pipeline Character scalar used as the default pipeline when renaming a single assay.
+#' @param sample_id_name Optional character scalar indicating the sample ID column name in colData.
+#'
+#' @return A \code{ProBatchFeatures} object containing the same assays as \code{object}.
+#'
+#' @examples
+#' if (requireNamespace("QFeatures", quietly = TRUE)) {
+#'     data(example_proteome_matrix, package = "proBatch")
+#'     data(example_sample_annotation, package = "proBatch")
+#'     cd <- S4Vectors::DataFrame(example_sample_annotation)
+#'     rownames(cd) <- example_sample_annotation$FullRunName
+#'     se <- SummarizedExperiment::SummarizedExperiment(
+#'         assays = list(intensity = example_proteome_matrix),
+#'         colData = cd
+#'     )
+#'     qf <- QFeatures::QFeatures(
+#'         experiments = list(peptideRaw = se),
+#'         colData = cd
+#'     )
+#'     as_ProBatchFeatures(qf, level = "peptide")
+#' }
+#'
+#' @export
+as_ProBatchFeatures <- function(object,
+                                level = "feature",
+                                pipeline = "raw",
+                                sample_id_name = NULL) {
+    if (!is(object, "QFeatures")) {
+        stop("`object` must be a QFeatures object.", call. = FALSE)
+    }
+
+    qf <- object
+    if (length(qf) == 0L) {
+        stop("Cannot coerce a QFeatures object with no assays.", call. = FALSE)
+    }
+
+    nm <- names(qf)
+
+    # Normalize 'level' and 'pipeline' (avoid %||%)
+    level <- if (is.null(level) || is.na(level) || !nzchar(level)) "feature" else as.character(level)
+    pipeline <- if (is.null(pipeline) || is.na(pipeline) || !nzchar(pipeline)) "raw" else as.character(pipeline)
+
+    if (length(qf) == 1L) {
+        current_name <- if (length(nm)) nm[[1L]] else ""
+        if (!nzchar(current_name) || !grepl("::", current_name, fixed = TRUE)) {
+            names(qf) <- .pb_assay_name(level, pipeline)
+        }
+    } else if (length(nm) && any(!grepl("::", nm, fixed = TRUE))) {
+        warning("Some assay names do not follow the '<level>::<pipeline>' convention; consider renaming manually.")
+    }
+
+    empty_log <- DataFrame(
+        step      = character(),
+        fun       = character(),
+        from      = character(),
+        to        = character(),
+        params    = I(vector("list", 0L)),
+        timestamp = as.POSIXct(character(), tz = "UTC"),
+        pkg       = character()
+    )
+
+    cd <- DataFrame(SummarizedExperiment::colData(qf))
+
+    # Ensure colData rownames exist and are consistent with first assay
+    if ((is.null(rownames(cd)) || anyNA(rownames(cd)) || any(!nzchar(rownames(cd)))) && length(qf)) {
+        first_se <- qf[[1L]]
+        if (is(first_se, "SummarizedExperiment")) {
+            cn <- colnames(first_se)
+            if (length(cn) != nrow(cd)) {
+                stop("colData had invalid/missing rownames and its number of rows (", nrow(cd),
+                    ") does not match the number of samples in the first assay (", length(cn), ").",
+                    call. = FALSE
+                )
+            }
+            rownames(cd) <- cn
+        }
+    }
+
+    # Sample ID column handling
+    final_sample_id <- NULL
+    if (!is.null(sample_id_name) && nzchar(sample_id_name)) {
+        final_sample_id <- as.character(sample_id_name)
+        if (!final_sample_id %in% colnames(cd)) {
+            warning("sample_id_name '", final_sample_id, "' not found in colData; initializing with rownames.")
+            if (is.null(rownames(cd))) {
+                stop("Cannot initialise sample_id_name without colData rownames.", call. = FALSE)
+            }
+            cd[[final_sample_id]] <- rownames(cd)
+        }
+    } else if ("sample_id" %in% colnames(cd)) {
+        final_sample_id <- "sample_id"
+    } else if (!is.null(rownames(cd))) {
+        final_sample_id <- "sample_id"
+        message("sample_id_name not provided; creating 'sample_id' column from colData rownames.")
+        cd[[final_sample_id]] <- rownames(cd)
+    }
+
+    if (!is.null(final_sample_id)) {
+        cd[[final_sample_id]] <- as.character(cd[[final_sample_id]])
+    }
+
+    colData(qf) <- cd
+
+    nm <- names(qf)
+    for (idx in seq_along(qf)) {
+        se <- qf[[idx]]
+        if (!is(se, "SummarizedExperiment")) {
+            next
+        }
+
+        assay_name <- if (length(nm) >= idx) nm[[idx]] else paste0("assay", idx)
+        se <- .pb_harmonize_colData(qf, se, from_assay = assay_name)
+
+        if (length(assays(se)) == 1L) {
+            cur <- assayNames(se)
+            if (!length(cur) || is.na(cur) || !nzchar(cur)) {
+                assayNames(se) <- "intensity"
+            }
+        }
+        qf[[idx]] <- se
+    }
+
+    out <- S4Vectors::new2("ProBatchFeatures", qf, chain = character(), oplog = empty_log, check = TRUE)
+    methods::validObject(out)
+    out
+}
+
+
 `%||%` <- function(a, b) if (!is.null(a)) a else b
 
 # ---------------------------
@@ -416,10 +571,26 @@ pb_current_assay <- function(object) {
     params <- params %||% list()
 
     if (step %in% c("log", "log2")) {
-        return(do.call(log_transform_dm.default, c(list(base_matrix), params)))
+        log_base <- if (identical(step, "log2")) {
+            params$log_base %||% 2
+        } else {
+            params$log_base %||% params$base %||% exp(1)
+        }
+        offset <- params$offset %||% params$pseudo %||% 1
+        return(log_transform_dm.default(
+            x = base_matrix,
+            log_base = log_base,
+            offset = offset
+        ))
     }
     if (identical(step, "unlog")) {
-        return(do.call(unlog_dm.default, c(list(base_matrix), params)))
+        log_base <- params$log_base %||% params$base %||% 2
+        offset <- params$offset %||% 1
+        return(unlog_dm.default(
+            x = base_matrix,
+            log_base = log_base,
+            offset = offset
+        ))
     }
 
     fun_candidate <- NULL
@@ -477,15 +648,39 @@ pb_current_assay <- function(object) {
     list(matrix = matrix, colData = base$colData)
 }
 
+.pb_assay_payload <- function(object, assay_name, name = "intensity") {
+    if (assay_name %in% names(object)) {
+        se <- object[[assay_name]]
+        return(list(
+            matrix = assay(se, i = name),
+            colData = colData(se),
+            stored = TRUE
+        ))
+    }
+
+    resolved <- .pb_resolve_assay_from_log(object, assay_name, name = name)
+    if (is.null(resolved)) {
+        return(NULL)
+    }
+
+    list(
+        matrix = resolved$matrix,
+        colData = resolved$colData,
+        stored = FALSE
+    )
+}
+
 .pb_coldata_for_assay <- function(object, assay) {
     if (assay %in% names(object)) {
-        return(colData(object[[assay]]))
+        se <- object[[assay]]
+        return(colData(se))
     }
-    resolved <- .pb_resolve_assay_from_log(object, assay, name = "intensity")
-    if (!is.null(resolved)) {
-        return(resolved$colData)
+
+    payload <- .pb_assay_payload(object, assay_name = assay, name = "intensity")
+    if (is.null(payload)) {
+        stop("Unable to retrieve colData for assay '", assay, "'.")
     }
-    stop("Unable to retrieve colData for assay '", assay, "'.")
+    payload$colData
 }
 
 .pb_enrich_step_params <- function(object, assay, fun, params) {
@@ -523,18 +718,14 @@ pb_assay_matrix <- function(object, assay = NULL, name = "intensity") {
     } else {
         message("Using assay: ", assay)
     }
-    if (assay %in% names(object)) {
-        se <- object[[assay]]
-        return(assay(se, i = name))
+    payload <- .pb_assay_payload(object, assay_name = assay, name = name)
+    if (is.null(payload)) {
+        stop("Assay '", assay, "' not found in object or operation log.")
     }
-
-    resolved <- .pb_resolve_assay_from_log(object, assay, name)
-    if (!is.null(resolved)) {
+    if (!isTRUE(payload$stored)) {
         message("Assay '", assay, "' not stored; computed from operation log.")
-        return(resolved$matrix)
     }
-
-    stop("Assay '", assay, "' not found in object or operation log.")
+    payload$matrix
 }
 
 #' Get current assay as LONG (via proBatch::matrix_to_long)
@@ -553,23 +744,18 @@ pb_as_long <- function(
   measure_col = "Intensity",
   pbf_name = pb_current_assay(object)
 ) {
-    if (pbf_name %in% names(object)) {
-        se <- object[[pbf_name]]
-        m <- assay(se, i = "intensity")
-        sa <- as.data.frame(colData(se))
+    payload <- .pb_assay_payload(object, assay_name = pbf_name, name = "intensity")
+    if (is.null(payload)) {
+        stop("Assay '", pbf_name, "' not found in object or operation log.")
+    }
+
+    if (isTRUE(payload$stored)) {
         message("Using stored assay '", pbf_name, "'.")
-    } else {
-        resolved <- .pb_resolve_assay_from_log(object, pbf_name, name = "intensity")
-        if (is.null(resolved)) {
-            stop("Assay '", pbf_name, "' not found in object or operation log.")
-        }
-        m <- resolved$matrix
-        sa <- as.data.frame(resolved$colData)
     }
 
     matrix_to_long(
-        data_matrix       = m,
-        sample_annotation = sa,
+        data_matrix       = payload$matrix,
+        sample_annotation = as.data.frame(payload$colData),
         feature_id_col    = feature_id_col,
         measure_col       = measure_col,
         sample_id_col     = sample_id_col
@@ -673,6 +859,7 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 #' @param params list of parameters for fun
 #' @param store logical: store result as new assay?
 #' @param new_level optional level label for the new assay (defaults to level parsed from 'from')
+#' @param to_override optional assay name override for the stored result
 #' @param backend "memory","hdf5","auto"
 #' @param hdf5_path optional filepath for HDF5Array
 #' @return list(object=updated, assay=assay_name_or_NULL, matrix=the_result_matrix)
@@ -681,9 +868,10 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 #' @noRd
 .pb_apply_step <- function(
   object, from, step, fun, params = list(),
-  store = TRUE, new_level = NULL,
+  store = TRUE, new_level = NULL, to_override = NULL,
   backend = c("auto", "memory", "hdf5"),
-  hdf5_path = NULL, .base_m = NULL
+  hdf5_path = NULL, .base_m = NULL,
+  from_data = from
 ) {
     backend <- match.arg(backend)
     stopifnot(is(object, "ProBatchFeatures"))
@@ -694,7 +882,7 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
     from_pipeline <- if (length(from_parts) >= 2) from_parts[2] else "raw"
     prev_tokens <- if (identical(from_pipeline, "raw")) "raw" else rev(strsplit(from_pipeline, "_on_", fixed = TRUE)[[1]])
     new_pipeline <- .pb_make_pipeline_name(c(prev_tokens, step))
-    to <- .pb_assay_name(new_level, new_pipeline)
+    to <- to_override %||% .pb_assay_name(new_level, new_pipeline)
 
     # Avoid duplicate identical entries
     fun_name <- if (is.character(fun)) fun else step
@@ -705,25 +893,36 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
             object@oplog$to == to &
             vapply(object@oplog$params, function(p) identical(p, params), logical(1))
         if (any(dup)) {
-            return(list(object = object, assay = to, matrix = pb_assay_matrix(object, to)))
+            return(list(
+                object = object,
+                assay = to,
+                matrix = pb_assay_matrix(object, to),
+                to = to
+            ))
         }
     }
 
-    base_m <- if (!is.null(.base_m)) .base_m else pb_assay_matrix(object, assay = from)
+    base_m <- if (!is.null(.base_m)) {
+        .base_m
+    } else {
+        suppressMessages(
+            pb_assay_matrix(object, assay = from_data)
+        )
+    }
 
     f <- .pb_get_step_fun(fun)
-    params <- .pb_enrich_step_params(object, from, f, params)
+    params <- .pb_enrich_step_params(object, from_data, f, params)
     res_m <- do.call(f, c(list(base_m), params))
 
     saved_assay <- NULL
     if (store) {
         mat <- .pb_materialize_matrix(res_m, backend = backend, hdf5_path = hdf5_path)
-        cd_from <- .pb_coldata_for_assay(object, from)
+        cd_from <- .pb_coldata_for_assay(object, from_data)
         se <- SummarizedExperiment(
             assays  = list(intensity = mat),
             colData = cd_from
         )
-        object <- .pb_add_assay_with_link(object, se, to = to, from = from)
+        object <- .pb_add_assay_with_link(object, se, to = to, from = from_data)
         saved_assay <- to
     }
 
@@ -734,7 +933,7 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
         from = from, to = to, params = params
     )
 
-    list(object = object, assay = saved_assay, matrix = res_m)
+    list(object = object, assay = saved_assay, matrix = res_m, to = to)
 }
 
 # ---------------------------
@@ -779,6 +978,7 @@ pb_transform <- function(
     stopifnot(length(steps) == length(funs), length(steps) == length(params_list))
 
     cur_from <- from
+    cur_from_data <- from
     base_m <- NULL
     last_assay <- NULL
 
@@ -787,25 +987,51 @@ pb_transform <- function(
         fun <- funs[[k]]
         par <- params_list[[k]]
 
-        is_fast <- .pb_is_fast_step(step, fast_steps)
-        store_this <- if (store_intermediate) TRUE else if (is_fast) store_fast_steps else TRUE
+        step_label <- step
+        is_fast <- .pb_is_fast_step(step_label, fast_steps)
+        is_final <- k == length(steps)
+        # Only "log"/"log2" are treated as ephemeral fast steps by default.
+        is_ephemeral_fast <- is_fast && step_label %in% c("log", "log2")
+        store_this <- if (store_intermediate) {
+            TRUE
+        } else if (is_ephemeral_fast) {
+            store_fast_steps
+        } else if (is_final) {
+            TRUE
+        } else if (is_fast) {
+            store_fast_steps
+        } else {
+            TRUE
+        }
 
+        use_final_name <- k == length(steps) && !is.null(final_name)
         out <- .pb_apply_step(
             object = object, from = cur_from,
-            step = step, fun = fun, params = par,
+            step = step_label, fun = fun, params = par,
             store = store_this, new_level = if (k == length(steps)) level else level,
+            to_override = if (use_final_name) final_name else NULL,
             backend = backend, hdf5_path = hdf5_path,
-            .base_m = base_m
+            .base_m = base_m,
+            from_data = cur_from_data
         )
         object <- out$object
         base_m <- out$matrix
-        last_assay <- out$assay %||% cur_from
-        if (store_this) cur_from <- last_assay
+        cur_from <- out$to %||% cur_from
+        if (store_this) {
+            cur_from_data <- out$assay %||% cur_from_data
+            last_assay <- cur_from_data
+        } else {
+            last_assay <- cur_from_data
+        }
     }
     # Rename final assay if requested and it exists
-    if (!is.null(final_name) && !is.null(last_assay) && last_assay %in% names(object)) {
+    if (!is.null(final_name) && !is.null(last_assay) && last_assay %in% names(object) &&
+        !identical(last_assay, final_name)) {
         names(object)[match(last_assay, names(object))] <- final_name
         last_assay <- final_name
+        if (nrow(object@oplog)) {
+            object@oplog$to[nrow(object@oplog)] <- final_name
+        }
     }
     object
 }
@@ -1170,3 +1396,63 @@ setMethod("show", "ProBatchFeatures", function(object) {
         cat("  Steps logged: ", nrow(log), " (see get_operation_log())\n", sep = "")
     }
 })
+
+
+# ---------------------------
+# List available steps
+# ---------------------------
+#' List available pb_transform steps
+#'
+#' Returns the names currently registered in the internal step registry used by
+#' \code{pb_transform()} and \code{pb_eval()} (e.g., "log2", "medianNorm",
+#' "combat", "limmaRBE", and "loessLimmaRBE").
+#'
+#' @param pattern optional regular expression to filter step names.
+#' @param details logical(1); if TRUE, return a S4Vectors::DataFrame with
+#'   columns: step, pkg (best-effort), env, n_formals.
+#' @return character vector of step names (default) or a DataFrame if
+#'   \code{details=TRUE}.
+#' @examples
+#' pb_list_steps()
+#' pb_list_steps(details = TRUE)
+#' pb_list_steps("^l") # list steps starting with 'l'
+#' @export
+pb_list_steps <- function(pattern = NULL, details = FALSE) {
+    nm <- sort(ls(envir = .pb_step_registry, all.names = FALSE))
+    if (!is.null(pattern)) nm <- nm[grepl(pattern, nm)]
+    if (!isTRUE(details)) {
+        return(nm)
+    }
+
+    # Build a lightweight info table about each registered function
+    get_pkg <- function(f) {
+        en <- environment(f)
+        nm <- environmentName(en)
+        if (is.null(nm)) {
+            return(NA_character_)
+        }
+        sub("^namespace:", "", nm)
+    }
+    funs <- mget(nm, envir = .pb_step_registry, inherits = FALSE)
+    pkgs <- vapply(funs, get_pkg, character(1))
+    envs <- vapply(funs, function(f) environmentName(environment(f)), character(1))
+    DataFrame(
+        step = nm,
+        pkg = pkgs,
+        env = envs,
+        n_formals = vapply(funs, function(f) length(formals(f)), integer(1)),
+        row.names = NULL
+    )
+}
+
+#' Is a step available in the registry?
+#' @param name character(1) step name (e.g., "combat" or "medianNorm")
+#' @return logical(1)
+#' @examples
+#' pb_has_step("medianNorm")
+#' pb_has_step("combat")
+#' @export
+pb_has_step <- function(name) {
+    is.character(name) && length(name) == 1L &&
+        exists(name, envir = .pb_step_registry, inherits = FALSE)
+}

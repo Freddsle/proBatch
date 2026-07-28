@@ -50,6 +50,20 @@ pbf_multi <- proBatch:::.pb_add_assay_with_link(
     from = toy_assay
 )
 
+test_that(".pb_truncate_heatmap_labels shortens long labels by default", {
+    labels <- c(
+        "short_label",
+        "123456789012345",
+        "1234567890123456",
+        NA_character_
+    )
+
+    expect_equal(
+        .pb_truncate_heatmap_labels(labels),
+        c("short_label", "123456789012345", "1234567890...", NA_character_)
+    )
+    expect_null(.pb_truncate_heatmap_labels(NULL))
+})
 
 test_that("plot_NA_heatmap.default returns pheatmap", {
     skip_if_not_installed("pheatmap")
@@ -59,6 +73,25 @@ test_that("plot_NA_heatmap.default returns pheatmap", {
         sample_annotation = toy_sa,
         color_by = "Condition",
         label_by = "Label",
+        cluster_samples = FALSE,
+        cluster_features = FALSE,
+        show_row_dend = FALSE,
+        show_column_dend = FALSE,
+        drop_complete = FALSE,
+        draw = FALSE
+    )
+
+    expect_s3_class(res, "pheatmap")
+})
+
+
+test_that("plot_NA_heatmap.default supports multiple color_by columns", {
+    skip_if_not_installed("pheatmap")
+
+    res <- plot_NA_heatmap(
+        toy_matrix,
+        sample_annotation = toy_sa,
+        color_by = c("Condition", "Label"),
         cluster_samples = FALSE,
         cluster_features = FALSE,
         show_row_dend = FALSE,
@@ -93,6 +126,25 @@ test_that("plot_NA_heatmap.ProBatchFeatures arranges multiple assays", {
     expect_length(res$heatmaps, 2L)
     expect_equal(names(res$heatmaps), c(toy_assay, toy_assay_alt))
     expect_true(all(vapply(res$heatmaps, inherits, logical(1), what = "pheatmap")))
+})
+
+test_that("plot_NA_heatmap.ProBatchFeatures accepts explicit main without collision", {
+    skip_if_not_installed("pheatmap")
+
+    res <- plot_NA_heatmap(
+        pbf_toy,
+        color_by = "Condition",
+        label_by = "FullRunName",
+        cluster_samples = FALSE,
+        cluster_features = FALSE,
+        show_row_dend = FALSE,
+        show_column_dend = FALSE,
+        drop_complete = FALSE,
+        draw = FALSE,
+        main = "Custom NA heatmap title"
+    )
+
+    expect_s3_class(res, "pheatmap")
 })
 
 
@@ -133,7 +185,7 @@ test_that("plot_NA_frequency.default summarises observation counts", {
     freq_data <- freq_data[order(freq_data$valid_counts), , drop = FALSE]
     expected <- data.frame(
         valid_counts = c(2L, 3L),
-        Freq = c(2L, 1L)
+        count = c(2L, 1L)
     )
     expect_equal(freq_data, expected, ignore_attr = TRUE)
 })

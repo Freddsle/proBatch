@@ -1,5 +1,5 @@
-merge_df_with_annotation <- function(df_long, sample_annotation, sample_id_col,
-                                     batch_col, order_col, facet_col) {
+.merge_df_with_annotation <- function(df_long, sample_annotation, sample_id_col,
+                                      batch_col, order_col, facet_col) {
     join_cols <- unique(c(sample_id_col, batch_col, order_col, facet_col))
     join_cols <- join_cols[!is.null(join_cols)]
     # keep only columns that are in both data frames
@@ -92,12 +92,73 @@ check_sample_consistency <- function(sample_annotation, sample_id_col, df_long,
 
     # Merge if requested
     if (merge) {
-        df_long <- merge_df_with_annotation(
+        df_long <- .merge_df_with_annotation(
             df_long, sample_annotation,
             sample_id_col, batch_col, order_col, facet_col
         )
     }
     return(df_long)
+}
+
+.pb_prepare_long_matrix <- function(df_long,
+                                    sample_annotation,
+                                    sample_id_col,
+                                    feature_id_col,
+                                    measure_col,
+                                    batch_col = NULL,
+                                    fill_the_missing = NULL,
+                                    warning_message = NULL,
+                                    qual_col = NULL,
+                                    qual_value = NULL,
+                                    merge = FALSE,
+                                    check_samples = TRUE,
+                                    error_message = "format='long' requires a data.frame.",
+                                    error_call = TRUE) {
+    if (!is.data.frame(df_long)) {
+        stop(error_message, call. = error_call)
+    }
+
+    original_cols <- names(df_long)
+
+    if (isTRUE(check_samples)) {
+        df_long <- check_sample_consistency(
+            sample_annotation, sample_id_col, df_long,
+            batch_col = batch_col,
+            order_col = NULL, facet_col = NULL, merge = merge
+        )
+    }
+
+    if (!is.null(warning_message)) {
+        handled <- .handle_missing_for_batch_df(
+            df_long = df_long,
+            sample_annotation = sample_annotation,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col,
+            measure_col = measure_col,
+            fill_the_missing = fill_the_missing,
+            warning_message = warning_message,
+            qual_col = qual_col,
+            qual_value = qual_value
+        )
+        df_long <- handled$df_long
+        sample_annotation <- handled$sample_annotation
+    }
+
+    data_matrix <- long_to_matrix(
+        df_long,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col,
+        sample_id_col = sample_id_col,
+        qual_col = qual_col,
+        qual_value = qual_value
+    )
+
+    list(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        data_matrix = data_matrix,
+        original_cols = original_cols
+    )
 }
 
 #' Defining sample order internally
@@ -128,7 +189,7 @@ define_sample_order <- function(order_col, sample_annotation, facet_col,
     annotation_cols <- c(batch_col, order_col, facet_col)
     if (!is.null(sample_annotation) &&
         !any(annotation_cols %in% names(df_long))) {
-        df_long <- merge_df_with_annotation(
+        df_long <- .merge_df_with_annotation(
             df_long, sample_annotation,
             sample_id_col, batch_col, order_col, facet_col
         )

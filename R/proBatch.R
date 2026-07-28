@@ -97,9 +97,10 @@
 #' @import dplyr
 #' @import ggfortify
 #' @import ggplot2
-#' @import reshape2
 #' @import lazyeval
 #' @import QFeatures
+#' @importFrom dplyr group_by ungroup across mutate rename select
+#' @importFrom dplyr any_of all_of
 #' @importFrom corrplot corrplot.mixed
 #' @importFrom data.table setnames
 #' @importFrom grDevices colorRampPalette
@@ -118,7 +119,7 @@
 #' @importFrom rlang .data as_label get_expr
 #' @importFrom limma removeBatchEffect
 #' @importFrom sva ComBat
-#' @importFrom tidyr complete nest unnest
+#' @importFrom tidyr complete nest unnest pivot_longer
 #' @importFrom utils combn tail head
 #' @importFrom scales brewer_pal zero_range
 #' @importFrom stats as.formula complete.cases cor dist hclust sd

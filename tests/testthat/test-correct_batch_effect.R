@@ -5,10 +5,14 @@ test_that("center_feature_batch_medians", {
     rows <- which(example_proteome$peptide_group_label == "10062_NVGVSFYADKPEVTQEQK_3")
 
     proteome <- example_proteome[rows, ]
-    median_proteome <- center_feature_batch_medians_df(proteome, example_sample_annotation, no_fit_imputed = FALSE)
+    median_proteome <- center_feature_batch(
+        proteome, example_sample_annotation,
+        no_fit_imputed = FALSE,
+        stat = "median", format = "long"
+    )
 
     n_batch <- length(unique(median_proteome$MS_batch))
-    expect_equal(length(unique(median_proteome$diff)), n_batch)
+    expect_equal(length(unique(median_proteome$diff_medians)), n_batch)
     expect_equal(length(unique(median_proteome$median_batch)), n_batch)
 })
 
@@ -30,7 +34,7 @@ test_that("adjust_batch_trend", {
 
     expect_equal(adjusted[["peptide_group_label"]][1], "10062_NVGVSFYADKPEVTQEQK_3")
     expect_equal(length(unique(adjusted$MS_batch)), n_batch)
-    expect_equal(adjusted$fit[1], 1830358, tolerance = 1, ignore_attr = TRUE)
+    expect_equal(adjusted$fit[[1]], 1830358, tolerance = 1, ignore_attr = TRUE)
 })
 
 
@@ -38,12 +42,17 @@ test_that("correct_with_ComBat_df", {
     data(example_proteome, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
 
-    short_df <- example_proteome[example_proteome[["peptide_group_label"]]
-    %in% c("10062_NVGVSFYADKPEVTQEQK_3", "10063_NVGVSFYADKPEVTQEQKK_3"), ]
-    combat_df <- correct_with_ComBat_df(short_df, example_sample_annotation)
+    short_df <- example_proteome[example_proteome[["peptide_group_label"]] %in% c("10062_NVGVSFYADKPEVTQEQK_3", "10063_NVGVSFYADKPEVTQEQKK_3"), ]
+    combat_df <- correct_with_ComBat(short_df, example_sample_annotation, format = "long")
+
+    # Example: using ComBat directly
+    example_matrix <- reshape2::dcast(short_df, peptide_group_label ~ FullRunName, value.var = "Intensity")
+    rownames(example_matrix) <- example_matrix$peptide_group_label
+    example_matrix$peptide_group_label <- NULL
+    combat_example <- ComBat(dat = as.matrix(example_matrix), batch = as.factor(example_sample_annotation$MS_batch))
 
     expect_equal(combat_df[["peptide_group_label"]][1], "10062_NVGVSFYADKPEVTQEQK_3")
-    expect_equal(combat_df[["Intensity"]][1], 768661.4, tolerance = 1)
+    expect_equal(combat_df[1, ][["Intensity"]], combat_example[combat_df[1, ][["peptide_group_label"]], combat_df[1, ][["FullRunName"]]], tolerance = 1)
 
     batch_1 <- example_sample_annotation$FullRunName[example_sample_annotation$MS_batch == "Batch_1"]
     batch_2 <- example_sample_annotation$FullRunName[example_sample_annotation$MS_batch == "Batch_2"]
@@ -81,12 +90,13 @@ test_that("correct_batch_effects_df wrapper", {
     short_df <- example_proteome[example_proteome[["peptide_group_label"]] %in%
         c("10062_NVGVSFYADKPEVTQEQK_3", "101233_QGFNVVVESGAGEASK_2"), ]
 
-    corrected <- correct_batch_effects_df(short_df, example_sample_annotation,
+    corrected <- correct_batch_effects(short_df, example_sample_annotation,
         continuous_func = "loess_regression",
         discrete_func = "MedianCentering",
         span = 0.7,
         min_measurements = 8,
-        no_fit_imputed = FALSE
+        no_fit_imputed = FALSE,
+        format = "long"
     )
 
     expect_true("fit" %in% names(corrected))
@@ -94,11 +104,11 @@ test_that("correct_batch_effects_df wrapper", {
 })
 
 test_that("correct_batch_effects_dm returns matrix", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
-    corrected <- correct_batch_effects_dm(example_proteome_matrix, example_sample_annotation,
-        discrete_func = "MedianCentering", no_fit_imputed = FALSE
+    corrected <- correct_batch_effects(example_proteome_matrix, example_sample_annotation,
+        discrete_func = "MedianCentering", no_fit_imputed = FALSE,
+        format = "wide"
     )
 
     expect_true(is.matrix(corrected))
@@ -124,8 +134,7 @@ test_that("adjust_batch_trend_df keeps order column", {
 })
 
 test_that("adjust_batch_trend_dm forwards arguments", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     feature_subset <- rownames(example_proteome_matrix) %in%
         c("10062_NVGVSFYADKPEVTQEQK_3", "101233_QGFNVVVESGAGEASK_2")

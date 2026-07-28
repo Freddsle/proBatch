@@ -26,7 +26,7 @@ test_that("basic output structure without batch, default args", {
         cv_df <- calc_cv(),
         "only total CV will be calculated"
     )
-    expect_equal(names(cv_df), c("peptide_group_label", "CV_total"))
+    expect_true(all(c("peptide_group_label", "EarTag", "CV_total") %in% names(cv_df)))
     expect_type(cv_df$CV_total, "double")
     expect_true(all(cv_df$CV_total >= 0))
 })
@@ -39,12 +39,13 @@ test_that("error on missing biospecimen_id_col", {
 })
 
 test_that("warning if no biospecimen_id_col provided", {
-    expect_warning(
-        expect_warning(
-            cv_df <- calc_cv(biospecimen_id_col = NULL),
-            "considering all samples as replicates!"
+    pb_test_expect_warnings(
+        cv_df <- calc_cv(biospecimen_id_col = NULL),
+        c(
+            "considering all samples as replicates!",
+            "only total CV will be calculated"
         ),
-        "only total CV will be calculated"
+        fixed = TRUE
     )
     expect_true("CV_total" %in% names(cv_df))
 })
@@ -182,14 +183,18 @@ test_that("per-batch CV matches manual calculation", {
         unlog              = FALSE
     )
     manual <- df %>%
-        group_by(MS_batch) %>%
-        summarise(cv = 100 * sd(Intensity) / mean(Intensity))
-    expect_equal(cv$CV_perBatch[1], manual$cv[1])
-    expect_equal(cv$CV_perBatch[2], manual$cv[2])
+        group_by(MS_batch, biospec) %>%
+        summarise(cv = 100 * sd(Intensity) / mean(Intensity), .groups = "drop") %>%
+        arrange(MS_batch, biospec)
+    cv_cmp <- cv %>%
+        select(MS_batch, biospec, CV_perBatch) %>%
+        distinct() %>%
+        arrange(MS_batch, biospec)
+    expect_equal(cv_cmp$CV_perBatch, manual$cv)
 })
 
 test_that("missing biospecimen column triggers warning", {
-    expect_warning(expect_warning(
+    pb_test_expect_warnings(
         res <- calculate_feature_CV(
             df_long = tibble(
                 peptide_group_label = rep("pep", 3),
@@ -204,8 +209,12 @@ test_that("missing biospecimen column triggers warning", {
             biospecimen_id_col = NULL,
             unlog = FALSE
         ),
-        "considering all samples as replicates"
-    ), "only total CV will be calculated")
+        c(
+            "considering all samples as replicates",
+            "only total CV will be calculated"
+        ),
+        fixed = TRUE
+    )
     expect_true(all(res$CV_total >= 0))
 })
 
@@ -253,6 +262,7 @@ test_that("full pipeline returns ggplot", {
     expect_s3_class(ggp, "ggplot")
     # title must match
     expect_equal(ggp$labels$title, "Full CV Test")
+    expect_equal(as_label(ggp$mapping$x), "MS_batch")
 })
 
 test_that("filename argument saves a file", {
@@ -274,4 +284,101 @@ test_that("filename argument saves a file", {
     )
     expect_true(file.exists(tmpfile))
     unlink(tmpfile)
+})
+
+test_that("CV diagnostics accept ProBatchFeatures inputs", {
+    pbf <- pb_test_make_pbf(n_rows = 80, n_cols = 16, add_log2 = TRUE)
+
+    cv_df <- suppressWarnings(calculate_feature_CV(
+        df_long = pbf,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE
+    ))
+    expect_true(all(c("CV_total", "CV_perBatch") %in% names(cv_df)))
+
+    cv_plot <- suppressWarnings(plot_CV_distr(
+        df_long = pbf,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE
+    ))
+    expect_s3_class(cv_plot, "ggplot")
+})
+
+test_that("CV diagnostics support explicit PBF assay selection", {
+    pbf <- pb_test_make_pbf(n_rows = 80, n_cols = 16, add_log2 = TRUE)
+    sample_ann <- as.data.frame(SummarizedExperiment::colData(pbf))
+    current_assay <- pb_current_assay(pbf)
+    raw_assay <- names(pbf)[1]
+
+    cv_default <- suppressWarnings(calculate_feature_CV(
+        df_long = pbf,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE
+    ))
+    cv_current <- suppressWarnings(calculate_feature_CV(
+        df_long = pbf,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE,
+        pbf_name = current_assay
+    ))
+    expect_equal(cv_default$CV_total, cv_current$CV_total)
+
+    raw_long <- matrix_to_long(
+        data_matrix = pb_assay_matrix(pbf, assay = raw_assay),
+        feature_id_col = "peptide_group_label",
+        sample_id_col = "FullRunName",
+        measure_col = "Intensity"
+    )
+    cv_raw <- suppressWarnings(calculate_feature_CV(
+        df_long = pbf,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE,
+        pbf_name = raw_assay
+    ))
+    cv_raw_expected <- suppressWarnings(calculate_feature_CV(
+        df_long = raw_long,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE
+    ))
+    expect_equal(cv_raw$CV_total, cv_raw_expected$CV_total)
+
+    plot_default <- suppressWarnings(plot_CV_distr(
+        df_long = pbf,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE
+    ))
+    plot_current <- suppressWarnings(plot_CV_distr(
+        df_long = pbf,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE,
+        pbf_name = current_assay
+    ))
+    expect_equal(plot_default$data$CV_total, plot_current$data$CV_total)
+
+    plot_raw <- suppressWarnings(plot_CV_distr(
+        df_long = pbf,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE,
+        pbf_name = raw_assay
+    ))
+    plot_raw_expected <- suppressWarnings(plot_CV_distr(
+        df_long = raw_long,
+        sample_annotation = sample_ann,
+        batch_col = "MS_batch",
+        biospecimen_id_col = NULL,
+        unlog = FALSE
+    ))
+    expect_equal(plot_raw$data$CV_total, plot_raw_expected$data$CV_total)
 })

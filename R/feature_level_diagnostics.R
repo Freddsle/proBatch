@@ -10,6 +10,12 @@
 #'  functions specific to each case below
 #'
 #' @inheritParams proBatch
+#' @param df_long data frame where each row is a single feature in a single
+#'   sample, or a `ProBatchFeatures` object.
+#' @param pbf_name Assay name used when `df_long` is a `ProBatchFeatures`
+#'   object (used by `plot_single_feature()` and
+#'   `plot_peptides_of_one_protein()`). If `NULL`, [pb_current_assay()] is
+#'   used.
 #' @param feature_name name of the selected feature (e.g. peptide) for
 #' diagnostic profiling
 #' @param geom whether to show the feature as points and/or connect by lines
@@ -91,11 +97,55 @@
 #' @name feature_level_diagnostics
 NULL
 
+# Convert ProBatchFeatures inputs to long data and default sample metadata.
+.pb_feature_diag_prepare <- function(df_long,
+                                     sample_annotation,
+                                     sample_id_col,
+                                     feature_id_col,
+                                     measure_col,
+                                     pbf_name = NULL) {
+    .pb_prepare_long_inputs(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col,
+        pbf_name = pbf_name
+    )
+}
+
+.pb_feature_diag_annotation_from_pbf <- function(prep,
+                                                 peptide_annotation,
+                                                 feature_id_col) {
+    if (!is.null(peptide_annotation)) {
+        annotation <- as.data.frame(peptide_annotation, stringsAsFactors = FALSE)
+        if (!feature_id_col %in% names(annotation)) {
+            rn <- rownames(annotation)
+            if (!is.null(rn) && !anyNA(rn) && length(rn) == nrow(annotation)) {
+                annotation[[feature_id_col]] <- rn
+            }
+        }
+        return(annotation)
+    }
+
+    if (is.null(prep$object) || is.null(prep$assay_name)) {
+        return(NULL)
+    }
+
+    .pb_default_feature_annotation(
+        object = prep$object,
+        assay_name = prep$assay_name,
+        feature_annotation = NULL,
+        feature_id_col = feature_id_col
+    )
+}
+
 #'
 #' @export
 #' @rdname feature_level_diagnostics
 plot_single_feature <- function(feature_name, df_long,
                                 sample_annotation = NULL,
+                                pbf_name = NULL,
                                 sample_id_col = "FullRunName",
                                 measure_col = "Intensity",
                                 feature_id_col = "peptide_group_label",
@@ -113,6 +163,17 @@ plot_single_feature <- function(feature_name, df_long,
                                 theme = "classic",
                                 ylimits = NULL,
                                 base_size = 20) {
+    prep <- .pb_feature_diag_prepare(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col,
+        pbf_name = pbf_name
+    )
+    df_long <- prep$df_long
+    sample_annotation <- prep$sample_annotation
+
     # to ensure that missing measurements are NAs (to make them disconnected)
     # df_long = df_long %>% complete(!!!syms(c(feature_id_col, sample_id_col)))
 
@@ -137,31 +198,25 @@ plot_single_feature <- function(feature_name, df_long,
     order_col <- sample_order$order_col
     plot_df <- sample_order$df_long
 
-    # Ensure that batch-coloring-related arguments are defined properly
-    if (!is.null(batch_col)) {
-        if (!(batch_col %in% names(plot_df))) {
-            stop("batches cannot be colored as the batch column or sample ID column
-           is not defined, check sample_annotation and data matrix")
-        }
-    } else {
-        if (color_by_batch) {
-            warning("batches cannot be colored as the batch column is defined as
-                NULL, continuing without colors")
-            color_by_batch <- FALSE
-        }
-    }
-
-    # For order definition and subsequent faceting, facet column has to be in the
-    # data frame
-    if (!is.null(facet_col)) {
-        if (!(facet_col %in% names(plot_df))) {
-            stop(sprintf(
-                '"%s" is specified as column for faceting, but is not present
+    validated <- .pb_validate_batch_facet_inputs(
+        df_plot = plot_df,
+        batch_col = batch_col,
+        color_by_batch = color_by_batch,
+        color_scheme = color_scheme,
+        facet_col = facet_col,
+        resolve_color_scheme = FALSE,
+        missing_batch_stop = "batches cannot be colored as the batch column or sample ID column
+           is not defined, check sample_annotation and data matrix",
+        null_batch_warning = "batches cannot be colored as the batch column is defined as
+                NULL, continuing without colors",
+        missing_facet_stop = sprintf(
+            '"%s" is specified as column for faceting, but is not present
                     in the data, check sample annotation data frame',
-                facet_col
-            ))
-        }
-    }
+            facet_col
+        )
+    )
+    color_by_batch <- validated$color_by_batch
+    color_scheme <- validated$color_scheme
 
     if (!is.null(batch_col)) {
         batch_vector <- sample_annotation[[batch_col]]
@@ -307,6 +362,7 @@ plot_peptides_of_one_protein <- function(protein_name,
                                          peptide_annotation = NULL,
                                          protein_col = "ProteinName",
                                          df_long, sample_annotation = NULL,
+                                         pbf_name = NULL,
                                          sample_id_col = "FullRunName",
                                          measure_col = "Intensity",
                                          feature_id_col = "peptide_group_label",
@@ -327,6 +383,22 @@ plot_peptides_of_one_protein <- function(protein_name,
                                          ),
                                          theme = "classic",
                                          base_size = 20) {
+    prep <- .pb_feature_diag_prepare(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col,
+        pbf_name = pbf_name
+    )
+    df_long <- prep$df_long
+    sample_annotation <- prep$sample_annotation
+    peptide_annotation <- .pb_feature_diag_annotation_from_pbf(
+        prep = prep,
+        peptide_annotation = peptide_annotation,
+        feature_id_col = feature_id_col
+    )
+
     if (!is.null(peptide_annotation)) {
         peptides <- peptide_annotation %>%
             filter((!!sym(protein_col)) == protein_name) %>%
@@ -387,6 +459,21 @@ plot_spike_in <- function(spike_ins = "BOVIN", peptide_annotation = NULL,
                           plot_title = sprintf("Spike-in %s plots", spike_ins),
                           theme = "classic",
                           base_size = 20) {
+    prep <- .pb_feature_diag_prepare(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col
+    )
+    df_long <- prep$df_long
+    sample_annotation <- prep$sample_annotation
+    peptide_annotation <- .pb_feature_diag_annotation_from_pbf(
+        prep = prep,
+        peptide_annotation = peptide_annotation,
+        feature_id_col = feature_id_col
+    )
+
     if (!is.null(protein_col)) {
         if (protein_col %in% names(df_long)) {
             spike_in_peptides <- df_long %>%
@@ -467,6 +554,21 @@ plot_iRT <- function(irt_pattern = "iRT",
                      plot_title = "iRT peptide profile",
                      theme = "classic",
                      base_size = 20) {
+    prep <- .pb_feature_diag_prepare(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col
+    )
+    df_long <- prep$df_long
+    sample_annotation <- prep$sample_annotation
+    peptide_annotation <- .pb_feature_diag_annotation_from_pbf(
+        prep = prep,
+        peptide_annotation = peptide_annotation,
+        feature_id_col = feature_id_col
+    )
+
     if (!is.null(peptide_annotation)) {
         df_long <- df_long %>%
             merge(peptide_annotation, by = feature_id_col)
@@ -528,6 +630,16 @@ plot_with_fitting_curve <- function(feature_name,
                                     ),
                                     theme = "classic",
                                     base_size = 20) {
+    prep <- .pb_feature_diag_prepare(
+        df_long = df_long,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col
+    )
+    df_long <- prep$df_long
+    sample_annotation <- prep$sample_annotation
+
     if (length(feature_name) > 10) {
         warning("Visualisation of individual features can be suboptimal,
             consider exploring no more than 5 features at a time")

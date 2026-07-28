@@ -1,16 +1,16 @@
 test_that("sample_mean_plots", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     matrix <- example_proteome_matrix[1:20, ]
-    expect_warning(
-        expect_warning(
-            meanplot <- plot_sample_mean(matrix, example_sample_annotation,
-                order_col = "order", batch_col = "MS_batch", color_by_batch = TRUE
-            ),
-            "inferring order-related batch borders for a plot;"
+    pb_test_expect_warnings(
+        meanplot <- plot_sample_mean(matrix, example_sample_annotation,
+            order_col = "order", batch_col = "MS_batch", color_by_batch = TRUE
         ),
-        "color_scheme will be inferred automatically"
+        c(
+            "inferring order-related batch borders for a plot;",
+            "color_scheme will be inferred automatically"
+        ),
+        fixed = TRUE
     )
 
     expect_equal(meanplot$labels$colour, "MS_batch")
@@ -24,14 +24,15 @@ test_that("boxplot_plots", {
     data(example_sample_annotation, package = "proBatch")
 
     proteome <- example_proteome[1:20, ]
-    expect_warning(
-        expect_warning(
-            boxplot <- plot_boxplot(proteome, example_sample_annotation,
-                batch_col = "MS_batch"
-            ),
-            "color_scheme will be inferred automatically"
+    pb_test_expect_warnings(
+        boxplot <- plot_boxplot(proteome, example_sample_annotation,
+            batch_col = "MS_batch"
         ),
-        "Mismatch between sample_annotation and df_long sample"
+        c(
+            "color_scheme will be inferred automatically",
+            "Mismatch between sample_annotation and df_long sample"
+        ),
+        fixed = TRUE
     )
 
     expect_equal(boxplot$labels$fill, "MS_batch")
@@ -120,8 +121,7 @@ test_that("boxplot without outliers", {
 
 
 test_that("plot_sample_mean with ProBatchFeatures", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
+    pb_test_load_example_data()
 
     pbf <- ProBatchFeatures(
         data_matrix = log2(example_proteome_matrix + 1),
@@ -139,30 +139,15 @@ test_that("plot_sample_mean with ProBatchFeatures", {
     )
     expect_equal(meanplot$labels$x, "order")
     expect_equal(meanplot$labels$y, "Mean_Intensity")
+    expect_equal(meanplot$labels$title, "feature, raw")
     expect_equal(meanplot$plot_env$color_by_batch, FALSE)
     expect_equal(meanplot$plot_env$facet_col, NULL)
 })
 
-test_that("plot_boxplot ProBatchFeatures handles multiple assays", {
+test_that("plot_boxplot ProBatchFeatures arranges assays and preserves subset order", {
     skip_if_not_installed("gridExtra")
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
 
-    matrix_small <- example_proteome_matrix[1:30, 1:5]
-    sample_ids <- colnames(matrix_small)
-    sample_ann <- example_sample_annotation[match(sample_ids, example_sample_annotation$FullRunName), ]
-
-    pbf <- suppressMessages(ProBatchFeatures(
-        data_matrix = matrix_small,
-        sample_annotation = sample_ann,
-        sample_id_col = "FullRunName",
-        name = "feature::raw"
-    ))
-    pbf <- suppressMessages(pb_transform(pbf,
-        from = "feature::raw",
-        steps = "log2",
-        store_fast_steps = TRUE
-    ))
+    pbf <- pb_test_make_pbf(n_rows = 30, n_cols = 5, add_log2 = TRUE)
 
     res <- suppressWarnings(plot_boxplot(
         pbf,
@@ -173,22 +158,30 @@ test_that("plot_boxplot ProBatchFeatures handles multiple assays", {
     expect_type(res, "list")
     expect_equal(length(res$plots), length(names(pbf)))
     expect_true(all(vapply(res$plots, inherits, logical(1), "ggplot")))
+    expect_equal(
+        vapply(res$plots, function(x) x$labels$title, character(1), USE.NAMES = FALSE),
+        c("feature, raw", "feature, log2-raw")
+    )
+
+    subset_assays <- names(pbf)[2:1]
+    res_subset <- suppressWarnings(plot_boxplot(
+        pbf,
+        pbf_name = subset_assays,
+        sample_id_col = "FullRunName",
+        return_gridExtra = TRUE
+    ))
+
+    expect_type(res_subset, "list")
+    expect_equal(names(res_subset$plots), subset_assays)
+    expect_true(all(vapply(res_subset$plots, inherits, logical(1), "ggplot")))
+    expect_equal(
+        vapply(res_subset$plots, function(x) x$labels$title, character(1), USE.NAMES = FALSE),
+        c("feature, log2-raw", "feature, raw")
+    )
 })
 
 test_that("plot_boxplot ProBatchFeatures returns ggplot for single assay", {
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
-
-    matrix_small <- example_proteome_matrix[1:30, 1:5]
-    sample_ids <- colnames(matrix_small)
-    sample_ann <- example_sample_annotation[match(sample_ids, example_sample_annotation$FullRunName), ]
-
-    pbf <- suppressMessages(ProBatchFeatures(
-        data_matrix = matrix_small,
-        sample_annotation = sample_ann,
-        sample_id_col = "FullRunName",
-        name = "feature::raw"
-    ))
+    pbf <- pb_test_make_pbf(n_rows = 30, n_cols = 5, add_log2 = FALSE)
 
     res <- suppressWarnings(plot_boxplot(
         pbf,
@@ -197,38 +190,4 @@ test_that("plot_boxplot ProBatchFeatures returns ggplot for single assay", {
     ))
 
     expect_s3_class(res, "ggplot")
-})
-
-test_that("plot_boxplot ProBatchFeatures respects assay subset order", {
-    skip_if_not_installed("gridExtra")
-    data(example_proteome_matrix, package = "proBatch")
-    data(example_sample_annotation, package = "proBatch")
-
-    matrix_small <- example_proteome_matrix[1:30, 1:5]
-    sample_ids <- colnames(matrix_small)
-    sample_ann <- example_sample_annotation[match(sample_ids, example_sample_annotation$FullRunName), ]
-
-    pbf <- suppressMessages(ProBatchFeatures(
-        data_matrix = matrix_small,
-        sample_annotation = sample_ann,
-        sample_id_col = "FullRunName",
-        name = "feature::raw"
-    ))
-    pbf <- suppressMessages(pb_transform(pbf,
-        from = "feature::raw",
-        steps = "log2",
-        store_fast_steps = TRUE
-    ))
-
-    subset_assays <- names(pbf)[2:1]
-    res <- suppressWarnings(plot_boxplot(
-        pbf,
-        pbf_name = subset_assays,
-        sample_id_col = "FullRunName",
-        return_gridExtra = TRUE
-    ))
-
-    expect_type(res, "list")
-    expect_equal(names(res$plots), subset_assays)
-    expect_true(all(vapply(res$plots, inherits, logical(1), "ggplot")))
 })

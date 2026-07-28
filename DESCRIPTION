@@ -32,6 +32,8 @@ Imports:
     data.table,
     ggfortify,
     ggplot2,
+    graphics,
+    grid,
     gridExtra,
     grDevices,
     lazyeval,
@@ -41,11 +43,11 @@ Imports:
     matrixStats,
     methods,
     pheatmap,
+    plyr,
     preprocessCore,
     purrr,
     pvca,
     RColorBrewer,
-    reshape2, 
     rlang,
     scales,
     stats,
@@ -68,7 +70,8 @@ Suggests:
     roxygen2,
     testthat (>= 3.0.0),
     spelling,
-    HDF5Array
+    HDF5Array,
+    MASS
 VignetteBuilder: knitr
 RoxygenNote: 7.3.3
 Language: en-US
