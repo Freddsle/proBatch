@@ -23,6 +23,7 @@ toy_matrix2 <- matrix(
 toy_sa <- data.frame(
     FullRunName = colnames(toy_matrix),
     Condition = c("A", "B", "B"),
+    Lab = c("L1", "L1", "L2"),
     Label = paste("Sample", seq_len(ncol(toy_matrix))),
     stringsAsFactors = FALSE
 )
@@ -103,6 +104,271 @@ test_that("plot_NA_heatmap.default supports multiple color_by columns", {
     expect_s3_class(res, "pheatmap")
 })
 
+test_that(".pb_group_missing_matrix aggregates observed fractions by group", {
+    grouped <- .pb_group_missing_matrix(
+        data_matrix = toy_matrix,
+        sample_annotation = toy_sa,
+        sample_id_col = "FullRunName",
+        color_by = "Condition",
+        drop_complete = FALSE
+    )
+
+    expected <- matrix(
+        c(
+            1, 1, 0,
+            0.5, 1, 1
+        ),
+        nrow = 3,
+        dimnames = list(
+            rownames(toy_matrix),
+            c("Condition=A", "Condition=B")
+        )
+    )
+
+    expect_equal(grouped$matrix, expected)
+    expect_equal(grouped$annotation$Condition, c("A", "B"))
+    expect_equal(grouped$annotation$.group_size, c(1L, 2L))
+    expect_equal(
+        grouped$annotation$.group_label,
+        c("Condition=A (n=1)", "Condition=B (n=2)")
+    )
+})
+
+test_that(".pb_group_missing_matrix supports multi-column grouping", {
+    grouped <- .pb_group_missing_matrix(
+        data_matrix = toy_matrix,
+        sample_annotation = toy_sa,
+        sample_id_col = "FullRunName",
+        color_by = c("Condition", "Lab"),
+        drop_complete = TRUE
+    )
+
+    expected <- matrix(
+        c(
+            1, 0,
+            0, 1,
+            1, 1
+        ),
+        nrow = 2,
+        dimnames = list(
+            c("prot1", "prot3"),
+            c(
+                "Condition=A | Lab=L1",
+                "Condition=B | Lab=L1",
+                "Condition=B | Lab=L2"
+            )
+        )
+    )
+
+    expect_equal(grouped$matrix, expected)
+    expect_equal(grouped$annotation$Condition, c("A", "B", "B"))
+    expect_equal(grouped$annotation$Lab, c("L1", "L1", "L2"))
+    expect_equal(grouped$annotation$.group_size, c(1L, 1L, 1L))
+})
+
+test_that(".pb_group_missing_matrix preserves one-feature matrix dimensions", {
+    skip_if_not_installed("pheatmap")
+
+    one_feature <- toy_matrix[1L, , drop = FALSE]
+    grouped <- .pb_group_missing_matrix(
+        data_matrix = one_feature,
+        sample_annotation = toy_sa,
+        sample_id_col = "FullRunName",
+        color_by = "Condition",
+        drop_complete = FALSE
+    )
+
+    expected <- matrix(
+        c(1, 0.5),
+        nrow = 1L,
+        dimnames = list(
+            rownames(one_feature),
+            c("Condition=A", "Condition=B")
+        )
+    )
+    expect_equal(grouped$matrix, expected)
+
+    result <- plot_grouped_NA_heatmap(
+        one_feature,
+        sample_annotation = toy_sa,
+        color_by = "Condition",
+        drop_complete = FALSE,
+        draw = FALSE
+    )
+    expect_s3_class(result, "pheatmap")
+})
+
+test_that("plot_grouped_NA_heatmap supports a single group with default clustering", {
+    skip_if_not_installed("pheatmap")
+
+    one_group_annotation <- toy_sa
+    one_group_annotation$Condition <- "only"
+
+    result <- plot_grouped_NA_heatmap(
+        toy_matrix,
+        sample_annotation = one_group_annotation,
+        color_by = "Condition",
+        drop_complete = FALSE,
+        draw = FALSE
+    )
+
+    expect_s3_class(result, "pheatmap")
+})
+
+test_that(".pb_group_missing_matrix keeps delimiter-bearing tuples separate", {
+    collision_matrix <- matrix(
+        c(1, NA_real_),
+        nrow = 1L,
+        dimnames = list("feature", c("S1", "S2"))
+    )
+    collision_annotation <- data.frame(
+        First = c("x", "x | y"),
+        Second = c("y | z", "z"),
+        row.names = colnames(collision_matrix),
+        stringsAsFactors = FALSE
+    )
+
+    grouped <- .pb_group_missing_matrix(
+        data_matrix = collision_matrix,
+        sample_annotation = collision_annotation,
+        sample_id_col = NULL,
+        color_by = c("First", "Second"),
+        drop_complete = FALSE
+    )
+
+    expect_equal(dim(grouped$matrix), c(1L, 2L))
+    expect_equal(unname(grouped$matrix), matrix(c(1, 0), nrow = 1L))
+})
+
+test_that(".pb_group_missing_matrix distinguishes missing and literal NA labels", {
+    missing_matrix <- matrix(
+        c(1, NA_real_),
+        nrow = 1L,
+        dimnames = list("feature", c("S1", "S2"))
+    )
+    missing_annotation <- data.frame(
+        Group = c(NA_character_, "<NA>"),
+        row.names = colnames(missing_matrix),
+        stringsAsFactors = FALSE
+    )
+
+    grouped <- .pb_group_missing_matrix(
+        data_matrix = missing_matrix,
+        sample_annotation = missing_annotation,
+        sample_id_col = NULL,
+        color_by = "Group",
+        drop_complete = FALSE
+    )
+
+    expect_equal(ncol(grouped$matrix), 2L)
+    expect_equal(sort(as.numeric(grouped$matrix)), c(0, 1))
+    expect_length(unique(colnames(grouped$matrix)), 2L)
+    expect_true(any(startsWith(colnames(grouped$matrix), "Group=<missing>")))
+    expect_true(any(startsWith(colnames(grouped$matrix), "Group=<NA>")))
+    expect_equal(sum(is.na(grouped$annotation$Group)), 1L)
+    expect_equal(sum(grouped$annotation$Group == "<NA>", na.rm = TRUE), 1L)
+
+    prepared <- .pb_prepare_sample_annotation(
+        sample_annotation = grouped$annotation,
+        sample_id_col = NULL,
+        color_by = "Group",
+        label_by = ".group_label",
+        sample_order = colnames(grouped$matrix),
+        col_vector = NULL,
+        allow_color_disable = FALSE
+    )
+    expect_equal(sum(is.na(prepared$annotation_col$Group)), 1L)
+    expect_named(prepared$annotation_colors$Group, "<NA>")
+})
+
+test_that(".pb_group_missing_matrix protects generated metadata columns", {
+    reserved_annotation <- data.frame(
+        .group_size = c("small", "large", "large"),
+        row.names = colnames(toy_matrix),
+        stringsAsFactors = FALSE
+    )
+
+    expect_error(
+        .pb_group_missing_matrix(
+            data_matrix = toy_matrix,
+            sample_annotation = reserved_annotation,
+            sample_id_col = NULL,
+            color_by = ".group_size",
+            drop_complete = FALSE
+        ),
+        "reserved names"
+    )
+})
+
+test_that(".pb_group_missing_matrix accepts a grouping column named No", {
+    skip_if_not_installed("pheatmap")
+
+    no_annotation <- data.frame(
+        No = c("first", "second", "second"),
+        row.names = colnames(toy_matrix),
+        stringsAsFactors = FALSE
+    )
+
+    grouped <- .pb_group_missing_matrix(
+        data_matrix = toy_matrix,
+        sample_annotation = no_annotation,
+        sample_id_col = NULL,
+        color_by = "No",
+        drop_complete = FALSE
+    )
+
+    expect_equal(ncol(grouped$matrix), 2L)
+    result <- plot_grouped_NA_heatmap(
+        toy_matrix,
+        sample_annotation = no_annotation,
+        color_by = "No",
+        cluster_samples = FALSE,
+        cluster_features = FALSE,
+        draw = FALSE
+    )
+    expect_s3_class(result, "pheatmap")
+
+    prepared <- .pb_prepare_sample_annotation(
+        sample_annotation = grouped$annotation,
+        sample_id_col = NULL,
+        color_by = grouped$color_by,
+        label_by = ".group_label",
+        sample_order = colnames(grouped$matrix),
+        col_vector = NULL,
+        allow_color_disable = FALSE
+    )
+    expect_named(prepared$annotation_col, "No")
+})
+
+test_that("plot_grouped_NA_heatmap.default supports grouped observed fractions", {
+    skip_if_not_installed("pheatmap")
+
+    res <- plot_grouped_NA_heatmap(
+        toy_matrix,
+        sample_annotation = toy_sa,
+        color_by = c("Condition", "Lab"),
+        cluster_samples = FALSE,
+        cluster_features = FALSE,
+        show_row_dend = FALSE,
+        show_column_dend = FALSE,
+        drop_complete = FALSE,
+        draw = FALSE
+    )
+
+    expect_s3_class(res, "pheatmap")
+})
+
+test_that("plot_grouped_NA_heatmap.default requires color_by", {
+    expect_error(
+        plot_grouped_NA_heatmap(
+            toy_matrix,
+            sample_annotation = toy_sa,
+            draw = FALSE
+        ),
+        "require one or more metadata columns in `color_by`"
+    )
+})
+
 
 test_that("plot_NA_heatmap.ProBatchFeatures arranges multiple assays", {
     skip_if_not_installed("pheatmap")
@@ -145,6 +411,77 @@ test_that("plot_NA_heatmap.ProBatchFeatures accepts explicit main without collis
     )
 
     expect_s3_class(res, "pheatmap")
+})
+
+test_that("plot_grouped_NA_heatmap.ProBatchFeatures supports grouped observed fractions", {
+    skip_if_not_installed("pheatmap")
+    skip_if_not_installed("gridExtra")
+
+    res <- plot_grouped_NA_heatmap(
+        pbf_multi,
+        pbf_name = c(toy_assay, toy_assay_alt),
+        color_by = c("Condition", "Lab"),
+        cluster_samples = FALSE,
+        cluster_features = FALSE,
+        show_row_dend = FALSE,
+        show_column_dend = FALSE,
+        drop_complete = FALSE,
+        draw = FALSE
+    )
+
+    expect_type(res, "list")
+    expect_s3_class(res$grob, "gtable")
+    expect_length(res$heatmaps, 2L)
+    expect_equal(names(res$heatmaps), c(toy_assay, toy_assay_alt))
+    expect_true(all(vapply(res$heatmaps, inherits, logical(1), what = "pheatmap")))
+})
+
+test_that("multiple requested heatmaps remain arranged with one surviving assay", {
+    skip_if_not_installed("pheatmap")
+    skip_if_not_installed("gridExtra")
+
+    complete_matrix <- matrix(
+        seq_len(length(toy_matrix)),
+        nrow = nrow(toy_matrix),
+        dimnames = dimnames(toy_matrix)
+    )
+    complete_assay <- paste0(toy_assay, "_complete")
+    complete_se <- SummarizedExperiment(
+        assays = list(intensity = complete_matrix),
+        colData = colData(pbf_toy[[toy_assay]])
+    )
+    pbf_with_complete <- proBatch:::.pb_add_assay_with_link(
+        pbf_toy,
+        se = complete_se,
+        to = complete_assay,
+        from = toy_assay
+    )
+
+    plot_file <- tempfile(fileext = ".pdf")
+    grDevices::pdf(plot_file)
+    on.exit({
+        grDevices::dev.off()
+        unlink(plot_file)
+    }, add = TRUE)
+
+    expect_warning(
+        res <- plot_grouped_NA_heatmap(
+            pbf_with_complete,
+            pbf_name = c(toy_assay, complete_assay),
+            color_by = "Condition",
+            cluster_samples = FALSE,
+            cluster_features = FALSE,
+            drop_complete = TRUE,
+            draw = TRUE
+        ),
+        "no rows with missing values|Skipping assay"
+    )
+
+    expect_type(res, "list")
+    expect_s3_class(res$grob, "gtable")
+    expect_length(res$heatmaps, 1L)
+    expect_named(res$heatmaps, toy_assay)
+    expect_s3_class(res$heatmaps[[1L]], "pheatmap")
 })
 
 
