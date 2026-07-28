@@ -254,6 +254,91 @@ test_that("internal add-assay-with-link links one-to-one when rows match", {
     expect_false(isTRUE(S4Vectors::metadata(pbf3)$linked_last))
 })
 
+test_that("internal add-assay-with-link skips duplicated feature axes", {
+    source_matrix <- matrix(
+        seq_len(6),
+        nrow = 3,
+        dimnames = list(paste0("f", 1:3), c("S1", "S2"))
+    )
+    sample_annotation <- data.frame(
+        FullRunName = colnames(source_matrix),
+        row.names = colnames(source_matrix)
+    )
+    pbf <- ProBatchFeatures(
+        source_matrix,
+        sample_annotation,
+        "FullRunName",
+        name = "raw"
+    )
+    child_matrix <- rbind(source_matrix, f4 = c(7, 8))
+    se_new <- SummarizedExperiment(
+        assays = list(intensity = child_matrix),
+        colData = colData(pbf[["feature::raw"]])
+    )
+    S4Vectors::metadata(se_new)$mock_duplicate_axis <- TRUE
+
+    # QFeatures rejects duplicate stored row names before the helper sees them.
+    # Mock only the helper's assay view to exercise its defensive guard while
+    # retaining a valid object and a real addAssay() call.
+    real_assay <- SummarizedExperiment::assay
+    testthat::local_mocked_bindings(
+        assay = function(x, i, ...) {
+            value <- real_assay(x, i, ...)
+            if (isTRUE(S4Vectors::metadata(x)$mock_duplicate_axis)) {
+                feature_names <- rownames(value)
+                feature_names[length(feature_names)] <- feature_names[1]
+                rownames(value) <- feature_names
+            }
+            value
+        },
+        .package = "proBatch"
+    )
+
+    result <- proBatch:::.pb_add_assay_with_link(
+        pbf,
+        se = se_new,
+        to = "feature::raw_duplicate",
+        from = "feature::raw"
+    )
+
+    expect_true(validObject(result))
+    expect_true("feature::raw_duplicate" %in% names(result))
+    expect_false(isTRUE(S4Vectors::metadata(result)$linked_last))
+})
+
+test_that("internal add-assay-with-link skips missing feature axes", {
+    source_matrix <- matrix(
+        seq_len(6),
+        nrow = 3,
+        dimnames = list(NULL, c("S1", "S2"))
+    )
+    sample_annotation <- data.frame(
+        FullRunName = colnames(source_matrix),
+        row.names = colnames(source_matrix)
+    )
+    pbf <- ProBatchFeatures(
+        source_matrix,
+        sample_annotation,
+        "FullRunName",
+        name = "raw"
+    )
+    se_new <- SummarizedExperiment(
+        assays = list(intensity = source_matrix),
+        colData = colData(pbf[["feature::raw"]])
+    )
+
+    result <- proBatch:::.pb_add_assay_with_link(
+        pbf,
+        se = se_new,
+        to = "feature::raw_copy",
+        from = "feature::raw"
+    )
+
+    expect_true(validObject(result))
+    expect_true("feature::raw_copy" %in% names(result))
+    expect_false(isTRUE(S4Vectors::metadata(result)$linked_last))
+})
+
 test_that("show() prints chain and step count", {
     data(example_proteome_matrix, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
