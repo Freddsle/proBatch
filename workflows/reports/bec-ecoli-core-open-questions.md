@@ -110,17 +110,60 @@ none of them touch these artifacts or dependency names.
 
 <!-- open-question id=roxygen-regeneration status=open area=documentation -->
 
-- Found: `002_foundation_core_api` source review (2026-07-28).
-- Artifacts: `./R/design_diagnostics.R`, `./R/metadata_diagnostics.R`, and the
-  other ported sources.
-- Evidence: the migration adds exported functions with Roxygen comments, but
-  `man/**` and `NAMESPACE` are maintainer-owned generated output that agents
-  must never write.
+- Found: `002_foundation_core_api` source review (2026-07-28); blocking symptom
+  identified during the split review (2026-07-28).
+- Artifacts: `./R/design_diagnostics.R`, `./R/metadata_diagnostics.R`,
+  `./R/proBatch.R`, `./R/correlation-based_diagnostics.R`, and the other ported
+  sources.
+- Evidence: the migration adds exported functions and new import declarations in
+  Roxygen comments, but `man/**` and `NAMESPACE` are maintainer-owned generated
+  output that agents must never write. Commit
+  `f4d689651c2c3c0e09b2d724db9ca614afb42049` added both the
+  `@importFrom tidyr complete nest unnest pivot_longer` declaration in
+  `R/proBatch.R` and the unqualified `pivot_longer()` calls in
+  `R/correlation-based_diagnostics.R`, so the generated namespace predates the
+  import it needs.
 - Effect: generated documentation and the namespace lag behind the sources until
-  the maintainer regenerates them.
+  the maintainer regenerates them. This already blocks the test suite:
+  `tests/testthat/test-correlation_based_diagnostics.R` reports nine errors of
+  the form `could not find function "pivot_longer"`. The failure is stale
+  generated output rather than a source defect, and a later review must not read
+  it as a regression.
 - Coverage: `017_4540aca9182c_generated_missing_docs` is the explicit
   generated-only exception in the family, but regeneration itself stays manual.
 - Decision: _pending; regenerate with devtools once the migration completes._
+
+### Breaking identifier contract has no `NEWS` entry or release-version decision
+
+<!-- open-question id=breaking-contract-news-and-version status=open area=release -->
+
+- Found: `002_foundation_core_api` split review (2026-07-28).
+- Artifacts: `./NEWS`, `./DESCRIPTION`.
+- Evidence: commit `1adb163d10785e3f775411ec6010b2fb9cd458f8` made duplicate,
+  `NA`, and empty sample and feature identifiers a hard error in
+  `ProBatchFeatures()`, `long_to_matrix()`, `matrix_to_long()`,
+  `.align_sample_annotation()`, and `check_sample_consistency()`. Such
+  identifiers were previously repaired silently with `make.unique()` or reported
+  only as a warning. The `NEWS` section for `v2.1.0` still describes only the
+  design-diagnostics additions and the `center_feature_batch()` deprecation, and
+  `DESCRIPTION` keeps `Version: 2.1.0`.
+- Effect: an upgrading user hits an error on input that previously loaded, with
+  no release note and no version signal that a public contract changed. Later
+  children in this migration are expected to add further breaking changes to the
+  same unreleased version.
+- Coverage: no workflow from `003` through `032` reads or edits `NEWS`; only the
+  manifest and `002` mention it. `022_72d11d1f7f92_version_variancepartition` is
+  the only later workflow that edits `DESCRIPTION`, and it is limited to
+  confirming that `2.1.0` already matches the source hunk and is forbidden from
+  altering the version without explicit release authority.
+  `032_residual_split_review` writes only
+  `bec-ecoli-core-residual-review.md` and
+  `bec-ecoli-core-remaining-change-plan.md`.
+- Options: (a) add a `NEWS` breaking-change block once the migration completes
+  and keep `2.1.0`; (b) add the `NEWS` block and bump to a version that signals
+  the incompatible contract; (c) relax the new validation to a warning for the
+  cases that were previously repaired silently.
+- Decision: _pending; requires release authority._
 
 ## Environment limitations (informational)
 

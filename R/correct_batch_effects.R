@@ -1590,6 +1590,7 @@ center_feature_batch_means_df <- function(df_long, sample_annotation = NULL,
 #' @title DEPRECATED: correct_with_ComBat_df
 #' @description Use [correct_with_ComBat()] with `format="long"`.
 #' @inheritParams correct_batch_effects
+#' @param ... Further arguments passed to \code{sva::ComBat()}.
 #' @export
 correct_with_ComBat_df <- function(df_long, sample_annotation = NULL,
                                    feature_id_col = "peptide_group_label",
@@ -1621,6 +1622,7 @@ correct_with_ComBat_df <- function(df_long, sample_annotation = NULL,
 #' @title DEPRECATED: correct_with_ComBat_dm
 #' @description Use [correct_with_ComBat()] with `format="wide"`.
 #' @inheritParams correct_batch_effects
+#' @param ... Further arguments passed to \code{sva::ComBat()}.
 #' @export
 correct_with_ComBat_dm <- function(data_matrix, sample_annotation = NULL,
                                    feature_id_col = "peptide_group_label",
