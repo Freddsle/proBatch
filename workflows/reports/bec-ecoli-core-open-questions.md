@@ -134,6 +134,12 @@ none of them touch these artifacts or dependency names.
   `R/proteome_wide_diagnostics.R` documents the newly activated `stacked_bar`,
   `stacked_plot_title`, `sort_stacked`, `category_order`, `path_to_save_results`,
   and `add_values` parameters, so the PVCA manual pages are stale as well.
+- Also owed after the `003` split stage (2026-07-28): the same file now carries
+  an explicit `@method plot_PVCA df` tag and a `@details` block beside the
+  retained `@export` and `@rawNamespace export(plot_PVCA.df)` tags. The S3
+  registration and usage section of the `plot_PVCA.df` manual page therefore
+  need regeneration before the generated output can be trusted to match the
+  source.
 - Coverage: `017_4540aca9182c_generated_missing_docs` is the explicit
   generated-only exception in the family, but regeneration itself stays manual.
 - Decision: _pending; regenerate with devtools once the migration completes._
@@ -169,6 +175,41 @@ none of them touch these artifacts or dependency names.
   the incompatible contract; (c) relax the new validation to a warning for the
   cases that were previously repaired silently.
 - Decision: _pending; requires release authority._
+
+### Shadowed duplicate correction definitions in `R/correct_batch_effects.R`
+
+<!-- open-question id=correction-duplicate-definitions status=open area=api -->
+
+- Found: `003_42544a21f10c_pvca_impl_dedup` split review (2026-07-28), while
+  evaluating the comparator's global single-definition test.
+- Artifacts: `./R/correct_batch_effects.R`.
+- Evidence: `correct_batch_effects_df`, `correct_batch_effects_dm`, and
+  `correct_with_removeBatchEffect_dm` are each defined twice at top level in the
+  same file, at lines `1169`/`1652`, `1288`/`1689`, and `1367`/`1740`. The
+  foundation port collated the historical `R/correct_batch_effects_old.R` bodies
+  after the earlier definitions, so the later copies silently win by evaluation
+  order. These are the only duplicated top-level function symbols in `R/`; the
+  PVCA family is now consolidated.
+- Effect: the earlier bodies are unreachable dead code, and the effective
+  behavior of three public correction entry points depends on position in a
+  1755-line file rather than on an explicit decision. A later migration child
+  that edits one of these functions may edit the shadowed copy and observe no
+  change. This is the same defect class that source commit `42544a21f10c` fixed
+  for PVCA. `R CMD check` does not report it.
+- Coverage: the comparator's
+  `tests/testthat/test-symbol-ownership.R` asserts that no top-level symbol is
+  defined twice, but it was not adopted in `003` because the assertion is
+  repository-wide and outside that child's PVCA scope. Of the remaining
+  workflows, only `013_fdafc6c8fe13_centralize_all_na_handling` and
+  `016_4285c42f3167_clarify_removebatcheffect_missing_policy` touch these
+  functions, and both are scoped to missing-value semantics rather than to
+  removing the duplicates. `032_residual_split_review` writes reports only.
+- Options: (a) delete the shadowed earlier definitions once the intended
+  authority is confirmed, and adopt the comparator's repository-wide
+  single-definition test; (b) keep the duplicates until `013` and `016` run and
+  resolve them there, accepting the risk of editing the shadowed copy;
+  (c) resolve after the migration as a separate cleanup.
+- Decision: _pending._
 
 ## Environment limitations (informational)
 

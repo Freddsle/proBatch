@@ -160,7 +160,7 @@ if (getRversion() >= "2.15.1") {
         "dateTime",
         "same_protein", "batch_the_same",
         "median_run",
-        "Var1", "Var2", "label", "weights", "category",
+        "Var1", "Var2", "label", "weight", "weights", "category",
         "Step", "correlation",
         "."
     ))

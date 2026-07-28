@@ -1652,8 +1652,12 @@ prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
 #'   `ProBatchFeatures`, these are forwarded to `prepare_PVCA_df()`.
 #'
 #' @return \code{ggplot} object with bars as weights, colored by bio/tech factors
-#' @rawNamespace export(plot_PVCA.df)
+#' @details `plot_PVCA.df()` is retained as a directly callable compatibility
+#'   helper and registered for the historical `"df"` S3 class. Prepared PVCA
+#'   data frames can continue to call the helper directly.
+#' @method plot_PVCA df
 #' @export
+#' @rawNamespace export(plot_PVCA.df)
 #'
 #' @examples
 #' data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
