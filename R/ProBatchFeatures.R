@@ -187,10 +187,39 @@ pb_register_step <- function(name, fun) {
     # Compare overlapping columns value-wise
     common_cols <- intersect(colnames(obj_cd), colnames(se_cd))
 
-    # helper equality on vectors (handles POSIXct / factor vs character)
+    # helper equality on vectors (handles POSIXct / factor vs character /
+    # factor-with-integer-like-levels vs numeric)
     .vec_equal <- function(a, b) {
         if (inherits(a, "POSIXct") && inherits(b, "POSIXct")) {
             return(identical(as.numeric(a), as.numeric(b))) # ignore tz/attr differences
+        }
+        .factor_numeric_equal <- function(factor_value, numeric_value) {
+            factor_numeric <- suppressWarnings(
+                as.numeric(as.character(factor_value))
+            )
+            factor_missing <- is.na(factor_value)
+
+            if (!identical(is.na(factor_numeric), factor_missing) ||
+                !identical(factor_missing, is.na(numeric_value))) {
+                return(FALSE)
+            }
+
+            observed <- factor_numeric[!factor_missing]
+            if (any(!is.finite(observed) | observed != trunc(observed))) {
+                return(FALSE)
+            }
+
+            isTRUE(all.equal(
+                factor_numeric,
+                as.numeric(numeric_value),
+                check.attributes = FALSE
+            ))
+        }
+        if (is.factor(a) && is.numeric(b)) {
+            return(.factor_numeric_equal(a, b))
+        }
+        if (is.numeric(a) && is.factor(b)) {
+            return(.factor_numeric_equal(b, a))
         }
         if (is.factor(a)) a <- as.character(a)
         if (is.factor(b)) b <- as.character(b)

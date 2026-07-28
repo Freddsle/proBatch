@@ -767,6 +767,84 @@ test_that("addAssay colData conflict on DateTime is avoided by using object-leve
     expect_true(validObject(pbf2))
 })
 
+test_that(".pb_harmonize_colData accepts matching integer-like factors", {
+    skip_if_not_installed("SummarizedExperiment")
+    skip_if_not_installed("S4Vectors")
+
+    sample_ids <- c("s1", "s2", "s3")
+    mat <- matrix(
+        1:6,
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), sample_ids)
+    )
+    factor_cd <- S4Vectors::DataFrame(
+        run_number = factor(c("1", "2", "3")),
+        row.names = sample_ids
+    )
+    integer_cd <- S4Vectors::DataFrame(
+        run_number = c(1L, 2L, 3L),
+        row.names = sample_ids
+    )
+    factor_se <- SummarizedExperiment::SummarizedExperiment(
+        assays = list(intensity = mat),
+        colData = factor_cd
+    )
+    integer_se <- SummarizedExperiment::SummarizedExperiment(
+        assays = list(intensity = mat + 10L),
+        colData = integer_cd
+    )
+
+    harmonized <- proBatch:::.pb_harmonize_colData(
+        factor_se,
+        integer_se,
+        from_assay = "factor"
+    )
+    reverse_harmonized <- proBatch:::.pb_harmonize_colData(
+        integer_se,
+        factor_se,
+        from_assay = "integer"
+    )
+
+    expect_identical(colData(harmonized)$run_number, factor_cd$run_number)
+    expect_identical(colData(reverse_harmonized)$run_number, integer_cd$run_number)
+})
+
+test_that(".pb_harmonize_colData rejects different factor and numeric values", {
+    skip_if_not_installed("SummarizedExperiment")
+    skip_if_not_installed("S4Vectors")
+
+    sample_ids <- c("s1", "s2", "s3")
+    mat <- matrix(
+        1:6,
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), sample_ids)
+    )
+    object <- SummarizedExperiment::SummarizedExperiment(
+        assays = list(intensity = mat),
+        colData = S4Vectors::DataFrame(
+            run_number = factor(c("1", "2", "3")),
+            row.names = sample_ids
+        )
+    )
+    incoming <- SummarizedExperiment::SummarizedExperiment(
+        assays = list(intensity = mat + 10L),
+        colData = S4Vectors::DataFrame(
+            run_number = c(1, 20, 3),
+            row.names = sample_ids
+        )
+    )
+
+    expect_error(
+        proBatch:::.pb_harmonize_colData(
+            object,
+            incoming,
+            from_assay = "factor"
+        ),
+        "Conflicting colData values in columns: run_number",
+        fixed = TRUE
+    )
+})
+
 test_that(".pb_add_assay_with_link links 1:1 even if row order differs", {
     skip_if_not_installed("QFeatures")
     skip_if_not_installed("SummarizedExperiment")

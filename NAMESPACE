@@ -115,7 +115,6 @@ export(plot_NA_heatmap)
 export(plot_PCA)
 export(plot_PVCA)
 export(plot_PVCA.df)
-
 export(plot_PVCA_stacked_from_saved)
 export(plot_boxplot)
 export(plot_corr_matrix)
