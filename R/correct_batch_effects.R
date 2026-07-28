@@ -575,6 +575,7 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
 #' @param keep_all For long format, columns to retain (see \code{subset_keep_cols()}).
 #' @param no_fit_imputed If \code{TRUE} and \code{qual_col} provided, masked values are
 #'   excluded when building the matrix (original values still corrected).
+#' @param ... Further arguments passed to \code{sva::ComBat()}.
 #'
 #' @return Matrix if \code{format="wide"}, data.frame if \code{format="long"}.
 #' @references Johnson WE et al. (2007) \emph{Biostatistics} 8(1):118–127; \emph{sva} vignette.
@@ -592,7 +593,8 @@ correct_with_ComBat <- function(
   keep_all = "default",
   no_fit_imputed = TRUE,
   qual_col = NULL,
-  qual_value = NULL
+  qual_value = NULL,
+  ...
 ) {
     format <- match.arg(format)
 
@@ -605,7 +607,8 @@ correct_with_ComBat <- function(
             sample_id_col = sample_id_col,
             par.prior = par.prior,
             fill_the_missing = fill_the_missing,
-            covariates_cols = covariates_cols
+            covariates_cols = covariates_cols,
+            ...
         )
         return(corrected_matrix)
     }
@@ -638,7 +641,8 @@ correct_with_ComBat <- function(
         sample_id_col = sample_id_col,
         par.prior = par.prior,
         fill_the_missing = fill_the_missing,
-        covariates_cols = covariates_cols
+        covariates_cols = covariates_cols,
+        ...
     )
 
     .post_correction_to_long(
@@ -929,11 +933,19 @@ correct_batch_effects <- function(
     }
 
     sample_annotation <- as.data.frame(sample_annotation)
+    sample_ids <- .pb_validate_identifiers(
+        sample_ids,
+        "`data_matrix` sample axis"
+    )
 
     if (!is.null(sample_id_col)) {
         if (!(sample_id_col %in% names(sample_annotation))) {
             if (!is.null(rownames(sample_annotation))) {
-                matches <- match(sample_ids, rownames(sample_annotation))
+                annotation_ids <- .pb_validate_identifiers(
+                    rownames(sample_annotation),
+                    "`sample_annotation` row names"
+                )
+                matches <- match(sample_ids, annotation_ids)
             } else {
                 stop(sprintf(
                     "Sample ID column %s is not defined in sample annotation",
@@ -952,10 +964,18 @@ correct_batch_effects <- function(
                 facet_col = NULL,
                 merge = FALSE
             )
-            matches <- match(sample_ids, sample_annotation[[sample_id_col]])
+            annotation_ids <- .pb_validate_identifiers(
+                sample_annotation[[sample_id_col]],
+                "`sample_annotation` sample identifiers"
+            )
+            matches <- match(sample_ids, annotation_ids)
         }
     } else if (!is.null(rownames(sample_annotation))) {
-        matches <- match(sample_ids, rownames(sample_annotation))
+        annotation_ids <- .pb_validate_identifiers(
+            rownames(sample_annotation),
+            "`sample_annotation` row names"
+        )
+        matches <- match(sample_ids, annotation_ids)
     } else {
         stop(
             "Either sample_id_col must be supplied or sample_annotation must have rownames"
@@ -1118,18 +1138,25 @@ run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
                                 fill_the_missing = NULL,
                                 covariates_cols = NULL,
                                 ...) {
+    combat_args <- list(...)
     .run_matrix_method(
         data_matrix, sample_annotation,
         sample_id_col = sample_id_col,
         fill_the_missing = fill_the_missing,
         missing_warning = "ComBat cannot operate with missing values in the matrix",
         method_fun = function(data_matrix, sample_annotation) {
-            run_ComBat_core(
-                sample_annotation = sample_annotation,
-                batch_col = batch_col,
-                data_matrix = data_matrix,
-                par.prior = par.prior,
-                covariates_cols = covariates_cols
+            do.call(
+                run_ComBat_core,
+                c(
+                    list(
+                        sample_annotation = sample_annotation,
+                        batch_col = batch_col,
+                        data_matrix = data_matrix,
+                        par.prior = par.prior,
+                        covariates_cols = covariates_cols
+                    ),
+                    combat_args
+                )
             )
         }
     )
@@ -1575,7 +1602,8 @@ correct_with_ComBat_df <- function(df_long, sample_annotation = NULL,
                                    qual_col = NULL,
                                    qual_value = NULL,
                                    keep_all = "default",
-                                   covariates_cols = NULL) {
+                                   covariates_cols = NULL,
+                                   ...) {
     .Deprecated("correct_with_ComBat")
     correct_with_ComBat(
         x = df_long, sample_annotation = sample_annotation,
@@ -1585,7 +1613,8 @@ correct_with_ComBat_df <- function(df_long, sample_annotation = NULL,
         covariates_cols = covariates_cols,
         fill_the_missing = fill_the_missing,
         keep_all = keep_all, no_fit_imputed = no_fit_imputed,
-        qual_col = qual_col, qual_value = qual_value
+        qual_col = qual_col, qual_value = qual_value,
+        ...
     )
 }
 
@@ -1600,7 +1629,8 @@ correct_with_ComBat_dm <- function(data_matrix, sample_annotation = NULL,
                                    batch_col = "MS_batch",
                                    par.prior = TRUE,
                                    fill_the_missing = NULL,
-                                   covariates_cols = NULL) {
+                                   covariates_cols = NULL,
+                                   ...) {
     .Deprecated("correct_with_ComBat")
     correct_with_ComBat(
         x = data_matrix, sample_annotation = sample_annotation,
@@ -1608,7 +1638,8 @@ correct_with_ComBat_dm <- function(data_matrix, sample_annotation = NULL,
         sample_id_col = sample_id_col, batch_col = batch_col,
         format = "wide", par.prior = par.prior,
         covariates_cols = covariates_cols,
-        fill_the_missing = fill_the_missing
+        fill_the_missing = fill_the_missing,
+        ...
     )
 }
 

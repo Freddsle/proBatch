@@ -96,7 +96,26 @@ test_that("constructor errors on malformed inputs (wide)", {
     ann3$FullRunName[1] <- NA
     expect_error(
         ProBatchFeatures(example_proteome_matrix, ann3, sample_id_col = "FullRunName"),
-        "NA/empty"
+        "NA or empty identifiers"
+    )
+
+    # duplicate matrix and annotation identifiers => error
+    dm_dup <- example_proteome_matrix[, 1:2, drop = FALSE]
+    colnames(dm_dup) <- rep(colnames(dm_dup)[1], 2)
+    expect_error(
+        ProBatchFeatures(dm_dup),
+        "duplicate identifiers"
+    )
+
+    ann4 <- example_sample_annotation
+    ann4$FullRunName[2] <- ann4$FullRunName[1]
+    expect_error(
+        ProBatchFeatures(
+            example_proteome_matrix,
+            ann4,
+            sample_id_col = "FullRunName"
+        ),
+        "duplicate identifiers"
     )
 })
 
@@ -713,6 +732,10 @@ test_that("pb_assay_matrix and pb_as_long compute fast logged assays on demand",
 
     resolved <- pb_assay_matrix(pbf, "peptide::log2_on_raw")
     expect_equal(resolved, expected)
+    expect_equal(
+        pb_as_wide(pbf, assay = "peptide::log2_on_raw"),
+        expected
+    )
 
     long_fast <- pb_as_long(
         pbf,

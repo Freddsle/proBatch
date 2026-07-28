@@ -16,6 +16,24 @@ test_that("long_conversion_to_matrix", {
     expect_equal(ncol(proteome_matrix), nrow(proteome) / 2)
 })
 
+test_that("long conversion rejects duplicate feature/sample keys", {
+    duplicate <- data.frame(
+        Feature = c("f1", "f1"),
+        Sample = c("s1", "s1"),
+        Intensity = c(1, 2)
+    )
+
+    expect_error(
+        long_to_matrix(
+            duplicate,
+            feature_id_col = "Feature",
+            sample_id_col = "Sample",
+            measure_col = "Intensity"
+        ),
+        "duplicate feature/sample keys.*f1/s1"
+    )
+})
+
 
 test_that("matrix_conversion_to_long", {
     data(example_proteome_matrix, package = "proBatch")
@@ -38,6 +56,28 @@ test_that("matrix_conversion_to_long", {
     setequal(
         colnames(proteome_long),
         c(colnames(example_sample_annotation), "peptide_group_label", "Intensity")
+    )
+})
+
+test_that("matrix conversion rejects duplicate axes", {
+    duplicate_features <- matrix(
+        seq_len(4),
+        nrow = 2,
+        dimnames = list(c("f1", "f1"), c("s1", "s2"))
+    )
+    duplicate_samples <- matrix(
+        seq_len(4),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s1"))
+    )
+
+    expect_error(
+        matrix_to_long(duplicate_features),
+        "feature axis contains duplicate identifiers"
+    )
+    expect_error(
+        matrix_to_long(duplicate_samples),
+        "sample axis contains duplicate identifiers"
     )
 })
 

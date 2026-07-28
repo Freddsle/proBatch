@@ -28,6 +28,21 @@ test_that("check_sample_consistency", {
         sample_id_col = "FullRunName",
         batch_col = NULL, order_col = NULL, facet_col = NULL
     ))
+
+    duplicate_annotation <- example_sample_annotation
+    duplicate_annotation$FullRunName[2] <-
+        duplicate_annotation$FullRunName[1]
+    expect_error(
+        check_sample_consistency(
+            sample_annotation = duplicate_annotation,
+            df_long = example_proteome,
+            sample_id_col = "FullRunName",
+            batch_col = NULL,
+            order_col = NULL,
+            facet_col = NULL
+        ),
+        "duplicate identifiers"
+    )
 })
 
 test_that("define_sample_order", {

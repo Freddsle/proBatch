@@ -258,6 +258,16 @@ ProBatchFeatures <- function(
     if (is.null(colnames(data_matrix))) {
         stop("data_matrix must have column names (sample IDs).")
     }
+    colnames(data_matrix) <- .pb_validate_identifiers(
+        colnames(data_matrix),
+        "`data_matrix` sample axis"
+    )
+    if (!is.null(rownames(data_matrix))) {
+        rownames(data_matrix) <- .pb_validate_identifiers(
+            rownames(data_matrix),
+            "`data_matrix` feature axis"
+        )
+    }
 
     # colData alignment
     if (!is.null(sample_annotation)) {
@@ -266,13 +276,18 @@ ProBatchFeatures <- function(
             if (!sample_id_col %in% colnames(sa)) {
                 stop("sample_id_col '", sample_id_col, "' not found in sample_annotation.")
             }
-            rn <- as.character(sa[[sample_id_col]])
-            if (anyNA(rn) || any(rn == "")) {
-                stop("sample_id_col contains NA/empty values.")
-            }
-            rownames(sa) <- make.unique(rn)
+            rn <- .pb_validate_identifiers(
+                sa[[sample_id_col]],
+                "sample_id_col"
+            )
+            rownames(sa) <- rn
         } else if (is.null(rownames(sa))) {
             stop("Provide rownames(sample_annotation) or a valid sample_id_col.")
+        } else {
+            rownames(sa) <- .pb_validate_identifiers(
+                rownames(sa),
+                "`sample_annotation` row names"
+            )
         }
         if (!all(colnames(data_matrix) %in% rownames(sa))) {
             miss <- setdiff(colnames(data_matrix), rownames(sa))
@@ -771,8 +786,7 @@ pb_as_long <- function(
 #' @export
 pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensity") {
     stopifnot(is(object, "ProBatchFeatures"))
-    se <- object[[assay]]
-    assay(se, i = name)
+    pb_assay_matrix(object, assay = assay, name = name)
 }
 
 # ---------------------------

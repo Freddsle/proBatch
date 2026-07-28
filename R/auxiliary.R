@@ -20,6 +20,11 @@ long_to_matrix <- function(df_long,
                            sample_id_col = "FullRunName",
                            qual_col = NULL,
                            qual_value = 2) {
+    .pb_validate_long_keys(
+        df_long,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col
+    )
     casting_formula <- as.formula(paste(
         feature_id_col, sample_id_col,
         sep = " ~ "
@@ -76,6 +81,18 @@ matrix_to_long <- function(data_matrix, sample_annotation = NULL,
                            measure_col = "Intensity",
                            sample_id_col = "FullRunName",
                            step = NULL) {
+    if (!is.null(rownames(data_matrix))) {
+        rownames(data_matrix) <- .pb_validate_identifiers(
+            rownames(data_matrix),
+            "`data_matrix` feature axis"
+        )
+    }
+    if (!is.null(colnames(data_matrix))) {
+        colnames(data_matrix) <- .pb_validate_identifiers(
+            colnames(data_matrix),
+            "`data_matrix` sample axis"
+        )
+    }
     df_long <- data_matrix %>%
         as.data.frame() %>%
         rownames_to_column(var = feature_id_col) %>%

@@ -70,6 +70,87 @@ test_that("correct_with_ComBat_df", {
     expect_gt(t_test_combat$p.value, 0.05)
 })
 
+test_that("ComBat entry points forward supported engine arguments", {
+    calls <- list()
+    testthat::local_mocked_bindings(
+        run_ComBat_core = function(...) {
+            arguments <- list(...)
+            calls[[length(calls) + 1L]] <<- arguments
+            arguments$data_matrix
+        },
+        .package = "proBatch"
+    )
+
+    data_matrix <- matrix(
+        seq_len(8),
+        nrow = 2,
+        dimnames = list(
+            c("f1", "f2"),
+            c("s1", "s2", "s3", "s4")
+        )
+    )
+    annotation <- data.frame(
+        FullRunName = colnames(data_matrix),
+        MS_batch = c("b1", "b1", "b2", "b2"),
+        row.names = colnames(data_matrix),
+        stringsAsFactors = FALSE
+    )
+    long <- data.frame(
+        Feature = rep(rownames(data_matrix), times = ncol(data_matrix)),
+        FullRunName = rep(colnames(data_matrix), each = nrow(data_matrix)),
+        Intensity = as.vector(data_matrix),
+        stringsAsFactors = FALSE
+    )
+
+    direct <- correct_with_ComBat(
+        data_matrix,
+        annotation,
+        format = "wide",
+        mean.only = TRUE,
+        ref.batch = "b1"
+    )
+    direct_long <- correct_with_ComBat(
+        long,
+        annotation,
+        feature_id_col = "Feature",
+        format = "long",
+        mean.only = TRUE,
+        ref.batch = "b1"
+    )
+    compatibility <- suppressWarnings(correct_with_ComBat_dm(
+        data_matrix,
+        annotation,
+        mean.only = TRUE,
+        ref.batch = "b1"
+    ))
+
+    expect_equal(direct, data_matrix)
+    expect_s3_class(direct_long, "data.frame")
+    expect_equal(compatibility, data_matrix)
+    expect_length(calls, 3L)
+    for (arguments in calls) {
+        expect_true(arguments$mean.only)
+        expect_identical(arguments$ref.batch, "b1")
+    }
+})
+
+test_that("batch annotation alignment rejects duplicate identifiers", {
+    duplicate <- data.frame(
+        FullRunName = c("s1", "s1"),
+        MS_batch = c("b1", "b2"),
+        stringsAsFactors = FALSE
+    )
+
+    expect_error(
+        proBatch:::.align_sample_annotation(
+            duplicate,
+            sample_ids = "s1",
+            sample_id_col = "FullRunName"
+        ),
+        "duplicate identifiers"
+    )
+})
+
 # test_that("center_feature_batch_means_df", {
 #     data(example_proteome, package = "proBatch")
 #     data(example_sample_annotation, package = "proBatch")

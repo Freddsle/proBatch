@@ -69,16 +69,22 @@ check_sample_consistency <- function(sample_annotation, sample_id_col, df_long,
             sample_id_col
         ))
     }
-
-    # Check for duplicated IDs
-    dup_ann <- duplicated(sample_annotation[[sample_id_col]])
-    # dup_df <- duplicated(df_long[[sample_id_col]])
-    if (any(dup_ann)) {
-        warning("Duplicated sample IDs in sample_annotation.")
+    if (!(sample_id_col %in% names(df_long))) {
+        stop(sprintf(
+            "Sample ID column %s is not defined in the long data.",
+            sample_id_col
+        ))
     }
-    # if (any(dup_df)) {
-    #     message("Duplicated sample IDs in df_long.")
-    # }
+
+    .pb_validate_identifiers(
+        sample_annotation[[sample_id_col]],
+        "`sample_annotation` sample identifiers"
+    )
+    .pb_validate_identifiers(
+        df_long[[sample_id_col]],
+        "`df_long` sample identifiers",
+        require_unique = FALSE
+    )
 
     # Consistency check
     ids_ann <- unique(sample_annotation[[sample_id_col]])
