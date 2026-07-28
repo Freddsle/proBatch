@@ -122,7 +122,7 @@ This is the first maintainer-controlled review and commit pause.
 
 1. Report the source evidence, destination changes or no-change decision, dependency impact, focused verification, and working-tree status to the maintainer.
 2. Give the maintainer time to inspect, edit, stage, and manually commit if desired.
-3. Do not stage, commit, amend, or draft a commit message.
+3. Do not stage, commit, or amend; the maintainer performs the commit. Inspect the exact in-scope unstaged diff and any in-scope untracked files without modifying the index. If the change set is nonempty, validate it against `@/specs/general/commits.md` and provide the complete copy-paste commit message in a fenced `text` block in the chat handoff. If one commit cannot accurately describe the change set, provide one validated message per coherent commit and identify each intended file set. If the change set is empty, state that no commit message is needed.
 4. Do not complete this action request until the maintainer explicitly asks to resume and confirms either the resulting destination commit SHA or an explicit no-new-commit decision.
 5. On explicit resume, record exactly one `<!-- source-review commit=<40-hex-or-none> -->` marker in the session notes.
 6. If accepted, `{{ donna.lib.goto("reverify_bec_port") }}`.
@@ -270,7 +270,7 @@ This is the second maintainer-controlled review and commit pause.
 
 1. Report the split comparison, adopted or rejected hardening, destination changes or no-change decision, focused verification, and working-tree status.
 2. Give the maintainer time to inspect, edit, stage, and manually commit if desired.
-3. Do not stage, commit, amend, or draft a commit message.
+3. Do not stage, commit, or amend; the maintainer performs the commit. Inspect the exact in-scope unstaged diff and any in-scope untracked files without modifying the index. If the change set is nonempty, validate it against `@/specs/general/commits.md` and provide the complete copy-paste commit message in a fenced `text` block in the chat handoff. If one commit cannot accurately describe the change set, provide one validated message per coherent commit and identify each intended file set. If the change set is empty, state that no commit message is needed.
 4. Do not complete this action request until the maintainer explicitly asks to resume and confirms either the resulting destination commit SHA or an explicit no-new-commit decision.
 5. On explicit resume, record exactly one `<!-- split-review commit=<40-hex-or-none> -->` marker in the session notes.
 6. If accepted, `{{ donna.lib.goto("reverify_split_adjustment") }}`.

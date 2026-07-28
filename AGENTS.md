@@ -55,12 +55,14 @@ Every commit message an agent drafts, proposes, creates, or amends must follow
 ```
 
 Use only the types allowed by the specification. Before generating a message,
-inspect the exact staged diff or the explicit change summary, choose the type
-from the change’s effect, and validate the header, scope, length, description,
-and breaking-change markers. If one message cannot accurately describe the
-staged changes, report that the commit should be split. Never invent issue
-references or attribution, and never create or rewrite a commit without user
-authorization.
+inspect the exact change set it will describe: at a maintainer-controlled
+workflow pause, inspect the exact in-scope unstaged diff and any in-scope
+untracked files without modifying the index; otherwise inspect the exact staged
+diff or the explicit change summary. Choose the type from the change’s effect,
+and validate the header, scope, length, description, and breaking-change
+markers. If one message cannot accurately describe the inspected changes,
+report that the commit should be split. Never invent issue references or
+attribution, and never create or rewrite a commit without user authorization.
 
 ## Donna workflows
 
@@ -113,6 +115,14 @@ Follow these rules:
   pending until the maintainer explicitly resumes after manual analysis and
   any manual commit. Reference-only manifest records have no review action
   requests. Agents must not stage, create, or amend those commits.
+- At every maintainer-controlled BEC review and commit pause, inspect the exact
+  in-scope unstaged diff and any in-scope untracked files without modifying the
+  index. If the change set is nonempty, validate a complete copy-paste commit
+  message against `specs/general/commits.md` and provide it in chat in a fenced
+  `text` block. If the change set requires multiple commits, provide one
+  validated message per coherent commit and identify each intended file set.
+  If it is empty, state that no commit message is needed. This handoff does not
+  authorize staging, creating, or amending a commit.
 - Copy action-request IDs and next-operation IDs exactly from Donna's output;
   never invent them.
 - Do not run `donna -p llm new-session` unless resetting the active session is

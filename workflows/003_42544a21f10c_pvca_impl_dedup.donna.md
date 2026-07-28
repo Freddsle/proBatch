@@ -23,7 +23,7 @@ kind = "donna.lib.request_action"
 6. Split comparator is exactly `29a7478dc7deea846a2c1ff1abd25a881e6f87db`; targets are `R/proteome_wide_diagnostics.R` and `tests/testthat/test-symbol-ownership.R`.
 7. Skip rationale: do not recreate `R/explained_variance_plots.R` or the alias mechanism when the destination already has one authoritative implementation; migrate semantic behavior and coverage only.
 8. Query all Depmesh relations for every destination artifact before editing.
-9. External reads must use `git -C ... show`, `diff`, `ls-tree`, or `grep` against full commit IDs. Never inspect or write an external working tree. Never run `checkout`, `switch`, `reset`, `stash`, or `clean` in either external repository. Never read or enumerate `man/**` or `NAMESPACE`. These prohibitions apply to every operation in this workflow: preserve every pre-existing user change; never cherry-pick, stage, commit, amend, draft a commit message, or touch generated files.
+9. External reads must use `git -C ... show`, `diff`, `ls-tree`, or `grep` against full commit IDs. Never inspect or write an external working tree. Never run `checkout`, `switch`, `reset`, `stash`, or `clean` in either external repository. Never read or enumerate `man/**` or `NAMESPACE`. These prohibitions apply to every operation in this workflow: preserve every pre-existing user change; never cherry-pick, stage, commit, amend, or touch generated files. Draft a commit message only at a maintainer review gate as required below.
 10. If ownership and behavior are clear, `{{ donna.lib.goto("port_bec_behavior") }}`; otherwise `{{ donna.lib.goto("blocked") }}`.
 
 ## Port BEC Behavior
@@ -88,7 +88,7 @@ kind = "donna.lib.request_action"
 This is a hard maintainer review and commit pause.
 
 1. Report source evidence, changed/no-change outcome, dependencies, focused checks, and working-tree status.
-2. The agent must not stage, commit, amend, or draft a commit message.
+2. Do not stage, commit, or amend; the maintainer performs the commit. Inspect the exact in-scope unstaged diff and any in-scope untracked files without modifying the index. If the change set is nonempty, validate it against `@/specs/general/commits.md` and provide the complete copy-paste commit message in a fenced `text` block in the chat handoff. If one commit cannot accurately describe the change set, provide one validated message per coherent commit and identify each intended file set. If the change set is empty, state that no commit message is needed.
 3. Do not complete this action request until the maintainer explicitly resumes and confirms a destination commit SHA or explicit no-new-commit decision.
 4. On resume, add exactly one `<!-- source-review commit=<40-hex-or-none> -->` marker to the notes.
 5. If accepted, `{{ donna.lib.goto("reverify_bec_port") }}`; if corrections are requested, `{{ donna.lib.goto("repair_bec_port") }}`; otherwise `{{ donna.lib.goto("blocked") }}`.
@@ -194,7 +194,7 @@ kind = "donna.lib.request_action"
 This is a hard maintainer review and commit pause.
 
 1. Report comparator evidence, adopted/rejected adjustments, checks, and working-tree status.
-2. The agent must not stage, commit, amend, or draft a commit message.
+2. Do not stage, commit, or amend; the maintainer performs the commit. Inspect the exact in-scope unstaged diff and any in-scope untracked files without modifying the index. If the change set is nonempty, validate it against `@/specs/general/commits.md` and provide the complete copy-paste commit message in a fenced `text` block in the chat handoff. If one commit cannot accurately describe the change set, provide one validated message per coherent commit and identify each intended file set. If the change set is empty, state that no commit message is needed.
 3. Do not complete this action request until the maintainer explicitly resumes and confirms a destination commit SHA or explicit no-new-commit decision.
 4. On resume, add exactly one `<!-- split-review commit=<40-hex-or-none> -->` marker.
 5. If accepted, `{{ donna.lib.goto("reverify_split_adjustment") }}`; if corrections are requested, `{{ donna.lib.goto("repair_split_adjustment") }}`; otherwise `{{ donna.lib.goto("blocked") }}`.

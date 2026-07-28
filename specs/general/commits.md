@@ -113,11 +113,11 @@ BREAKING CHANGE: callers must replace unqualified assay names with `<level>::<pi
 
 ## Agent requirements
 
-Before drafting or creating a commit message, an agent MUST inspect the exact staged change or the explicit change summary provided by the user.
+Before drafting or creating a commit message, an agent MUST inspect the exact change set that the message will describe. At a maintainer-controlled workflow pause, the agent MUST inspect the exact in-scope unstaged diff and the contents of any in-scope untracked files without modifying the Git index. Otherwise, the agent MUST inspect the exact staged change or an explicit change summary provided by the user.
 
 An agent MUST choose the type from the change’s effect, not from the filenames modified.
 
-A commit SHOULD contain one coherent change. If the staged diff contains unrelated changes that cannot be described accurately by one header, the agent MUST report that the commit should be split rather than generate a misleading message.
+A commit SHOULD contain one coherent change. If the inspected change set contains unrelated changes that cannot be described accurately by one header, the agent MUST report that the commit should be split rather than generate a misleading message.
 
 When an agent proposes multiple candidate messages, every candidate MUST comply with this specification.
 

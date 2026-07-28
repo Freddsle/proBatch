@@ -91,7 +91,7 @@ kind = "donna.lib.request_action"
 This is the first hard maintainer review and commit pause.
 
 1. Report core and companion hunk evidence separately, destination changes/no-change, dependency impact, focused verification, and working-tree status.
-2. Do not stage, commit, amend, or draft a commit message.
+2. Do not stage, commit, or amend; the maintainer performs the commit. Inspect the exact in-scope unstaged diff and any in-scope untracked files without modifying the index. If the change set is nonempty, validate it against `@/specs/general/commits.md` and provide the complete copy-paste commit message in a fenced `text` block in the chat handoff. If one commit cannot accurately describe the change set, provide one validated message per coherent commit and identify each intended file set. If the change set is empty, state that no commit message is needed.
 3. Do not complete this action until the maintainer explicitly resumes and confirms a destination commit SHA or explicit no-new-commit decision.
 4. Only then record exactly one `<!-- source-review id=post-sync-029-e2bb1854-drop-unused-model-levels commit=<40-hex-or-none> -->`.
 5. If accepted, `{{ donna.lib.goto("reverify_bec_port") }}`; if corrections are requested, `{{ donna.lib.goto("repair_bec_port") }}`; otherwise `{{ donna.lib.goto("blocked") }}`.
@@ -198,7 +198,7 @@ kind = "donna.lib.request_action"
 This is the second hard maintainer review and commit pause.
 
 1. Report split comparison, adopted/rejected core hardening, BERT exclusions, checks, and working-tree status.
-2. Do not stage, commit, amend, or draft a commit message.
+2. Do not stage, commit, or amend; the maintainer performs the commit. Inspect the exact in-scope unstaged diff and any in-scope untracked files without modifying the index. If the change set is nonempty, validate it against `@/specs/general/commits.md` and provide the complete copy-paste commit message in a fenced `text` block in the chat handoff. If one commit cannot accurately describe the change set, provide one validated message per coherent commit and identify each intended file set. If the change set is empty, state that no commit message is needed.
 3. Do not complete this action until the maintainer explicitly resumes and confirms a destination commit SHA or explicit no-new-commit decision.
 4. Only then record exactly one `<!-- split-review id=post-sync-029-e2bb1854-drop-unused-model-levels commit=<40-hex-or-none> -->`.
 5. If accepted, `{{ donna.lib.goto("reverify_split_adjustment") }}`; if corrections are requested, `{{ donna.lib.goto("repair_split_adjustment") }}`; otherwise `{{ donna.lib.goto("blocked") }}`.

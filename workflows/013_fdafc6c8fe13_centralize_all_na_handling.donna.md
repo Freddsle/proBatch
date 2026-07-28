@@ -94,7 +94,7 @@ kind = "donna.lib.request_action"
 This is the first hard maintainer review and commit pause.
 
 1. Report source evidence, core/companion decisions, changes or no-change, dependencies, focused checks, and working-tree status.
-2. Do not stage, commit, amend, or draft a commit message. The agent must not perform the maintainer's commit.
+2. Do not stage, commit, or amend; the maintainer performs the commit. Inspect the exact in-scope unstaged diff and any in-scope untracked files without modifying the index. If the change set is nonempty, validate it against `@/specs/general/commits.md` and provide the complete copy-paste commit message in a fenced `text` block in the chat handoff. If one commit cannot accurately describe the change set, provide one validated message per coherent commit and identify each intended file set. If the change set is empty, state that no commit message is needed.
 3. Do not complete this action request until the maintainer explicitly resumes and supplies a 40-hex destination commit or explicitly chooses no new commit.
 4. On explicit resume, add exactly one `<!-- source-review commit=<40-hex-or-none> -->` marker to the notes.
 5. If accepted, `{{ donna.lib.goto("reverify_bec_port") }}`; for corrections, `{{ donna.lib.goto("repair_bec_port") }}`; if rejected or blocked, `{{ donna.lib.goto("blocked") }}`.
@@ -206,7 +206,7 @@ kind = "donna.lib.request_action"
 This is the second hard maintainer review and commit pause.
 
 1. Report split evidence, adopted/rejected hardening, changes or no-change, checks, and working-tree status.
-2. Do not stage, commit, amend, or draft a commit message. The agent must not perform the maintainer's commit.
+2. Do not stage, commit, or amend; the maintainer performs the commit. Inspect the exact in-scope unstaged diff and any in-scope untracked files without modifying the index. If the change set is nonempty, validate it against `@/specs/general/commits.md` and provide the complete copy-paste commit message in a fenced `text` block in the chat handoff. If one commit cannot accurately describe the change set, provide one validated message per coherent commit and identify each intended file set. If the change set is empty, state that no commit message is needed.
 3. Do not complete this action request until the maintainer explicitly resumes and supplies a 40-hex destination commit or explicitly chooses no new commit.
 4. On explicit resume, add exactly one `<!-- split-review commit=<40-hex-or-none> -->` marker to the notes.
 5. If accepted, `{{ donna.lib.goto("reverify_split_adjustment") }}`; for corrections, `{{ donna.lib.goto("repair_split_adjustment") }}`; if rejected or blocked, `{{ donna.lib.goto("blocked") }}`.

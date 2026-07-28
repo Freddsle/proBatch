@@ -23,7 +23,7 @@ kind = "donna.lib.request_action"
 6. Dependency question: core must not retain `PRONE` in either `Imports` or `Suggests`; confirm existing QFeatures infrastructure is sufficient.
 7. Exact split comparator is `29a7478dc7deea846a2c1ff1abd25a881e6f87db`. Targets: `R/ProBatchFeatures.R`, `tests/testthat/test-ProBatchFeatures.R`, `R/registry.R`, `tests/testthat/test-registry.R`, `tests/testthat/test-symbol-ownership.R`, and `DESCRIPTION`.
 8. Skip rationale: provider implementations and benchmark/intragroup behavior belong exclusively in the companion; core keeps only the independent link-safety hunk and provider boundary.
-9. Query all Depmesh relations before destination edits. External reads are full-ID Git object reads only; never inspect/write external working trees or access `man/**`/`NAMESPACE`. Never run `checkout`, `switch`, `reset`, `stash`, or `clean` in either external repository. These prohibitions apply to every operation in this workflow: preserve every pre-existing user change; never cherry-pick, stage, commit, amend, draft a commit message, or touch generated files.
+9. Query all Depmesh relations before destination edits. External reads are full-ID Git object reads only; never inspect/write external working trees or access `man/**`/`NAMESPACE`. Never run `checkout`, `switch`, `reset`, `stash`, or `clean` in either external repository. These prohibitions apply to every operation in this workflow: preserve every pre-existing user change; never cherry-pick, stage, commit, amend, or touch generated files. Draft a commit message only at a maintainer review gate as required below.
 10. Continue with `{{ donna.lib.goto("port_bec_behavior") }}`, or `{{ donna.lib.goto("blocked") }}`.
 
 ## Port BEC Behavior
@@ -85,7 +85,7 @@ id = "review_bec_port"
 kind = "donna.lib.request_action"
 ```
 
-Hard maintainer review and commit pause: report evidence, exclusions, checks, dependencies, and status. The agent must not stage, commit, amend, or draft a commit message. Do not complete this request until the maintainer explicitly resumes and confirms a commit SHA or no-new-commit decision. Record exactly one `<!-- source-review commit=<40-hex-or-none> -->` marker. Then `{{ donna.lib.goto("reverify_bec_port") }}`, `{{ donna.lib.goto("repair_bec_port") }}`, or `{{ donna.lib.goto("blocked") }}` as directed.
+Hard maintainer review and commit pause: report evidence, exclusions, checks, dependencies, and status. Do not stage, commit, or amend; the maintainer performs the commit. Inspect the exact in-scope unstaged diff and any in-scope untracked files without modifying the index. If the change set is nonempty, validate it against `@/specs/general/commits.md` and provide the complete copy-paste commit message in a fenced `text` block in the chat handoff. If one commit cannot accurately describe the change set, provide one validated message per coherent commit and identify each intended file set. If the change set is empty, state that no commit message is needed. Do not complete this request until the maintainer explicitly resumes and confirms a commit SHA or no-new-commit decision. Record exactly one `<!-- source-review commit=<40-hex-or-none> -->` marker. Then `{{ donna.lib.goto("reverify_bec_port") }}`, `{{ donna.lib.goto("repair_bec_port") }}`, or `{{ donna.lib.goto("blocked") }}` as directed.
 
 ## Reverify BEC Port
 
@@ -177,7 +177,7 @@ id = "review_split_adjustment"
 kind = "donna.lib.request_action"
 ```
 
-Hard maintainer review and commit pause: report comparison, exclusions, checks, and status. The agent must not stage, commit, amend, or draft a commit message. Do not complete this request until the maintainer explicitly resumes and confirms a commit SHA or no-new-commit decision. Record exactly one `<!-- split-review commit=<40-hex-or-none> -->` marker. Then `{{ donna.lib.goto("reverify_split_adjustment") }}`, `{{ donna.lib.goto("repair_split_adjustment") }}`, or `{{ donna.lib.goto("blocked") }}`.
+Hard maintainer review and commit pause: report comparison, exclusions, checks, and status. Do not stage, commit, or amend; the maintainer performs the commit. Inspect the exact in-scope unstaged diff and any in-scope untracked files without modifying the index. If the change set is nonempty, validate it against `@/specs/general/commits.md` and provide the complete copy-paste commit message in a fenced `text` block in the chat handoff. If one commit cannot accurately describe the change set, provide one validated message per coherent commit and identify each intended file set. If the change set is empty, state that no commit message is needed. Do not complete this request until the maintainer explicitly resumes and confirms a commit SHA or no-new-commit decision. Record exactly one `<!-- split-review commit=<40-hex-or-none> -->` marker. Then `{{ donna.lib.goto("reverify_split_adjustment") }}`, `{{ donna.lib.goto("repair_split_adjustment") }}`, or `{{ donna.lib.goto("blocked") }}`.
 
 ## Reverify Split Adjustment
 

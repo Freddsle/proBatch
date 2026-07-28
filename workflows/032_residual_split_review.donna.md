@@ -206,7 +206,7 @@ This is a maintainer-controlled report review and commit pause.
 
 1. Report the 99-path classification totals, all `decision` items, the ordered actionable plan, explicit exclusions, and verification result.
 2. Give the maintainer time to inspect, edit, stage, and manually commit the reports if desired.
-3. Do not stage, commit, amend, or draft a commit message.
+3. Do not stage, commit, or amend; the maintainer performs the commit. Inspect the exact in-scope unstaged diff and any in-scope untracked files without modifying the index. If the change set is nonempty, validate it against `@/specs/general/commits.md` and provide the complete copy-paste commit message in a fenced `text` block in the chat handoff. If one commit cannot accurately describe the change set, provide one validated message per coherent commit and identify each intended file set. If the change set is empty, state that no commit message is needed.
 4. Do not complete this action request until the maintainer explicitly asks to resume and confirms either the report commit SHA or an explicit no-new-commit decision.
 5. On explicit resume, record exactly one `<!-- residual-review commit=<40-hex-or-none> -->` marker in `.session/donna/032-residual-split-review-notes.md`.
 6. If accepted, `{{ donna.lib.goto("reverify_residual_inventory") }}`.
