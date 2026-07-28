@@ -85,10 +85,4 @@ protein_corrplot_plot <- plot_protein_corrplot(example_proteome_matrix,
     protein_col = "Gene"
 )
 
-protein_corrplot_plot <- plot_protein_corrplot(example_proteome_matrix,
-    protein_name = c("Haao", "Dhtkd1"),
-    peptide_annotation = example_peptide_annotation,
-    protein_col = "Gene", factors_to_plot = "Gene"
-)
-
 }

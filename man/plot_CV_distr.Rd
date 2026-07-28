@@ -17,7 +17,8 @@ plot_CV_distr(
   offset = 1,
   plot_title = NULL,
   filename = NULL,
-  theme = "classic"
+  theme = "classic",
+  pbf_name = NULL
 )
 }
 \arguments{
@@ -68,12 +69,18 @@ otherwise, the object is save into the file. Currently only
 pdf and png format is supported}
 
 \item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
+
+\item{pbf_name}{Assay name to transform when `x` is a `ProBatchFeatures`.}
 }
 \value{
 \code{ggplot} object with the boxplot of CVs on one or several steps
 }
 \description{
 Plot CV distribution to compare various steps of the analysis
+}
+\details{
+If `batch_col` is supplied and per-batch CV is available, `plot_CV_distr()`
+plots `CV_perBatch` across batches. Otherwise it plots `CV_total`.
 }
 \examples{
 data(list = c("example_sample_annotation", "example_proteome"), package = "proBatch")

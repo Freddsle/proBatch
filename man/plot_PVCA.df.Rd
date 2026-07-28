@@ -71,12 +71,34 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{...}{Additional arguments. When `data_matrix` is a
 `ProBatchFeatures`, these are forwarded to `prepare_PVCA_df()`.}
+
+\item{stacked_bar}{Logical; combine multiple `ProBatchFeatures` assays in one
+stacked bar chart.}
+
+\item{stacked_plot_title}{Optional character vector used as the stacked plot
+title; elements are joined with newlines.}
+
+\item{sort_stacked}{Optional factor label used to order stacked assay bars by
+descending explained variance.}
+
+\item{category_order}{Optional character vector specifying stacked category
+order.}
+
+\item{path_to_save_results}{Optional directory where aggregated PVCA result
+CSV files are written.}
+
+\item{add_values}{Logical; annotate bars with rounded weight values.}
 }
 \value{
 \code{ggplot} object with bars as weights, colored by bio/tech factors
 }
 \description{
 plot PVCA, when the analysis is completed
+}
+\details{
+`plot_PVCA.df()` is retained as a directly callable compatibility
+  helper and registered for the historical `"df"` S3 class. Prepared PVCA
+  data frames can continue to call the helper directly.
 }
 \examples{
 data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")

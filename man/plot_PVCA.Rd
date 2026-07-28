@@ -24,6 +24,7 @@
   plot_title = NULL,
   theme = "classic",
   base_size = 15,
+  path_to_save_results = NULL,
   ...
 )
 
@@ -36,6 +37,11 @@
   plot_title = NULL,
   return_gridExtra = FALSE,
   plot_ncol = NULL,
+  stacked_bar = FALSE,
+  stacked_plot_title = "Plot of weighted average proportion variance vs effects in PVCA",
+  sort_stacked = NULL,
+  category_order = NULL,
+  path_to_save_results = NULL,
   ...
 )
 }
@@ -95,6 +101,9 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{base_size}{base size of the text in the plot}
 
+\item{path_to_save_results}{optional directory where aggregated PVCA results
+are written as CSV.}
+
 \item{...}{Additional arguments passed to lower-level methods.}
 
 \item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
@@ -102,6 +111,22 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 \item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
+
+\item{stacked_bar}{logical; when `TRUE` and multiple `pbf_name` values are
+provided, combines all assays in a single stacked bar chart (supported for
+`ProBatchFeatures` inputs only).}
+
+\item{stacked_plot_title}{optional character vector that annotates the stacked
+PVCA plot when `stacked_bar = TRUE`; elements are joined with newlines.}
+
+\item{sort_stacked}{optional factor name used to order stacked bars when
+`stacked_bar = TRUE`; assays are ordered by the explained variance of this
+factor in descending order.}
+
+\item{category_order}{optional character vector specifying the category order
+in a stacked PVCA plot.}
+
+\item{add_values}{logical; when `TRUE`, annotates each bar with its rounded weight.}
 }
 \value{
 \code{ggplot} object with the plot

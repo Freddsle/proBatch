@@ -6,6 +6,7 @@
 \alias{pb_infIsNA}
 \alias{pb_nNA}
 \alias{pb_filterNA}
+\alias{pb_groupfilterNA}
 \title{Apply `QFeatures` missing-data helpers to stored assays}
 \usage{
 pb_zeroIsNA(object, pbf_name = names(object), ...)
@@ -15,6 +16,17 @@ pb_infIsNA(object, pbf_name = names(object), ...)
 pb_nNA(object, pbf_name = names(object), ...)
 
 pb_filterNA(object, pbf_name = NULL, inplace = FALSE, final_name = NULL, ...)
+
+pb_groupfilterNA(
+  object,
+  pbf_name = NULL,
+  group_cols,
+  min_valid = 2L,
+  pNA = NULL,
+  inplace = FALSE,
+  final_name = NULL,
+  ...
+)
 }
 \arguments{
 \item{object}{A `ProBatchFeatures` object.}
@@ -33,11 +45,26 @@ If `FALSE`, the modified assay(s) will be added to the object with
 \item{final_name}{Character (used by `pb_filterNA()` only), name for the
 modified assay(s) if `inplace` is `FALSE`. If `NULL` (default), the
 original name(s) with suffix `_filteredNA` will be used.}
+
+\item{group_cols}{Character vector (used by `pb_groupfilterNA()` only)
+specifying sample-annotation column(s) that define the groups within which
+missingness must be evaluated.}
+
+\item{min_valid}{Integer scalar (used by `pb_groupfilterNA()` only),
+minimum number of non-missing values required within each group to retain a
+feature. Default: `2L`.}
+
+\item{pNA}{Numeric scalar (used by `pb_groupfilterNA()` only), maximum
+proportion of missing values allowed within each group to retain a feature.
+Must be in the range `[0, 1]`. If both `min_valid` and `pNA` are provided,
+the stricter requirement is applied per group by enforcing the larger
+minimum number of observed values implied by either threshold.}
 }
 \value{
-`pb_zeroIsNA()`, `pb_infIsNA()` and `pb_filterNA()` return the
-  updated `ProBatchFeatures` object. `pb_nNA()` returns the output of the
-  corresponding `QFeatures::nNA()` call (a `list` of `DataFrame`s).
+`pb_zeroIsNA()`, `pb_infIsNA()`, `pb_filterNA()` and
+  `pb_groupfilterNA()` return the updated `ProBatchFeatures` object.
+  `pb_nNA()` returns the output of the corresponding `QFeatures::nNA()` call
+  (a `list` of `DataFrame`s).
 }
 \description{
 These wrappers delegate to the corresponding `QFeatures` generics while
@@ -45,4 +72,8 @@ ensuring that the requested assays remain part of the `ProBatchFeatures`
 object. Only assays that are already materialised can be modified.
 If a transformation step was applied as a "fast" step (log, log2, etc.),
 consider re-running it with `store_fast_steps = TRUE`.
+}
+\details{
+For grouped filtering, features are retained if they meet the
+  missingness criteria in at least one group defined by `group_cols`.
 }

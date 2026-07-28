@@ -16,6 +16,7 @@
   fill_the_missing = -1,
   pca_threshold = 0.6,
   variance_threshold = 0.01,
+  path_to_save_results = NULL,
   ...
 )
 
@@ -64,6 +65,9 @@ variabilities that the selected principal components need to explain}
 
 \item{variance_threshold}{the percentile value of weight each of the
 covariates needs to explain (the rest will be lumped together)}
+
+\item{path_to_save_results}{optional directory where aggregated PVCA results
+are written as `PVCA_results_aggregated.csv`.}
 
 \item{...}{Additional arguments forwarded between methods.}
 

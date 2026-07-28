@@ -2,6 +2,7 @@
 % Please edit documentation in R/initial_assessment.R
 \name{plot_sample_mean_or_boxplot}
 \alias{plot_sample_mean_or_boxplot}
+\alias{.pb_apply_initial_assessment_theme}
 \alias{plot_sample_mean.default}
 \alias{plot_boxplot.default}
 \alias{plot_sample_mean.ProBatchFeatures}
@@ -10,6 +11,8 @@
 \alias{plot_boxplot}
 \title{Plot per-sample mean or boxplots for initial assessment}
 \usage{
+.pb_apply_initial_assessment_theme(gg, theme_name, base_size)
+
 \method{plot_sample_mean}{default}(
   x,
   sample_annotation,
@@ -72,6 +75,10 @@ plot_sample_mean(x, ...)
 plot_boxplot(x, ...)
 }
 \arguments{
+\item{theme_name}{Name of the ggplot theme to apply to the resulting plot.}
+
+\item{base_size}{base font size}
+
 \item{x}{Input object supplied to the generics (matrix, long data frame, or `ProBatchFeatures`).}
 
 \item{sample_annotation}{data frame with:
@@ -125,10 +132,6 @@ pdf and png format is supported}
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
-\item{theme_name}{Name of the ggplot theme to apply to the resulting plot.}
-
-\item{base_size}{base font size}
-
 \item{ylimits}{range of y-axis to compare two plots side by side, if required.}
 
 \item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
@@ -157,30 +160,10 @@ functions for quick visual assessment of trends associated, overall
   or specific covariate-associated (see \code{batch_col} and \code{facet_col})
 }
 \examples{
-data(list = c(
-    "example_proteome", "example_sample_annotation",
-    "example_proteome_matrix"
-), package = "proBatch")
-
-demo_ids <- colnames(example_proteome_matrix)[1:6]
-demo_matrix <- example_proteome_matrix[, demo_ids]
-demo_annotation <- example_sample_annotation[
-    example_sample_annotation$FullRunName \%in\% demo_ids,
-]
-
-plot_sample_mean(
-    demo_matrix,
-    demo_annotation,
-    order_col = "order",
-    batch_col = "MS_batch"
-)
-
-demo_proteome <- example_proteome[
-    example_proteome$FullRunName \%in\% demo_ids,
-]
+data(list = c("example_proteome", "example_sample_annotation"), package = "proBatch")
 plot_boxplot(
-    demo_proteome,
-    sample_annotation = demo_annotation,
+    example_proteome,
+    sample_annotation = example_sample_annotation,
     batch_col = "MS_batch"
 )
 

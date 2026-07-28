@@ -18,7 +18,8 @@ plot_sample_corr_distribution(
   units = c("cm", "in", "mm"),
   plot_title = "Sample correlation distribution",
   plot_param = "batch_replicate",
-  theme = "classic"
+  theme = "classic",
+  pbf_name = NULL
 )
 
 plot_sample_corr_distribution.corrDF(
@@ -35,15 +36,16 @@ plot_sample_corr_distribution.corrDF(
 }
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+feature IDs in rownames and file/sample names as colnames, or a
+`ProBatchFeatures` object. When `data_matrix` is a
+`ProBatchFeatures` object, `pbf_name` is used (or the current assay when
+`pbf_name = NULL`).}
 
-\item{sample_annotation}{data frame with:
-\enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
-  \item biological covariates
-  \item technical covariates (batches etc) }.
-  See \code{help("example_sample_annotation")}}
+\item{sample_annotation}{data frame with sample-level metadata. When
+`data_matrix` is a matrix, this argument is required. When
+`data_matrix` is a `ProBatchFeatures` object and
+`sample_annotation` is not provided, `as.data.frame(colData(data_matrix))`
+is used.}
 
 \item{repeated_samples}{if \code{NULL}, correlation of all samples is plotted}
 
@@ -83,6 +85,9 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
 
+\item{pbf_name}{Assay name used when `data_matrix` is a `ProBatchFeatures`
+object. If `NULL`, [pb_current_assay()] is used.}
+
 \item{corr_distribution}{data frame with correlation distribution,
 as returned by \code{calculate_sample_corr_distr}}
 
@@ -115,14 +120,6 @@ corr_distribution <- calculate_sample_corr_distr(
 sample_corr_distribution_plot <- plot_sample_corr_distribution.corrDF(corr_distribution,
     plot_param = "batch_replicate"
 )
-
-sample_corr_file <- tempfile("sample_corr", fileext = ".png")
-sample_corr_distribution_plot <- plot_sample_corr_distribution.corrDF(corr_distribution,
-    plot_param = "batch_replicate",
-    filename = sample_corr_file,
-    width = 28, height = 28, units = "cm"
-)
-unlink(sample_corr_file)
 
 }
 \seealso{

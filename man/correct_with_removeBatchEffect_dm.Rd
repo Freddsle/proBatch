@@ -15,6 +15,18 @@ correct_with_removeBatchEffect_dm(
   fill_the_missing = NULL,
   ...
 )
+
+correct_with_removeBatchEffect_dm(
+  data_matrix,
+  sample_annotation,
+  feature_id_col = "peptide_group_label",
+  measure_col = "Intensity",
+  sample_id_col = "FullRunName",
+  batch_col = "MS_batch",
+  covariates_cols = NULL,
+  fill_the_missing = NULL,
+  ...
+)
 }
 \arguments{
 \item{data_matrix}{data matrix with features in rows and samples in columns}
@@ -43,6 +55,12 @@ data matrix with batch effects removed
 \description{
 Batch effect correction with removeBatchEffect.
 }
+\section{Functions}{
+\itemize{
+\item \code{correct_with_removeBatchEffect_dm()}: Deprecated wrapper for
+`correct_with_removeBatchEffect(format = "wide")`.
+
+}}
 \examples{
 data(
     list = c("example_sample_annotation", "example_proteome_matrix"),
