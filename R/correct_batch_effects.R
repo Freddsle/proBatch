@@ -217,8 +217,14 @@ center_feature_batch <- function(
     }
 
     if (identical(format, "wide")) {
-        if (length(unique(sample_annotation[[sample_id_col]])) != ncol(x)) {
+        if (!is.matrix(x) || !is.numeric(x)) {
             stop("format='wide' requires a numeric matrix with features in rows and samples in columns.")
+        }
+        if (is.null(sample_annotation) || is.null(colnames(x))) {
+            stop("format='wide' requires `sample_annotation` and column names on the matrix.")
+        }
+        if (!all(colnames(x) %in% sample_annotation[[sample_id_col]])) {
+            stop("Not all matrix column names found in sample_annotation[[sample_id_col]].")
         }
         # Convert wide -> long
         df_long <- matrix_to_long(
@@ -1671,7 +1677,8 @@ correct_batch_effects_df <- function(df_long, sample_annotation,
     .Deprecated("correct_batch_effects")
     correct_batch_effects(
         x = df_long, sample_annotation = sample_annotation, format = "long",
-        continuous_func = continuous_func, discrete_func = discrete_func,
+        continuous_func = continuous_func,
+        discrete_func = match.arg(discrete_func),
         batch_col = batch_col, feature_id_col = feature_id_col,
         sample_id_col = sample_id_col, measure_col = measure_col,
         order_col = order_col, keep_all = keep_all, no_fit_imputed = no_fit_imputed,
@@ -1703,7 +1710,8 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
     .Deprecated("correct_batch_effects")
     correct_batch_effects(
         x = data_matrix, sample_annotation = sample_annotation, format = "wide",
-        continuous_func = continuous_func, discrete_func = discrete_func,
+        continuous_func = continuous_func,
+        discrete_func = match.arg(discrete_func),
         batch_col = batch_col, feature_id_col = feature_id_col,
         sample_id_col = sample_id_col, measure_col = measure_col,
         order_col = order_col, min_measurements = min_measurements,

@@ -16,6 +16,90 @@ test_that("center_feature_batch_medians", {
     expect_equal(length(unique(median_proteome$median_batch)), n_batch)
 })
 
+test_that("center_feature_batch validates wide inputs by sample identity", {
+    data_matrix <- matrix(
+        c(1, 3, 2, 4),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2"))
+    )
+    annotation <- data.frame(
+        FullRunName = c("s1", "s2", "unused"),
+        MS_batch = c("b1", "b2", "b3"),
+        stringsAsFactors = FALSE
+    )
+
+    expect_warning(
+        centered <- center_feature_batch(
+            data_matrix,
+            annotation,
+            format = "wide",
+            stat = "means",
+            no_fit_imputed = FALSE
+        ),
+        "will merge on intersecting IDs only",
+        fixed = TRUE
+    )
+
+    expect_true(is.matrix(centered))
+    expect_identical(dim(centered), dim(data_matrix))
+    expect_setequal(colnames(centered), colnames(data_matrix))
+
+    expect_error(
+        center_feature_batch(
+            as.data.frame(data_matrix),
+            annotation,
+            format = "wide",
+            no_fit_imputed = FALSE
+        ),
+        "format='wide' requires a numeric matrix",
+        fixed = TRUE
+    )
+    expect_error(
+        center_feature_batch(
+            matrix(
+                as.character(data_matrix),
+                nrow = nrow(data_matrix),
+                dimnames = dimnames(data_matrix)
+            ),
+            annotation,
+            format = "wide",
+            no_fit_imputed = FALSE
+        ),
+        "format='wide' requires a numeric matrix",
+        fixed = TRUE
+    )
+    expect_error(
+        center_feature_batch(
+            data_matrix,
+            sample_annotation = NULL,
+            format = "wide",
+            no_fit_imputed = FALSE
+        ),
+        "requires `sample_annotation` and column names",
+        fixed = TRUE
+    )
+    expect_error(
+        center_feature_batch(
+            unname(data_matrix),
+            annotation,
+            format = "wide",
+            no_fit_imputed = FALSE
+        ),
+        "requires `sample_annotation` and column names",
+        fixed = TRUE
+    )
+    expect_error(
+        center_feature_batch(
+            data_matrix,
+            annotation[annotation$FullRunName != "s2", , drop = FALSE],
+            format = "wide",
+            no_fit_imputed = FALSE
+        ),
+        "Not all matrix column names found in sample_annotation[[sample_id_col]].",
+        fixed = TRUE
+    )
+})
+
 
 test_that("adjust_batch_trend", {
     data(example_proteome, package = "proBatch")
@@ -194,6 +278,62 @@ test_that("correct_batch_effects_dm returns matrix", {
 
     expect_true(is.matrix(corrected))
     expect_equal(dim(corrected), dim(example_proteome_matrix))
+})
+
+test_that("deprecated batch-correction wrappers select their default method", {
+    forwarded <- list()
+    testthat::local_mocked_bindings(
+        correct_batch_effects = function(...) {
+            arguments <- list(...)
+            forwarded[[length(forwarded) + 1L]] <<- arguments
+            arguments$x
+        },
+        .package = "proBatch"
+    )
+
+    data_matrix <- matrix(
+        1:4,
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2"))
+    )
+    annotation <- data.frame(
+        FullRunName = colnames(data_matrix),
+        MS_batch = c("b1", "b2"),
+        stringsAsFactors = FALSE
+    )
+    df_long <- data.frame(
+        peptide_group_label = rep(rownames(data_matrix), times = ncol(data_matrix)),
+        FullRunName = rep(colnames(data_matrix), each = nrow(data_matrix)),
+        Intensity = as.vector(data_matrix),
+        stringsAsFactors = FALSE
+    )
+
+    expect_warning(
+        df_result <- correct_batch_effects_df(
+            df_long,
+            annotation,
+            fill_the_missing = FALSE
+        ),
+        "deprecated"
+    )
+    expect_warning(
+        dm_result <- correct_batch_effects_dm(
+            data_matrix,
+            annotation,
+            fill_the_missing = FALSE
+        ),
+        "deprecated"
+    )
+
+    expect_identical(df_result, df_long)
+    expect_identical(dm_result, data_matrix)
+    expect_length(forwarded, 2L)
+    expect_identical(forwarded[[1L]]$format, "long")
+    expect_identical(forwarded[[2L]]$format, "wide")
+    expect_identical(forwarded[[1L]]$discrete_func, "MedianCentering")
+    expect_identical(forwarded[[2L]]$discrete_func, "MedianCentering")
+    expect_false(forwarded[[1L]]$fill_the_missing)
+    expect_false(forwarded[[2L]]$fill_the_missing)
 })
 
 
