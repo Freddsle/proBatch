@@ -111,11 +111,21 @@ loess_regression <- function(x_to_fit, y, x_all, y_all,
                              feature_id = NULL, batch_id = NULL, ...) {
     loess_warning <- NULL
     fallback_fit <- rep(NA_real_, length(y_all))
+    fit_range <- if (length(x_to_fit)) {
+        range(x_to_fit, na.rm = TRUE)
+    } else {
+        c(NA_real_, NA_real_)
+    }
     out <- tryCatch(
         withCallingHandlers(
             {
                 fit <- loess(y ~ x_to_fit, surface = "direct", ...)
                 pred <- predict(fit, newdata = data.frame(x_to_fit = x_all))
+                if (all(is.finite(fit_range))) {
+                    out_of_range <- !is.na(x_all) &
+                        (x_all < fit_range[1L] | x_all > fit_range[2L])
+                    pred[out_of_range] <- NA_real_
+                }
                 pred
             },
             warning = function(cond) {
@@ -150,6 +160,11 @@ loess_regression_opt <- function(x_to_fit, y, x_all, y_all,
                                  ...) {
     loess_warning <- NULL
     fallback_fit <- rep(NA_real_, length(y_all))
+    fit_range <- if (length(x_to_fit)) {
+        range(x_to_fit, na.rm = TRUE)
+    } else {
+        c(NA_real_, NA_real_)
+    }
     out <- tryCatch(
         withCallingHandlers(
             {
@@ -157,6 +172,11 @@ loess_regression_opt <- function(x_to_fit, y, x_all, y_all,
                 degr_freedom <- optimise_df(x_to_fit, bw)
                 fit <- loess(y ~ x_to_fit, enp.target = degr_freedom, surface = "direct", ...)
                 pred <- predict(fit, newdata = data.frame(x_to_fit = x_all))
+                if (all(is.finite(fit_range))) {
+                    out_of_range <- !is.na(x_all) &
+                        (x_all < fit_range[1L] | x_all > fit_range[2L])
+                    pred[out_of_range] <- NA_real_
+                }
                 return(pred)
             },
             warning = function(cond) {

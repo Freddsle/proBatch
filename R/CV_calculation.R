@@ -2,8 +2,15 @@
 compute_cv <- function(data, measure_col, group_vars, cv_name) {
     data %>%
         group_by(across(all_of(group_vars))) %>%
-        mutate(!!sym(cv_name) := 100 * sd(.data[[measure_col]], na.rm = TRUE) /
-            mean(.data[[measure_col]], na.rm = TRUE)) %>%
+        mutate(!!sym(cv_name) := {
+            mu <- mean(.data[[measure_col]], na.rm = TRUE)
+            sdv <- sd(.data[[measure_col]], na.rm = TRUE)
+            ifelse(
+                is.finite(mu) & abs(mu) > .Machine$double.eps,
+                100 * sdv / mu,
+                NA_real_
+            )
+        }) %>%
         ungroup()
 }
 

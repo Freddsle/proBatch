@@ -193,6 +193,37 @@ test_that("per-batch CV matches manual calculation", {
     expect_equal(cv_cmp$CV_perBatch, manual$cv)
 })
 
+test_that("CV is undefined for zero, near-zero, and non-finite means", {
+    cv_input <- tibble(
+        group = rep(c("finite", "near_zero", "non_finite", "zero"), each = 3),
+        Intensity = c(
+            1, 2, 3,
+            -1, 1, .Machine$double.eps,
+            1, 2, Inf,
+            -1, 0, 1
+        )
+    )
+
+    cv <- compute_cv(
+        data = cv_input,
+        measure_col = "Intensity",
+        group_vars = "group",
+        cv_name = "CV"
+    ) %>%
+        select(group, CV) %>%
+        distinct() %>%
+        arrange(group)
+
+    expect_equal(
+        cv$CV[cv$group == "finite"],
+        100 * sd(1:3) / mean(1:3)
+    )
+    expect_identical(
+        unname(cv$CV[cv$group != "finite"]),
+        rep(NA_real_, 3)
+    )
+})
+
 test_that("missing biospecimen column triggers warning", {
     pb_test_expect_warnings(
         res <- calculate_feature_CV(

@@ -83,3 +83,90 @@ test_that("fit_nonlinear excludes imputed values when requested", {
 
     expect_equal(vals_without_imputed, vals_expected)
 })
+
+test_that("LOESS helpers suppress predictions outside fitted support", {
+    x_to_fit <- 1:12
+    y_to_fit <- sin(x_to_fit / 3)
+    x_all <- c(0, x_to_fit, 13)
+    y_all <- rep(NA_real_, length(x_all))
+
+    direct <- loess_regression(
+        x_to_fit,
+        y_to_fit,
+        x_all,
+        y_all,
+        span = 1
+    )
+    optimized <- loess_regression_opt(
+        x_to_fit,
+        y_to_fit,
+        x_all,
+        y_all,
+        bws = c(0.5, 1, 1.5)
+    )
+
+    for (fit in list(direct, optimized)) {
+        expect_true(all(is.na(fit[c(1, length(fit))])))
+        expect_true(all(is.finite(fit[-c(1, length(fit))])))
+    }
+})
+
+test_that("LOESS warning and error paths return NA fallbacks", {
+    warning_fit <- NULL
+    warning_messages <- capture.output(
+        expect_warning(
+            warning_fit <- loess_regression(
+                rep(1, 6),
+                1:6,
+                1:4,
+                rep(NA_real_, 4),
+                feature_id = "feature",
+                batch_id = "batch"
+            ),
+            NA
+        ),
+        type = "message"
+    )
+    expect_true(all(is.na(warning_fit)))
+
+    direct_error <- NULL
+    direct_messages <- capture.output(
+        direct_error <- loess_regression(
+            1:3,
+            1:2,
+            1:4,
+            rep(NA_real_, 4),
+            feature_id = "feature",
+            batch_id = "batch"
+        ),
+        type = "message"
+    )
+    optimized_error <- NULL
+    optimized_messages <- capture.output(
+        optimized_error <- loess_regression_opt(
+            1:3,
+            1:2,
+            1:4,
+            rep(NA_real_, 4),
+            feature_id = "feature",
+            batch_id = "batch",
+            bws = 1
+        ),
+        type = "message"
+    )
+
+    expect_match(
+        paste(warning_messages, collapse = "\n"),
+        "could not be fit with LOESS"
+    )
+    expect_match(
+        paste(direct_messages, collapse = "\n"),
+        "could not be fit with LOESS"
+    )
+    expect_match(
+        paste(optimized_messages, collapse = "\n"),
+        "could not be fit with optimised LOESS"
+    )
+    expect_true(all(is.na(direct_error)))
+    expect_true(all(is.na(optimized_error)))
+})

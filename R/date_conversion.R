@@ -33,6 +33,7 @@ dates_to_posix <- function(sample_annotation,
                            dateTimeFormat = c("%b_%d", "%H:%M:%S"),
                            tz = "GMT", locale = "en_US.UTF-8") {
     old_locale <- Sys.getlocale("LC_TIME")
+    on.exit(Sys.setlocale("LC_TIME", old_locale), add = TRUE)
     Sys.setlocale("LC_TIME", locale)
 
     if (length(time_column) > 1 && length(dateTimeFormat) != length(time_column)) {
@@ -57,7 +58,6 @@ dates_to_posix <- function(sample_annotation,
             )) %>%
             rename(!!new_time_column := dateTime)
     }
-    Sys.setlocale("LC_TIME", old_locale)
     return(sample_annotation)
 }
 
@@ -107,11 +107,16 @@ date_to_sample_order <- function(sample_annotation,
     if (!is.null(instrument_col)) {
         sample_annotation <- sample_annotation %>%
             group_by_at(vars(one_of(instrument_col))) %>%
-            mutate(!!(sym(new_order_col)) := rank(!!sym(new_time_column))) %>%
+            mutate(
+                !!(sym(new_order_col)) := rank(
+                    !!sym(new_time_column),
+                    ties.method = "first"
+                )
+            ) %>%
             ungroup()
     } else {
         sample_annotation[[new_order_col]] <-
-            rank(sample_annotation[[new_time_column]])
+            rank(sample_annotation[[new_time_column]], ties.method = "first")
     }
     return(sample_annotation)
 }

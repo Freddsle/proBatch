@@ -88,6 +88,59 @@ test_that("dates_to_posix: error when lengths mismatch", {
     )
 })
 
+test_that("dates_to_posix restores LC_TIME after success and error", {
+    original_locale <- Sys.getlocale("LC_TIME")
+    on.exit(
+        suppressWarnings(Sys.setlocale("LC_TIME", original_locale)),
+        add = TRUE
+    )
+
+    locale_candidates <- unique(c(
+        original_locale,
+        "C.UTF-8",
+        "C.utf8",
+        "en_US.UTF-8",
+        "en_US.utf8",
+        "English_United States.1252"
+    ))
+    alternate_locale <- NULL
+    for (candidate in locale_candidates) {
+        changed <- suppressWarnings(Sys.setlocale("LC_TIME", candidate))
+        if (!is.na(changed) && Sys.getlocale("LC_TIME") != "C") {
+            alternate_locale <- Sys.getlocale("LC_TIME")
+            break
+        }
+    }
+    suppressWarnings(Sys.setlocale("LC_TIME", original_locale))
+    skip_if(is.null(alternate_locale), "No non-C LC_TIME locale is available")
+
+    suppressWarnings(Sys.setlocale("LC_TIME", alternate_locale))
+    locale_before_call <- Sys.getlocale("LC_TIME")
+
+    out <- dates_to_posix(
+        sample_annotation = data.frame(date = "2026-01-02"),
+        time_column = "date",
+        new_time_column = "parsed",
+        dateTimeFormat = "%Y-%m-%d",
+        locale = "C"
+    )
+    expect_s3_class(out$parsed, "POSIXct")
+    expect_identical(Sys.getlocale("LC_TIME"), locale_before_call)
+
+    expect_error(
+        dates_to_posix(
+            sample_annotation = data.frame(date = "2026-01-02"),
+            time_column = c("date", "missing"),
+            new_time_column = "parsed",
+            dateTimeFormat = "%Y-%m-%d",
+            locale = "C"
+        ),
+        "`dateTimeFormat` must match length of `time_column`",
+        fixed = TRUE
+    )
+    expect_identical(Sys.getlocale("LC_TIME"), locale_before_call)
+})
+
 test_that("date_to_sample_order: grouping by instrument resets ranks", {
     data(example_sample_annotation, package = "proBatch")
     df <- example_sample_annotation[1:6, ]
@@ -108,4 +161,36 @@ test_that("date_to_sample_order: grouping by instrument resets ranks", {
     ord_by_inst <- split(out$ord, out$instrument)
     expect_equal(ord_by_inst$A, 1:3)
     expect_equal(ord_by_inst$B, 1:3)
+})
+
+test_that("date_to_sample_order resolves tied times by arranged order", {
+    tied <- data.frame(
+        sample = c("a2", "a1", "b2", "b1"),
+        instrument = c("A", "A", "B", "B"),
+        run_time = rep("2026-01-02 10:00:00", 4)
+    )
+
+    ungrouped <- suppressWarnings(date_to_sample_order(
+        sample_annotation = tied,
+        time_column = "run_time",
+        new_time_column = "parsed",
+        dateTimeFormat = "%Y-%m-%d %H:%M:%S",
+        new_order_col = "run_order",
+        instrument_col = NULL
+    ))
+    expect_equal(ungrouped$sample, tied$sample)
+    expect_equal(ungrouped$run_order, seq_len(nrow(tied)))
+
+    grouped <- suppressWarnings(date_to_sample_order(
+        sample_annotation = tied,
+        time_column = "run_time",
+        new_time_column = "parsed",
+        dateTimeFormat = "%Y-%m-%d %H:%M:%S",
+        new_order_col = "run_order",
+        instrument_col = "instrument"
+    ))
+    expect_equal(
+        unname(split(grouped$run_order, grouped$instrument)),
+        list(1:2, 1:2)
+    )
 })
