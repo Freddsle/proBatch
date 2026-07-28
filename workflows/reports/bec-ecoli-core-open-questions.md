@@ -130,6 +130,20 @@ none of them touch these artifacts or dependency names.
   `plot_grouped_NA_heatmap()`, the `force_binarization` heatmap threshold, the
   grouped-density `sample_annotation`/`color_by`/`col_vector`/`color_scheme`
   parameters of `plot_NA_density()`, and `pb_subset_samples()`.
+- Also missing after `013`, `015`, and the `016` source stage (2026-07-29): the
+  same `v2.1.0` section documents none of the following. Commit
+  `d66b2bcdab3c37d140b532a9e435805fb098643e` made wide `center_feature_batch()`
+  reject non-numeric matrices, unnamed samples, and samples absent from
+  `sample_annotation`, which previously proceeded. Commit
+  `52704e234ee2ad85e33f24c28886a8c1eff7605d` carries an explicit
+  `BREAKING CHANGE:` footer for the default-on `pb_groupfilterNA(mask_failing)`
+  masking and adds the entirely new public `plot_NA_intensity()` generic with
+  its `default` and `ProBatchFeatures` methods. Commit
+  `5b034afddef2c134c071a74627ca8d32dff09686` redefined the documented meaning of
+  `fill_the_missing = FALSE` from "drop rows with NA" to the explicit keep
+  policy, made `"remove"`/`"rm"`/`"REMOVE"` the only removal spelling, and
+  turned the unconditional `removed n rows and n columns` `message()` into a
+  conditional `warning()`.
 - Coverage: no workflow from `003` through `032` reads or edits `NEWS`; only the
   manifest and `002` mention it. `022_72d11d1f7f92_version_variancepartition` is
   the only later workflow that edits `DESCRIPTION`, and it is limited to
@@ -153,14 +167,15 @@ none of them touch these artifacts or dependency names.
 - Artifacts: `./R/correct_batch_effects.R`.
 - Evidence: `correct_batch_effects_df`, `correct_batch_effects_dm`, and
   `correct_with_removeBatchEffect_dm` are each defined twice at top level in the
-  same file, at lines `1169`/`1652`, `1288`/`1689`, and `1367`/`1740`. The
-  foundation port collated the historical `R/correct_batch_effects_old.R` bodies
-  after the earlier definitions, so the later copies silently win by evaluation
-  order. These are the only duplicated top-level function symbols in `R/`; the
-  PVCA family is now consolidated.
+  same file, at lines `1182`/`1670`, `1301`/`1708`, and `1382`/`1763` as of
+  commit `5b034afddef2c134c071a74627ca8d32dff09686`. The foundation port
+  collated the historical `R/correct_batch_effects_old.R` bodies after the
+  earlier definitions, so the later copies silently win by evaluation order.
+  These are the only duplicated top-level function symbols in `R/`; the PVCA
+  family is now consolidated.
 - Effect: the earlier bodies are unreachable dead code, and the effective
   behavior of three public correction entry points depends on position in a
-  1755-line file rather than on an explicit decision. A later migration child
+  1778-line file rather than on an explicit decision. A later migration child
   that edits one of these functions may edit the shadowed copy and observe no
   change. This is the same defect class that source commit `42544a21f10c` fixed
   for PVCA. `R CMD check` does not report it.
@@ -172,11 +187,18 @@ none of them touch these artifacts or dependency names.
   `016_4285c42f3167_clarify_removebatcheffect_missing_policy` touch these
   functions, and both are scoped to missing-value semantics rather than to
   removing the duplicates. `032_residual_split_review` writes reports only.
+- Update after `013` and the `016` source stage (2026-07-29): both edited only
+  the effective later definitions and the shared helpers
+  `.handle_missing_for_batch_df()`, `.run_matrix_method()`, and
+  `.removeBatchEffect_matrix_step()`, so no shadowed copy was edited by
+  mistake. Neither removed the duplicates, and the shadowed bodies have now
+  drifted further from the effective ones. Only the `016` split stage remains
+  as an in-migration opportunity.
 - Options: (a) delete the shadowed earlier definitions once the intended
   authority is confirmed, and adopt the comparator's repository-wide
-  single-definition test; (b) keep the duplicates until `013` and `016` run and
-  resolve them there, accepting the risk of editing the shadowed copy;
-  (c) resolve after the migration as a separate cleanup.
+  single-definition test; (b) resolve them in the `016` split stage, which is
+  the last workflow scoped to these functions; (c) resolve after the migration
+  as a separate cleanup.
 - Decision: _pending._
 
 ### Bayesian PCA and `pcaMethods` skipped by an explicit core-policy decision
@@ -209,6 +231,34 @@ none of them touch these artifacts or dependency names.
   (c) port the source implementation unchanged and accept the
   argument-supply-dependent missing-value semantics.
 - Decision: _pending._
+
+### `plot_NA_intensity()` is unreachable until documentation is regenerated
+
+<!-- open-question id=owed-regeneration-plot-na-intensity status=open area=documentation -->
+
+- Found: `015_4b117a03f0c5_mask_groups_plot_na_intensity` source review
+  (2026-07-29).
+- Artifacts: `./R/plot_NA_intensity.R`, `./R/pb_missing_filters.R`,
+  `./R/correct_batch_effects.R`, `./R/handle_missing_values.R`.
+- Evidence: the last regeneration is commit
+  `745a211c04fd99677ce35b0a940e85be9712757a`, which predates slots `013`, `015`,
+  and `016`. Commit `52704e234ee2ad85e33f24c28886a8c1eff7605d` then added a
+  whole new public generic with two S3 methods, and commits
+  `d66b2bcdab3c37d140b532a9e435805fb098643e` and
+  `5b034afddef2c134c071a74627ca8d32dff09686` rewrote the `fill_the_missing`
+  Roxygen contract of the correction entry points and of
+  `handle_missing_values()`.
+- Effect: this is the same class as the `plot_grouped_NA_heatmap()` gap that
+  regeneration already closed once. `proBatch::plot_NA_intensity()` stays
+  unreachable for users and `R CMD check` reports an undocumented export until
+  regeneration, while the missing-policy manual pages still describe the
+  superseded `FALSE`-removes-rows contract. Focused tests do not catch it
+  because they run inside the package namespace; the `015` harness had to
+  register the two methods by hand.
+- Coverage: `017_4540aca9182c_generated_missing_docs` is the explicit
+  generated-only exception in the family and records a no-change disposition
+  without regenerating, so regeneration itself stays manual.
+- Decision: _pending; regenerate with devtools._
 
 ## Environment limitations (informational)
 
