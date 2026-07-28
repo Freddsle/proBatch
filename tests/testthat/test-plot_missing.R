@@ -581,8 +581,7 @@ test_that("plot_NA_density.default supports grouped densities", {
         drop = FALSE
     ]
     grouped_data <- grouped_data[
-        order(grouped_data$.pb_density_group, grouped_data$mean),
-        ,
+        order(grouped_data$.pb_density_group, grouped_data$mean), ,
         drop = FALSE
     ]
     expected <- data.frame(
