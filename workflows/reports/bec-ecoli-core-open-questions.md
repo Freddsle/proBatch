@@ -140,6 +140,17 @@ none of them touch these artifacts or dependency names.
   registration and usage section of the `plot_PVCA.df` manual page therefore
   need regeneration before the generated output can be trusted to match the
   source.
+- Also owed after `006_4e4e9811503c_grouped_na_heatmaps` (2026-07-28):
+  `R/plot_missing.R` adds a whole new public generic. `NAMESPACE` has no
+  `export(plot_grouped_NA_heatmap)` and neither
+  `S3method(plot_grouped_NA_heatmap,default)` nor
+  `S3method(plot_grouped_NA_heatmap,ProBatchFeatures)`, and `man/` has no
+  `plot_grouped_NA_heatmap.Rd`. This is the first migrated commit whose new API
+  is entirely absent from the generated output rather than merely stale, so
+  `proBatch::plot_grouped_NA_heatmap()` stays unreachable for users and
+  `R CMD check` reports an undocumented export until regeneration. The focused
+  tests still pass because `test_check()` evaluates them inside the package
+  namespace.
 - Coverage: `017_4540aca9182c_generated_missing_docs` is the explicit
   generated-only exception in the family, but regeneration itself stays manual.
 - Decision: _pending; regenerate with devtools once the migration completes._
