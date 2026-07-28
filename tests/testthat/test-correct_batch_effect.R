@@ -235,6 +235,138 @@ test_that("batch annotation alignment rejects duplicate identifiers", {
     )
 })
 
+test_that("false keeps missing values without preprocessing warnings", {
+    data_matrix <- matrix(
+        c(1, NA_real_, 3, 4),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2"))
+    )
+    annotation <- data.frame(
+        FullRunName = colnames(data_matrix),
+        MS_batch = c("b1", "b2"),
+        row.names = colnames(data_matrix),
+        stringsAsFactors = FALSE
+    )
+
+    matrix_result <- expect_silent(proBatch:::.run_matrix_method(
+        data_matrix,
+        annotation,
+        sample_id_col = "FullRunName",
+        fill_the_missing = FALSE,
+        missing_warning = "missing values would be handled",
+        method_fun = function(data_matrix, sample_annotation) data_matrix
+    ))
+
+    expect_identical(matrix_result, data_matrix)
+
+    df_long <- data.frame(
+        Feature = rep(rownames(data_matrix), times = ncol(data_matrix)),
+        FullRunName = rep(colnames(data_matrix), each = nrow(data_matrix)),
+        Intensity = as.vector(data_matrix),
+        stringsAsFactors = FALSE
+    )
+    handled <- expect_silent(proBatch:::.handle_missing_for_batch_df(
+        df_long = df_long,
+        sample_annotation = annotation,
+        feature_id_col = "Feature",
+        sample_id_col = "FullRunName",
+        measure_col = "Intensity",
+        fill_the_missing = FALSE,
+        warning_message = "missing values would be handled"
+    ))
+
+    expect_identical(handled$df_long, df_long)
+    expect_identical(handled$sample_annotation, annotation)
+})
+
+test_that("removeBatchEffect maps keep, drop, and fill missing outcomes", {
+    engine_inputs <- list()
+    testthat::local_mocked_bindings(
+        removeBatchEffect = function(x, batch, design, ...) {
+            engine_inputs[[length(engine_inputs) + 1L]] <<- x
+            x
+        },
+        .package = "proBatch"
+    )
+
+    data_matrix <- matrix(
+        c(1, 2, NA_real_, 4, 5, 6, 7, 8),
+        nrow = 2,
+        dimnames = list(
+            c("f1", "f2"),
+            c("s1", "s2", "s3", "s4")
+        )
+    )
+    annotation <- data.frame(
+        FullRunName = colnames(data_matrix),
+        MS_batch = rep(c("b1", "b2"), each = 2),
+        row.names = colnames(data_matrix),
+        stringsAsFactors = FALSE
+    )
+    df_long <- data.frame(
+        Feature = rep(rownames(data_matrix), times = ncol(data_matrix)),
+        FullRunName = rep(colnames(data_matrix), each = nrow(data_matrix)),
+        Intensity = as.vector(data_matrix),
+        stringsAsFactors = FALSE
+    )
+
+    kept_wide <- expect_silent(correct_with_removeBatchEffect(
+        data_matrix,
+        annotation,
+        format = "wide",
+        fill_the_missing = FALSE
+    ))
+    kept_long <- expect_silent(correct_with_removeBatchEffect(
+        df_long,
+        annotation,
+        feature_id_col = "Feature",
+        format = "long",
+        fill_the_missing = FALSE
+    ))
+
+    expect_identical(kept_wide, data_matrix)
+    expect_equal(sum(is.na(kept_long$Intensity)), 1L)
+
+    dropped <- pb_test_expect_warnings(
+        correct_with_removeBatchEffect(
+            df_long,
+            annotation,
+            feature_id_col = "Feature",
+            format = "long",
+            fill_the_missing = "remove"
+        ),
+        c(
+            "applying requested NA handling before modeling",
+            "removed 1 rows and 0 columns"
+        ),
+        fixed = TRUE
+    )
+
+    expect_identical(unique(dropped$Feature), "f2")
+
+    filled <- pb_test_expect_warnings(
+        correct_with_removeBatchEffect(
+            df_long,
+            annotation,
+            feature_id_col = "Feature",
+            format = "long",
+            fill_the_missing = 0
+        ),
+        c(
+            "applying requested NA handling before modeling",
+            "filling missing values with 0"
+        ),
+        fixed = TRUE
+    )
+
+    filled_value <- filled$Intensity[
+        filled$Feature == "f1" & filled$FullRunName == "s2"
+    ]
+    expect_identical(filled_value, 0)
+    expect_false(anyNA(filled$Intensity))
+    expect_length(engine_inputs, 4L)
+})
+
 # test_that("center_feature_batch_means_df", {
 #     data(example_proteome, package = "proBatch")
 #     data(example_sample_annotation, package = "proBatch")

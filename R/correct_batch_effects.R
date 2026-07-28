@@ -16,9 +16,9 @@
 #'     \code{\link{correct_with_ComBat}()} adjusts for discrete batch effects
 #'     using parametric or non-parametric empirical Bayes (Johnson et al., 2007).
 #'     \strong{Missing data:} ComBat requires an \emph{NA-free} matrix. If your data
-#'     contain missing values, either set \code{fill_the_missing = FALSE} to drop
-#'     NA-containing features/columns or provide a numeric value to impute before
-#'     calling ComBat.
+#'     contain missing values, use a removal token such as
+#'     \code{fill_the_missing = "remove"} to drop NA-containing features or
+#'     provide a numeric value to impute before calling ComBat.
 #'
 #'   \item \strong{Linear batch correction with limma}:
 #'     \code{\link{correct_with_removeBatchEffect}()} removes linear batch effects
@@ -51,10 +51,12 @@
 #'   wrapper: one of \code{"MedianCentering"}, \code{"MeanCentering"},
 #'   \code{"ComBat"}, or \code{"removeBatchEffect"}.
 #' @param fill_the_missing Missing-value policy applied \emph{before} discrete correction.
-#'   If \code{NULL} (default), missing values are left as is (no imputation/dropping).
-#'   For \code{ComBat}, the matrix must be NA-free — set \code{FALSE} to drop rows with NA
-#'   or provide a numeric value to impute. For \code{removeBatchEffect}, NA values in the data
-#'   matrix are permitted; however, the design (batch/covariates) must not contain NA.
+#'   If \code{NULL} (default) or \code{FALSE}, missing values are left as is
+#'   (no imputation or dropping). Use \code{"remove"}, \code{"rm"}, or
+#'   \code{"REMOVE"} to drop rows with NA, or provide a numeric value to
+#'   impute. For \code{ComBat}, the resulting matrix must be NA-free. For
+#'   \code{removeBatchEffect}, NA values in the data matrix are permitted;
+#'   however, the design (batch/covariates) must not contain NA.
 #' @param ... Additional parameters passed to \code{adjust_batch_trend_df()} and
 #'   the chosen \code{fit_func}.
 #'
@@ -85,12 +87,12 @@
 #'     example_sample_annotation
 #' )
 #'
-#' # 3) ComBat (discrete) — drop NA features/samples first if needed
+#' # 3) ComBat (discrete) — drop NA features first if needed
 #' combat_corrected_df <- correct_with_ComBat(
 #'     x = example_proteome,
 #'     sample_annotation = example_sample_annotation,
 #'     format = "long",
-#'     fill_the_missing = FALSE
+#'     fill_the_missing = "remove"
 #' )
 #'
 #' # 4) Continuous drift correction (LOESS), then discrete centering if desired
@@ -575,9 +577,11 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
 #' @param par.prior Logical; ComBat parametric prior (vs non-parametric).
 #' @param covariates_cols Optional character vector of \code{sample_annotation} columns
 #'   included in \code{mod} for ComBat (biological or nuisance covariates).
-#' @param fill_the_missing Missing-value policy prior to ComBat. If \code{NULL}, no action is taken
-#'   and the call will \emph{fail if the matrix contains NA}. Set \code{FALSE} to drop rows with NA,
-#'   or provide a numeric value to impute (use with caution).
+#' @param fill_the_missing Missing-value policy prior to ComBat. If \code{NULL}
+#'   or \code{FALSE}, no action is taken and the call will \emph{fail if the
+#'   matrix contains NA}. Use \code{"remove"}, \code{"rm"}, or \code{"REMOVE"}
+#'   to drop rows with NA, or provide a numeric value to impute (use with
+#'   caution).
 #' @param keep_all For long format, columns to retain (see \code{subset_keep_cols()}).
 #' @param no_fit_imputed If \code{TRUE} and \code{qual_col} provided, masked values are
 #'   excluded when building the matrix (original values still corrected).
@@ -673,7 +677,9 @@ correct_with_ComBat <- function(
 #' @param fill_the_missing Missing-value policy applied before modeling. If \code{NULL} (default),
 #'   \emph{NA values in the data matrix are left as is} and handled by limma's linear modeling;
 #'   the design matrix (\code{batch_col} and \code{covariates_cols}) must be NA-free.
-#'   Set \code{FALSE} to drop rows with NA, or provide a numeric value to impute explicitly.
+#'   \code{FALSE} also leaves missing values unchanged. Use \code{"remove"},
+#'   \code{"rm"}, or \code{"REMOVE"} to drop rows with NA, or provide a
+#'   numeric value to impute explicitly.
 #'
 #' @return Matrix if \code{format="wide"}, data.frame if \code{format="long"} with batch effects removed
 #' @examples
@@ -718,7 +724,8 @@ correct_with_removeBatchEffect <- function(
     }
 
     # LONG
-    warning_message <- if (is.null(fill_the_missing) || !fill_the_missing) {
+    warning_message <- if (is.null(fill_the_missing) ||
+        isFALSE(fill_the_missing)) {
         "removeBatchEffect will leave NA as-is in the matrix; design matrix (batch/covariates) must be free of NA."
     } else {
         "removeBatchEffect can operate with missing values; applying requested NA handling before modeling."
@@ -1007,7 +1014,7 @@ correct_batch_effects <- function(
                                          warning_message,
                                          qual_col = NULL,
                                          qual_value = NULL) {
-    handle_flag <- !is.null(fill_the_missing) || identical(fill_the_missing, FALSE)
+    handle_flag <- !is.null(fill_the_missing) && !isFALSE(fill_the_missing)
     if (!handle_flag) {
         return(list(df_long = df_long, sample_annotation = sample_annotation))
     }
@@ -1352,8 +1359,10 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
 #' @param batch_col column name in \code{sample_annotation} with batch IDs
 #' @param covariates_cols vector of column names in \code{sample_annotation}
 #' with covariates to include in the model
-#' @param fill_the_missing numeric value used to impute missing measurements
-#' before correction. If \code{FALSE} rows with missing values are removed.
+#' @param fill_the_missing Missing-value control forwarded to the correction
+#' helper. \code{NULL} or \code{FALSE} leaves missing values unchanged;
+#' \code{"remove"}, \code{"rm"}, or \code{"REMOVE"} removes rows with missing
+#' values; and a numeric scalar imputes missing values before correction.
 #' @param ... other parameters to pass to \code{removeBatchEffect}
 #' @return data matrix with batch effects removed
 #' @examples
@@ -1398,7 +1407,10 @@ correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
         data_matrix, sample_annotation,
         sample_id_col = sample_id_col,
         fill_the_missing = fill_the_missing,
-        missing_warning = "removeBatchEffect cannot operate with missing values in the matrix",
+        missing_warning = paste0(
+            "removeBatchEffect: missing values detected; applying requested ",
+            "NA handling before modeling."
+        ),
         method_fun = function(data_matrix, sample_annotation) {
             if (!(batch_col %in% names(sample_annotation))) {
                 stop("Batch column is not present in sample_annotation")
@@ -1482,8 +1494,8 @@ correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
         stop("Input must be coercible to a numeric matrix for batch correction.")
     }
 
-    # optional NA handling
-    handle_flag <- !is.null(fill_the_missing) || identical(fill_the_missing, FALSE)
+    # Optional NA handling. FALSE is the explicit keep policy.
+    handle_flag <- !is.null(fill_the_missing) && !isFALSE(fill_the_missing)
     if (handle_flag && anyNA(data_matrix)) {
         data_matrix <- handle_missing_values(
             data_matrix,
