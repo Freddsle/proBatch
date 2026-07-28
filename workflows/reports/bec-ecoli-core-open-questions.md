@@ -128,7 +128,12 @@ none of them touch these artifacts or dependency names.
   `tests/testthat/test-correlation_based_diagnostics.R` reports nine errors of
   the form `could not find function "pivot_longer"`. The failure is stale
   generated output rather than a source defect, and a later review must not read
-  it as a regression.
+  it as a regression. Confirmed against an unmodified `HEAD` worktree on
+  2026-07-28: the same nine errors occur without any working-tree change.
+- Also owed after `003_42544a21f10c_pvca_impl_dedup` (2026-07-28):
+  `R/proteome_wide_diagnostics.R` documents the newly activated `stacked_bar`,
+  `stacked_plot_title`, `sort_stacked`, `category_order`, `path_to_save_results`,
+  and `add_values` parameters, so the PVCA manual pages are stale as well.
 - Coverage: `017_4540aca9182c_generated_missing_docs` is the explicit
   generated-only exception in the family, but regeneration itself stays manual.
 - Decision: _pending; regenerate with devtools once the migration completes._

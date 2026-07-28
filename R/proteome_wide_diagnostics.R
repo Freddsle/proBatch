@@ -750,12 +750,18 @@ calculate_PVCA.default <- function(data_matrix, sample_annotation,
                                    ),
                                    pca_threshold = .6, variance_threshold = .01,
                                    fill_the_missing = -1, ...) {
-    df_long <- matrix_to_long(data_matrix, sample_id_col = sample_id_col)
-    df_long <- check_sample_consistency(sample_annotation, sample_id_col, df_long,
-        batch_col = NULL, order_col = NULL,
-        facet_col = NULL, merge = FALSE
+    alignment <- .pb_align_matrix_and_annotation(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        sample_id_col = sample_id_col,
+        check_args = list(
+            batch_col = NULL,
+            order_col = NULL,
+            facet_col = NULL
+        )
     )
-    data_matrix <- long_to_matrix(df_long, sample_id_col = sample_id_col)
+    data_matrix <- alignment$data_matrix
+    sample_annotation <- alignment$sample_annotation
 
     # if factors_for_PVCA is NULL, add default columns
     if (is.null(factors_for_PVCA)) {
@@ -767,16 +773,33 @@ calculate_PVCA.default <- function(data_matrix, sample_annotation,
 
     sample_annotation <- sample_annotation %>%
         select(all_of(c(sample_id_col, factors_for_PVCA))) %>%
-        mutate_if(is.POSIXct, as.numeric) %>%
+        mutate(across(where(is.POSIXct), as.numeric)) %>%
         as.data.frame() %>%
+        remove_rownames() %>%
         column_to_rownames(var = sample_id_col)
+    if (!is.null(factors_for_PVCA)) {
+        factors_for_PVCA <- unique(factors_for_PVCA)
+        factors_for_PVCA <- factors_for_PVCA[factors_for_PVCA %in% names(sample_annotation)]
+        if (length(factors_for_PVCA)) {
+            level_counts <- vapply(sample_annotation[factors_for_PVCA], function(x) {
+                length(unique(x[!is.na(x)]))
+            }, integer(1))
+            factors_for_PVCA <- factors_for_PVCA[level_counts > 1L]
+        }
+        if (!length(factors_for_PVCA)) {
+            stop("No PVCA factors with more than one sampled level.")
+        }
+    }
+    data_matrix <- check_feature_id_col_in_dm(
+        feature_id_col = feature_id_col,
+        data_matrix = data_matrix,
+        issue_reported = TRUE
+    )
 
-    data_matrix <- check_feature_id_col_in_dm(feature_id_col, data_matrix)
-
-    warning_message <- "PVCA cannot operate with missing values in the matrix"
-    data_matrix <- handle_missing_values(
-        data_matrix, warning_message,
-        fill_the_missing
+    data_matrix <- .pb_handle_missing_wrapper(
+        data_matrix = data_matrix,
+        warning_message = "PVCA cannot operate with missing values in the matrix",
+        fill_the_missing = fill_the_missing
     )
 
     covrts.annodf <- AnnotatedDataFrame(data = sample_annotation)
@@ -785,8 +808,42 @@ calculate_PVCA.default <- function(data_matrix, sample_annotation,
         assayData = data_matrix,
         phenoData = covrts.annodf
     )
-    pvcaAssess <- pvcaBatchAssess(expr_set, factors_for_PVCA,
-        threshold = pca_threshold
+    pvcaAssess <- tryCatch(
+        pvcaBatchAssess(expr_set, factors_for_PVCA, threshold = pca_threshold),
+        error = function(e) {
+            msg <- conditionMessage(e)
+            if (!grepl("minDataPointsPerStratum", msg, fixed = TRUE) &&
+                !grepl("too small for reliable estimation", msg, fixed = TRUE)) {
+                stop(e)
+            }
+            # Pad rows for tiny matrices to satisfy vsn2's minimum data requirement.
+            pad_target <- max(nrow(data_matrix) * 2L, 50L)
+            for (i in seq_len(3L)) {
+                idx <- rep(seq_len(nrow(data_matrix)), length.out = pad_target)
+                padded_matrix <- data_matrix[idx, , drop = FALSE]
+                if (!is.null(rownames(padded_matrix))) {
+                    rownames(padded_matrix) <- make.unique(rownames(padded_matrix))
+                }
+                expr_set_pad <- ExpressionSet(
+                    assayData = padded_matrix,
+                    phenoData = covrts.annodf
+                )
+                res <- tryCatch(
+                    pvcaBatchAssess(expr_set_pad, factors_for_PVCA, threshold = pca_threshold),
+                    error = function(err) err
+                )
+                if (!inherits(res, "error")) {
+                    return(res)
+                }
+                msg <- conditionMessage(res)
+                if (!grepl("minDataPointsPerStratum", msg, fixed = TRUE) &&
+                    !grepl("too small for reliable estimation", msg, fixed = TRUE)) {
+                    stop(res)
+                }
+                pad_target <- pad_target * 2L
+            }
+            stop(e)
+        }
     )
     pvcaAssess_df <- data.frame(
         weights = as.vector(pvcaAssess$dat),
@@ -816,19 +873,49 @@ calculate_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
                                             sample_id_col = "FullRunName",
                                             ...) {
     object <- data_matrix
-    data_matrix <- pb_assay_matrix(object, pbf_name)
+    prep <- .pb_prepare_multi_assay(
+        object = object,
+        pbf_name = pbf_name,
+        dots = list(...),
+        plot_title = NULL,
+        default_title_fun = function(x) x
+    )
+    assays <- prep$assays
+    dots <- prep$dots
+    split_arg <- prep$split_arg
 
-    if (is.null(sample_annotation)) {
-        sample_annotation <- as.data.frame(colData(object))
+    default_sample_annotation <- .pb_default_sample_annotation(
+        object = object,
+        sample_id_col = sample_id_col
+    )
+    sample_ann_list <- split_arg(sample_annotation)
+
+    pvca_list <- vector("list", length(assays))
+    names(pvca_list) <- assays
+
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        data_matrix <- pb_assay_matrix(object, assay_nm)
+        sample_ann <- sample_ann_list[[i]]
+        if (is.null(sample_ann)) {
+            sample_ann <- default_sample_annotation
+        }
+
+        call_args <- c(list(
+            data_matrix = data_matrix,
+            sample_annotation = sample_ann,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col
+        ), dots)
+
+        pvca_list[[i]] <- do.call(calculate_PVCA.default, call_args)
     }
 
-    calculate_PVCA.default(
-        data_matrix = data_matrix,
-        sample_annotation = sample_annotation,
-        feature_id_col = feature_id_col,
-        sample_id_col = sample_id_col,
-        ...
-    )
+    if (length(pvca_list) == 1L) {
+        return(pvca_list[[1L]])
+    }
+
+    pvca_list
 }
 
 #' @export
@@ -856,8 +943,21 @@ calculate_PVCA <- function(data_matrix, ...) UseMethod("calculate_PVCA")
 #' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
 #' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
+#' @param stacked_bar logical; when `TRUE` and multiple `pbf_name` values are
+#'   provided, combines all assays in a single stacked bar chart (supported for
+#'   `ProBatchFeatures` inputs only).
+#' @param stacked_plot_title optional character vector that annotates the stacked
+#'   PVCA plot when `stacked_bar = TRUE`; elements are joined with newlines.
+#' @param sort_stacked optional factor name used to order stacked bars when
+#'   `stacked_bar = TRUE`; assays are ordered by the explained variance of this
+#'   factor in descending order.
+#' @param category_order optional character vector specifying the category order
+#'   in a stacked PVCA plot.
+#' @param path_to_save_results optional directory where aggregated PVCA results
+#'   are written as CSV.
 #' @param ... Additional arguments passed to lower-level methods.
 #' @param base_size base size of the text in the plot
+#' @param add_values logical; when `TRUE`, annotates each bar with its rounded weight.
 #'
 #' @name plot_PVCA
 #' @return \code{ggplot} object with the plot
@@ -892,7 +992,16 @@ plot_PVCA.default <- function(data_matrix, sample_annotation,
                               units = c("cm", "in", "mm"),
                               plot_title = NULL,
                               theme = "classic",
-                              base_size = 15, ...) {
+                              base_size = 15,
+                              path_to_save_results = NULL,
+                              ...) {
+    dots <- list(...)
+    add_values <- FALSE
+    if ("add_values" %in% names(dots)) {
+        add_values <- isTRUE(dots$add_values)
+        dots$add_values <- NULL
+    }
+
     pvca_res <- prepare_PVCA_df(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
@@ -902,15 +1011,27 @@ plot_PVCA.default <- function(data_matrix, sample_annotation,
         biological_factors = biological_factors,
         fill_the_missing = fill_the_missing,
         pca_threshold = pca_threshold,
-        variance_threshold = variance_threshold
+        variance_threshold = variance_threshold,
+        path_to_save_results = path_to_save_results
     )
 
-    gg <- plot_PVCA.df(
-        data_matrix = pvca_res, colors_for_bars = colors_for_bars,
-        filename = filename, width = width, height = height, units = units,
+    plot_args <- list(
+        data_matrix = pvca_res,
+        colors_for_bars = colors_for_bars,
+        filename = filename,
+        width = width,
+        height = height,
+        units = units,
         plot_title = plot_title,
-        theme = theme, base_size = base_size
+        theme = theme,
+        base_size = base_size,
+        add_values = add_values
     )
+
+    gg <- do.call(plot_PVCA.df, plot_args)
+    if (!is.null(gg$data) && "category" %in% names(gg$data)) {
+        gg$data$category <- as.character(gg$data$category)
+    }
     return(gg)
 }
 
@@ -924,23 +1045,123 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
                                        plot_title = NULL,
                                        return_gridExtra = FALSE,
                                        plot_ncol = NULL,
+                                       stacked_bar = FALSE,
+                                       stacked_plot_title = "Plot of weighted average proportion variance vs effects in PVCA",
+                                       sort_stacked = NULL,
+                                       category_order = NULL,
+                                       path_to_save_results = NULL,
                                        ...) {
     object <- data_matrix
-    assays <- .pb_assays_to_plot(object, pbf_name)
-    dots <- list(...)
-
-    filename_list <- NULL
-    if ("filename" %in% names(dots)) {
-        filename_list <- .pb_split_arg_by_assay(dots$filename, assays)
-        dots$filename <- NULL
-    }
+    prep <- .pb_prepare_multi_assay(
+        object = object,
+        pbf_name = pbf_name,
+        dots = list(...),
+        plot_title = plot_title,
+        default_title_fun = function(x) x
+    )
+    assays <- prep$assays
+    dots <- prep$dots
+    filename_list <- prep$filename_list
+    split_arg <- prep$split_arg
+    titles <- prep$titles
+    shared_title <- prep$shared_title
 
     if (is.null(sample_annotation)) {
-        sample_annotation <- as.data.frame(colData(object))
-        rownames(sample_annotation) <- NULL
+        sample_annotation <- .pb_default_sample_annotation(
+            object = object,
+            sample_id_col = sample_id_col,
+            drop_rownames = TRUE
+        )
     }
-    sample_ann_list <- .pb_split_arg_by_assay(sample_annotation, assays)
-    titles <- .pb_resolve_titles(assays, plot_title, default_fun = function(x) x)
+    sample_ann_list <- split_arg(sample_annotation)
+    default_sample_annotation <- .pb_default_sample_annotation(
+        object = object,
+        sample_id_col = sample_id_col,
+        drop_rownames = TRUE
+    )
+
+    stacked_requested <- isTRUE(stacked_bar)
+    use_stacked <- stacked_requested && length(assays) >= 2L
+
+    if (use_stacked) {
+        prepare_dots <- dots
+        drop_args <- c(
+            "colors_for_bars", "filename", "width", "height", "units",
+            "plot_title", "theme", "base_size", "add_values",
+            "stacked_bar", "sort_stacked", "return_gridExtra", "plot_ncol",
+            "path_to_save_results"
+        )
+        for (nm in drop_args) {
+            prepare_dots[[nm]] <- NULL
+        }
+
+        pvca_df_list <- vector("list", length(assays))
+        names(pvca_df_list) <- assays
+
+        for (i in seq_along(assays)) {
+            assay_nm <- assays[[i]]
+            data_matrix <- pb_assay_matrix(object, assay_nm)
+            sample_ann <- sample_ann_list[[i]]
+            if (is.null(sample_ann)) {
+                sample_ann <- default_sample_annotation
+            }
+            sample_ann <- as.data.frame(sample_ann, stringsAsFactors = FALSE)
+
+            path_to_save_results_assay <- NULL
+            if (!is.null(path_to_save_results)) {
+                path_to_save_results_assay <- file.path(path_to_save_results, assay_nm)
+            }
+
+            call_args <- c(list(
+                data_matrix = data_matrix,
+                sample_annotation = sample_ann,
+                feature_id_col = feature_id_col,
+                sample_id_col = sample_id_col,
+                path_to_save_results = path_to_save_results_assay
+            ), prepare_dots)
+
+            pvca_df_list[[i]] <- do.call(prepare_PVCA_df.default, call_args)
+        }
+
+        stacked_filename <- NULL
+        if (!is.null(filename_list)) {
+            idx <- which(!vapply(filename_list, is.null, logical(1)))
+            if (length(idx)) {
+                stacked_filename <- filename_list[[idx[1]]]
+            }
+        }
+
+        width_arg <- if ("width" %in% names(dots)) dots$width else NA
+        height_arg <- if ("height" %in% names(dots)) dots$height else NA
+        units_arg <- if ("units" %in% names(dots)) dots$units else c("cm", "in", "mm")
+        theme_arg <- if ("theme" %in% names(dots)) dots$theme else "classic"
+        base_size_arg <- if ("base_size" %in% names(dots)) dots$base_size else 15
+        colors_arg <- dots$colors_for_bars
+
+        stacked_title <- .pb_collapsed_plot_title(stacked_plot_title)
+        if (is.null(stacked_title)) {
+            stacked_title <- .pb_first_plot_title(plot_title)
+            if (is.null(stacked_title)) {
+                stacked_title <- shared_title
+            }
+        }
+
+        gg <- .pb_plot_pvca_stacked_bar(
+            pvca_df_list = pvca_df_list,
+            assays = assays,
+            colors_for_bars = colors_arg,
+            plot_title = stacked_title,
+            theme = theme_arg,
+            base_size = base_size_arg,
+            filename = stacked_filename,
+            width = width_arg,
+            height = height_arg,
+            units = units_arg,
+            sort_label = sort_stacked,
+            category_order = category_order
+        )
+        return(gg)
+    }
 
     plot_list <- vector("list", length(assays))
     names(plot_list) <- assays
@@ -950,28 +1171,30 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
         data_matrix <- pb_assay_matrix(object, assay_nm)
         sample_ann <- sample_ann_list[[i]]
         if (is.null(sample_ann)) {
-            sample_ann <- as.data.frame(colData(object))
-            rownames(sample_ann) <- NULL
+            sample_ann <- default_sample_annotation
+        }
+        sample_ann <- as.data.frame(sample_ann, stringsAsFactors = FALSE)
+
+        path_to_save_results_assay <- NULL
+        if (!is.null(path_to_save_results)) {
+            path_to_save_results_assay <- file.path(path_to_save_results, assay_nm)
         }
 
-        call_args <- dots
-        if (!is.null(filename_list)) {
-            fn <- filename_list[[i]]
-            if (!is.null(fn)) {
-                call_args$filename <- fn
-            }
-        }
+        call_args <- .pb_per_assay_dots(dots, filename_list, i)
 
         call_args <- c(list(
             data_matrix = data_matrix,
             sample_annotation = sample_ann,
             feature_id_col = feature_id_col,
             sample_id_col = sample_id_col,
-            plot_title = titles[i]
+            plot_title = titles[i],
+            path_to_save_results = path_to_save_results_assay
         ), call_args)
 
         plot_list[[i]] <- do.call(plot_PVCA.default, call_args)
     }
+
+    plot_list <- .pb_attach_shared_title(plot_list, shared_title)
 
     .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
 }
@@ -995,6 +1218,8 @@ plot_PVCA <- function(data_matrix, ...) UseMethod("plot_PVCA")
 #' excluded.
 #' If \code{NULL}, features with missing values are excluded.
 #' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
+#' @param path_to_save_results optional directory where aggregated PVCA results
+#'   are written as `PVCA_results_aggregated.csv`.
 #' @param ... Additional arguments forwarded between methods.
 #'
 #' @return data frame with weights and factors, combined in a way ready for plotting
@@ -1016,7 +1241,9 @@ prepare_PVCA_df.default <- function(data_matrix, sample_annotation,
                                     technical_factors = c("MS_batch", "instrument"),
                                     biological_factors = c("cell_line", "drug_dose"),
                                     fill_the_missing = -1,
-                                    pca_threshold = .6, variance_threshold = .01,
+                                    pca_threshold = .6,
+                                    variance_threshold = .01,
+                                    path_to_save_results = NULL,
                                     ...) {
     factors_for_PVCA <- c(technical_factors, biological_factors)
 
@@ -1031,6 +1258,9 @@ prepare_PVCA_df.default <- function(data_matrix, sample_annotation,
         fill_the_missing = fill_the_missing
     )
 
+    pvca_res <- pvca_res %>%
+        mutate(label = as.character(label))
+
     tech_interactions <- expand.grid(technical_factors, technical_factors) %>%
         mutate(tech_interactions = paste(Var1, Var2, sep = ":")) %>%
         pull(tech_interactions)
@@ -1041,20 +1271,33 @@ prepare_PVCA_df.default <- function(data_matrix, sample_annotation,
     label_of_small <- sprintf("Below %1.0f%%", 100 * variance_threshold)
     technical_factors <- c(technical_factors, tech_interactions)
     biological_factors <- c(biological_factors, biol_interactions)
-    pvca_res <- pvca_res %>% mutate(category = ifelse(label %in% technical_factors,
-        "technical",
-        ifelse(label %in% biological_factors,
-            "biological",
-            ifelse(label %in% c(label_of_small, "resid"),
-                "residual", "biol:techn"
-            )
-        )
-    ))
+    residual_labels <- c("Residuals", "Residual", "resid", "residual")
+    if (!is.null(label_of_small)) {
+        residual_labels <- c(residual_labels, label_of_small)
+    }
+    residual_labels <- unique(tolower(residual_labels))
+
+    pvca_res <- pvca_res %>%
+        mutate(category = case_when(
+            label %in% technical_factors ~ "technical",
+            label %in% biological_factors ~ "biological",
+            tolower(label) %in% residual_labels ~ "residual",
+            TRUE ~ "biol:techn"
+        ))
 
     pvca_res <- pvca_res %>%
         arrange(desc(weights)) %>%
         arrange(label == label_of_small) %>%
         arrange(label == "resid")
+
+    if (!is.null(path_to_save_results)) {
+        if (!dir.exists(path_to_save_results)) {
+            dir.create(path_to_save_results, recursive = TRUE)
+        }
+        pvca_res_file <- file.path(path_to_save_results, "PVCA_results_aggregated.csv")
+        utils::write.csv(pvca_res, pvca_res_file, row.names = FALSE)
+    }
+
     return(pvca_res)
 }
 
@@ -1067,19 +1310,50 @@ prepare_PVCA_df.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
                                              sample_id_col = "FullRunName",
                                              ...) {
     object <- data_matrix
-    data_matrix <- pb_assay_matrix(object, pbf_name)
+    prep <- .pb_prepare_multi_assay(
+        object = object,
+        pbf_name = pbf_name,
+        dots = list(...),
+        plot_title = NULL,
+        default_title_fun = function(x) x
+    )
+    assays <- prep$assays
+    dots <- prep$dots
+    split_arg <- prep$split_arg
 
-    if (is.null(sample_annotation)) {
-        sample_annotation <- as.data.frame(colData(object))
+    default_sample_annotation <- .pb_default_sample_annotation(
+        object = object,
+        sample_id_col = sample_id_col
+    )
+    sample_ann_list <- split_arg(sample_annotation)
+
+    pvca_df_list <- vector("list", length(assays))
+    names(pvca_df_list) <- assays
+
+    for (i in seq_along(assays)) {
+        assay_nm <- assays[[i]]
+        data_matrix <- pb_assay_matrix(object, assay_nm)
+        sample_ann <- sample_ann_list[[i]]
+        if (is.null(sample_ann)) {
+            sample_ann <- default_sample_annotation
+        }
+        sample_ann <- as.data.frame(sample_ann, stringsAsFactors = FALSE)
+
+        call_args <- c(list(
+            data_matrix = data_matrix,
+            sample_annotation = sample_ann,
+            feature_id_col = feature_id_col,
+            sample_id_col = sample_id_col
+        ), dots)
+
+        pvca_df_list[[i]] <- do.call(prepare_PVCA_df.default, call_args)
     }
 
-    prepare_PVCA_df.default(
-        data_matrix = data_matrix,
-        sample_annotation = sample_annotation,
-        feature_id_col = feature_id_col,
-        sample_id_col = sample_id_col,
-        ...
-    )
+    if (length(pvca_df_list) == 1L) {
+        return(pvca_df_list[[1L]])
+    }
+
+    pvca_df_list
 }
 
 #' @export
@@ -1091,31 +1365,55 @@ prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
                                   units = c("cm", "in", "mm"),
                                   plot_title = NULL,
                                   theme = "classic",
-                                  base_size = 15, ...) {
+                                  base_size = 15,
+                                  add_values = FALSE, ...) {
     pvca_res <- df
     pvca_res <- pvca_res %>%
-        mutate(label = factor(label, levels = label))
+        mutate(label = as.character(label))
+    label_levels <- unique(pvca_res$label)
+    pvca_res <- pvca_res %>%
+        mutate(label = factor(label, levels = label_levels))
+    label_category_map <- pvca_res %>%
+        distinct(label, category) %>%
+        arrange(label)
+    category_levels <- unique(label_category_map$category)
+    if (!length(category_levels)) {
+        category_levels <- unique(pvca_res$category)
+    }
+    pvca_res <- pvca_res %>%
+        mutate(category = factor(category, levels = category_levels))
+    max_weight <- max(pvca_res$weights, na.rm = TRUE)
+    if (!is.finite(max_weight)) {
+        max_weight <- 0
+    }
 
     gg <- ggplot(pvca_res, aes(x = label, y = weights, fill = category)) +
         geom_bar(stat = "identity", color = "black") +
         ylab("Weighted average proportion variance")
 
+    if (max_weight > 0) {
+        gg <- gg + expand_limits(y = if (max_weight * 1.05 <= 1) max_weight * 1.05 else 1.05)
+    }
+
+    default_cat_names <- c("residual", "biological", "biol:techn", "technical")
     if (is.null(colors_for_bars)) {
         colors_for_bars <- c("grey", wes_palettes$Rushmore[3:5])
-        names(colors_for_bars) <- c(
-            "residual", "biological",
-            "biol:techn", "technical"
-        )
+        names(colors_for_bars) <- default_cat_names
+    } else if (length(colors_for_bars) != 4) {
+        color_names <- paste(default_cat_names, collapse = " ")
+        warning(sprintf("four colors for: %s were expected", color_names))
     } else {
-        if (length(colors_for_bars) != 4) {
-            color_names <- paste(c(
-                "residual", "biological", "biol:techn",
-                "technical"
-            ), collapse = " ")
-            warning(sprintf("four colors for: %s were expected", color_names))
+        color_names <- names(colors_for_bars)
+        if (is.null(color_names) || any(!nzchar(color_names))) {
+            names(colors_for_bars) <- default_cat_names
         }
     }
-    gg <- gg + scale_fill_manual(values = colors_for_bars)
+    color_breaks <- levels(pvca_res$category)
+    gg <- gg + scale_fill_manual(
+        values = colors_for_bars,
+        breaks = color_breaks,
+        limits = color_breaks
+    )
 
     if (!is.null(plot_title)) {
         gg <- gg + ggtitle(plot_title)
@@ -1138,6 +1436,14 @@ prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
         xlab(NULL) +
         guides(fill = guide_legend(override.aes = list(color = NA), title = NULL))
 
+    if (isTRUE(add_values)) {
+        gg <- gg +
+            geom_text(aes(label = sprintf("%.2f", weights)),
+                vjust = -0.3,
+                size = base_size / 3
+            )
+    }
+
     save_ggplot(filename, units, width, height, gg)
 
     return(gg)
@@ -1155,28 +1461,65 @@ prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
                                            base_size = 20,
                                            return_gridExtra = FALSE,
                                            plot_ncol = NULL,
+                                           stacked_bar = FALSE,
+                                           stacked_plot_title = "Plot of weighted average proportion variance vs effects in PVCA",
+                                           sort_stacked = NULL,
+                                           category_order = NULL,
                                            ...) {
     object <- data_matrix
-    assays <- .pb_assays_to_plot(object, pbf_name)
-    prepare_dots <- list(...)
+    dots <- list(...)
+    if (!"filename" %in% names(dots)) {
+        dots <- c(list(filename = filename), dots)
+    }
+
+    prep <- .pb_prepare_multi_assay(
+        object = object,
+        pbf_name = pbf_name,
+        dots = dots,
+        plot_title = plot_title,
+        default_title_fun = function(x) x
+    )
+    assays <- prep$assays
+    prepare_dots <- prep$dots
+    filename_list <- prep$filename_list
+    split_arg <- prep$split_arg
+    titles <- prep$titles
+    shared_title <- prep$shared_title
+    add_values_arg <- NULL
+    if ("add_values" %in% names(prepare_dots)) {
+        add_values_arg <- prepare_dots$add_values
+        prepare_dots$add_values <- NULL
+    }
+    add_values_list <- split_arg(add_values_arg)
+
+    default_sample_annotation <- .pb_default_sample_annotation(
+        object = object,
+        sample_id_col = sample_id_col,
+        drop_rownames = TRUE
+    )
 
     if (is.null(sample_annotation)) {
-        sample_annotation <- as.data.frame(colData(object))
+        sample_annotation <- default_sample_annotation
     }
-    sample_ann_list <- .pb_split_arg_by_assay(sample_annotation, assays)
-    filename_list <- .pb_split_arg_by_assay(filename, assays)
-    titles <- .pb_resolve_titles(assays, plot_title, default_fun = function(x) x)
+    sample_ann_list <- split_arg(sample_annotation)
 
-    plot_list <- vector("list", length(assays))
-    names(plot_list) <- assays
+    if (is.list(colors_for_bars) && !is.data.frame(colors_for_bars)) {
+        colors_for_bars_list <- split_arg(colors_for_bars)
+    } else {
+        colors_for_bars_list <- rep(list(colors_for_bars), length(assays))
+    }
+
+    pvca_res_list <- vector("list", length(assays))
+    names(pvca_res_list) <- assays
 
     for (i in seq_along(assays)) {
         assay_nm <- assays[[i]]
         data_matrix <- pb_assay_matrix(object, assay_nm)
         sample_ann <- sample_ann_list[[i]]
         if (is.null(sample_ann)) {
-            sample_ann <- as.data.frame(colData(object))
+            sample_ann <- default_sample_annotation
         }
+        sample_ann <- as.data.frame(sample_ann, stringsAsFactors = FALSE)
 
         prepare_args <- c(list(
             data_matrix = data_matrix,
@@ -1185,11 +1528,63 @@ prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
             sample_id_col = sample_id_col
         ), prepare_dots)
         pvca_res <- do.call(prepare_PVCA_df.default, prepare_args)
+        pvca_res_list[[i]] <- pvca_res
+    }
+
+    stacked_requested <- isTRUE(stacked_bar)
+    use_stacked <- stacked_requested && length(assays) >= 2L
+    if (use_stacked) {
+        stacked_filename <- filename
+        if (!is.null(filename_list)) {
+            idx <- which(!vapply(filename_list, is.null, logical(1)))
+            if (length(idx)) {
+                stacked_filename <- filename_list[[idx[1]]]
+            }
+        }
+        stacked_title <- .pb_collapsed_plot_title(stacked_plot_title)
+        if (is.null(stacked_title)) {
+            stacked_title <- .pb_first_plot_title(plot_title)
+            if (is.null(stacked_title)) {
+                stacked_title <- shared_title
+            }
+        }
+        stacked_colors <- NULL
+        color_idx <- which(!vapply(colors_for_bars_list, is.null, logical(1)))
+        if (length(color_idx)) {
+            stacked_colors <- colors_for_bars_list[[color_idx[1]]]
+        }
+
+        gg <- .pb_plot_pvca_stacked_bar(
+            pvca_df_list = pvca_res_list,
+            assays = assays,
+            colors_for_bars = stacked_colors,
+            plot_title = stacked_title,
+            theme = theme,
+            base_size = base_size,
+            filename = stacked_filename,
+            width = width,
+            height = height,
+            units = units,
+            sort_label = sort_stacked,
+            category_order = category_order
+        )
+        return(gg)
+    }
+
+    plot_list <- vector("list", length(assays))
+    names(plot_list) <- assays
+
+    for (i in seq_along(assays)) {
+        pvca_res <- pvca_res_list[[i]]
+        fn <- filename
+        if (!is.null(filename_list)) {
+            fn <- filename_list[[i]]
+        }
 
         plot_args <- list(
             df = pvca_res,
-            colors_for_bars = colors_for_bars,
-            filename = filename_list[[i]],
+            colors_for_bars = colors_for_bars_list[[i]],
+            filename = fn,
             width = width,
             height = height,
             units = units,
@@ -1197,9 +1592,15 @@ prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
             theme = theme,
             base_size = base_size
         )
+        add_values_val <- add_values_list[[i]]
+        if (!is.null(add_values_val)) {
+            plot_args$add_values <- isTRUE(add_values_val)
+        }
 
         plot_list[[i]] <- do.call(.plot_PVCA_df_default, plot_args)
     }
+
+    plot_list <- .pb_attach_shared_title(plot_list, shared_title)
 
     .pb_arrange_plot_list(plot_list, convert_fun = ggplotGrob, plot_ncol = plot_ncol, return_gridExtra = return_gridExtra)
 }
@@ -1236,6 +1637,17 @@ prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
 #' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
 #' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
+#' @param stacked_bar Logical; combine multiple `ProBatchFeatures` assays in one
+#'   stacked bar chart.
+#' @param stacked_plot_title Optional character vector used as the stacked plot
+#'   title; elements are joined with newlines.
+#' @param sort_stacked Optional factor label used to order stacked assay bars by
+#'   descending explained variance.
+#' @param category_order Optional character vector specifying stacked category
+#'   order.
+#' @param path_to_save_results Optional directory where aggregated PVCA result
+#'   CSV files are written.
+#' @param add_values Logical; annotate bars with rounded weight values.
 #' @param ... Additional arguments. When `data_matrix` is a
 #'   `ProBatchFeatures`, these are forwarded to `prepare_PVCA_df()`.
 #'
