@@ -111,7 +111,7 @@ fit_nonlinear <- function(df_feature_batch,
 #' @importFrom stats predict loess
 loess_regression <- function(x_to_fit, y, x_all, y_all,
                              feature_id = NULL, batch_id = NULL, ...) {
-    loess_warning <- NULL
+    loess_warning <- new.env(parent = emptyenv())
     fallback_fit <- rep(NA_real_, length(y_all))
     fit_range <- if (length(x_to_fit)) {
         range(x_to_fit, na.rm = TRUE)
@@ -131,7 +131,7 @@ loess_regression <- function(x_to_fit, y, x_all, y_all,
                 pred
             },
             warning = function(cond) {
-                loess_warning <<- conditionMessage(cond)
+                loess_warning$msg <- conditionMessage(cond)
                 invokeRestart("muffleWarning")
             }
         ),
@@ -144,12 +144,12 @@ loess_regression <- function(x_to_fit, y, x_all, y_all,
             fallback_fit
         }
     )
-    if (!is.null(loess_warning)) {
+    if (!is.null(loess_warning$msg)) {
         message(sprintf(
             "Feature %s in batch %s could not be fit with LOESS:",
             feature_id, batch_id
         ))
-        message(loess_warning)
+        message(loess_warning$msg)
         return(fallback_fit)
     }
     return(out)
@@ -160,7 +160,7 @@ loess_regression_opt <- function(x_to_fit, y, x_all, y_all,
                                  kernel = "normal",
                                  bws = c(0.01, 0.5, 1, 1.5, 2, 5, 10),
                                  ...) {
-    loess_warning <- NULL
+    loess_warning <- new.env(parent = emptyenv())
     fallback_fit <- rep(NA_real_, length(y_all))
     fit_range <- if (length(x_to_fit)) {
         range(x_to_fit, na.rm = TRUE)
@@ -182,7 +182,7 @@ loess_regression_opt <- function(x_to_fit, y, x_all, y_all,
                 return(pred)
             },
             warning = function(cond) {
-                loess_warning <<- conditionMessage(cond)
+                loess_warning$msg <- conditionMessage(cond)
                 invokeRestart("muffleWarning")
             }
         ),
@@ -195,12 +195,12 @@ loess_regression_opt <- function(x_to_fit, y, x_all, y_all,
             fallback_fit
         }
     )
-    if (!is.null(loess_warning)) {
+    if (!is.null(loess_warning$msg)) {
         message(sprintf(
             "Feature %s in batch %s could not be fit with optimised LOESS:",
             feature_id, batch_id
         ))
-        message(loess_warning)
+        message(loess_warning$msg)
         return(fallback_fit)
     }
     return(out)

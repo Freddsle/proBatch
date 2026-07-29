@@ -15,6 +15,8 @@
 #'
 #' @example inst/examples/ProBatchFeatures-basic.R
 #'
+#' @return No return value; defines the \code{ProBatchFeatures} S4 class.
+#'
 #' @import QFeatures
 #' @import SummarizedExperiment
 #' @import methods

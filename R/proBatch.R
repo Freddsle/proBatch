@@ -144,6 +144,7 @@
 #'     browseVignettes(package = "proBatch")
 #' }
 #'
+#' @return No return value.
 #' @docType package
 #' @name proBatch
 #' @aliases proBatch-package
