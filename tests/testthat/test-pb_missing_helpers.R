@@ -169,6 +169,44 @@ test_that("pb_filterNA modifies stored assays in place when requested", {
     expect_identical(log$params[[1]]$inplace, TRUE)
 })
 
+test_that("pb_filterNA preserves and prunes links during in-place filtering", {
+    mat <- matrix(
+        c(1, NA, 3, 4, 5, 6),
+        nrow = 3,
+        byrow = TRUE,
+        dimnames = list(paste0("f", 1:3), paste0("s", 1:2))
+    )
+    pbf <- make_test_pbf(mat)
+    source_name <- pb_current_assay(pbf)
+    linked_name <- "feature::copy"
+    pbf <- proBatch:::.pb_add_assay_with_link(
+        pbf,
+        se = pbf[[source_name]],
+        to = linked_name,
+        from = source_name
+    )
+
+    result <- expect_no_warning(
+        suppressMessages(
+            pb_filterNA(
+                pbf,
+                pbf_name = linked_name,
+                inplace = TRUE,
+                pNA = 0
+            )
+        )
+    )
+
+    expect_true(validObject(result))
+    expect_identical(rownames(result[[linked_name]]), c("f2", "f3"))
+    link <- QFeatures::assayLink(result, linked_name)
+    expect_identical(link@from, source_name)
+    expect_identical(
+        as.character(as.data.frame(link@hits)$names_to),
+        c("f2", "f3")
+    )
+})
+
 test_that("pb_filterNA validates final_name length when creating new assays", {
     mat <- matrix(
         c(1, NA, 3, 4),
@@ -224,6 +262,48 @@ test_that("pb_groupfilterNA retains union of group-wise valid features in place"
     expect_identical(log$params[[1]]$group_cols, "Batch")
     expect_identical(log$params[[1]]$min_valid, 2L)
     expect_null(log$params[[1]]$pNA)
+})
+
+test_that("pb_groupfilterNA reports links removed by in-place replacement", {
+    mat <- matrix(
+        c(1, 2, NA, 4, 5, 6),
+        nrow = 3,
+        byrow = TRUE,
+        dimnames = list(paste0("f", 1:3), paste0("s", 1:2))
+    )
+    pbf <- make_test_pbf(
+        mat,
+        sa_extra = data.frame(Batch = c("B1", "B1"))
+    )
+    source_name <- pb_current_assay(pbf)
+    linked_name <- "feature::copy"
+    pbf <- proBatch:::.pb_add_assay_with_link(
+        pbf,
+        se = pbf[[source_name]],
+        to = linked_name,
+        from = source_name
+    )
+
+    result <- NULL
+    expect_warning(
+        result <- suppressMessages(
+            pb_groupfilterNA(
+                pbf,
+                pbf_name = linked_name,
+                group_cols = "Batch",
+                min_valid = 2L,
+                inplace = TRUE
+            )
+        ),
+        "Links between assays were lost/removed during replacement",
+        fixed = TRUE
+    )
+
+    expect_true(validObject(result))
+    expect_identical(rownames(result[[linked_name]]), c("f1", "f3"))
+    link <- QFeatures::assayLink(result, linked_name)
+    expect_true(is.na(link@from))
+    expect_length(link@hits, 0L)
 })
 
 test_that("pb_groupfilterNA stores union of group-wise valid features when not operating in place", {

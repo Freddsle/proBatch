@@ -12,13 +12,14 @@
 #' @param object A `ProBatchFeatures` object.
 #' @param pbf_name Character vector of assay names. Defaults to
 #'   `names(object)` - all assays.
-#' @param inplace Logical (used by `pb_filterNA()` only), whether to modify the
-#'   object in place. Default: `FALSE`.
-#'   If `FALSE`, the modified assay(s) will be added to the object with
-#'   `final_name` (if provided) or the original name(s) with suffix `_filteredNA`.
-#' @param final_name Character (used by `pb_filterNA()` only), name for the
-#'   modified assay(s) if `inplace` is `FALSE`. If `NULL` (default), the
-#'   original name(s) with suffix `_filteredNA` will be used.
+#' @param inplace Logical (used by `pb_filterNA()` and
+#'   `pb_groupfilterNA()`), whether to modify the object in place. Default:
+#'   `FALSE`. If `FALSE`, the modified assay(s) are added to the object with
+#'   `final_name` (if provided) or a function-specific suffix.
+#' @param final_name Character (used by `pb_filterNA()` and
+#'   `pb_groupfilterNA()`), name for the modified assay(s) if `inplace` is
+#'   `FALSE`. If `NULL` (default), the original name(s) receive suffix
+#'   `_filteredNA` or `_groupfilteredNA`, respectively.
 #' @param group_cols Character vector (used by `pb_groupfilterNA()` only)
 #'   specifying sample-annotation column(s) that define the groups within which
 #'   missingness must be evaluated.
@@ -45,6 +46,12 @@
 #'   missingness criteria in at least one group defined by `group_cols`.
 #'   When `mask_failing = TRUE` (the default), the values in groups where
 #'   the feature did not pass the threshold are replaced with `NA`.
+#'
+#'   With in-place `pb_filterNA()`, QFeatures preserves valid assay links and
+#'   prunes their hits to the retained features. In-place
+#'   `pb_groupfilterNA()` replaces the assay directly and may remove affected
+#'   links when feature rows change; QFeatures warns when this occurs. Use
+#'   `inplace = FALSE` to keep existing links unchanged.
 #' @name pb_missing_helpers
 NULL
 
