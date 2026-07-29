@@ -1176,6 +1176,76 @@ test_that("pb_transform honors final_name without colliding with pipeline-derive
     expect_true("feature::medianNorm_zeroNA" %in% names(pbf))
 })
 
+test_that("pb_transform materializes explicitly named final log assays", {
+    m <- matrix(
+        c(100, 200, 300, 400, 500, 600),
+        nrow = 3,
+        dimnames = list(paste0("P", 1:3), paste0("S", 1:2))
+    )
+    sa <- data.frame(
+        file = c("S1", "S2"),
+        row.names = c("S1", "S2")
+    )
+    pbf <- ProBatchFeatures(
+        m,
+        sa,
+        sample_id_col = "file",
+        level = "PGs"
+    )
+
+    final_name <- "PGs::log2_on_raw"
+    transformed <- pb_transform(
+        pbf,
+        from = "PGs::raw",
+        steps = "log2",
+        params_list = list(list(log_base = 2, offset = 1)),
+        final_name = final_name
+    )
+
+    expect_true("PGs::raw" %in% names(transformed))
+    expect_true(final_name %in% names(transformed))
+    expect_true(validObject(transformed))
+    expect_true(isTRUE(S4Vectors::metadata(transformed)$linked_last))
+    expect_equal(pb_assay_matrix(transformed, "PGs::raw"), m)
+    expect_equal(
+        pb_assay_matrix(transformed, final_name),
+        log2(m + 1),
+        tolerance = 1e-6
+    )
+
+    operation_log <- get_operation_log(transformed)
+    expect_identical(tail(as.character(operation_log$from), 1), "PGs::raw")
+    expect_identical(tail(as.character(operation_log$to), 1), final_name)
+    expect_identical(pb_pipeline_name(transformed, final_name), "log2_on_raw")
+    expect_equal(
+        pb_eval(
+            pbf,
+            from = "PGs::raw",
+            steps = "log",
+            params_list = list(list(base = 10, pseudo = 2))
+        ),
+        log(m + 2, base = 10)
+    )
+    expect_equal(
+        pb_eval(
+            pbf,
+            from = "PGs::raw",
+            steps = "log",
+            params_list = list(list(10, 2))
+        ),
+        log(m + 2, base = 10)
+    )
+    expect_equal(
+        pb_eval(
+            pbf,
+            from = "PGs::raw",
+            steps = "log2",
+            params_list = list(list(2))
+        ),
+        log2(m + 2)
+    )
+})
+
 test_that("registry inspection reports available core steps", {
     expect_true(pb_has_step("medianNorm"))
     expect_false(pb_has_step("not-a-step"))
