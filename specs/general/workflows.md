@@ -62,7 +62,7 @@ A finding that no remaining workflow resolves MUST be recorded as an entry in an
 ### Migrate BEC E. coli core history
 
 - Artifact: `./workflows/001_bec-ecoli-core-migration.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: analyze the core-owned API and the stopped split reference, define the exact BEC history scope, generate numbered workflows for core-relevant commits, retain unrelated companion-only commits as ordered references, and coordinate source-first and split-reference migration with maintainer-controlled review and commit pauses.
 - Triggers: the explicit migration of core-owned behavior from the local `BEC_ecoli_data` branch after baseline `ba6ee246eace090e71baa7aba302ca64e76ddb32`.
 - Major stages: verify pinned reference inputs; resolve the non-linear history boundary; inventory API ownership, commit effects, and split implementation evidence; classify each selected commit as executable or reference-only; create and catalog numbered child workflows; run executable children in order while skipping ordered references; pause twice per executable commit for maintainer analysis and commits; audit residual stopped-split changes; create structured residual reports; run deterministic governance checks.
@@ -92,7 +92,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC foundation core API
 
 - Artifact: `./workflows/002_foundation_core_api.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: migrate the 104 core-owned exports present at the synchronization merge while excluding companion providers and resolving effective correction load order.
 - Triggers: the recommended post-synchronization scope selected by the parent migration.
 - Major stages: inspect the pinned merge; port core behavior and tests; pause for source review; compare the stopped split; apply justified hardening; pause for split review; reverify.
@@ -102,7 +102,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit 42544a21f10c
 
 - Artifact: `./workflows/003_42544a21f10c_pvca_impl_dedup.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: review PVCA implementation consolidation and duplicate-definition removal.
 - Triggers: ordered migration of source commit `42544a21f10ca6960d3e4c44d2833f764054d721`.
 - Major stages: inspect the pinned PVCA hunks; port or record equivalence; review; compare split consolidation; review; reverify.
@@ -112,7 +112,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit db128668458a
 
 - Artifact: `./workflows/004_db128668458a_prone_normalization_integration.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: retain the core QFeatures link guard while excluding PRONE normalization providers.
 - Triggers: ordered migration of source commit `db128668458a58ad31f66be5b6e39e2fedadbbe1`.
 - Major stages: split core and companion hunks; verify the link behavior; review; compare registry/ownership evidence; review; reverify.
@@ -122,7 +122,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit 4e4e9811503c
 
 - Artifact: `./workflows/006_4e4e9811503c_grouped_na_heatmaps.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: migrate grouped missingness heatmaps and their focused tests.
 - Triggers: ordered migration of source commit `4e4e9811503cc7da1e35a8113a2fb8383fc5007b`.
 - Major stages: inspect grouped heatmap APIs; port/test; review; compare split helpers; review; reverify.
@@ -132,7 +132,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit 12d4597e9e86
 
 - Artifact: `./workflows/007_12d4597e9e86_violin_qualification.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: qualify core split-violin calls while excluding companion variance-partition metadata.
 - Triggers: ordered migration of source commit `12d4597e9e86ea2daddc77c4d236e692bbfa8fa9`.
 - Major stages: split mixed hunks; port/test core calls; review; compare split source and dependencies; review; reverify.
@@ -142,7 +142,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit 5747090a1de1
 
 - Artifact: `./workflows/008_5747090a1de1_test_grouped_na_binarization.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: migrate the grouped-heatmap binarization regression tests in source order.
 - Triggers: ordered migration of source commit `5747090a1de1cdde780c6db7a84f988aedb9e8af`.
 - Major stages: inspect test-only hunks; add or record equivalent coverage; review; compare split tests; review; reverify.
@@ -152,7 +152,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit 7feb6d5cea9e
 
 - Artifact: `./workflows/009_7feb6d5cea9e_grouped_na_density.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: migrate grouped density plots and grouped-heatmap binarization.
 - Triggers: ordered migration of source commit `7feb6d5cea9ec92d378453ff65d672f231fa44b8`.
 - Major stages: inspect source/tests; port; review; compare split public signatures; review; reverify.
@@ -162,7 +162,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit 0dbce8129444
 
 - Artifact: `./workflows/010_0dbce8129444_density_color_scheme.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: migrate grouped-density color schemes and editable documentation.
 - Triggers: ordered migration of source commit `0dbce8129444c9079a560fb9bcd60b328b1f054c`.
 - Major stages: inspect color hunks/tests; port; review; compare stopped-split helpers; review; reverify.
@@ -172,7 +172,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit 6d3c15e41905
 
 - Artifact: `./workflows/011_6d3c15e41905_subset_and_bpca.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: migrate sample subsetting and decide the optional Bayesian PCA surface.
 - Triggers: ordered migration of source commit `6d3c15e419058d264b61ac43c27e95e0d635ca01`.
 - Major stages: inspect container/PCA hunks; port; review; compare split behavior/dependencies; review; reverify.
@@ -182,7 +182,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit 7db05faed18f
 
 - Artifact: `./workflows/012_7db05faed18f_omicsgmf_all_na_guard.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: retain core colData compatibility while excluding omicsGMF and PRONE provider behavior.
 - Triggers: ordered migration of source commit `7db05faed18f75572d92553ae668288c326bda2a`.
 - Major stages: separate mixed hunks; test core compatibility; review; compare ownership boundaries; review; reverify.
@@ -192,7 +192,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit fdafc6c8fe13
 
 - Artifact: `./workflows/013_fdafc6c8fe13_centralize_all_na_handling.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: assess shared all-NA helpers, correction wrappers, and normalization behavior without provider leakage.
 - Triggers: ordered migration of source commit `fdafc6c8fe1391de1cc0d2db36d346cd0d4e61d5`.
 - Major stages: separate core/provider hunks; port/test; review; compare canonical split policies; review; reverify.
@@ -202,7 +202,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit 77a3365f0e13
 
 - Artifact: `./workflows/014_77a3365f0e13_demote_all_na_helper_roxygen.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: apply the internal-helper documentation change only if its prerequisite helpers are retained.
 - Triggers: ordered migration of source commit `77a3365f0e13e9abca40a14e1898a351a1cdbc7f`.
 - Major stages: inspect prerequisite state; change or skip source comments; review; compare split absence; review; reverify.
@@ -212,7 +212,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit 4b117a03f0c5
 
 - Artifact: `./workflows/015_4b117a03f0c5_mask_groups_plot_na_intensity.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: migrate group-failure masking and the NA-intensity plotting API.
 - Triggers: ordered migration of source commit `4b117a03f0c5295f2253db26e13b945d7e3027b5`.
 - Major stages: inspect source/tests; port; review; compare split implementations and coverage; review; reverify.
@@ -222,7 +222,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit 4285c42f3167
 
 - Artifact: `./workflows/016_4285c42f3167_clarify_removebatcheffect_missing_policy.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: translate legacy removeBatchEffect missing-value behavior into the canonical core policy.
 - Triggers: ordered migration of source commit `4285c42f31670d2f750dc8eb8c7ff1d0134a342d`.
 - Major stages: inspect semantics; port or record supersession; review; compare split policy; review; reverify.
@@ -232,7 +232,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit 4540aca9182c
 
 - Artifact: `./workflows/017_4540aca9182c_generated_missing_docs.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: record a generated-only documentation commit without reading generated artifacts.
 - Triggers: ordered migration of source commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57`.
 - Major stages: verify the empty editable diff; review no-change; compare split provenance; review; reverify.
@@ -242,7 +242,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit d95dd736cb27
 
 - Artifact: `./workflows/019_d95dd736cb27_harden_cv_dates_loess_mcombat.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: migrate core CV, date, and LOESS safeguards while excluding mComBat.
 - Triggers: ordered migration of source commit `d95dd736cb27d68fb2e21b20ab97d0f69826a663`.
 - Major stages: split mixed hunks; port/test core safeguards; review; compare absent split behavior; review; reverify.
@@ -252,7 +252,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit 6989542e4ece
 
 - Artifact: `./workflows/020_6989542e4ece_harden_sample_alignment_consistency.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: migrate independent sample-alignment, correlation, copy-safety, and consistency diagnostics.
 - Triggers: ordered migration of source commit `6989542e4ece84f9fe210f3bf06b8254684e425e`.
 - Major stages: separate mixed hunks; port/test; review; compare split equivalence and removals; review; reverify.
@@ -262,7 +262,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit 428ad74b73fb
 
 - Artifact: `./workflows/021_428ad74b73fb_cleanup_provider_control_flow_docs.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: migrate core warning-capture and editable documentation while excluding provider and embedding cleanup.
 - Triggers: ordered migration of source commit `428ad74b73fbc067de09d0a71c93395ae85eb51f`.
 - Major stages: split mixed source/Roxygen hunks; port; review; compare split docs/control flow; review; reverify.
@@ -272,7 +272,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit 72d11d1f7f92
 
 - Artifact: `./workflows/022_72d11d1f7f92_version_variancepartition.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: review release version metadata and exclude the companion variancePartition dependency.
 - Triggers: ordered migration of source commit `72d11d1f7f92a10cb9a5244e68f9c19e830197b9`.
 - Major stages: inspect metadata; record current-policy result; review; compare split metadata; review; reverify.
@@ -282,7 +282,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit 8088de1701e0
 
 - Artifact: `./workflows/023_8088de1701e0_ignore_docker_readme.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: review repository-local Docker ignore metadata.
 - Triggers: ordered migration of source commit `8088de1701e0908cca25b978105f8d6c7bfccc20`.
 - Major stages: inspect `.gitignore`; change or skip; review; compare split metadata; review; reverify.
@@ -292,7 +292,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit b60e2b169afe
 
 - Artifact: `./workflows/027_b60e2b169afe_store_explicit_final_log_assay.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: migrate or record equivalent explicit final log-assay storage.
 - Triggers: ordered migration of source commit `b60e2b169afe45934c18eee1c83469e7e5fed33f`.
 - Major stages: inspect registry/container hunks; port/test; review; compare strengthened split behavior; review; reverify.
@@ -302,7 +302,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit 5edcc4b89f5c
 
 - Artifact: `./workflows/028_5edcc4b89f5c_report_inplace_link_effects.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: preserve correct assay-link behavior without replaying obsolete warnings.
 - Triggers: ordered migration of source commit `5edcc4b89f5cbfba07e1ca1057ab475a56501202`.
 - Major stages: inspect link-warning hunks; port or skip; review; compare evolved split behavior; review; reverify.
@@ -312,7 +312,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### BEC commit e2bb18547c73
 
 - Artifact: `./workflows/031_e2bb18547c73_drop_unused_model_levels.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: migrate unused-factor-level handling for core correction while excluding BERT modeling.
 - Triggers: ordered migration of source commit `e2bb18547c73f1c471fc1afcb3facbd8bea5fa92`.
 - Major stages: separate mixed core/BERT hunks; port/test; review; compare split gap; review; reverify.
@@ -322,7 +322,7 @@ Commit `4540aca9182c6708fe9bda0b8fc33d2cf8c13e57` at prefix `017_` MUST remain a
 #### Residual stopped-split review
 
 - Artifact: `./workflows/032_residual_split_review.donna.md`
-- State: implementation in progress
+- State: implemented
 - Purpose: classify the immutable 99-path residual split delta and create a structured remaining-change plan.
 - Triggers: completion of the foundation and 22 executable post-synchronization commit children, with all seven reference-only commits recorded as deterministic skips.
 - Major stages: inspect pinned split evidence; draft two reports; verify exact path/API markers; repair; pause for report review; reverify.
