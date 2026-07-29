@@ -159,6 +159,73 @@ test_that("correct_with_ComBat_df", {
     expect_gt(t_test_combat$p.value, 0.05)
 })
 
+test_that("ComBat / removeBatchEffect tolerate unused batch factor levels", {
+    engine_calls <- list()
+    testthat::local_mocked_bindings(
+        ComBat = function(dat, batch, mod, ...) {
+            engine_calls$combat <<- list(batch = batch, design = mod)
+            dat
+        },
+        removeBatchEffect = function(x, batch, design, ...) {
+            engine_calls$remove_batch_effect <<- list(
+                batch = batch,
+                design = design
+            )
+            x
+        },
+        .package = "proBatch"
+    )
+
+    data_matrix <- matrix(
+        seq_len(32),
+        nrow = 4,
+        dimnames = list(
+            paste0("f", seq_len(4)),
+            paste0("s", seq_len(8))
+        )
+    )
+    annotation <- data.frame(
+        FullRunName = colnames(data_matrix),
+        MS_batch = factor(
+            rep(c("b1", "b2"), each = 4),
+            levels = c("ghost_batch", "b1", "b2")
+        ),
+        condition = factor(
+            rep(c("A", "B"), times = 4),
+            levels = c("ghost_condition", "A", "B")
+        ),
+        row.names = colnames(data_matrix)
+    )
+
+    combat_out <- correct_with_ComBat(
+        data_matrix,
+        annotation,
+        format = "wide",
+        covariates_cols = "condition",
+        fill_the_missing = "error"
+    )
+    remove_batch_effect_out <- correct_with_removeBatchEffect(
+        data_matrix,
+        annotation,
+        format = "wide",
+        batch_col = "MS_batch",
+        covariates_cols = "condition",
+        fill_the_missing = "error"
+    )
+
+    expect_identical(dim(combat_out), dim(data_matrix))
+    expect_identical(dim(remove_batch_effect_out), dim(data_matrix))
+    for (engine_call in engine_calls) {
+        expect_identical(levels(engine_call$batch), c("b1", "b2"))
+        expect_false(any(grepl(
+            "ghost",
+            colnames(engine_call$design),
+            fixed = TRUE
+        )))
+        expect_identical(qr(engine_call$design)$rank, ncol(engine_call$design))
+    }
+})
+
 test_that("ComBat entry points forward supported engine arguments", {
     calls <- list()
     testthat::local_mocked_bindings(

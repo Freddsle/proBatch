@@ -1237,8 +1237,9 @@ run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
         stop("Batch column is not present in sample_annotation")
     }
 
-    # ONE batch factor only (ComBat constraint).
-    batches <- factor(sample_annotation[[batch_col]])
+    # ONE batch factor only (ComBat constraint). Remove empty levels before
+    # constructing the engine model to avoid rank-deficient designs.
+    batches <- droplevels(factor(sample_annotation[[batch_col]]))
 
     if (!is.null(covariates_cols) && length(covariates_cols)) {
         missing_cov <- setdiff(covariates_cols, names(sample_annotation))
@@ -1246,6 +1247,13 @@ run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
             stop("Covariates missing in sample_annotation: ", paste(missing_cov, collapse = ", "))
         }
         covariates <- as.data.frame(sample_annotation[, covariates_cols, drop = FALSE])
+        covariates[] <- lapply(covariates, function(column_values) {
+            if (is.factor(column_values)) {
+                droplevels(column_values)
+            } else {
+                column_values
+            }
+        })
         mod <- model.matrix(~., data = covariates)
     } else {
         mod <- model.matrix(~1, data = sample_annotation)
@@ -1622,7 +1630,7 @@ correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
             if (!(batch_col %in% names(sample_annotation))) {
                 stop("Batch column is not present in sample_annotation")
             }
-            batches <- as.factor(sample_annotation[[batch_col]])
+            batches <- droplevels(as.factor(sample_annotation[[batch_col]]))
 
             # design matrix (covariates optional, never include batch twice)
             if (!is.null(covariates_cols)) {
@@ -1634,6 +1642,13 @@ correct_with_removeBatchEffect_dm <- function(data_matrix, sample_annotation,
                     stop("`covariates_cols` must not include `batch_col` when using removeBatchEffect.")
                 }
                 covariates <- as.data.frame(sample_annotation[, covariates_cols, drop = FALSE])
+                covariates[] <- lapply(covariates, function(column_values) {
+                    if (is.factor(column_values)) {
+                        droplevels(column_values)
+                    } else {
+                        column_values
+                    }
+                })
                 degenerate_cov <- names(covariates)[vapply(
                     covariates,
                     function(column_values) {
