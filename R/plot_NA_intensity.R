@@ -42,8 +42,21 @@
 #' @return A `ggplot` object.
 #'
 #' @examples
-#' \dontrun{
-#' plot_NA_intensity(pbf, color_by = "Group")
+#' data(example_proteome_matrix, package = "proBatch")
+#' data(example_sample_annotation, package = "proBatch")
+#' plot_NA_intensity(
+#'     example_proteome_matrix[1:100, ],
+#'     sample_annotation = example_sample_annotation,
+#'     sample_id_col = "FullRunName",
+#'     color_by = "Diet"
+#' )
+#' \donttest{
+#' pbf <- ProBatchFeatures(
+#'     data_matrix = example_proteome_matrix,
+#'     sample_annotation = example_sample_annotation,
+#'     sample_id_col = "FullRunName"
+#' )
+#' plot_NA_intensity(pbf, color_by = "Diet")
 #' }
 #' @export
 plot_NA_intensity <- function(x, ...) UseMethod("plot_NA_intensity")
