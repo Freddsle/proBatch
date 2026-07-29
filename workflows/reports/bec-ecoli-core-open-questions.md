@@ -144,6 +144,20 @@ none of them touch these artifacts or dependency names.
   policy, made `"remove"`/`"rm"`/`"REMOVE"` the only removal spelling, and
   turned the unconditional `removed n rows and n columns` `message()` into a
   conditional `warning()`.
+- Also missing after the `016` split stage and the `019` source stage
+  (2026-07-29): commit `21cab206a68ffdcec75cb51319f662829c62030f` carries a
+  second `BREAKING CHANGE:` footer that makes `"error"` the default
+  missing-value policy across the correction APIs and the registered batch
+  steps, rejects `NULL`, and replaces the legacy booleans with the canonical
+  `"keep"`, `"drop_features"`, and `"fill"` values plus `fill_value`. Commit
+  `9fbe2bc8e4174077a330c06babb9b0b2ec4fb479` then changed numeric output
+  silently: `compute_cv()` returns `NA` instead of `Inf` for zero, near-zero,
+  and non-finite group means, so those features drop out of
+  `calculate_feature_CV()` and the CV plots; and both LOESS helpers mask
+  predictions outside the fitted `x` support, which leaves leading and
+  trailing samples of a batch uncorrected and also shifts `mean_fit`, and
+  therefore the applied correction, for every sample in the affected
+  feature/batch group of `adjust_batch_trend_df()`.
 - Coverage: no workflow from `003` through `032` reads or edits `NEWS`; only the
   manifest and `002` mention it. `022_72d11d1f7f92_version_variancepartition` is
   the only later workflow that edits `DESCRIPTION`, and it is limited to
@@ -192,13 +206,27 @@ none of them touch these artifacts or dependency names.
   `.handle_missing_for_batch_df()`, `.run_matrix_method()`, and
   `.removeBatchEffect_matrix_step()`, so no shadowed copy was edited by
   mistake. Neither removed the duplicates, and the shadowed bodies have now
-  drifted further from the effective ones. Only the `016` split stage remains
-  as an in-migration opportunity.
+  drifted further from the effective ones.
+- Update after the `016` split stage (2026-07-29): commit
+  `21cab206a68ffdcec75cb51319f662829c62030f` edited both copies of all three
+  symbols, applying the canonical missing-value policy twice instead of
+  removing the duplication. As of that commit the pairs sit at lines
+  `1347`/`1879`, `1499`/`1920`, and `1583`/`1980` of a 1997-line file and
+  still differ: the effective later `correct_batch_effects_df()` and
+  `correct_batch_effects_dm()` are `.Deprecated()` wrappers that accept
+  `discrete_func = "removeBatchEffect"`, while the shadowed earlier copies
+  omit it. Both copies also carry `@export`, the earlier ones under
+  `@rdname correct_batch_effects` and the later ones under their own
+  `DEPRECATED:` titles.
+- Coverage update (2026-07-29): no in-migration opportunity remains. `016`
+  was the last workflow scoped to these functions; `020`, `021`, and `031`
+  edit `R/correct_batch_effects.R` only in `run_ComBat_core()`,
+  `.removeBatchEffect_matrix_step()`, sample-alignment code, and Roxygen
+  comments, so each of them can still edit a shadowed copy by mistake.
 - Options: (a) delete the shadowed earlier definitions once the intended
   authority is confirmed, and adopt the comparator's repository-wide
-  single-definition test; (b) resolve them in the `016` split stage, which is
-  the last workflow scoped to these functions; (c) resolve after the migration
-  as a separate cleanup.
+  single-definition test; (b) resolve after the migration as a separate
+  cleanup.
 - Decision: _pending._
 
 ### Bayesian PCA and `pcaMethods` skipped by an explicit core-policy decision
@@ -239,7 +267,8 @@ none of them touch these artifacts or dependency names.
 - Found: `015_4b117a03f0c5_mask_groups_plot_na_intensity` source review
   (2026-07-29).
 - Artifacts: `./R/plot_NA_intensity.R`, `./R/pb_missing_filters.R`,
-  `./R/correct_batch_effects.R`, `./R/handle_missing_values.R`.
+  `./R/correct_batch_effects.R`, `./R/handle_missing_values.R`,
+  `./R/ProBatchFeatures.R`, `./R/plot_helpers.R`, `./R/utility_funcs.R`.
 - Evidence: the last regeneration is commit
   `745a211c04fd99677ce35b0a940e85be9712757a`, which predates slots `013`, `015`,
   and `016`. Commit `52704e234ee2ad85e33f24c28886a8c1eff7605d` then added a
@@ -247,14 +276,20 @@ none of them touch these artifacts or dependency names.
   `d66b2bcdab3c37d140b532a9e435805fb098643e` and
   `5b034afddef2c134c071a74627ca8d32dff09686` rewrote the `fill_the_missing`
   Roxygen contract of the correction entry points and of
-  `handle_missing_values()`.
+  `handle_missing_values()`. The `016` split commit
+  `21cab206a68ffdcec75cb51319f662829c62030f` then rewrote that contract again
+  across 109 Roxygen lines in `R/ProBatchFeatures.R`,
+  `R/correct_batch_effects.R`, `R/handle_missing_values.R`,
+  `R/plot_helpers.R`, and `R/utility_funcs.R`, introducing the canonical
+  `"error"`/`"keep"`/`"drop_features"`/`"fill"` policy and the new
+  `fill_value` parameter.
 - Effect: this is the same class as the `plot_grouped_NA_heatmap()` gap that
   regeneration already closed once. `proBatch::plot_NA_intensity()` stays
   unreachable for users and `R CMD check` reports an undocumented export until
-  regeneration, while the missing-policy manual pages still describe the
-  superseded `FALSE`-removes-rows contract. Focused tests do not catch it
-  because they run inside the package namespace; the `015` harness had to
-  register the two methods by hand.
+  regeneration, while the missing-policy manual pages still describe a
+  `fill_the_missing` vocabulary that the package no longer accepts. Focused
+  tests do not catch it because they run inside the package namespace; the
+  `015` harness had to register the two methods by hand.
 - Coverage: `017_4540aca9182c_generated_missing_docs` is the explicit
   generated-only exception in the family and records a no-change disposition
   without regenerating, so regeneration itself stays manual.
