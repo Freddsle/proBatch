@@ -13,9 +13,10 @@ correct_with_removeBatchEffect(
   batch_col = "MS_batch",
   format = c("long", "wide"),
   covariates_cols = NULL,
-  fill_the_missing = NULL,
+  fill_the_missing = "error",
   keep_all = "default",
-  ...
+  ...,
+  fill_value = NULL
 )
 }
 \arguments{
@@ -25,14 +26,18 @@ correct_with_removeBatchEffect(
 
 \item{covariates_cols}{Optional \code{sample_annotation} columns for the design matrix (biological or nuisance covariates).}
 
-\item{fill_the_missing}{Missing-value policy applied before modeling. If \code{NULL} (default),
-\emph{NA values in the data matrix are left as is} and handled by limma's linear modeling;
-the design matrix (\code{batch_col} and \code{covariates_cols}) must be NA-free.
-Set \code{FALSE} to drop rows with NA, or provide a numeric value to impute explicitly.}
+\item{fill_the_missing}{Missing-value policy applied before modeling:
+\code{"error"} (default), \code{"keep"}, \code{"drop_features"}, or
+\code{"fill"}. With \code{"keep"}, NA values are passed to limma's
+linear modeling as is. The design matrix (\code{batch_col} and
+\code{covariates_cols}) must be NA-free for every policy.}
 
 \item{keep_all}{For long format, columns to retain (see \code{subset_keep_cols()}).}
 
 \item{...}{Further arguments passed to \code{sva::ComBat()}.}
+
+\item{fill_value}{Finite numeric scalar used only with
+\code{fill_the_missing = "fill"}.}
 }
 \value{
 Matrix if \code{format="wide"}, data.frame if \code{format="long"} with batch effects removed
@@ -51,7 +56,8 @@ batch_corrected_matrix <- correct_with_removeBatchEffect(
     example_proteome_matrix,
     example_sample_annotation,
     batch_col = "MS_batch",
-    covariates_cols = c("Condition", "Type")
+    covariates_cols = c("Condition", "Type"),
+    fill_the_missing = "drop_features"
 )
 }
 \seealso{

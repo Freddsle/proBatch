@@ -57,11 +57,12 @@ correct_batch_effects(
   no_fit_imputed = TRUE,
   qual_col = NULL,
   qual_value = NULL,
-  fill_the_missing = NULL,
+  fill_the_missing = "error",
   par.prior = TRUE,
   covariates_cols = NULL,
   min_measurements = 8,
-  ...
+  ...,
+  fill_value = NULL
 )
 
 correct_batch_effects_df(
@@ -78,18 +79,19 @@ correct_batch_effects_df(
   no_fit_imputed = TRUE,
   qual_col = NULL,
   qual_value = NULL,
-  fill_the_missing = NULL,
+  fill_the_missing = "error",
   par.prior = TRUE,
   covariates_cols = NULL,
   min_measurements = 8,
-  ...
+  ...,
+  fill_value = NULL
 )
 
 correct_batch_effects_dm(
   data_matrix,
   sample_annotation,
   continuous_func = NULL,
-  discrete_func = c("MedianCentering", "MeanCentering", "ComBat"),
+  discrete_func = c("MedianCentering", "MeanCentering", "ComBat", "removeBatchEffect"),
   batch_col = "MS_batch",
   feature_id_col = "peptide_group_label",
   sample_id_col = "FullRunName",
@@ -97,10 +99,11 @@ correct_batch_effects_dm(
   order_col = "order",
   min_measurements = 8,
   no_fit_imputed = TRUE,
-  fill_the_missing = NULL,
+  fill_the_missing = "error",
   par.prior = TRUE,
   covariates_cols = NULL,
-  ...
+  ...,
+  fill_value = NULL
 )
 }
 \arguments{
@@ -177,16 +180,22 @@ values: all/default/minimal (which set of columns be kept).}
 
 \item{discrete_func}{batch method name.}
 
-\item{fill_the_missing}{Missing-value policy applied \emph{before} discrete correction.
-If \code{NULL} (default), missing values are left as is (no imputation/dropping).
-For \code{ComBat}, the matrix must be NA-free — set \code{FALSE} to drop rows with NA
-or provide a numeric value to impute. For \code{removeBatchEffect}, NA values in the data
-matrix are permitted; however, the design (batch/covariates) must not contain NA.}
+\item{fill_the_missing}{Missing-value policy applied \emph{before} discrete
+correction: \code{"error"} (default), \code{"keep"},
+\code{"drop_features"}, or \code{"fill"}. With \code{"keep"}, missing
+values are passed through; ComBat still requires an NA-free matrix, while
+removeBatchEffect can model expression values containing NA. For one
+release, \code{FALSE}, a numeric scalar, and \code{"remove"},
+\code{"rm"}, or \code{"REMOVE"} are translated with a deprecation
+warning. Explicit \code{NULL} is an error.}
 
 \item{par.prior}{Logical; use parametric prior (ComBat) or non-parametric.}
 
 \item{covariates_cols}{Optional character vector of \code{sample_annotation} columns
 included in \code{mod} for ComBat (biological or nuisance covariates).}
+
+\item{fill_value}{Finite numeric scalar used only with
+\code{fill_the_missing = "fill"}.}
 }
 \value{
 Returns data in the same format as input (\code{data_matrix} or \code{df_long}).
@@ -217,9 +226,10 @@ to a comparable scale. The following methods are available:
     \code{\link{correct_with_ComBat}()} adjusts for discrete batch effects
     using parametric or non-parametric empirical Bayes (Johnson et al., 2007).
     \strong{Missing data:} ComBat requires an \emph{NA-free} matrix. If your data
-    contain missing values, either set \code{fill_the_missing = FALSE} to drop
-    NA-containing features/columns or provide a numeric value to impute before
-    calling ComBat.
+    contain missing values, use
+    \code{fill_the_missing = "drop_features"} to drop NA-containing
+    features or \code{fill_the_missing = "fill"} with an explicit
+    \code{fill_value} to impute before calling ComBat.
 
   \item \strong{Linear batch correction with limma}:
     \code{\link{correct_with_removeBatchEffect}()} removes linear batch effects
@@ -259,15 +269,16 @@ median_centered_df <- center_feature_batch_medians_df(
 
 combat_corrected_df <- correct_with_ComBat_df(
     example_proteome,
-    example_sample_annotation
+    example_sample_annotation,
+    fill_the_missing = "drop_features"
 )
 
-# 3) ComBat (discrete) — drop NA features/samples first if needed
+# 3) ComBat (discrete) — drop NA features first if needed
 combat_corrected_df <- correct_with_ComBat(
     x = example_proteome,
     sample_annotation = example_sample_annotation,
     format = "long",
-    fill_the_missing = FALSE
+    fill_the_missing = "drop_features"
 )
 
 # 4) Continuous drift correction (LOESS), then discrete centering if desired
@@ -293,6 +304,7 @@ batch_corrected_matrix <- correct_batch_effects(
     continuous_func = "loess_regression",
     discrete_func = "MedianCentering",
     batch_col = "MS_batch",
+    fill_the_missing = "keep",
     span = 0.7, min_measurements = 8
 )
 

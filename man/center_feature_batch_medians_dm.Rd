@@ -40,6 +40,9 @@ names.}
 column with expression/abundance/intensity; otherwise, it is used
 internally for consistency.}
 }
+\value{
+A numeric matrix of batch-corrected values (features \eqn{\times} samples).
+}
 \description{
 Use [center_feature_batch()] with `format="wide", stat="medians"`.
 }

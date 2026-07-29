@@ -18,11 +18,12 @@ correct_batch_effects_df(
   no_fit_imputed = TRUE,
   qual_col = NULL,
   qual_value = NULL,
-  fill_the_missing = NULL,
+  fill_the_missing = "error",
   par.prior = TRUE,
   covariates_cols = NULL,
   min_measurements = 8,
-  ...
+  ...,
+  fill_value = NULL
 )
 }
 \arguments{
@@ -80,11 +81,14 @@ which means argument value has to be set to \code{m_score}.}
 this argument value has to be set to \code{2} (this is an \code{m_score}
 value for imputed values (requant values).}
 
-\item{fill_the_missing}{Missing-value policy applied \emph{before} discrete correction.
-If \code{NULL} (default), missing values are left as is (no imputation/dropping).
-For \code{ComBat}, the matrix must be NA-free — set \code{FALSE} to drop rows with NA
-or provide a numeric value to impute. For \code{removeBatchEffect}, NA values in the data
-matrix are permitted; however, the design (batch/covariates) must not contain NA.}
+\item{fill_the_missing}{Missing-value policy applied \emph{before} discrete
+correction: \code{"error"} (default), \code{"keep"},
+\code{"drop_features"}, or \code{"fill"}. With \code{"keep"}, missing
+values are passed through; ComBat still requires an NA-free matrix, while
+removeBatchEffect can model expression values containing NA. For one
+release, \code{FALSE}, a numeric scalar, and \code{"remove"},
+\code{"rm"}, or \code{"REMOVE"} are translated with a deprecation
+warning. Explicit \code{NULL} is an error.}
 
 \item{par.prior}{Logical; use parametric prior (ComBat) or non-parametric.}
 
@@ -95,6 +99,12 @@ included in \code{mod} for ComBat (biological or nuisance covariates).}
 
 \item{...}{Additional parameters passed to \code{adjust_batch_trend_df()} and
 the chosen \code{fit_func}.}
+
+\item{fill_value}{Finite numeric scalar used only with
+\code{fill_the_missing = "fill"}.}
+}
+\value{
+A data.frame in long format with batch-corrected values in \code{measure_col}.
 }
 \description{
 Use [correct_batch_effects()] with `format="long"`.

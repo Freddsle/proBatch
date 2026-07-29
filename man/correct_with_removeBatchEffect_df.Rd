@@ -12,9 +12,10 @@ correct_with_removeBatchEffect_df(
   sample_id_col = "FullRunName",
   batch_col = "MS_batch",
   covariates_cols = NULL,
-  fill_the_missing = NULL,
+  fill_the_missing = "error",
   keep_all = "default",
-  ...
+  ...,
+  fill_value = NULL
 )
 }
 \arguments{
@@ -47,17 +48,26 @@ batch comparison (or other, non-batch factor to be mapped to color in plots).}
 \item{covariates_cols}{Optional character vector of \code{sample_annotation} columns
 included in \code{mod} for ComBat (biological or nuisance covariates).}
 
-\item{fill_the_missing}{Missing-value policy applied \emph{before} discrete correction.
-If \code{NULL} (default), missing values are left as is (no imputation/dropping).
-For \code{ComBat}, the matrix must be NA-free — set \code{FALSE} to drop rows with NA
-or provide a numeric value to impute. For \code{removeBatchEffect}, NA values in the data
-matrix are permitted; however, the design (batch/covariates) must not contain NA.}
+\item{fill_the_missing}{Missing-value policy applied \emph{before} discrete
+correction: \code{"error"} (default), \code{"keep"},
+\code{"drop_features"}, or \code{"fill"}. With \code{"keep"}, missing
+values are passed through; ComBat still requires an NA-free matrix, while
+removeBatchEffect can model expression values containing NA. For one
+release, \code{FALSE}, a numeric scalar, and \code{"remove"},
+\code{"rm"}, or \code{"REMOVE"} are translated with a deprecation
+warning. Explicit \code{NULL} is an error.}
 
 \item{keep_all}{when transforming the data (normalize, correct) - acceptable
 values: all/default/minimal (which set of columns be kept).}
 
 \item{...}{Additional parameters passed to \code{adjust_batch_trend_df()} and
 the chosen \code{fit_func}.}
+
+\item{fill_value}{Finite numeric scalar used only with
+\code{fill_the_missing = "fill"}.}
+}
+\value{
+A data.frame in long format with batch effects removed in \code{measure_col}.
 }
 \description{
 Use [correct_with_removeBatchEffect()] with `format="long"`.

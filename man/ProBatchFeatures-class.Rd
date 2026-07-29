@@ -4,6 +4,9 @@
 \name{ProBatchFeatures-class}
 \alias{ProBatchFeatures-class}
 \title{ProBatchFeatures: QFeatures subclass with operation log, levels/pipelines, and lazy storage}
+\value{
+No return value; defines the \code{ProBatchFeatures} S4 class.
+}
 \description{
 Assay naming convention:
   "<level>::<pipeline>"  e.g., "peptide::raw", "protein::median_on_log"

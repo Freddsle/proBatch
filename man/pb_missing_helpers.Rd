@@ -25,6 +25,7 @@ pb_groupfilterNA(
   pNA = NULL,
   inplace = FALSE,
   final_name = NULL,
+  mask_failing = TRUE,
   ...
 )
 }
@@ -37,14 +38,15 @@ pb_groupfilterNA(
 \item{...}{Additional parameters forwarded to the underlying
 `QFeatures` method where applicable.}
 
-\item{inplace}{Logical (used by `pb_filterNA()` only), whether to modify the
-object in place. Default: `FALSE`.
-If `FALSE`, the modified assay(s) will be added to the object with
-`final_name` (if provided) or the original name(s) with suffix `_filteredNA`.}
+\item{inplace}{Logical (used by `pb_filterNA()` and
+`pb_groupfilterNA()`), whether to modify the object in place. Default:
+`FALSE`. If `FALSE`, the modified assay(s) are added to the object with
+`final_name` (if provided) or a function-specific suffix.}
 
-\item{final_name}{Character (used by `pb_filterNA()` only), name for the
-modified assay(s) if `inplace` is `FALSE`. If `NULL` (default), the
-original name(s) with suffix `_filteredNA` will be used.}
+\item{final_name}{Character (used by `pb_filterNA()` and
+`pb_groupfilterNA()`), name for the modified assay(s) if `inplace` is
+`FALSE`. If `NULL` (default), the original name(s) receive suffix
+`_filteredNA` or `_groupfilteredNA`, respectively.}
 
 \item{group_cols}{Character vector (used by `pb_groupfilterNA()` only)
 specifying sample-annotation column(s) that define the groups within which
@@ -59,6 +61,12 @@ proportion of missing values allowed within each group to retain a feature.
 Must be in the range `[0, 1]`. If both `min_valid` and `pNA` are provided,
 the stricter requirement is applied per group by enforcing the larger
 minimum number of observed values implied by either threshold.}
+
+\item{mask_failing}{Logical scalar (used by `pb_groupfilterNA()` only).
+When `TRUE` (default), values in groups that did not pass the missingness
+threshold are set to `NA`. When `FALSE`, the original values in failing
+groups are kept as-is (the feature is still retained if it passes in at
+least one group).}
 }
 \value{
 `pb_zeroIsNA()`, `pb_infIsNA()`, `pb_filterNA()` and
@@ -76,4 +84,12 @@ consider re-running it with `store_fast_steps = TRUE`.
 \details{
 For grouped filtering, features are retained if they meet the
   missingness criteria in at least one group defined by `group_cols`.
+  When `mask_failing = TRUE` (the default), the values in groups where
+  the feature did not pass the threshold are replaced with `NA`.
+
+  With in-place `pb_filterNA()`, QFeatures preserves valid assay links and
+  prunes their hits to the retained features. In-place
+  `pb_groupfilterNA()` replaces the assay directly and may remove affected
+  links when feature rows change; QFeatures warns when this occurs. Use
+  `inplace = FALSE` to keep existing links unchanged.
 }

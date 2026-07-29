@@ -38,7 +38,9 @@ pb_transform(
 
 \item{store_intermediate}{logical; if TRUE store every step (overrides fast behavior)}
 
-\item{final_name}{optional final assay name override}
+\item{final_name}{Optional final assay name override in
+`<level>::<pipeline>` form. It must differ from `from`. Supplying a name
+materializes the final result even for an otherwise ephemeral log step.}
 
 \item{backend}{"memory","hdf5","auto"}
 

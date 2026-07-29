@@ -14,12 +14,13 @@ correct_with_ComBat(
   format = c("long", "wide"),
   par.prior = TRUE,
   covariates_cols = NULL,
-  fill_the_missing = NULL,
+  fill_the_missing = "error",
   keep_all = "default",
   no_fit_imputed = TRUE,
   qual_col = NULL,
   qual_value = NULL,
-  ...
+  ...,
+  fill_value = NULL
 )
 }
 \arguments{
@@ -32,9 +33,9 @@ correct_with_ComBat(
 \item{covariates_cols}{Optional character vector of \code{sample_annotation} columns
 included in \code{mod} for ComBat (biological or nuisance covariates).}
 
-\item{fill_the_missing}{Missing-value policy prior to ComBat. If \code{NULL}, no action is taken
-and the call will \emph{fail if the matrix contains NA}. Set \code{FALSE} to drop rows with NA,
-or provide a numeric value to impute (use with caution).}
+\item{fill_the_missing}{Missing-value policy prior to ComBat:
+\code{"error"} (default), \code{"keep"}, \code{"drop_features"}, or
+\code{"fill"}. ComBat still requires the resulting matrix to be NA-free.}
 
 \item{keep_all}{For long format, columns to retain (see \code{subset_keep_cols()}).}
 
@@ -42,6 +43,9 @@ or provide a numeric value to impute (use with caution).}
 excluded when building the matrix (original values still corrected).}
 
 \item{...}{Further arguments passed to \code{sva::ComBat()}.}
+
+\item{fill_value}{Finite numeric scalar used only with
+\code{fill_the_missing = "fill"}.}
 }
 \value{
 Matrix if \code{format="wide"}, data.frame if \code{format="long"}.

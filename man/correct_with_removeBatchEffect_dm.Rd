@@ -12,8 +12,9 @@ correct_with_removeBatchEffect_dm(
   sample_id_col = "FullRunName",
   batch_col = "MS_batch",
   covariates_cols = NULL,
-  fill_the_missing = NULL,
-  ...
+  fill_the_missing = "error",
+  ...,
+  fill_value = NULL
 )
 
 correct_with_removeBatchEffect_dm(
@@ -24,8 +25,9 @@ correct_with_removeBatchEffect_dm(
   sample_id_col = "FullRunName",
   batch_col = "MS_batch",
   covariates_cols = NULL,
-  fill_the_missing = NULL,
-  ...
+  fill_the_missing = "error",
+  ...,
+  fill_value = NULL
 )
 }
 \arguments{
@@ -44,10 +46,13 @@ correct_with_removeBatchEffect_dm(
 \item{covariates_cols}{vector of column names in \code{sample_annotation}
 with covariates to include in the model}
 
-\item{fill_the_missing}{numeric value used to impute missing measurements
-before correction. If \code{FALSE} rows with missing values are removed.}
+\item{fill_the_missing}{Missing-value policy inherited from
+\code{correct_batch_effects()}. Explicit \code{NULL} is an error.}
 
 \item{...}{other parameters to pass to \code{removeBatchEffect}}
+
+\item{fill_value}{Finite numeric scalar used only with
+\code{fill_the_missing = "fill"}.}
 }
 \value{
 data matrix with batch effects removed
@@ -71,7 +76,8 @@ batch_corrected_matrix <- correct_with_removeBatchEffect_dm(
     example_proteome_small,
     example_sample_annotation,
     batch_col = "MS_batch",
-    covariates_cols = c("Diet", "Sex")
+    covariates_cols = c("Diet", "Sex"),
+    fill_the_missing = "drop_features"
 )
 }
 \seealso{

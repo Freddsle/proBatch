@@ -12,9 +12,10 @@ correct_with_ComBat_dm(
   sample_id_col = "FullRunName",
   batch_col = "MS_batch",
   par.prior = TRUE,
-  fill_the_missing = NULL,
+  fill_the_missing = "error",
   covariates_cols = NULL,
-  ...
+  ...,
+  fill_value = NULL
 )
 }
 \arguments{
@@ -46,16 +47,25 @@ batch comparison (or other, non-batch factor to be mapped to color in plots).}
 
 \item{par.prior}{Logical; use parametric prior (ComBat) or non-parametric.}
 
-\item{fill_the_missing}{Missing-value policy applied \emph{before} discrete correction.
-If \code{NULL} (default), missing values are left as is (no imputation/dropping).
-For \code{ComBat}, the matrix must be NA-free — set \code{FALSE} to drop rows with NA
-or provide a numeric value to impute. For \code{removeBatchEffect}, NA values in the data
-matrix are permitted; however, the design (batch/covariates) must not contain NA.}
+\item{fill_the_missing}{Missing-value policy applied \emph{before} discrete
+correction: \code{"error"} (default), \code{"keep"},
+\code{"drop_features"}, or \code{"fill"}. With \code{"keep"}, missing
+values are passed through; ComBat still requires an NA-free matrix, while
+removeBatchEffect can model expression values containing NA. For one
+release, \code{FALSE}, a numeric scalar, and \code{"remove"},
+\code{"rm"}, or \code{"REMOVE"} are translated with a deprecation
+warning. Explicit \code{NULL} is an error.}
 
 \item{covariates_cols}{Optional character vector of \code{sample_annotation} columns
 included in \code{mod} for ComBat (biological or nuisance covariates).}
 
 \item{...}{Further arguments passed to \code{sva::ComBat()}.}
+
+\item{fill_value}{Finite numeric scalar used only with
+\code{fill_the_missing = "fill"}.}
+}
+\value{
+A numeric matrix of ComBat-corrected values (features \eqn{\times} samples).
 }
 \description{
 Use [correct_with_ComBat()] with `format="wide"`.
