@@ -90,10 +90,28 @@ check_sample_consistency <- function(sample_annotation, sample_id_col, df_long,
     ids_ann <- unique(sample_annotation[[sample_id_col]])
     ids_df <- unique(df_long[[sample_id_col]])
     if (!setequal(ids_ann, ids_df)) {
-        warning(
-            "Mismatch between sample_annotation and df_long samples: ",
-            "will merge on intersecting IDs only."
-        )
+        only_in_ann <- setdiff(ids_ann, ids_df)
+        only_in_df <- setdiff(ids_df, ids_ann)
+        warning(sprintf(
+            paste0(
+                "Mismatch between sample_annotation and df_long samples; ",
+                "will merge on intersecting IDs only. ",
+                "%d sample(s) only in sample_annotation%s; ",
+                "%d sample(s) only in df_long%s."
+            ),
+            length(only_in_ann),
+            if (length(only_in_ann)) {
+                paste0(": ", paste(only_in_ann, collapse = ", "))
+            } else {
+                ""
+            },
+            length(only_in_df),
+            if (length(only_in_df)) {
+                paste0(": ", paste(only_in_df, collapse = ", "))
+            } else {
+                ""
+            }
+        ))
     }
 
     # Merge if requested

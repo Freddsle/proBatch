@@ -46,6 +46,8 @@ fit_nonlinear <- function(df_feature_batch,
                           no_fit_imputed = TRUE, qual_col = "m_score",
                           qual_value = 2,
                           min_measurements = 8, ...) {
+    df_feature_batch <- as.data.frame(df_feature_batch)
+
     x_all <- df_feature_batch[[order_col]]
 
     # Keep full-length response for consistent output length

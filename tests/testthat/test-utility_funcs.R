@@ -180,3 +180,33 @@ test_that("long-matrix preparation forwards canonical missing policy", {
     expect_identical(kept$df_long$Intensity, qualified$Intensity)
     expect_true(anyNA(kept$data_matrix))
 })
+
+test_that("check_sample_consistency reports IDs unique to each input", {
+    annotation <- data.frame(
+        sample = c("shared", "ann-b", "ann-a"),
+        stringsAsFactors = FALSE
+    )
+    df_long <- data.frame(
+        sample = c("shared", "df-b", "df-a"),
+        value = seq_len(3),
+        stringsAsFactors = FALSE
+    )
+
+    result <- pb_test_expect_warnings(
+        check_sample_consistency(
+            sample_annotation = annotation,
+            sample_id_col = "sample",
+            df_long = df_long,
+            merge = FALSE
+        ),
+        paste0(
+            "Mismatch between sample_annotation and df_long samples; ",
+            "will merge on intersecting IDs only. ",
+            "2 sample(s) only in sample_annotation: ann-b, ann-a; ",
+            "2 sample(s) only in df_long: df-b, df-a."
+        ),
+        fixed = TRUE
+    )
+
+    expect_identical(result, df_long)
+})

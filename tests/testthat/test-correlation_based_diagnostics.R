@@ -466,3 +466,41 @@ test_that("peptide correlation diagnostics accept PBF with rowname-only annotati
     ))
     expect_s3_class(protein_corrplot, "pheatmap")
 })
+
+test_that("sample correlation heatmaps use pairwise-complete observations", {
+    data_matrix <- rbind(
+        c(1, 1, NA),
+        c(2, 2, NA),
+        c(1, NA, 1),
+        c(2, NA, 2),
+        c(NA, 1, 1),
+        c(NA, 2, 2)
+    )
+    dimnames(data_matrix) <- list(
+        paste0("f", seq_len(nrow(data_matrix))),
+        paste0("s", seq_len(ncol(data_matrix)))
+    )
+
+    testthat::local_mocked_bindings(
+        plot_corr_matrix = function(corr_matrix, ...) corr_matrix,
+        .package = "proBatch"
+    )
+
+    corr_matrix <- NULL
+    expect_message(
+        corr_matrix <- plot_sample_corr_heatmap(
+            data_matrix,
+            cluster_rows = FALSE,
+            cluster_cols = FALSE
+        ),
+        paste0(
+            "Sample correlation heatmap: 0/6 features fully observed; ",
+            "using pairwise.complete.obs."
+        )
+    )
+
+    expect_equal(
+        corr_matrix,
+        stats::cor(data_matrix, use = "pairwise.complete.obs")
+    )
+})

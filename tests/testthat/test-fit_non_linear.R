@@ -170,3 +170,24 @@ test_that("LOESS warning and error paths return NA fallbacks", {
     expect_true(all(is.na(direct_error)))
     expect_true(all(is.na(optimized_error)))
 })
+
+test_that("fit_nonlinear does not mutate caller-owned tabular inputs", {
+    inputs <- list(
+        data.frame(
+            order = seq_len(4),
+            Intensity = c(1, 100, 1, 1),
+            m_score = c(0, 2, 0, 0)
+        ),
+        data.table::data.table(
+            order = seq_len(4),
+            Intensity = c(1, 100, 1, 1),
+            m_score = c(0, 2, 0, 0)
+        )
+    )
+
+    for (input in inputs) {
+        before <- data.table::copy(input)
+        suppressWarnings(fit_nonlinear(input, min_measurements = 5))
+        expect_identical(input, before)
+    }
+})

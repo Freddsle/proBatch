@@ -504,10 +504,22 @@ plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
                 paste(missing_samples, collapse = ";\n")
             ))
         }
-        corr_matrix <- cor(data_matrix[, samples_to_plot], use = "complete.obs")
+        mat_for_corr <- data_matrix[, samples_to_plot, drop = FALSE]
     } else {
-        corr_matrix <- cor(data_matrix, use = "complete.obs")
+        mat_for_corr <- data_matrix
     }
+    if (anyNA(mat_for_corr)) {
+        n_complete <- sum(stats::complete.cases(mat_for_corr))
+        message(sprintf(
+            paste0(
+                "Sample correlation heatmap: %d/%d features fully observed; ",
+                "using pairwise.complete.obs."
+            ),
+            n_complete,
+            nrow(mat_for_corr)
+        ))
+    }
+    corr_matrix <- cor(mat_for_corr, use = "pairwise.complete.obs")
 
     if (!is.null(sample_annotation) && !is.null(samples_to_plot)) {
         annotation_ids <- if (sample_id_col %in% names(sample_annotation)) {

@@ -711,3 +711,36 @@ test_that("adjust_batch_trend_dm forwards arguments", {
     expect_true(is.matrix(res$corrected_dm))
     expect_equal(nrow(res$corrected_dm), sum(feature_subset))
 })
+
+test_that("correct_batch_effects reports sample mismatches and orders survivors", {
+    data_matrix <- matrix(
+        seq_len(6),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s3", "s1", "s2"))
+    )
+    annotation <- data.frame(
+        FullRunName = c("s2", "s3", "s4"),
+        MS_batch = c("b1", "b2", "b3"),
+        stringsAsFactors = FALSE
+    )
+
+    corrected <- pb_test_expect_warnings(
+        correct_batch_effects(
+            data_matrix,
+            annotation,
+            format = "wide",
+            discrete_func = "MedianCentering",
+            fill_the_missing = "keep",
+            no_fit_imputed = FALSE
+        ),
+        paste0(
+            "Mismatch between sample_annotation and df_long samples; ",
+            "will merge on intersecting IDs only. ",
+            "1 sample(s) only in sample_annotation: s4; ",
+            "1 sample(s) only in df_long: s1."
+        ),
+        fixed = TRUE
+    )
+
+    expect_identical(colnames(corrected), c("s3", "s2"))
+})
