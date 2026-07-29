@@ -58,7 +58,7 @@ A completed workflow family MAY be removed after one historical workflow record 
 - Purpose: establish or revise the specification index, meta-specification, project agent guidance, file-relation model, Depmesh implementation, and workflow catalog.
 - Triggers: initial specification-system setup; an explicit request to restructure the specification hierarchy; or a coordinated revision of the project relation and workflow model.
 - Major stages: read reference specifications; inspect the R/Bioconductor package structure; author core specifications and agent guidance; specify and implement file relations; document required workflows; run deterministic deliverable checks.
-- Expected verification: mandatory specification headings exist; `AGENTS.md` references the specification and package structure; Depmesh lists and resolves governance and test relations in both directions without accessing `./man/`; this workflow validates.
+- Expected verification: mandatory specification headings exist; `./AGENTS.md` references the specification and package structure; Depmesh lists and resolves governance and test relations in both directions without accessing `./man/`; this workflow validates.
 - Completion outcome: the specification system and dependency model are internally consistent, and planned workflows are clearly distinguished from implemented workflow artifacts.
 
 ### Establish standalone core baseline
@@ -68,13 +68,13 @@ A completed workflow family MAY be removed after one historical workflow record 
 - Purpose: turn the migrated package into a coherent standalone `proBatch` baseline that is safe for `proBatchBench` to import, while restoring t-SNE and UMAP diagnostics and avoiding a whole-file replay of the rejected split rewrite.
 - Triggers: the maintainer's explicit request to close the core migration findings, restore `plot_TSNE()` and `plot_UMAP()` from original proBatch, and establish the one-way Core-to-Bench ownership boundary.
 - Major stages: verify pinned source and downstream evidence; specify the standalone ownership and extension contracts; repair package hygiene and core invariants; implement only the downstream extension surface justified by actual Bench use; restore t-SNE and UMAP with focused tests; synchronize dependencies, relations, Roxygen sources, vignettes, and release notes; run agent-safe verification; obtain maintainer confirmation for generated documentation and package-wide checks; verify the installed import surface.
-- Expected verification: the behavior specification and Depmesh governance are consistent; focused and complete testthat runs pass; `DESCRIPTION`, Pixi metadata, dependency usage, and build exclusions agree; t-SNE and UMAP work for matrix and `ProBatchFeatures` inputs with guarded optional rendering; Core has no dependency on Bench or provider engines; Donna and Depmesh validation pass; the maintainer confirms generated documentation, vignette, package, Bioconductor, ComBat, and quantile-normalization checks; the loaded namespace exposes the agreed import surface without inspecting `./man/`.
+- Expected verification: the behavior specification and Depmesh governance are consistent; focused and complete testthat runs pass; `./DESCRIPTION`, Pixi metadata, dependency usage, and build exclusions agree; t-SNE and UMAP work for matrix and `ProBatchFeatures` inputs with guarded optional rendering; Core has no dependency on Bench or provider engines; Donna and Depmesh validation pass; the maintainer confirms generated documentation, vignette, package, Bioconductor, ComBat, and quantile-normalization checks; the loaded namespace exposes the agreed import surface without inspecting `./man/`.
 - Completion outcome: `proBatch` is a verified standalone baseline with a minimal documented extension contract, Core-owned PCA/t-SNE/UMAP diagnostics, and an explicit handoff for removing duplicated implementations from `proBatchBench`.
 
 ### Verify specifications
 
 - Artifact: `./workflows/verify-specifications.donna.md`
-- State: planned
+- State: implemented
 - Purpose: verify structural and semantic consistency across all project specifications without changing implementation behavior.
 - Triggers: any change under `./specs/`; a specification path change; or a pre-release documentation review.
 - Major stages: compare the filesystem with `./specs/intro.md`; check mandatory headings and path style; review RFC 2119 statements for clarity and conflicts; query governance relations; repair discrepancies; repeat checks.
@@ -127,8 +127,8 @@ A completed workflow family MAY be removed after one historical workflow record 
 - State: planned
 - Purpose: perform the authoritative local quality gate for an R/Bioconductor package.
 - Triggers: completion of a nontrivial implementation change; changes to metadata, exports, compiled or generated artifacts, dependencies, examples, tests, or vignettes; or release preparation.
-- Major stages: inspect package metadata and dependency impact; review documentation sources when required; run focused agent-safe source and test checks; ask the maintainer to regenerate documentation and run any package-wide R or Bioconductor checks that inspect `./man/`; repair only non-`man/` issues in scope; repeat the applicable checks.
-- Expected verification: agent-safe checks pass; the maintainer confirms completion of package-wide checks; any `man/` diagnostics are reported and left entirely to the maintainer; the source tree contains no unintended check/build artifacts.
+- Major stages: inspect package metadata and dependency impact; review documentation sources when required; run focused agent-safe source and test checks; ask the maintainer to regenerate documentation and run any package-wide R or Bioconductor checks that inspect `./man/`; repair only in-scope issues unrelated to `./man/`; repeat the applicable checks.
+- Expected verification: agent-safe checks pass; the maintainer confirms completion of package-wide checks; any `./man/` diagnostics are reported and left entirely to the maintainer; the source tree contains no unintended check/build artifacts.
 - Completion outcome: agent-owned checks have passed and maintainer-owned generation and package-wide verification have been explicitly handed off or confirmed without agent inspection of `./man/`.
 
 ### Prepare package release

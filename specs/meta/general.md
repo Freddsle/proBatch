@@ -86,11 +86,11 @@ Requirements that affect package dependencies, exported interfaces, documentatio
 
 ## Specification relationships
 
-Every specification MUST be listed in `./specs/intro.md`.
+Every specification MUST be listed in `./specs/intro.md`. When a specification file or directory is added, moved, renamed, or removed, the index MUST be updated in the same change.
 
 A specification SHOULD own one cohesive concern. Requirements MUST NOT be duplicated across specifications; when concerns overlap, one specification MUST own the requirement and the others MAY summarize the relationship.
 
-Changes to specification paths or ownership MUST update `./specs/intro.md`, `./depmesh.toml`, and affected agent guidance in the same change when those artifacts refer to the changed specification.
+Changes to specification paths or ownership MUST update affected agent guidance in the same change when that guidance refers to the changed specification. Depmesh governance maintenance for specification changes is owned by `./specs/behavior/files_relations.md`.
 
 An implementation change governed by a specification MUST preserve that specification or update the specification in the same change when the intended contract changes.
 

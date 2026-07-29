@@ -77,6 +77,9 @@ to run them. A newly created workflow remains `implementation in progress`
 until its artifact validates, renders correctly, and completes a representative
 execution; only then may the catalog mark it `implemented`.
 
+Use `@/workflows/verify-specifications.donna.md` for the specification
+verification triggers listed in the workflow catalog.
+
 Before using Donna in a session:
 
 1. Read the built-in instructions with `donna skill` (or

@@ -27,8 +27,6 @@ Detailed requirements owned by individual specifications are out of scope except
 
 ## Index maintenance
 
-Every specification document MUST be listed in this index.
-
-When a specification file or directory is added, moved, renamed, or removed, this index MUST be updated in the same change.
+The specification-document list above is the complete current set. Specification-index completeness and index-maintenance requirements are owned by `./specs/meta/general.md`.
 
 Index entries MUST describe ownership without duplicating the detailed requirements of the indexed specification.

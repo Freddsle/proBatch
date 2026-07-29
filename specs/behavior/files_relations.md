@@ -71,7 +71,7 @@ The presence of a test relation MUST NOT imply complete behavioral coverage. It 
 
 Specifications live under `./specs/` and MUST follow `./specs/meta/general.md`.
 
-The specification index at `./specs/intro.md` MUST enumerate every specification. Adding, moving, renaming, or removing a specification MUST update the index and affected governance rules in the same change.
+Specification-index completeness and index-maintenance requirements are owned by `./specs/meta/general.md`. Adding, moving, renaming, or removing a specification MUST update affected governance rules in the same change.
 
 ### R sources and tests
 
@@ -91,17 +91,17 @@ The maintainer alone generates `./man/` with devtools. Dependency discovery MUST
 
 ### Donna workflows
 
-Permanent project workflows MUST live under `./workflows/` and end with `.donna.md`. Temporary workflows MUST live under the Donna session directory configured in `./donna.toml`.
+Permanent project workflow placement and filename requirements are owned by `./specs/general/workflows.md`. Temporary workflows MUST live under the Donna session directory configured in `./donna.toml`.
 
 Only permanent workflows MUST be returned by project governance relations. Session artifacts MUST remain ignored runtime state and MUST NOT appear as project dependencies.
 
 ### Workflow reports
 
-Permanent Markdown artifacts that a workflow produces for later human action MUST live under `./workflows/reports/` and MUST NOT use the `.donna.md` extension, so that Donna does not discover them as workflows.
+Permanent workflow-output placement and filename requirements are owned by `./specs/general/workflows.md`.
 
-A workflow report MUST record findings, decisions, or open questions rather than executable process steps. Findings that no remaining workflow resolves MUST be recorded in a workflow report instead of being left only in session notes.
+Workflow reports record findings, decisions, or open questions rather than executable process steps. Persistence requirements for findings that no remaining workflow resolves are owned by `./specs/general/workflows.md`.
 
-Workflow reports MUST be governed by `./specs/general/workflows.md` and MUST NOT require a workflow catalog entry, because they are workflow output rather than workflows.
+Workflow reports MUST be governed by `./specs/general/workflows.md`. Their exclusion from the workflow catalog is part of the workflow-output contract owned by that specification.
 
 ### Dependency-discovery helpers
 
