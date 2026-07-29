@@ -73,7 +73,9 @@ workflow/session artifacts belong in `.session/donna/`.
 `specs/general/workflows.md` is the authoritative workflow catalog. Read it
 before selecting or creating a project workflow. Catalog entries marked
 `planned` are requirements, not executable workflows; do not claim or attempt
-to run them until their artifacts exist and validate.
+to run them. A newly created workflow remains `implementation in progress`
+until its artifact validates, renders correctly, and completes a representative
+execution; only then may the catalog mark it `implemented`.
 
 Before using Donna in a session:
 

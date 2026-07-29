@@ -84,7 +84,7 @@ A completed workflow family MAY be removed after one historical workflow record 
 ### Verify file relations
 
 - Artifact: `./workflows/verify-file-relations.donna.md`
-- State: planned
+- State: implemented
 - Purpose: validate the complete operational contract in `./specs/behavior/files_relations.md`.
 - Triggers: changes to `./depmesh.toml`, `./bin/depemesh/`, specification paths, R/test filename conventions, documentation sources under `./R/`, or permanent workflow paths.
 - Major stages: list relation definitions; query conventional and exceptional test mappings in both directions; query governance in both directions; verify that no rule or helper accesses `./man/`; repair rules or helpers; rerun all checks.

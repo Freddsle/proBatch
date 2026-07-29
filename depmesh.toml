@@ -105,13 +105,19 @@ output = { type = "files", pattern = "@/R/{module}.R" }
 
 [[rules]]
 relation = "tested_by"
-input = { type = "one_of", artifacts = ["@/R/correct_batch_effects.R"] }
+input = { type = "one_of", artifacts = [
+    "@/R/batch_correction_helpers.R",
+    "@/R/correct_batch_effects.R",
+] }
 output = { type = "files", pattern = "@/tests/testthat/test-correct_batch_effect.R" }
 
 [[rules]]
 relation = "tests"
 input = { type = "one_of", artifacts = ["@/tests/testthat/test-correct_batch_effect.R"] }
-output = { type = "files", pattern = "@/R/correct_batch_effects.R" }
+output = { type = "list", artifacts = [
+    "@/R/batch_correction_helpers.R",
+    "@/R/correct_batch_effects.R",
+] }
 
 [[rules]]
 relation = "tested_by"
@@ -132,6 +138,36 @@ output = { type = "files", pattern = "@/tests/testthat/test-pb_missing_helpers.R
 relation = "tests"
 input = { type = "one_of", artifacts = ["@/tests/testthat/test-pb_missing_helpers.R"] }
 output = { type = "files", pattern = "@/R/pb_missing_filters.R" }
+
+[[rules]]
+relation = "tested_by"
+input = { type = "one_of", artifacts = ["@/R/ProBatchFeatures.R"] }
+output = { type = "files", pattern = "@/tests/testthat/test-ProBatchFeatures_links.R" }
+
+[[rules]]
+relation = "tests"
+input = { type = "one_of", artifacts = ["@/tests/testthat/test-ProBatchFeatures_links.R"] }
+output = { type = "files", pattern = "@/R/ProBatchFeatures.R" }
+
+[[rules]]
+relation = "tested_by"
+input = { type = "one_of", artifacts = ["@/R/proteome_wide_diagnostics.R"] }
+output = { type = "files", pattern = "@/tests/testthat/test-explained_variance_plots.R" }
+
+[[rules]]
+relation = "tests"
+input = { type = "one_of", artifacts = ["@/tests/testthat/test-explained_variance_plots.R"] }
+output = { type = "files", pattern = "@/R/proteome_wide_diagnostics.R" }
+
+[[rules]]
+relation = "tested_by"
+input = { type = "one_of", artifacts = ["@/R/pbf_input_helpers.R"] }
+output = { type = "files", pattern = "@/tests/testthat/test-plot_helpers.R" }
+
+[[rules]]
+relation = "tests"
+input = { type = "one_of", artifacts = ["@/tests/testthat/test-plot_helpers.R"] }
+output = { type = "files", pattern = "@/R/pbf_input_helpers.R" }
 
 [[rules]]
 relation = "tested_by"
