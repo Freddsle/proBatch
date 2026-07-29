@@ -74,6 +74,38 @@ setValidity("ProBatchFeatures", function(object) {
     paste0(level, "::", pipeline)
 }
 
+.pb_assay_parts <- function(name, strict = FALSE) {
+    if (!is.character(name) || length(name) != 1L ||
+        is.na(name) || !nzchar(name)) {
+        stop("Assay name must be a non-empty character scalar.", call. = FALSE)
+    }
+    separator_positions <- gregexpr("::", name, fixed = TRUE)[[1L]]
+    separator_count <- if (separator_positions[[1L]] < 0L) {
+        0L
+    } else {
+        length(separator_positions)
+    }
+    if (separator_count == 0L && !strict) {
+        return(list(level = "feature", pipeline = name))
+    }
+    if (separator_count != 1L) {
+        stop(
+            "Assay name '", name,
+            "' must use the '<level>::<pipeline>' form.",
+            call. = FALSE
+        )
+    }
+    parts <- strsplit(name, "::", fixed = TRUE)[[1L]]
+    if (length(parts) != 2L || any(!nzchar(parts))) {
+        stop(
+            "Assay name '", name,
+            "' must use the '<level>::<pipeline>' form.",
+            call. = FALSE
+        )
+    }
+    list(level = parts[[1L]], pipeline = parts[[2L]])
+}
+
 .pb_is_fast_step <- function(step, fast_steps) {
     isTRUE(step %in% fast_steps)
 }
@@ -586,16 +618,106 @@ get_operation_log <- function(object) {
     object@oplog
 }
 
+.pb_lineage_from_log <- function(object, assay) {
+    log <- get_operation_log(object)
+    node <- as.character(assay)
+    visited <- character()
+    reverse_steps <- character()
+
+    while (nrow(log)) {
+        if (node %in% visited) {
+            stop(
+                "Cyclic operation-log lineage detected at assay '",
+                node, "'.",
+                call. = FALSE
+            )
+        }
+        visited <- c(visited, node)
+        matches <- which(as.character(log$to) == node)
+        if (!length(matches)) {
+            break
+        }
+
+        self_matches <- matches[as.character(log$from[matches]) == node]
+        if (length(self_matches)) {
+            reverse_steps <- c(
+                reverse_steps,
+                rev(as.character(log$step[self_matches]))
+            )
+        }
+
+        parent_matches <- setdiff(matches, self_matches)
+        if (!length(parent_matches)) {
+            break
+        }
+        first <- parent_matches[[1L]]
+        identical_edges <- vapply(parent_matches, function(index) {
+            identical(as.character(log$from[[index]]), as.character(log$from[[first]])) &&
+                identical(as.character(log$step[[index]]), as.character(log$step[[first]])) &&
+                identical(as.character(log$fun[[index]]), as.character(log$fun[[first]])) &&
+                identical(as.character(log$pkg[[index]]), as.character(log$pkg[[first]])) &&
+                identical(log$params[[index]], log$params[[first]])
+        }, logical(1))
+        if (!all(identical_edges)) {
+            stop(
+                "Conflicting operation-log results target assay '",
+                node, "'.",
+                call. = FALSE
+            )
+        }
+        index <- parent_matches[[length(parent_matches)]]
+        reverse_steps <- c(reverse_steps, as.character(log$step[[index]]))
+        node <- as.character(log$from[[index]])
+    }
+
+    list(
+        steps = rev(reverse_steps),
+        root = node
+    )
+}
+
+.pb_pipeline_tokens <- function(object, assay) {
+    lineage <- .pb_lineage_from_log(object, assay)
+    root <- .pb_assay_parts(lineage$root)
+    root_tokens <- rev(strsplit(
+        root$pipeline,
+        "_on_",
+        fixed = TRUE
+    )[[1L]])
+    c(root_tokens, lineage$steps)
+}
+
 #' Retrieve operation chain as vector or single string "combat_on_mediannorm_on_log"
 #' @param object A `ProBatchFeatures` object.
 #' @param as_string logical(1). if `TRUE` returns the chain as a single string
 #'   of the form `"combat_on_mediannorm_on_log"`.
+#' @param assay Optional assay identifier. When supplied, derive that assay's
+#'   lineage from operation-log edges. When `NULL`, return the legacy global
+#'   `chain` slot.
 #' @return Character vector or string describing the processing chain.
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
-get_chain <- function(object, as_string = FALSE) {
+get_chain <- function(object, as_string = FALSE, assay = NULL) {
     stopifnot(is(object, "ProBatchFeatures"))
-    ch <- object@chain
+    ch <- if (is.null(assay)) {
+        object@chain
+    } else {
+        assay <- as.character(assay)
+        if (length(assay) != 1L || is.na(assay) || !nzchar(assay)) {
+            stop("`assay` must be one non-empty assay name.", call. = FALSE)
+        }
+        known <- assay %in% names(object) ||
+            any(as.character(object@oplog$to) == assay) ||
+            any(as.character(object@oplog$from) == assay)
+        if (!known) {
+            stop(
+                "Assay '", assay,
+                "' not found in object or operation log.",
+                call. = FALSE
+            )
+        }
+        .pb_lineage_from_log(object, assay)$steps
+    }
     if (!as_string) {
         return(ch)
     }
@@ -614,16 +736,7 @@ get_chain <- function(object, as_string = FALSE) {
 pb_pipeline_name <- function(object, assay = pb_current_assay(object)) {
     stopifnot(is(object, "ProBatchFeatures"))
     nm <- if (length(assay) == 1) assay else pb_current_assay(object)
-    # Prefer the assay's own pipeline encoded as "<level>::<pipeline>"
-    if (nm %in% names(object)) {
-        parts <- strsplit(nm, "::", fixed = TRUE)[[1]]
-        if (length(parts) >= 2 && nzchar(parts[2])) {
-            return(parts[2])
-        }
-    }
-    # Fallback for legacy objects: use global chain (may be ambiguous with branches)
-    ch <- get_chain(object, as_string = TRUE)
-    if (nzchar(ch)) ch else "raw"
+    .pb_make_pipeline_name(.pb_pipeline_tokens(object, nm))
 }
 
 #' Current (latest) assay name
@@ -1024,7 +1137,8 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 #' @param store_fast_steps logical; if FALSE, fast steps are computed but not stored
 #' @param fast_steps which steps count as fast (default: c("log","log2","medianNorm"))
 #' @param store_intermediate logical; if TRUE store every step (overrides fast behavior)
-#' @param final_name Optional final assay name override. Supplying a name
+#' @param final_name Optional final assay name override in
+#'   `<level>::<pipeline>` form. It must differ from `from`. Supplying a name
 #'   materializes the final result even for an otherwise ephemeral log step.
 #' @param backend "memory","hdf5","auto"
 #' @param hdf5_path Optional file path used when `backend = "hdf5"`.
@@ -1051,6 +1165,16 @@ pb_transform <- function(
     if (is.null(funs)) funs <- steps
     if (is.null(params_list)) params_list <- replicate(length(steps), list(), simplify = FALSE)
     stopifnot(length(steps) == length(funs), length(steps) == length(params_list))
+    if (!is.null(final_name)) {
+        .pb_assay_parts(final_name, strict = TRUE)
+        if (identical(final_name, from)) {
+            stop(
+                "`final_name` conflicts with the source assay '",
+                from, "'.",
+                call. = FALSE
+            )
+        }
+    }
 
     cur_from <- from
     cur_from_data <- from

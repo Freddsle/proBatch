@@ -1216,7 +1216,18 @@ test_that("pb_transform materializes explicitly named final log assays", {
     operation_log <- get_operation_log(transformed)
     expect_identical(tail(as.character(operation_log$from), 1), "PGs::raw")
     expect_identical(tail(as.character(operation_log$to), 1), final_name)
+    expect_identical(get_chain(transformed, assay = final_name), "log2")
     expect_identical(pb_pipeline_name(transformed, final_name), "log2_on_raw")
+
+    aliased <- pb_transform(
+        pbf,
+        from = "PGs::raw",
+        steps = "log2",
+        final_name = "PGs::custom"
+    )
+    expect_identical(get_chain(aliased, assay = "PGs::custom"), "log2")
+    expect_identical(pb_pipeline_name(aliased, "PGs::custom"), "log2_on_raw")
+
     expect_equal(
         pb_eval(
             pbf,
@@ -1243,6 +1254,55 @@ test_that("pb_transform materializes explicitly named final log assays", {
             params_list = list(list(2))
         ),
         log2(m + 2)
+    )
+})
+
+test_that("pb_transform validates explicit final assay names", {
+    m <- matrix(
+        1:4,
+        nrow = 2,
+        dimnames = list(paste0("P", 1:2), paste0("S", 1:2))
+    )
+    sa <- data.frame(
+        file = colnames(m),
+        row.names = colnames(m)
+    )
+    pbf <- ProBatchFeatures(
+        m,
+        sa,
+        sample_id_col = "file",
+        level = "PGs"
+    )
+
+    expect_error(
+        pb_transform(
+            pbf,
+            from = "PGs::raw",
+            steps = "log2",
+            final_name = "malformed"
+        ),
+        "must use the '<level>::<pipeline>' form",
+        fixed = TRUE
+    )
+    expect_error(
+        pb_transform(
+            pbf,
+            from = "PGs::raw",
+            steps = "log2",
+            final_name = "PGs::custom::"
+        ),
+        "must use the '<level>::<pipeline>' form",
+        fixed = TRUE
+    )
+    expect_error(
+        pb_transform(
+            pbf,
+            from = "PGs::raw",
+            steps = "log2",
+            final_name = "PGs::raw"
+        ),
+        "`final_name` conflicts with the source assay",
+        fixed = TRUE
     )
 })
 
