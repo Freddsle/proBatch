@@ -91,38 +91,10 @@ Follow these rules:
   instructions, or Donna itself.
 - Keep every permanent workflow under `workflows/` synchronized with the
   workflow catalog and its Depmesh governance relations.
-- Name workflows in the BEC E. coli migration family with the next
-  never-allocated zero-padded `NNN_` prefix, preserving numeric execution
-  order, never reusing a reserved or removed slot, and never renumbering an
-  existing workflow.
-- For the active recommended BEC post-synchronization migration, preserve all
-  allocated slots from `001_` through `032_`: `001_` is the parent, `002_` is
-  the foundation, `003_` through `031_` map to the 29 source commits in
-  manifest order, and `032_` is the residual split review. Prefixes `005_`,
-  `018_`, `024_`, `025_`, `026_`, `029_`, and `030_` are reserved for
-  manifest-only companion references and intentionally have no workflow
-  artifacts. Do not execute those references or create an ordinary workflow
-  completion for them; when reached, record only the parent-defined
-  `reference-only` progress outcome with no source or split commit. Do not
-  insert another workflow into their slots, renumber later workflows, or reuse
-  any prefix in this family. Keep `017_` executable as the explicit
-  generated-only core-documentation exception.
-- Leave the parent generated-workflow review and final catalog review pending
-  until the maintainer explicitly resumes after manual analysis and any manual
-  commit. Agents must not stage, create, or amend either commit.
-- Leave both review action requests in every executable BEC foundation or
-  per-commit child, and the report-review request in the residual child,
-  pending until the maintainer explicitly resumes after manual analysis and
-  any manual commit. Reference-only manifest records have no review action
-  requests. Agents must not stage, create, or amend those commits.
-- At every maintainer-controlled BEC review and commit pause, inspect the exact
-  in-scope unstaged diff and any in-scope untracked files without modifying the
-  index. If the change set is nonempty, validate a complete copy-paste commit
-  message against `specs/general/commits.md` and provide it in chat in a fenced
-  `text` block. If the change set requires multiple commits, provide one
-  validated message per coherent commit and identify each intended file set.
-  If it is empty, state that no commit message is needed. This handoff does not
-  authorize staging, creating, or amending a commit.
+- Treat completed-workflow history reports as non-executable evidence. Do not
+  reconstruct or run removed workflow artifacts from a historical report.
+- Keep external source and downstream repositories read-only unless the user
+  explicitly places changes to them in scope.
 - Copy action-request IDs and next-operation IDs exactly from Donna's output;
   never invent them.
 - Do not run `donna -p llm new-session` unless resetting the active session is
