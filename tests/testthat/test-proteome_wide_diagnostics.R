@@ -109,6 +109,45 @@ test_that("plot_PCA warns on missing values and honors x/y PC selection", {
     expect_match(pca_xy$labels$y, "^PC3 ")
 })
 
+test_that("plot_PCA builds numeric annotations with discrete or continuous colors", {
+    pb_test_load_example_data()
+
+    matrix_test <- example_proteome_matrix[1:20, 1:8]
+    sample_ids <- colnames(matrix_test)
+    sample_annotation <- example_sample_annotation[
+        match(sample_ids, example_sample_annotation$FullRunName), ,
+        drop = FALSE
+    ]
+
+    sample_annotation$numeric_group <- rep(1:2, length.out = nrow(sample_annotation))
+    discrete_palette <- c("1" = "#1B9E77", "2" = "#D95F02")
+    discrete_plot <- suppressWarnings(plot_PCA(
+        matrix_test,
+        sample_annotation,
+        color_by = "numeric_group",
+        color_scheme = discrete_palette,
+        fill_the_missing = -1
+    ))
+    discrete_build <- ggplot2::ggplot_build(discrete_plot)
+
+    expect_setequal(
+        unique(discrete_build$data[[1]]$colour),
+        unname(discrete_palette)
+    )
+
+    sample_annotation$numeric_gradient <- seq_len(nrow(sample_annotation))
+    continuous_plot <- suppressWarnings(plot_PCA(
+        matrix_test,
+        sample_annotation,
+        color_by = "numeric_gradient",
+        color_scheme = c("#2166AC", "#B2182B"),
+        fill_the_missing = -1
+    ))
+    continuous_build <- ggplot2::ggplot_build(continuous_plot)
+
+    expect_gt(length(unique(continuous_build$data[[1]]$colour)), 2)
+})
+
 test_that("plot_PCA supports marginal density plots", {
     pb_test_load_example_data()
 

@@ -61,7 +61,8 @@ names.}
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
 
-\item{color_by}{column name (as in \code{sample_annotation}) to color by}
+\item{color_by}{Column name in \code{sample_annotation} to color by.
+Factor-like and numeric columns are supported.}
 
 \item{shape_by}{Optional column used for point shapes in the PCA plot.}
 
@@ -116,10 +117,11 @@ to override `PC_to_plot`.}
 \item{...}{Additional arguments forwarded to lower-level plotting helpers.}
 }
 \value{
-ggplot scatterplot colored by factor levels of column specified in
-  \code{factor_to_color}. When `marginal_density = TRUE`, returns a ggplot
-  object if `ggplotify` or `cowplot` is available; otherwise returns a grid
-  grob.
+A `ggplot` PCA scatterplot colored by the column specified in
+  `color_by`. Factor-like values, including numeric values matched by a named
+  palette, use a discrete scale; other numeric values use a continuous
+  gradient. When `marginal_density = TRUE`, returns a `ggplot` object if
+  `ggplotify` or `cowplot` is available; otherwise returns a grid grob.
 }
 \description{
 plot PCA plot

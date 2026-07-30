@@ -1982,7 +1982,8 @@ plot_PVCA_stacked_from_saved <- function(pvca_dir,
 #' plot PCA plot
 #'
 #' @inheritParams proBatch
-#' @param color_by column name (as in \code{sample_annotation}) to color by
+#' @param color_by Column name in \code{sample_annotation} to color by.
+#'   Factor-like and numeric columns are supported.
 #' @param PC_to_plot Integer vector of length 2 giving the PC indices for x and y axes.
 #' @param x_nPC Optional integer PC index for the x axis. Use together with `y_nPC`
 #'   to override `PC_to_plot`.
@@ -2005,10 +2006,11 @@ plot_PVCA_stacked_from_saved <- function(pvca_dir,
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
 #' @param ... Additional arguments forwarded to lower-level plotting helpers.
 #'
-#' @return ggplot scatterplot colored by factor levels of column specified in
-#'   \code{factor_to_color}. When `marginal_density = TRUE`, returns a ggplot
-#'   object if `ggplotify` or `cowplot` is available; otherwise returns a grid
-#'   grob.
+#' @return A `ggplot` PCA scatterplot colored by the column specified in
+#'   `color_by`. Factor-like values, including numeric values matched by a named
+#'   palette, use a discrete scale; other numeric values use a continuous
+#'   gradient. When `marginal_density = TRUE`, returns a `ggplot` object if
+#'   `ggplotify` or `cowplot` is available; otherwise returns a grid grob.
 #' @name plot_PCA
 #' @export
 #'
@@ -2302,7 +2304,8 @@ plot_PCA <- function(x, ...) UseMethod("plot_PCA")
     }
 
     gg <- ggplot(plot_df, aes(x = Dim1, y = Dim2)) +
-        geom_point(mapping = point_aes, size = point_size, alpha = point_alpha) +
+        point_aes +
+        geom_point(size = point_size, alpha = point_alpha) +
         labs(x = axis_labels$x, y = axis_labels$y, color = color_by)
 
     if (!is.null(shape_by)) {
