@@ -114,7 +114,7 @@ A completed workflow family MAY be removed after one historical workflow record 
 ### Build package vignettes
 
 - Artifact: `./workflows/build-vignettes.donna.md`
-- State: planned
+- State: implemented
 - Purpose: verify executable long-form documentation and its supporting assets.
 - Triggers: changes under `./vignettes/`, changes to APIs or example data used by vignettes, documentation dependency changes, or release preparation.
 - Major stages: inspect vignette dependencies and affected package APIs; build vignettes in a clean process; capture rendering failures; repair code, prose, or assets; rebuild; confirm generated caches and HTML are not accidentally tracked.

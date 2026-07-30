@@ -86,6 +86,9 @@ regression triggers listed in the workflow catalog.
 Use `@/workflows/review-documentation-sources.donna.md` for the
 documentation-source review triggers listed in the workflow catalog.
 
+Use `@/workflows/build-vignettes.donna.md` for the vignette-build triggers
+listed in the workflow catalog.
+
 Before using Donna in a session:
 
 1. Read the built-in instructions with `donna skill` (or

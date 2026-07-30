@@ -485,13 +485,9 @@ id = "repair_test_plan_discovery"
 kind = "donna.lib.request_action"
 ```
 
-Automatic test-plan discovery failed.
-
-Standard output:
-
-```text
-{{ donna.lib.task_variable("discovery_stdout") }}
-```
+Automatic test-plan discovery failed. The captured standard output may contain
+nested Markdown fences and is intentionally not interpolated here. Inspect any
+session-local plan artifacts that were created before the failure.
 
 Standard error:
 
@@ -512,11 +508,9 @@ kind = "donna.lib.request_action"
 
 Automatic discovery produced a session-local test plan.
 
-Discovery output:
-
-```text
-{{ donna.lib.task_variable("discovery_stdout") }}
-```
+The captured discovery output can contain nested Markdown fences, so it is not
+interpolated into this action request. Inspect the session-local plan artifacts
+listed below for the complete discovery evidence.
 
 1. Inspect `{{ donna.lib.path("@/.session/donna/run-tests/scope.txt") }}`, `{{ donna.lib.path("@/.session/donna/run-tests/focused-tests.txt") }}`, and `{{ donna.lib.path("@/.session/donna/run-tests/plan.md") }}`. Treat every worktree-derived scope entry as a candidate, not authorization.
 2. Query all configured relations separately for every scope artifact and focused test. For a test, inspect its reverse `tests` result; for an R source, inspect its `tested_by` result.
