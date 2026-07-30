@@ -94,7 +94,7 @@ A completed workflow family MAY be removed after one historical workflow record 
 ### Run focused package tests
 
 - Artifact: `./workflows/run-tests.donna.md`
-- State: planned
+- State: implemented
 - Purpose: run the package's testthat suite and guide focused repair without the broader cost of a full package check.
 - Triggers: changes to `./R/`, `./tests/`, test fixtures, or package data used by tests; or an explicit request for fast regression verification.
 - Major stages: query source/test relations; select focused tests when the change scope is known; run focused tests; run the complete testthat suite; diagnose failures; repair in scope; repeat until green.

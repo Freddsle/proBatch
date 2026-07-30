@@ -80,6 +80,9 @@ execution; only then may the catalog mark it `implemented`.
 Use `@/workflows/verify-specifications.donna.md` for the specification
 verification triggers listed in the workflow catalog.
 
+Use `@/workflows/run-tests.donna.md` for focused and complete testthat
+regression triggers listed in the workflow catalog.
+
 Before using Donna in a session:
 
 1. Read the built-in instructions with `donna skill` (or

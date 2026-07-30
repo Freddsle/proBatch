@@ -3,12 +3,57 @@
 ```toml donna
 id = "primary"
 kind = "donna.lib.workflow"
-start_operation_id = "preflight"
+start_operation_id = "initialize_graphics_hygiene"
 ```
 
 Complete the migrated `proBatch` package as a standalone baseline, define the smallest public extension contract required by `proBatchBench`, restore Core-owned t-SNE and UMAP diagnostics from pinned original sources, and verify the editable and installed package surfaces without replaying the rejected split rewrite.
 
 This workflow MUST NOT edit an external source or downstream repository, inspect or modify `man/`, stage files, create commits, reset the Donna session, or rename the package from `proBatch`.
+
+## Initialize Graphics Hygiene
+
+```toml donna
+id = "initialize_graphics_hygiene"
+kind = "donna.lib.run_script"
+goto_on_success = "preflight"
+goto_on_failure = "blocked"
+timeout = 30
+```
+
+```bash donna script
+#!/usr/bin/env bash
+set -euo pipefail
+
+for artifact in Rplots.pdf tests/testthat/Rplots.pdf; do
+    if [[ -e "$artifact" || -L "$artifact" ]]; then
+        printf 'Refusing to start with a pre-existing test graphics artifact: %s\n' \
+            "$artifact" >&2
+        exit 1
+    fi
+done
+
+set +e
+ignore_output="$(
+    git check-ignore --no-index -v -- \
+        Rplots.pdf tests/testthat/Rplots.pdf 2>&1
+)"
+ignore_status=$?
+set -e
+case "$ignore_status" in
+    0)
+        printf 'Test graphics output is hidden by an ignore rule:\n%s\n' \
+            "$ignore_output" >&2
+        exit 1
+        ;;
+    1)
+        ;;
+    *)
+        printf 'Unable to verify test-graphics ignore state:\n%s\n' \
+            "$ignore_output" >&2
+        exit "$ignore_status"
+        ;;
+esac
+```
 
 ## Preflight
 
@@ -28,7 +73,7 @@ kind = "donna.lib.request_action"
    - downstream proBatchBench reference `60ace4572cacac1e5160ff4f147632427d7678c8` in `/home/yuliya/repos/cosybio/proBatchBench`.
 6. Use `git show <sha>:<path>` or another object-level read for external evidence. Keep all external repositories read-only.
 7. If the governed scope, archive, references, and user changes are understood, `{{ donna.lib.goto("specify_baseline_contract") }}`.
-8. If an immutable input is unavailable or the scope conflicts with a current specification, `{{ donna.lib.goto("blocked") }}`.
+8. If an immutable input is unavailable or the scope conflicts with a current specification, `{{ donna.lib.goto("cleanup_before_blocked") }}`.
 
 ## Specify Baseline Contract
 
@@ -46,7 +91,7 @@ kind = "donna.lib.request_action"
 7. Treat the stopped split as evidence only. Do not copy its registry, matrix-adapter, structured-result, identifier, dependency, R-version, or versioning choices without an independently specified Core requirement.
 8. Define t-SNE/UMAP compatibility, optional-backend policy, reproducibility, and missing-value defaults consistently with the Core plotting family.
 9. If the contract is complete and testable, `{{ donna.lib.goto("verify_contract") }}`.
-10. If a product decision cannot be made from the stated standalone/downstream goal, `{{ donna.lib.goto("blocked") }}`.
+10. If a product decision cannot be made from the stated standalone/downstream goal, `{{ donna.lib.goto("cleanup_before_blocked") }}`.
 
 ## Verify Contract
 
@@ -101,7 +146,7 @@ Standard error:
 
 Repair only the specification, index, guidance, relation, or workflow inconsistency shown above. Then `{{ donna.lib.goto("verify_contract") }}`.
 
-If repair requires a new maintainer decision, `{{ donna.lib.goto("blocked") }}`.
+If repair requires a new maintainer decision, `{{ donna.lib.goto("cleanup_before_blocked") }}`.
 
 ## Review Contract
 
@@ -118,7 +163,7 @@ Pause for maintainer review before changing package behavior.
 4. Do not stage, commit, amend, or inspect generated manuals.
 5. If the contract is accepted, `{{ donna.lib.goto("implement_package_hygiene") }}`.
 6. If it needs revision, `{{ donna.lib.goto("repair_contract") }}`.
-7. If the maintainer cannot accept either path, `{{ donna.lib.goto("blocked") }}`.
+7. If the maintainer cannot accept either path, `{{ donna.lib.goto("cleanup_before_blocked") }}`.
 
 ## Implement Package Hygiene
 
@@ -133,11 +178,11 @@ kind = "donna.lib.request_action"
 4. Replace the test-only `reshape2::dcast()` use with an independent base-R construction.
 5. Replace the sole `plyr::arrange()` use with stable base ordering, then remove only the now-unneeded direct `plyr` and `r-reshape2` requirements. Accept that transitive packages may remain in the lock.
 6. Consolidate duplicated `ProBatchFeatures` link tests into one authoritative home.
-7. Find and close the graphics-device leak that creates `Rplots.pdf`; do not hide the artifact with an ignore rule.
+7. Treat `Rplots.pdf` as disposable test output: require both declared locations to be absent before a test run, remove only newly generated regular files immediately afterward, and do not hide the artifact with an ignore rule.
 8. Remove avoidable plot-test warnings and perform only evidence-backed dependency cleanup. Keep dependencies with proven runtime or test use.
 9. Synchronize `DESCRIPTION`, `pixi.toml`, and `pixi.lock` without changing the package name or release version.
 10. When the package and test hygiene changes are complete, `{{ donna.lib.goto("verify_package_hygiene") }}`.
-11. If completion is blocked by dependency resolution or environment access, `{{ donna.lib.goto("blocked") }}`.
+11. If completion is blocked by dependency resolution or environment access, `{{ donna.lib.goto("cleanup_before_blocked") }}`.
 
 ## Verify Package Hygiene
 
@@ -170,8 +215,34 @@ if rg -n 'reshape2::dcast|plyr::arrange' R tests; then
     echo "Direct reshape2/plyr use remains" >&2
     exit 1
 fi
-test ! -e tests/testthat/Rplots.pdf
-test ! -e Rplots.pdf
+for artifact in Rplots.pdf tests/testthat/Rplots.pdf; do
+    if [[ -e "$artifact" || -L "$artifact" ]]; then
+        printf 'Unexpected test graphics artifact before package-hygiene verification: %s\n' \
+            "$artifact" >&2
+        exit 1
+    fi
+done
+set +e
+ignore_output="$(
+    git check-ignore --no-index -v -- \
+        Rplots.pdf tests/testthat/Rplots.pdf 2>&1
+)"
+ignore_status=$?
+set -e
+case "$ignore_status" in
+    0)
+        printf 'Test graphics output is hidden by an ignore rule:\n%s\n' \
+            "$ignore_output" >&2
+        exit 1
+        ;;
+    1)
+        ;;
+    *)
+        printf 'Unable to verify test-graphics ignore state:\n%s\n' \
+            "$ignore_output" >&2
+        exit "$ignore_status"
+        ;;
+esac
 git diff --check -- . ':(exclude)man/**'
 ```
 
@@ -198,7 +269,7 @@ Standard error:
 
 Diagnose the exact failure, preserve unrelated changes, and repair only the package-hygiene scope. Then `{{ donna.lib.goto("verify_package_hygiene") }}`.
 
-If the failure requires network access or a maintainer dependency decision that is not authorized, `{{ donna.lib.goto("blocked") }}`.
+If the failure requires network access or a maintainer dependency decision that is not authorized, `{{ donna.lib.goto("cleanup_before_blocked") }}`.
 
 ## Implement Core Invariants
 
@@ -215,7 +286,7 @@ kind = "donna.lib.request_action"
 6. Add focused lineage, naming, compatibility-wrapper, and top-level symbol-uniqueness regressions.
 7. Keep the change incremental in the current files; do not replace them with stopped-split versions.
 8. When the invariants and tests are complete, `{{ donna.lib.goto("verify_core_invariants") }}`.
-9. If the accepted contract cannot be implemented without a broader API change, `{{ donna.lib.goto("blocked") }}`.
+9. If the accepted contract cannot be implemented without a broader API change, `{{ donna.lib.goto("cleanup_before_blocked") }}`.
 
 ## Verify Core Invariants
 
@@ -233,12 +304,55 @@ timeout = 600
 #!/usr/bin/env bash
 set -euo pipefail
 
+assert_test_graphics_absent() {
+    local artifact
+    for artifact in Rplots.pdf tests/testthat/Rplots.pdf; do
+        if [[ -e "$artifact" || -L "$artifact" ]]; then
+            printf 'Unexpected test graphics artifact: %s\n' "$artifact" >&2
+            return 1
+        fi
+    done
+}
+
+remove_generated_test_graphics() {
+    local artifact
+    for artifact in Rplots.pdf tests/testthat/Rplots.pdf; do
+        if [[ -L "$artifact" || ( -e "$artifact" && ! -f "$artifact" ) ]]; then
+            printf 'Refusing to remove a non-regular test graphics artifact: %s\n' \
+                "$artifact" >&2
+            return 1
+        fi
+        if [[ -f "$artifact" ]]; then
+            if rm -f -- "$artifact"; then
+                printf 'REMOVED_TEST_GRAPHICS_ARTIFACT=%s\n' "$artifact"
+            else
+                printf 'Failed to remove test graphics artifact: %s\n' \
+                    "$artifact" >&2
+                return 1
+            fi
+        fi
+    done
+    assert_test_graphics_absent
+}
+
+cleanup_test_graphics_on_exit() {
+    local status=$?
+    trap - EXIT
+    if ! remove_generated_test_graphics; then
+        status=1
+    fi
+    exit "$status"
+}
+
 for path in R/ProBatchFeatures.R R/pb_missing_filters.R R/correct_batch_effects.R; do
     pixi run Rscript -e 'parse(file = commandArgs(TRUE)[1])' "$path" >/dev/null
 done
 
+assert_test_graphics_absent
+trap cleanup_test_graphics_on_exit EXIT
 pixi run Rscript -e 'devtools::test(filter = "ProBatchFeatures|pb_missing_helpers|correct_batch_effect", reporter = "summary")'
-test ! -e tests/testthat/Rplots.pdf
+remove_generated_test_graphics
+trap - EXIT
 git diff --check -- R tests/testthat
 ```
 
@@ -265,7 +379,7 @@ Standard error:
 
 Diagnose and repair only the specified Core invariants or their focused tests, then `{{ donna.lib.goto("verify_core_invariants") }}`.
 
-If the failure exposes an unresolved public contract, `{{ donna.lib.goto("blocked") }}`.
+If the failure exposes an unresolved public contract, `{{ donna.lib.goto("cleanup_before_blocked") }}`.
 
 ## Review Core Repairs
 
@@ -295,7 +409,7 @@ kind = "donna.lib.request_action"
 5. Update the Core behavior specification with the minimal accepted extension surface and explicit exclusions.
 6. If no new Core API is needed, `{{ donna.lib.goto("verify_companion_boundary") }}`.
 7. If a bounded provider-neutral API is required, `{{ donna.lib.goto("implement_companion_boundary") }}`.
-8. If Core and Bench ownership cannot be reconciled from the stated goal, `{{ donna.lib.goto("blocked") }}`.
+8. If Core and Bench ownership cannot be reconciled from the stated goal, `{{ donna.lib.goto("cleanup_before_blocked") }}`.
 
 ## Implement Companion Boundary
 
@@ -328,6 +442,46 @@ timeout = 600
 #!/usr/bin/env bash
 set -euo pipefail
 
+assert_test_graphics_absent() {
+    local artifact
+    for artifact in Rplots.pdf tests/testthat/Rplots.pdf; do
+        if [[ -e "$artifact" || -L "$artifact" ]]; then
+            printf 'Unexpected test graphics artifact: %s\n' "$artifact" >&2
+            return 1
+        fi
+    done
+}
+
+remove_generated_test_graphics() {
+    local artifact
+    for artifact in Rplots.pdf tests/testthat/Rplots.pdf; do
+        if [[ -L "$artifact" || ( -e "$artifact" && ! -f "$artifact" ) ]]; then
+            printf 'Refusing to remove a non-regular test graphics artifact: %s\n' \
+                "$artifact" >&2
+            return 1
+        fi
+        if [[ -f "$artifact" ]]; then
+            if rm -f -- "$artifact"; then
+                printf 'REMOVED_TEST_GRAPHICS_ARTIFACT=%s\n' "$artifact"
+            else
+                printf 'Failed to remove test graphics artifact: %s\n' \
+                    "$artifact" >&2
+                return 1
+            fi
+        fi
+    done
+    assert_test_graphics_absent
+}
+
+cleanup_test_graphics_on_exit() {
+    local status=$?
+    trap - EXIT
+    if ! remove_generated_test_graphics; then
+        status=1
+    fi
+    exit "$status"
+}
+
 while IFS= read -r path; do
     pixi run Rscript -e 'parse(file = commandArgs(TRUE)[1])' "$path" >/dev/null
 done < <(find R tests/testthat -type f -name '*.R' -print)
@@ -337,7 +491,11 @@ if rg -n 'proBatchBench::|Imports:.*proBatchBench|Depends:.*proBatchBench' R DES
     exit 1
 fi
 
+assert_test_graphics_absent
+trap cleanup_test_graphics_on_exit EXIT
 pixi run Rscript -e 'devtools::test(filter = "extension.contract|registry|ProBatchFeatures", reporter = "summary")'
+remove_generated_test_graphics
+trap - EXIT
 depmesh -p llm dependencies @/R/ProBatchFeatures.R
 git diff --check -- R tests/testthat DESCRIPTION
 ```
@@ -384,7 +542,7 @@ kind = "donna.lib.request_action"
 8. Add focused matrix and `ProBatchFeatures` tests for static and optional interactive output, validation, ordering, missing values, forwarded backend arguments, seed behavior, single/multi-assay results, and subplot behavior.
 9. Make examples self-contained in Roxygen2 sources. Do not generate `man/` or edit `NAMESPACE`.
 10. When the embedding surface is complete, `{{ donna.lib.goto("verify_embeddings") }}`.
-11. If an optional backend is unavailable in the supported environment, `{{ donna.lib.goto("blocked") }}`.
+11. If an optional backend is unavailable in the supported environment, `{{ donna.lib.goto("cleanup_before_blocked") }}`.
 
 ## Verify Embeddings
 
@@ -402,6 +560,46 @@ timeout = 900
 #!/usr/bin/env bash
 set -euo pipefail
 
+assert_test_graphics_absent() {
+    local artifact
+    for artifact in Rplots.pdf tests/testthat/Rplots.pdf; do
+        if [[ -e "$artifact" || -L "$artifact" ]]; then
+            printf 'Unexpected test graphics artifact: %s\n' "$artifact" >&2
+            return 1
+        fi
+    done
+}
+
+remove_generated_test_graphics() {
+    local artifact
+    for artifact in Rplots.pdf tests/testthat/Rplots.pdf; do
+        if [[ -L "$artifact" || ( -e "$artifact" && ! -f "$artifact" ) ]]; then
+            printf 'Refusing to remove a non-regular test graphics artifact: %s\n' \
+                "$artifact" >&2
+            return 1
+        fi
+        if [[ -f "$artifact" ]]; then
+            if rm -f -- "$artifact"; then
+                printf 'REMOVED_TEST_GRAPHICS_ARTIFACT=%s\n' "$artifact"
+            else
+                printf 'Failed to remove test graphics artifact: %s\n' \
+                    "$artifact" >&2
+                return 1
+            fi
+        fi
+    done
+    assert_test_graphics_absent
+}
+
+cleanup_test_graphics_on_exit() {
+    local status=$?
+    trap - EXIT
+    if ! remove_generated_test_graphics; then
+        status=1
+    fi
+    exit "$status"
+}
+
 pixi run Rscript -e 'parse(file = "R/proteome_wide_diagnostics.R")' >/dev/null
 pixi run Rscript -e '
 required <- c("Rtsne", "umap", "plotly")
@@ -416,8 +614,11 @@ rg -q '^plot_UMAP <- function' R/proteome_wide_diagnostics.R
 rg -q '^plot_UMAP.default <- function' R/proteome_wide_diagnostics.R
 rg -q '^plot_UMAP.ProBatchFeatures <- function' R/proteome_wide_diagnostics.R
 
+assert_test_graphics_absent
+trap cleanup_test_graphics_on_exit EXIT
 pixi run Rscript -e 'devtools::test(filter = "proteome_wide_diagnostics", reporter = "summary")'
-test ! -e tests/testthat/Rplots.pdf
+remove_generated_test_graphics
+trap - EXIT
 git diff --check -- R tests/testthat DESCRIPTION pixi.toml pixi.lock
 ```
 
@@ -478,7 +679,7 @@ kind = "donna.lib.request_action"
 7. Leave the release version decision to the maintainer; do not copy the stopped split's R-version or package-version changes.
 8. Ensure no stale migration report is reintroduced and no generated documentation is accessed.
 9. When editable project artifacts are synchronized, `{{ donna.lib.goto("verify_editable_package") }}`.
-10. If a release or dependency choice requires maintainer direction, `{{ donna.lib.goto("blocked") }}`.
+10. If a release or dependency choice requires maintainer direction, `{{ donna.lib.goto("cleanup_before_blocked") }}`.
 
 ## Verify Editable Package
 
@@ -495,6 +696,46 @@ timeout = 1800
 ```bash donna script
 #!/usr/bin/env bash
 set -euo pipefail
+
+assert_test_graphics_absent() {
+    local artifact
+    for artifact in Rplots.pdf tests/testthat/Rplots.pdf; do
+        if [[ -e "$artifact" || -L "$artifact" ]]; then
+            printf 'Unexpected test graphics artifact: %s\n' "$artifact" >&2
+            return 1
+        fi
+    done
+}
+
+remove_generated_test_graphics() {
+    local artifact
+    for artifact in Rplots.pdf tests/testthat/Rplots.pdf; do
+        if [[ -L "$artifact" || ( -e "$artifact" && ! -f "$artifact" ) ]]; then
+            printf 'Refusing to remove a non-regular test graphics artifact: %s\n' \
+                "$artifact" >&2
+            return 1
+        fi
+        if [[ -f "$artifact" ]]; then
+            if rm -f -- "$artifact"; then
+                printf 'REMOVED_TEST_GRAPHICS_ARTIFACT=%s\n' "$artifact"
+            else
+                printf 'Failed to remove test graphics artifact: %s\n' \
+                    "$artifact" >&2
+                return 1
+            fi
+        fi
+    done
+    assert_test_graphics_absent
+}
+
+cleanup_test_graphics_on_exit() {
+    local status=$?
+    trap - EXIT
+    if ! remove_generated_test_graphics; then
+        status=1
+    fi
+    exit "$status"
+}
 
 pixi run Rscript -e 'read.dcf("DESCRIPTION")' >/dev/null
 while IFS= read -r path; do
@@ -515,10 +756,11 @@ depmesh -p llm dependencies --relation governs @/specs/behavior/core_baseline.md
 depmesh -p llm dependencies @/workflows/establish-standalone-core-baseline.donna.md
 
 donna -p llm validate --all
+assert_test_graphics_absent
+trap cleanup_test_graphics_on_exit EXIT
 pixi run Rscript -e 'devtools::test(reporter = "summary")'
-
-test ! -e Rplots.pdf
-test ! -e tests/testthat/Rplots.pdf
+remove_generated_test_graphics
+trap - EXIT
 if rg -n 'proBatchBench::|Imports:.*proBatchBench|Depends:.*proBatchBench' R DESCRIPTION; then
     echo "Core must not depend on proBatchBench" >&2
     exit 1
@@ -549,7 +791,7 @@ Standard error:
 
 Classify the failure, query affected Depmesh relations, and repair only non-generated project artifacts in scope. Then `{{ donna.lib.goto("verify_editable_package") }}`.
 
-If the failure is an environment limitation or requires inspecting `man/`, `{{ donna.lib.goto("blocked") }}`.
+If the failure is an environment limitation or requires inspecting `man/`, `{{ donna.lib.goto("cleanup_before_blocked") }}`.
 
 ## Review Release Sources
 
@@ -565,7 +807,7 @@ kind = "donna.lib.request_action"
 5. Do not stage or create a commit.
 6. If editable release sources are accepted, `{{ donna.lib.goto("maintainer_generation_and_checks") }}`.
 7. If repairs are needed, `{{ donna.lib.goto("repair_editable_package") }}`.
-8. If the maintainer defers the release decision, `{{ donna.lib.goto("blocked") }}`.
+8. If the maintainer defers the release decision, `{{ donna.lib.goto("cleanup_before_blocked") }}`.
 
 ## Maintainer Generation and Checks
 
@@ -582,7 +824,7 @@ The agent MUST NOT perform this operation on the maintainer's behalf.
 4. Do not inspect, compare, lint, validate, or repair any `man/` result.
 5. If the maintainer confirms generation and all required checks, `{{ donna.lib.goto("verify_import_surface") }}`.
 6. If a non-`man/` source failure is reported, `{{ donna.lib.goto("repair_editable_package") }}`.
-7. If a generated-manual issue or environment blocker remains, `{{ donna.lib.goto("blocked") }}`.
+7. If a generated-manual issue or environment blocker remains, `{{ donna.lib.goto("cleanup_before_blocked") }}`.
 
 ## Verify Import Surface
 
@@ -596,11 +838,135 @@ kind = "donna.lib.request_action"
 3. Exercise a minimal fake-provider lifecycle and matrix/`ProBatchFeatures` embedding smoke test through the public namespace.
 4. Compare the installed Core surface with the pinned proBatchBench call inventory. Keep the downstream repository read-only.
 5. Confirm that proBatchBench can remove its duplicated embedding implementation and import the Core functions, and record remaining Bench-only refactoring in the final handoff.
-6. If the installed Core is a sufficient standalone import target, `{{ donna.lib.goto("finish") }}`.
+6. If the installed Core is a sufficient standalone import target, `{{ donna.lib.goto("cleanup_before_finish") }}`.
 7. If a Core extension contract is incomplete, `{{ donna.lib.goto("repair_companion_boundary") }}`.
 8. If a Core embedding contract is incomplete, `{{ donna.lib.goto("repair_embeddings") }}`.
-9. If only downstream Bench changes remain, `{{ donna.lib.goto("finish") }}`.
-10. If ownership is still ambiguous, `{{ donna.lib.goto("blocked") }}`.
+9. If only downstream Bench changes remain, `{{ donna.lib.goto("cleanup_before_finish") }}`.
+10. If ownership is still ambiguous, `{{ donna.lib.goto("cleanup_before_blocked") }}`.
+
+## Clean Graphics Before Finish
+
+```toml donna
+id = "cleanup_before_finish"
+kind = "donna.lib.run_script"
+goto_on_success = "finish"
+goto_on_failure = "blocked"
+timeout = 30
+```
+
+```bash donna script
+#!/usr/bin/env bash
+set -euo pipefail
+
+for artifact in Rplots.pdf tests/testthat/Rplots.pdf; do
+    if [[ -L "$artifact" || ( -e "$artifact" && ! -f "$artifact" ) ]]; then
+        printf 'Refusing to remove a non-regular test graphics artifact: %s\n' \
+            "$artifact" >&2
+        exit 1
+    fi
+    if [[ -f "$artifact" ]]; then
+        if rm -f -- "$artifact"; then
+            printf 'REMOVED_TEST_GRAPHICS_ARTIFACT=%s\n' "$artifact"
+        else
+            printf 'Failed to remove test graphics artifact: %s\n' \
+                "$artifact" >&2
+            exit 1
+        fi
+    fi
+done
+
+for artifact in Rplots.pdf tests/testthat/Rplots.pdf; do
+    if [[ -e "$artifact" || -L "$artifact" ]]; then
+        printf 'Test graphics artifact remains before workflow finish: %s\n' \
+            "$artifact" >&2
+        exit 1
+    fi
+done
+
+set +e
+ignore_output="$(
+    git check-ignore --no-index -v -- \
+        Rplots.pdf tests/testthat/Rplots.pdf 2>&1
+)"
+ignore_status=$?
+set -e
+case "$ignore_status" in
+    0)
+        printf 'Test graphics output is hidden by an ignore rule:\n%s\n' \
+            "$ignore_output" >&2
+        exit 1
+        ;;
+    1)
+        ;;
+    *)
+        printf 'Unable to verify test-graphics ignore state:\n%s\n' \
+            "$ignore_output" >&2
+        exit "$ignore_status"
+        ;;
+esac
+```
+
+## Clean Graphics Before Blocked Exit
+
+```toml donna
+id = "cleanup_before_blocked"
+kind = "donna.lib.run_script"
+goto_on_success = "blocked"
+goto_on_failure = "blocked"
+timeout = 30
+```
+
+```bash donna script
+#!/usr/bin/env bash
+set -euo pipefail
+
+for artifact in Rplots.pdf tests/testthat/Rplots.pdf; do
+    if [[ -L "$artifact" || ( -e "$artifact" && ! -f "$artifact" ) ]]; then
+        printf 'Refusing to remove a non-regular test graphics artifact: %s\n' \
+            "$artifact" >&2
+        exit 1
+    fi
+    if [[ -f "$artifact" ]]; then
+        if rm -f -- "$artifact"; then
+            printf 'REMOVED_TEST_GRAPHICS_ARTIFACT=%s\n' "$artifact"
+        else
+            printf 'Failed to remove test graphics artifact: %s\n' \
+                "$artifact" >&2
+            exit 1
+        fi
+    fi
+done
+
+for artifact in Rplots.pdf tests/testthat/Rplots.pdf; do
+    if [[ -e "$artifact" || -L "$artifact" ]]; then
+        printf 'Test graphics artifact remains before blocked workflow exit: %s\n' \
+            "$artifact" >&2
+        exit 1
+    fi
+done
+
+set +e
+ignore_output="$(
+    git check-ignore --no-index -v -- \
+        Rplots.pdf tests/testthat/Rplots.pdf 2>&1
+)"
+ignore_status=$?
+set -e
+case "$ignore_status" in
+    0)
+        printf 'Test graphics output is hidden by an ignore rule:\n%s\n' \
+            "$ignore_output" >&2
+        exit 1
+        ;;
+    1)
+        ;;
+    *)
+        printf 'Unable to verify test-graphics ignore state:\n%s\n' \
+            "$ignore_output" >&2
+        exit "$ignore_status"
+        ;;
+esac
+```
 
 ## Finish
 
@@ -609,7 +975,7 @@ id = "finish"
 kind = "donna.lib.finish"
 ```
 
-The standalone Core baseline is complete. Report the accepted public and ownership contracts, Core fixes, restored t-SNE/UMAP behavior, verification evidence, maintainer confirmations, and the exact downstream-only changes still required in proBatchBench.
+The standalone Core baseline is complete. Report the accepted public and ownership contracts, Core fixes, restored t-SNE/UMAP behavior, verification evidence, maintainer confirmations, final test-graphics cleanup, and the exact downstream-only changes still required in proBatchBench.
 
 ## Blocked
 
@@ -618,4 +984,4 @@ id = "blocked"
 kind = "donna.lib.finish"
 ```
 
-The standalone Core baseline cannot continue without maintainer input or an external-state change. Report completed operations, the exact blocker, affected artifacts, preserved user changes, and the decision or environment change required. Do not stage, commit, edit external repositories, or inspect generated manuals.
+The standalone Core baseline cannot continue without maintainer input or an external-state change. Report completed operations, the exact blocker, affected artifacts, final test-graphics cleanup state, preserved user changes, and the decision or environment change required. Do not stage, commit, edit external repositories, or inspect generated manuals.
