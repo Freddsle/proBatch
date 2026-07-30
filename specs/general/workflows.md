@@ -77,8 +77,8 @@ A completed workflow family MAY be removed after one historical workflow record 
 - State: implemented
 - Purpose: verify structural and semantic consistency across all project specifications without changing implementation behavior.
 - Triggers: any change under `./specs/`; a specification path change; or a pre-release documentation review.
-- Major stages: compare the filesystem with `./specs/intro.md`; check mandatory headings and path style; review RFC 2119 statements for clarity and conflicts; query governance relations; repair discrepancies; repeat checks.
-- Expected verification: every specification is indexed exactly once; every specification contains `Goal of the document` and `Scope`; all except the meta-specification are governed by it; `git diff --check` passes; Depmesh queries match the current paths.
+- Major stages: capture the initial repository scope excluding `./man/`; compare the specification filesystem with `./specs/intro.md`; check mandatory headings and path style; review RFC 2119 statements for clarity and conflicts; query governance relations; repair discrepancies; snapshot the reviewed authorized edit set; repeat protected-scope checks immediately before completion.
+- Expected verification: every specification is indexed exactly once; every specification contains `Goal of the document` and `Scope`; all except the meta-specification are governed by it; `git diff --check` passes; Depmesh queries match the current paths; HEAD, staged entries, assume-unchanged, skip-worktree, fsmonitor-valid, intent-to-add, and resolve-undo state outside `./man/` remain unchanged; tracked and non-ignored untracked artifacts outside the authorized edit set remain at their initial state; and the authorized edit set remains at its reviewed state through completion.
 - Completion outcome: specifications are structurally valid, indexed, non-conflicting, and connected to governed artifacts.
 
 ### Verify file relations
