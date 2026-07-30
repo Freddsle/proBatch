@@ -89,6 +89,38 @@ output = { type = "union", items = [
     { type = "files", pattern = "@/donna.toml" },
 ] }
 
+[[rules]]
+relation = "governed_by"
+input = { type = "any", items = [
+    { type = "glob", pattern = "@/R/{*source}.R" },
+    { type = "glob", pattern = "@/tests/{**test_path}.R" },
+    { type = "glob", pattern = "@/vignettes/{*vignette}.Rmd" },
+    { type = "one_of", artifacts = [
+        "@/.Rbuildignore",
+        "@/DESCRIPTION",
+        "@/NEWS",
+        "@/pixi.toml",
+        "@/pixi.lock",
+        "@/inst/CITATION",
+    ] },
+] }
+output = { type = "files", pattern = "@/specs/behavior/core_baseline.md" }
+
+[[rules]]
+relation = "governs"
+input = { type = "one_of", artifacts = ["@/specs/behavior/core_baseline.md"] }
+output = { type = "union", items = [
+    { type = "files", pattern = "@/R/*.R" },
+    { type = "files", pattern = "@/tests/**/*.R" },
+    { type = "files", pattern = "@/vignettes/*.Rmd" },
+    { type = "files", pattern = "@/.Rbuildignore" },
+    { type = "files", pattern = "@/DESCRIPTION" },
+    { type = "files", pattern = "@/NEWS" },
+    { type = "files", pattern = "@/pixi.toml" },
+    { type = "files", pattern = "@/pixi.lock" },
+    { type = "files", pattern = "@/inst/CITATION" },
+] }
+
 ################################
 # R source and test ownership
 ################################

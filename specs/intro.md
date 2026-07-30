@@ -20,6 +20,7 @@ Detailed requirements owned by individual specifications are out of scope except
 ## Specification documents
 
 - `./specs/intro.md` — this file; indexes every specification directory and document.
+- `./specs/behavior/core_baseline.md` — defines the standalone Core ownership, data, extension, embedding, and dependency contracts.
 - `./specs/behavior/files_relations.md` — defines the required file-relation vocabulary, directionality, discovery rules, maintenance expectations, and Depmesh behavior.
 - `./specs/general/commits.md` — defines the mandatory Conventional Commits format for agent-generated commit messages.
 - `./specs/general/workflows.md` — catalogs the Donna workflows required to develop, verify, document, and release the package.

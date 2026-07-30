@@ -45,6 +45,15 @@ Leave any such package-wide command to the maintainer. If the maintainer reports
 a `man/` problem, defer it without investigating or correcting the generated
 file.
 
+`specs/behavior/core_baseline.md` is authoritative for package behavior and the
+Core-to-Bench ownership boundary. Keep `proBatch` independently installable:
+Core owns provider-neutral containers, transformations, corrections,
+missing-value policies, diagnostics, and PCA/t-SNE/UMAP, while
+`proBatchBench` is a one-way consumer that owns providers, benchmarking, and
+benchmark-only presentation. Do not add Bench or provider-engine dependencies
+to Core, and do not transplant the rejected split's broader architecture
+without a separately specified Core requirement.
+
 ## Commit messages
 
 Every commit message an agent drafts, proposes, creates, or amends must follow
