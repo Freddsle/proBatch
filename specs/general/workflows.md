@@ -104,7 +104,7 @@ A completed workflow family MAY be removed after one historical workflow record 
 ### Review documentation sources
 
 - Artifact: `./workflows/review-documentation-sources.donna.md`
-- State: planned
+- State: implemented
 - Purpose: review and improve public API documentation at its editable source under `./R/` without reading or generating `./man/`.
 - Triggers: changes to Roxygen2 comments, exports, S3 or S4 registration, public signatures, documented datasets, or documentation-source conventions.
 - Major stages: inspect affected R files and public interfaces; edit Roxygen2 comments under `./R/`; review source-level completeness and consistency; confirm no file under `./man/` was accessed or changed; hand generation off to the maintainer.
