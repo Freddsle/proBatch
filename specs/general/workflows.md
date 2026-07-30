@@ -124,7 +124,7 @@ A completed workflow family MAY be removed after one historical workflow record 
 ### Check R and Bioconductor package
 
 - Artifact: `./workflows/check-package.donna.md`
-- State: planned
+- State: implemented
 - Purpose: perform the authoritative local quality gate for an R/Bioconductor package.
 - Triggers: completion of a nontrivial implementation change; changes to metadata, exports, compiled or generated artifacts, dependencies, examples, tests, or vignettes; or release preparation.
 - Major stages: inspect package metadata and dependency impact; review documentation sources when required; run focused agent-safe source and test checks; ask the maintainer to regenerate documentation and run any package-wide R or Bioconductor checks that inspect `./man/`; repair only in-scope issues unrelated to `./man/`; repeat the applicable checks.
