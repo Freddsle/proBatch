@@ -2287,7 +2287,8 @@ plot_PCA <- function(data_matrix, ...) UseMethod("plot_PCA")
 #'   the initial PCA step performed by the backend.
 #' @param max_iter Positive integer number of t-SNE iterations.
 #' @param random_seed Optional integer seed for reproducible t-SNE coordinates.
-#'   When `NULL`, the caller controls the R random-number state.
+#'   A supplied seed is scoped to the backend call and leaves the caller's
+#'   random-number state unchanged. When `NULL`, the caller controls that state.
 #' @param use_plotlyrender Logical; return a `plotly` object instead of a
 #'   `ggplot`.
 #' @param plotly_param Named list of optional arguments such as `width` and
@@ -2460,10 +2461,14 @@ plot_TSNE.default <- function(data_matrix,
         perplexity = perplexity,
         max_iter = max_iter
     ), dots)
-    if (!is.null(random_seed)) {
-        set.seed(random_seed)
+    tsne_result <- if (is.null(random_seed)) {
+        do.call(Rtsne::Rtsne, tsne_args)
+    } else {
+        withr::with_seed(
+            random_seed,
+            do.call(Rtsne::Rtsne, tsne_args)
+        )
     }
-    tsne_result <- do.call(Rtsne::Rtsne, tsne_args)
     embedding_matrix <- .pb_validate_embedding_result(
         tsne_result$Y,
         sample_ids,

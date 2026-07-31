@@ -43,6 +43,8 @@ proBatch  v2.1.0
 - Added explicit t-SNE and UMAP seeds, backend argument forwarding, t-SNE
   perplexity capping, categorical shape and categorical/numeric color support,
   and the PCA-family `fill_the_missing = -1` default.
+- Scoped explicit t-SNE seeds to the backend call so reproducible embeddings no
+  longer advance or create the caller's random-number state.
 
 ## Deprecations
 - Added `center_feature_batch()`: unified API for per-batch centering by `stat` (`"medians"` or `"means"`) and `format` (`"long"` or `"wide"`).

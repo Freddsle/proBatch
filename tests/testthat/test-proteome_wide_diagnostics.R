@@ -662,11 +662,55 @@ test_that("explicit embedding seeds reproduce backend coordinates", {
         max_iter = 250,
         random_seed = 2026
     )
+
+    caller_rng_existed <- exists(
+        ".Random.seed",
+        envir = .GlobalEnv,
+        inherits = FALSE
+    )
+    if (caller_rng_existed) {
+        original_caller_rng <- get(
+            ".Random.seed",
+            envir = .GlobalEnv,
+            inherits = FALSE
+        )
+    }
+    on.exit({
+        if (caller_rng_existed) {
+            assign(".Random.seed", original_caller_rng, envir = .GlobalEnv)
+        } else if (exists(
+            ".Random.seed",
+            envir = .GlobalEnv,
+            inherits = FALSE
+        )) {
+            rm(".Random.seed", envir = .GlobalEnv)
+        }
+    }, add = TRUE)
+
+    if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+        rm(".Random.seed", envir = .GlobalEnv)
+    }
+    tsne_without_caller_rng <- do.call(plot_TSNE.default, common_tsne)
+    expect_false(exists(
+        ".Random.seed",
+        envir = .GlobalEnv,
+        inherits = FALSE
+    ))
+
+    set.seed(314)
+    caller_rng_state <- .Random.seed
     tsne_a <- do.call(plot_TSNE.default, common_tsne)
+    expect_identical(.Random.seed, caller_rng_state)
     tsne_b <- do.call(plot_TSNE.default, common_tsne)
+    expect_identical(.Random.seed, caller_rng_state)
     expect_equal(
         tsne_a$data[, c("Dim1", "Dim2")],
         tsne_b$data[, c("Dim1", "Dim2")],
+        tolerance = 0
+    )
+    expect_equal(
+        tsne_without_caller_rng$data[, c("Dim1", "Dim2")],
+        tsne_a$data[, c("Dim1", "Dim2")],
         tolerance = 0
     )
 
