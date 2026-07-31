@@ -1,36 +1,11 @@
-#' @title Plot per-sample mean or boxplots for initial assessment
-#' @description Plot per-sample mean or boxplots (showing median and quantiles). In ordered samples,
-#' e.g. consecutive MS runs, order-associated effects are visualised.
-#' @inheritParams proBatch
-#' @details functions for quick visual assessment of trends associated, overall
-#'   or specific covariate-associated (see \code{batch_col} and \code{facet_col})
-#' @inheritParams proBatch
-#' @param color_scheme named vector, names corresponding to unique batch values of
-#'  \code{batch_col} in \code{sample_annotation}. Best created with \link{sample_annotation_to_colors}
-#' @param vline_color color of vertical lines, typically denoting
-#'  different MS batches in ordered runs; should be \code{NULL} for experiments without intrinsic order
-#' @param ylimits range of y-axis to compare two plots side by side, if required.
-#' @param outliers keep (default) or remove the boxplot outliers
-#' @param theme_name Name of the ggplot theme to apply to the resulting plot.
-#' @param x Input object supplied to the generics (matrix, long data frame, or `ProBatchFeatures`).
-#' @param pbf_name Assay name(s) used when `x` is a `ProBatchFeatures`.
-#' @param plot_ncol Number of columns when arranging multiple assay plots.
-#' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
-#' @param ... Additional arguments forwarded between methods.
+#' Apply a theme to an initial-assessment plot
 #'
-#' @return ggplot2 class object. Thus, all aesthetics can be overridden
+#' @param gg A `ggplot` object.
+#' @param theme_name Name of the ggplot theme to apply.
+#' @param base_size Base font size.
 #'
-#' @seealso \code{\link[ggplot2]{ggplot}}, \link{date_to_sample_order}
-#' @name plot_sample_mean_or_boxplot
-#'
-#' @examples
-#' data(list = c("example_proteome", "example_sample_annotation"), package = "proBatch")
-#' plot_boxplot(
-#'     example_proteome,
-#'     sample_annotation = example_sample_annotation,
-#'     batch_col = "MS_batch"
-#' )
-#'
+#' @return The themed `ggplot` object.
+#' @noRd
 .pb_apply_initial_assessment_theme <- function(gg, theme_name, base_size) {
     theme_name <- match.arg(theme_name, choices = c("classic", "minimal", "bw", "light", "dark"))
     if (identical(theme_name, "classic")) {
@@ -479,6 +454,46 @@ plot_boxplot.ProBatchFeatures <- function(x, pbf_name = NULL, sample_id_col = NU
 
     .pb_arrange_plot_list(plot_list, plot_ncol = plot_ncol, convert_fun = ggplotGrob, return_gridExtra = return_gridExtra)
 }
+
+#' Plot per-sample mean or boxplots for initial assessment
+#'
+#' Plot per-sample means or boxplots showing medians and quantiles. For ordered
+#' samples, such as consecutive mass-spectrometry runs, the plots show
+#' order-associated effects.
+#'
+#' @inheritParams proBatch
+#' @param color_scheme Named vector whose names correspond to unique values of
+#'   `batch_col` in `sample_annotation`. A suitable mapping can be created with
+#'   [sample_annotation_to_colors()].
+#' @param vline_color Color of vertical lines that typically denote different
+#'   MS batches in ordered runs. Use `NULL` for experiments without an
+#'   intrinsic order.
+#' @param ylimits Optional y-axis range for comparing plots side by side.
+#' @param outliers Logical; keep boxplot outliers when `TRUE` (the default) or
+#'   hide them when `FALSE`.
+#' @param theme_name Name of the ggplot theme to apply to the resulting plot.
+#' @param x Input supplied to the generics: a matrix, long data frame, or
+#'   `ProBatchFeatures` object.
+#' @param pbf_name Assay name or names used when `x` is a
+#'   `ProBatchFeatures` object.
+#' @param plot_ncol Number of columns when arranging multiple assay plots.
+#' @param return_gridExtra Logical; return arranged grobs instead of a plot
+#'   list.
+#' @param ... Additional arguments forwarded between methods.
+#'
+#' @return A `ggplot` object. Its aesthetics can be overridden with ggplot2.
+#'
+#' @seealso [ggplot2::ggplot()], [date_to_sample_order()]
+#' @name plot_sample_mean_or_boxplot
+#'
+#' @examples
+#' data(list = c("example_proteome", "example_sample_annotation"), package = "proBatch")
+#' plot_boxplot(
+#'     example_proteome,
+#'     sample_annotation = example_sample_annotation,
+#'     batch_col = "MS_batch"
+#' )
+NULL
 
 #' Generic function for plotting per-sample mean or boxplots for initial assessment
 #' @rdname plot_sample_mean_or_boxplot

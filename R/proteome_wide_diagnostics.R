@@ -247,7 +247,7 @@ plot_hierarchical_clustering <- function(data_matrix, ...) UseMethod("plot_hiera
 #'   excluded.
 #' @param color_for_missing special color to make missing values.
 #' Usually black or white, depending on \code{heatmap_color}
-#' @param heatmap_color vector of colors used in heatmap (typicall a gradient)
+#' @param heatmap_color vector of colors used in heatmap (typically a gradient)
 #' @param cluster_rows boolean value determining if rows
 #' should be clustered
 #' @param cluster_cols boolean value determining if columns
@@ -494,7 +494,7 @@ plot_heatmap_diagnostic <- function(data_matrix, ...) UseMethod("plot_heatmap_di
 #'   excluded.
 #' @param color_for_missing special color to make missing values.
 #' Usually black or white, depending on \code{heatmap_color}
-#' @param heatmap_color vector of colors used in heatmap (typicall a gradient)
+#' @param heatmap_color vector of colors used in heatmap (typically a gradient)
 #' @param ... other parameters of \code{link[pheatmap]{pheatmap}}
 #' @param data_matrix Input object: matrix-like data or a `ProBatchFeatures` instance.
 #' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
@@ -961,9 +961,9 @@ calculate_PVCA <- function(data_matrix, ...) UseMethod("calculate_PVCA")
 #'   in a stacked PVCA plot.
 #' @param path_to_save_results optional directory where aggregated PVCA results
 #'   are written as CSV.
-#' @param ... Additional arguments passed to lower-level methods.
+#' @param ... Additional arguments passed to lower-level methods. The default
+#'   method accepts `add_values = TRUE` to annotate bars with rounded weights.
 #' @param base_size base size of the text in the plot
-#' @param add_values logical; when `TRUE`, annotates each bar with its rounded weight.
 #'
 #' @name plot_PVCA
 #' @return \code{ggplot} object with the plot
@@ -1640,24 +1640,16 @@ prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
 #' @param units units: 'cm', 'in' or 'mm'
 #' @param plot_title title of the plot (e.g., processing step + representation
 #'   level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))
-#' @param theme ggplot theme, by default \code{classic}. Can be easily overriden
+#' @param theme ggplot theme, by default \code{classic}. Can be easily overridden
 #' @param base_size base size of the text in the plot
 #' @param pbf_name Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.
 #' @param return_gridExtra Logical; return arranged grobs instead of a plot list.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
-#' @param stacked_bar Logical; combine multiple `ProBatchFeatures` assays in one
-#'   stacked bar chart.
-#' @param stacked_plot_title Optional character vector used as the stacked plot
-#'   title; elements are joined with newlines.
-#' @param sort_stacked Optional factor label used to order stacked assay bars by
-#'   descending explained variance.
-#' @param category_order Optional character vector specifying stacked category
-#'   order.
-#' @param path_to_save_results Optional directory where aggregated PVCA result
-#'   CSV files are written.
-#' @param add_values Logical; annotate bars with rounded weight values.
-#' @param ... Additional arguments. When `data_matrix` is a
-#'   `ProBatchFeatures`, these are forwarded to `prepare_PVCA_df()`.
+#' @param ... Additional arguments. For a `ProBatchFeatures` input,
+#'   `stacked_bar`, `stacked_plot_title`, `sort_stacked`, and `category_order`
+#'   control multi-assay presentation; remaining computation arguments,
+#'   including `path_to_save_results`, are forwarded to `prepare_PVCA_df()`.
+#'   For all inputs, `add_values = TRUE` annotates bars with rounded weights.
 #'
 #' @return \code{ggplot} object with bars as weights, colored by bio/tech factors
 #' @details `plot_PVCA.df()` is retained as a directly callable compatibility
@@ -2292,7 +2284,7 @@ plot_PCA <- function(data_matrix, ...) UseMethod("plot_PCA")
 #' @param perplexity Positive t-SNE perplexity. Values above
 #'   `max(1, floor((n_samples - 1) / 3))` are reduced with a warning.
 #' @param initial_dims Positive integer number of input dimensions retained by
-#'   the backend's initial PCA step.
+#'   the initial PCA step performed by the backend.
 #' @param max_iter Positive integer number of t-SNE iterations.
 #' @param random_seed Optional integer seed for reproducible t-SNE coordinates.
 #'   When `NULL`, the caller controls the R random-number state.

@@ -269,7 +269,7 @@ map_numbers_to_colors <- function(annotation_df_numbers,
 }
 
 
-#' Generates color vector from continous palette
+#' Generates color vector from continuous palette
 #'
 #' Generates a vector of colors for a vector of numeric, POSIXct (i.e. the
 #' (signed) number of seconds since the beginning of 1970 , or factors

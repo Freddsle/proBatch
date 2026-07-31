@@ -585,7 +585,7 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
 #' Works for long-format data frames and wide matrices via \code{format}.
 #' Optionally accepts covariates through \code{covariates_cols} (passed as \code{mod}).
 #'
-#' @inheritParams correct_batch_effects
+#' @inheritParams proBatch
 #' @param x Data in long (\code{data.frame}) or wide (\code{matrix}) form, controlled by \code{format}.
 #' @param format One of \code{"long"} or \code{"wide"}.
 #' @param par.prior Logical; ComBat parametric prior (vs non-parametric).
@@ -597,6 +597,8 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
 #' @param keep_all For long format, columns to retain (see \code{subset_keep_cols()}).
 #' @param no_fit_imputed If \code{TRUE} and \code{qual_col} provided, masked values are
 #'   excluded when building the matrix (original values still corrected).
+#' @param fill_value Finite numeric scalar used only with
+#'   \code{fill_the_missing = "fill"}.
 #' @param ... Further arguments passed to \code{sva::ComBat()}.
 #'
 #' @return Matrix if \code{format="wide"}, data.frame if \code{format="long"}.
@@ -696,11 +698,12 @@ correct_with_ComBat <- function(
 #' Works for long or wide via \code{format}. Use \code{covariates_cols}
 #' to keep biological effects in the design (not removed).
 #' @inheritParams correct_with_ComBat
+#' @inheritParams proBatch
 #' @param covariates_cols Optional \code{sample_annotation} columns for the design matrix (biological or nuisance covariates).
 #' @param fill_the_missing Missing-value policy applied before modeling:
 #'   \code{"error"} (default), \code{"keep"}, \code{"drop_features"}, or
-#'   \code{"fill"}. With \code{"keep"}, NA values are passed to limma's
-#'   linear modeling as is. The design matrix (\code{batch_col} and
+#'   \code{"fill"}. With \code{"keep"}, NA values are passed unchanged to
+#'   \code{limma::removeBatchEffect()}. The design matrix (\code{batch_col} and
 #'   \code{covariates_cols}) must be NA-free for every policy.
 #' @param ... Further arguments passed to
 #'   \code{limma::removeBatchEffect()}.
