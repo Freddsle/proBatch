@@ -14,7 +14,7 @@
         common_col_string <- paste(common_cols, collapse = " ")
         warning(sprintf("The following columns are represented in both df_long
                     and sample_annotation: %s, these columns in df_long
-                    will be overriden from sample_annotation.
+                    will be overridden from sample_annotation.
                     If this is not intended behavior,
                     remove these columns from df_long and
                     repeat the function execution.", common_col_string))
