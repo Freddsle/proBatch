@@ -43,7 +43,6 @@ Imports:
     matrixStats,
     methods,
     pheatmap,
-    plyr,
     preprocessCore,
     purrr,
     pvca,
@@ -68,11 +67,14 @@ Suggests:
     rmarkdown,
     devtools,
     gtable,
+    plotly,
+    Rtsne,
     roxygen2,
-    testthat (>= 3.0.0),
+    testthat (>= 3.2.0),
     spelling,
     HDF5Array,
-    MASS
+    MASS,
+    umap
 VignetteBuilder: knitr
 Language: en-US
 Config/testthat/edition: 3
