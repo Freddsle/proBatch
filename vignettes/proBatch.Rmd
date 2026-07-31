@@ -525,12 +525,21 @@ computationally effective and has simple assumption that the majority of
 features (genes, proteins) is constant among the samples, thus also the
 distribution in principle are identical.
 
-```{r quantile_norm, fig.show='hold'}
-quantile_normalized_matrix <- normalize_data_dm(
+```{r normalized_matrix_fallback, include=FALSE}
+normalized_matrix <- median_normalized_matrix
+```
+
+```{r quantile_norm, fig.show='hold', eval=FALSE}
+normalized_matrix <- normalize_data_dm(
     log_transformed_matrix,
     normalize_func = "quantile"
 )
 ```
+
+For portable package builds, the quantile-normalization chunk is not run
+by default, and subsequent examples use the median-normalized matrix.
+Change the chunk option to `eval=TRUE` to execute quantile normalization
+and use that result instead.
 
 > On some systems `preprocessCore` this code can throw an error. You can
 > try re-install it with disable threading:
@@ -544,7 +553,7 @@ normalization of the log transformed dataset.
 
 ```{r plot_mean_normalized, fig.show='hold', fig.width=5, fig.height=2}
 plot_sample_mean(
-    quantile_normalized_matrix, example_sample_annotation,
+    normalized_matrix, example_sample_annotation,
     color_by_batch = TRUE, ylimits = c(12, 16),
     color_scheme = color_list[[batch_col]]
 )
@@ -585,7 +594,7 @@ selected_annotations <- c("MS_batch", "digestion_batch", "Diet")
 
 # Plot clustering between samples
 plot_hierarchical_clustering(
-    quantile_normalized_matrix,
+    normalized_matrix,
     sample_annotation = example_sample_annotation,
     color_list = color_list,
     factors_to_plot = selected_annotations,
@@ -603,7 +612,7 @@ specifying the required covariates with `sample_annotation_col`,
 
 ```{r plot_heatmap, fig.show='hold', fig.width=10, fig.height=11}
 plot_heatmap_diagnostic(
-    quantile_normalized_matrix, example_sample_annotation,
+    normalized_matrix, example_sample_annotation,
     factors_to_plot = selected_annotations,
     cluster_cols = TRUE,
     color_list = color_list,
@@ -626,22 +635,22 @@ coloring potential candidates.
 
 ```{r plot_PCA, fig.show='hold', fig.width=14, fig.height=8.5}
 pca1 <- plot_PCA(
-    quantile_normalized_matrix, example_sample_annotation,
+    normalized_matrix, example_sample_annotation,
     color_by = "MS_batch",
     plot_title = "MS batch", color_scheme = color_list[["MS_batch"]]
 )
 pca2 <- plot_PCA(
-    quantile_normalized_matrix, example_sample_annotation,
+    normalized_matrix, example_sample_annotation,
     color_by = "digestion_batch",
     plot_title = "Digestion batch", color_scheme = color_list[["digestion_batch"]]
 )
 pca3 <- plot_PCA(
-    quantile_normalized_matrix, example_sample_annotation,
+    normalized_matrix, example_sample_annotation,
     color_by = "Diet",
     plot_title = "Diet", color_scheme = color_list[["Diet"]]
 )
 pca4 <- plot_PCA(
-    quantile_normalized_matrix, example_sample_annotation,
+    normalized_matrix, example_sample_annotation,
     color_by = "DateTime",
     plot_title = "DateTime", color_scheme = color_list[["DateTime"]]
 )
@@ -660,7 +669,7 @@ important.
 
 ```{r plot_PCA_spec, fig.show='hold', fig.width=5, fig.height=3.5}
 pca_spec <- plot_PCA(
-    quantile_normalized_matrix, example_sample_annotation,
+    normalized_matrix, example_sample_annotation,
     color_by = "digestion_batch",
     plot_title = "Digestion batch"
 )
@@ -683,9 +692,9 @@ The smaller matrix below keeps these examples quick while preserving the
 feature-by-sample orientation:
 
 ```{r prepare_nonlinear_embeddings}
-embedding_matrix <- quantile_normalized_matrix[
-    seq_len(min(200L, nrow(quantile_normalized_matrix))),
-    seq_len(min(30L, ncol(quantile_normalized_matrix))),
+embedding_matrix <- normalized_matrix[
+    seq_len(min(200L, nrow(normalized_matrix))),
+    seq_len(min(30L, ncol(normalized_matrix))),
     drop = FALSE
 ]
 embedding_sample_annotation <- example_sample_annotation[
@@ -761,7 +770,7 @@ this analysis as a stand-alone script on a powerful machine.
 
 ```{r plot_PVCA, fig.show='hold', fig.width=5, fig.height=5}
 plot_PVCA(
-    quantile_normalized_matrix, example_sample_annotation,
+    normalized_matrix, example_sample_annotation,
     technical_factors = technical_factors,
     biological_factors = biological_factors
 )
@@ -804,9 +813,9 @@ assessed for a few representative peptides, thus the `order` column is
 also important for this diagnostics.
 
 ```{r plot_spikeIn, fig.show='hold'}
-quantile_normalized_long <- matrix_to_long(quantile_normalized_matrix)
+normalized_long <- matrix_to_long(normalized_matrix)
 plot_spike_in(
-    quantile_normalized_long, example_sample_annotation,
+    normalized_long, example_sample_annotation,
     peptide_annotation = example_peptide_annotation,
     protein_col = "Gene", spike_ins = "BOVINE_A1ag",
     plot_title = "Spike-in BOVINE protein peptides",
@@ -855,7 +864,7 @@ batches are discrete and thus can be corrected using discrete methods
 such as median-centering or ComBat.
 
 ```{r loess_fit, fig.show='hold', fig.width=5, fig.height=2.4}
-loess_fit_df <- adjust_batch_trend_df(quantile_normalized_long, example_sample_annotation)
+loess_fit_df <- adjust_batch_trend_df(normalized_long, example_sample_annotation)
 ```
 
 One important parameter in LOESS fitting is span, which determines the
@@ -867,7 +876,7 @@ peptides to determine the best smoothing degree for a given dataset.
 
 ```{r loess_30, fig.show='hold', fig.width=5, fig.height=2.4}
 loess_fit_30 <- adjust_batch_trend_df(
-    quantile_normalized_long,
+    normalized_long,
     example_sample_annotation,
     span = 0.3
 )
@@ -875,7 +884,7 @@ loess_fit_30 <- adjust_batch_trend_df(
 plot_with_fitting_curve(
     feature_name = "10231_QDVDVWLWQQEGSSK_2",
     fit_df = loess_fit_30, fit_value_col = "fit",
-    df_long = quantile_normalized_long,
+    df_long = normalized_long,
     sample_annotation = example_sample_annotation,
     color_by_batch = TRUE, color_scheme = color_list[[batch_col]],
     plot_title = "Span = 30%",
@@ -885,13 +894,13 @@ plot_with_fitting_curve(
 
 ```{r loess_70, fig.show='hold', fig.width=5, fig.height=2.4}
 loess_fit_70 <- adjust_batch_trend_df(
-    quantile_normalized_long, example_sample_annotation,
+    normalized_long, example_sample_annotation,
     span = 0.7
 )
 plot_with_fitting_curve(
     feature_name = "10231_QDVDVWLWQQEGSSK_2",
     fit_df = loess_fit_70, fit_value_col = "fit",
-    df_long = quantile_normalized_long,
+    df_long = normalized_long,
     sample_annotation = example_sample_annotation,
     color_by_batch = TRUE, color_scheme = color_list[[batch_col]],
     plot_title = "Span = 70%",
@@ -991,7 +1000,7 @@ in `adjust_batch_trend_df()`.
 
 ```{r batch_corr_general, fig.show='hold'}
 batch_corrected_df <- correct_batch_effects(
-    x = quantile_normalized_long,
+    x = normalized_long,
     sample_annotation = example_sample_annotation,
     format = "long",
     discrete_func = "ComBat",
