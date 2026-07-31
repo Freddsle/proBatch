@@ -144,7 +144,8 @@ test_that(".pb_NA_intensity_cor_labels computes per-group rho", {
     expect_s3_class(cor_df, "data.frame")
     expect_equal(nrow(cor_df), 2L)
     expect_setequal(cor_df$.group, c("X", "Y"))
-    expect_true(all(grepl("^\u03C1 = ", cor_df$label)))
+    expect_true(all(grepl("^rho == ", cor_df$label)))
+    expect_false(any(grepl("[^ -~]", cor_df$label)))
     expect_true(all(cor_df$x == Inf))
 })
 
@@ -162,7 +163,8 @@ test_that(".pb_NA_intensity_cor_labels returns one row without groups", {
 
     expect_s3_class(cor_df, "data.frame")
     expect_equal(nrow(cor_df), 1L)
-    expect_true(grepl("^\u03C1 = ", cor_df$label))
+    expect_true(grepl("^rho == ", cor_df$label))
+    expect_false(grepl("[^ -~]", cor_df$label))
 })
 
 test_that(".pb_NA_intensity_cor_labels needs three ungrouped rows", {
@@ -193,7 +195,7 @@ test_that(".pb_NA_intensity_cor_labels computes labels per assay", {
     )
 
     expect_identical(as.character(cor_df$pbf_name), c("first", "second"))
-    expect_identical(cor_df$label, c("\u03C1 = -1", "\u03C1 = 1"))
+    expect_identical(cor_df$label, c("rho == -1", "rho == 1"))
 })
 
 
@@ -208,6 +210,19 @@ test_that("plot_NA_intensity returns a ggplot for a matrix", {
     expect_equal(p$labels$x, "Mean log2 intensity (non-missing values)")
     expect_equal(p$labels$y, "% missing values")
     expect_true(nrow(p$data) > 0)
+})
+
+test_that("plot_NA_intensity renders portable plotmath correlation labels", {
+    p <- plot_NA_intensity(toy_matrix_nai, spline_df = 0)
+    text_layers <- Filter(
+        function(layer) inherits(layer$geom, "GeomText"),
+        p$layers
+    )
+
+    expect_length(text_layers, 1L)
+    expect_true(isTRUE(text_layers[[1]]$geom_params$parse))
+    expect_false(any(grepl("[^ -~]", text_layers[[1]]$data$label)))
+    expect_no_error(ggplot2::ggplotGrob(p))
 })
 
 test_that("plot_NA_intensity returns an empty plot for an all-NA matrix", {

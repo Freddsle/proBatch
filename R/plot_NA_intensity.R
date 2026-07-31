@@ -336,6 +336,7 @@ plot_NA_intensity.ProBatchFeatures <- function(
                 hjust = 1.1,
                 fontface = "bold",
                 size = 4,
+                parse = TRUE,
                 inherit.aes = FALSE,
                 show.legend = FALSE
             )
@@ -346,6 +347,7 @@ plot_NA_intensity.ProBatchFeatures <- function(
                 hjust = 1.1,
                 fontface = "bold",
                 size = 4,
+                parse = TRUE,
                 inherit.aes = FALSE,
                 show.legend = FALSE
             )
@@ -420,7 +422,7 @@ plot_NA_intensity.ProBatchFeatures <- function(
         }, numeric(1))
         data.frame(
             .group = groups,
-            label = paste0("\u03C1 = ", round(rhos, 2)),
+            label = paste0("rho == ", round(rhos, 2)),
             x = Inf,
             y = seq(0.95, by = -0.06, length.out = length(groups)),
             stringsAsFactors = FALSE
@@ -436,7 +438,7 @@ plot_NA_intensity.ProBatchFeatures <- function(
             use = "complete.obs"
         )
         data.frame(
-            label = paste0("\u03C1 = ", round(rho, 2)),
+            label = paste0("rho == ", round(rho, 2)),
             x = Inf,
             y = 0.95,
             stringsAsFactors = FALSE
