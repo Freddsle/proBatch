@@ -42,10 +42,17 @@
 #' ), package = "proBatch")
 #'
 #' sample_annotation <- example_sample_annotation
-#' peptide_annotation <- example_peptide_annotation
-#' proteome <- example_proteome
 #'
-#' feature_id <- "10231_QDVDVWLWQQEGSSK_2"
+#' feature_ids <- c(
+#'     "10231_QDVDVWLWQQEGSSK_2", "10768_RLESELDGLR_2",
+#'     "10062_NVGVSFYADKPEVTQEQK_3", "10063_NVGVSFYADKPEVTQEQKK_3",
+#'     "1146_ADVTPADFSEWSK_3", "12476_TPVISGGPYEYR_2"
+#' )
+#' peptide_annotation <- subset(
+#'     example_peptide_annotation, peptide_group_label %in% feature_ids)
+#' proteome <- subset(
+#'     example_proteome, peptide_group_label %in% feature_ids)
+#' feature_id <- feature_ids[1]
 #'
 #' feature_plot <- plot_single_feature(
 #'     feature_name = feature_id,
@@ -186,7 +193,6 @@ plot_single_feature <- function(feature_name, df_long,
     plot_df <- df_long %>%
         filter(!!(sym(feature_id_col)) %in% feature_name)
     rm(df_long)
-    gc()
 
     # Check the consistency of sample annot. sample IDs
     # and measur.table sample IDs

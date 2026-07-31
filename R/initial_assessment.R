@@ -545,9 +545,15 @@ plot_boxplot.ProBatchFeatures <- function(
 #'     list = c("example_proteome", "example_sample_annotation"),
 #'     package = "proBatch"
 #' )
+#' keep <- !duplicated(example_sample_annotation$MS_batch) |
+#'     !duplicated(example_sample_annotation$MS_batch, fromLast = TRUE)
+#' annotation_small <- example_sample_annotation[keep, ]
+#' annotation_small$order <- seq_len(nrow(annotation_small))
+#' proteome_small <- subset(
+#'     example_proteome, FullRunName %in% annotation_small$FullRunName)
 #' plot_boxplot(
-#'     example_proteome,
-#'     sample_annotation = example_sample_annotation,
+#'     proteome_small,
+#'     sample_annotation = annotation_small,
 #'     batch_col = "MS_batch"
 #' )
 NULL

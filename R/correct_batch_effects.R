@@ -89,9 +89,12 @@
 #'     list = c("example_sample_annotation", "example_proteome"),
 #'     package = "proBatch"
 #' )
+#' test_peptides <- unique(example_proteome$peptide_group_label)[1:3]
+#' test_df <- subset(example_proteome, peptide_group_label %in% test_peptides)
+#'
 #' # 1) Per-feature median centering
 #' median_centered_df <- center_feature_batch(
-#'     x = example_proteome,
+#'     x = test_df,
 #'     sample_annotation = example_sample_annotation,
 #'     format = "long",
 #'     stat = "medians",
@@ -100,7 +103,7 @@
 #'
 #' # 2) ComBat (discrete) — drop NA features first if needed
 #' combat_corrected_df <- correct_with_ComBat(
-#'     x = example_proteome,
+#'     x = test_df,
 #'     sample_annotation = example_sample_annotation,
 #'     format = "long",
 #'     fill_the_missing = "drop_features",
@@ -108,8 +111,6 @@
 #' )
 #'
 #' # 3) Continuous drift correction (LOESS), then discrete centering if desired
-#' test_peptides <- unique(example_proteome$peptide_group_label)[1:3]
-#' test_df <- subset(example_proteome, peptide_group_label %in% test_peptides)
 #' adjusted_df <- adjust_batch_trend_df(
 #'     df_long = test_df,
 #'     sample_annotation = example_sample_annotation,
@@ -125,8 +126,8 @@
 #' )
 #'
 #' # 4) One-call wrapper (continuous + discrete)
-#' batch_corrected_matrix <- correct_batch_effects(
-#'     x = example_proteome, sample_annotation = example_sample_annotation,
+#' batch_corrected_df <- correct_batch_effects(
+#'     x = test_df, sample_annotation = example_sample_annotation,
 #'     format = "long",
 #'     continuous_func = "loess_regression",
 #'     discrete_func = "MedianCentering",
