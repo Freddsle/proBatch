@@ -60,6 +60,32 @@
 #'   `pb_groupfilterNA()` replaces the assay directly and may remove affected
 #'   links when feature rows change; QFeatures warns when this occurs. Use
 #'   `inplace = FALSE` to keep existing links unchanged.
+#' @examples
+#' values <- matrix(
+#'     c(0, 1, 2, Inf, 4, 5, 6, 7, 8),
+#'     nrow = 3,
+#'     byrow = TRUE,
+#'     dimnames = list(
+#'         paste0("feature", 1:3),
+#'         paste0("sample", 1:3)
+#'     )
+#' )
+#' annotation <- data.frame(sample = colnames(values))
+#' pbf <- ProBatchFeatures(
+#'     values,
+#'     sample_annotation = annotation,
+#'     sample_id_col = "sample"
+#' )
+#' pbf <- pb_zeroIsNA(pbf, "feature::raw")
+#' pbf <- pb_infIsNA(pbf, "feature::raw")
+#' pb_nNA(pbf, "feature::raw")$nNA
+#'
+#' filtered <- pb_filterNA(
+#'     pbf,
+#'     pbf_name = "feature::raw",
+#'     pNA = 0
+#' )
+#' rownames(filtered[["feature::raw_filteredNA"]])
 #' @name pb_missing_helpers
 #' @md
 NULL

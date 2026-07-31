@@ -602,6 +602,24 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
 #' @param ... Further arguments passed to \code{sva::ComBat()}.
 #'
 #' @return Matrix if \code{format="wide"}, data.frame if \code{format="long"}.
+#' @examples
+#' data(
+#'     list = c("example_sample_annotation", "example_proteome"),
+#'     package = "proBatch"
+#' )
+#' feature_ids <- c(
+#'     "10062_NVGVSFYADKPEVTQEQK_3",
+#'     "10063_NVGVSFYADKPEVTQEQKK_3"
+#' )
+#' example_subset <- example_proteome[
+#'     example_proteome$peptide_group_label %in% feature_ids,
+#' ]
+#' combat_corrected <- correct_with_ComBat(
+#'     x = example_subset,
+#'     sample_annotation = example_sample_annotation,
+#'     format = "long",
+#'     fill_the_missing = "error"
+#' )
 #' @references Johnson WE et al. (2007) \emph{Biostatistics} 8(1):118–127; \emph{sva} vignette.
 #' @export
 correct_with_ComBat <- function(
@@ -1497,6 +1515,9 @@ run_ComBat_core <- function(sample_annotation, batch_col, data_matrix,
 #' @description Use [center_feature_batch()] with `format="wide", stat="medians"`.
 #' @inheritParams correct_batch_effects
 #' @return A numeric matrix of batch-corrected values (features \eqn{\times} samples).
+#' @examples
+#' # Use the unified replacement with `format = "wide"` and `stat = "medians"`.
+#' args(center_feature_batch)
 #' @export
 center_feature_batch_medians_dm <- function(data_matrix, sample_annotation,
                                             sample_id_col = "FullRunName",
@@ -1517,6 +1538,9 @@ center_feature_batch_medians_dm <- function(data_matrix, sample_annotation,
 #' @description Use [center_feature_batch()] with `format="wide", stat="means"`.
 #' @inheritParams correct_batch_effects
 #' @return A numeric matrix of batch-corrected values (features \eqn{\times} samples).
+#' @examples
+#' # Use the unified replacement with `format = "wide"` and `stat = "means"`.
+#' args(center_feature_batch)
 #' @export
 center_feature_batch_means_dm <- function(data_matrix, sample_annotation,
                                           sample_id_col = "FullRunName",
@@ -1538,6 +1562,9 @@ center_feature_batch_means_dm <- function(data_matrix, sample_annotation,
 #' @inheritParams correct_batch_effects
 #' @return A data.frame in long format with batch-corrected values in \code{measure_col}
 #'   and original values preserved in \code{preBatchCorr_[measure_col]}.
+#' @examples
+#' # Use the unified replacement with `format = "long"` and `stat = "medians"`.
+#' args(center_feature_batch)
 #' @export
 center_feature_batch_medians_df <- function(df_long, sample_annotation = NULL,
                                             sample_id_col = "FullRunName",
@@ -1565,6 +1592,9 @@ center_feature_batch_medians_df <- function(df_long, sample_annotation = NULL,
 #' @inheritParams correct_batch_effects
 #' @return A data.frame in long format with batch-corrected values in \code{measure_col}
 #'   and original values preserved in \code{preBatchCorr_[measure_col]}.
+#' @examples
+#' # Use the unified replacement with `format = "long"` and `stat = "means"`.
+#' args(center_feature_batch)
 #' @export
 center_feature_batch_means_df <- function(df_long, sample_annotation = NULL,
                                           sample_id_col = "FullRunName",
@@ -1594,6 +1624,9 @@ center_feature_batch_means_df <- function(df_long, sample_annotation = NULL,
 #' @param ... Further arguments passed to \code{sva::ComBat()}.
 #' @return A data.frame in long format with ComBat-corrected values in \code{measure_col}
 #'   and original values preserved in \code{preBatchCorr_[measure_col]}.
+#' @examples
+#' # Use the unified replacement with `format = "long"`.
+#' args(correct_with_ComBat)
 #' @export
 correct_with_ComBat_df <- function(df_long, sample_annotation = NULL,
                                    feature_id_col = "peptide_group_label",
@@ -1630,6 +1663,9 @@ correct_with_ComBat_df <- function(df_long, sample_annotation = NULL,
 #' @inheritParams correct_batch_effects
 #' @param ... Further arguments passed to \code{sva::ComBat()}.
 #' @return A numeric matrix of ComBat-corrected values (features \eqn{\times} samples).
+#' @examples
+#' # Use the unified replacement with `format = "wide"`.
+#' args(correct_with_ComBat)
 #' @export
 correct_with_ComBat_dm <- function(data_matrix, sample_annotation = NULL,
                                    feature_id_col = "peptide_group_label",
@@ -1660,6 +1696,9 @@ correct_with_ComBat_dm <- function(data_matrix, sample_annotation = NULL,
 #' @inheritParams correct_batch_effects
 #' @param ... Further arguments forwarded to [correct_batch_effects()].
 #' @return A data.frame in long format with batch-corrected values in \code{measure_col}.
+#' @examples
+#' # Use the unified replacement with `format = "long"`.
+#' args(correct_batch_effects)
 #' @export
 correct_batch_effects_df <- function(df_long, sample_annotation,
                                      continuous_func = NULL,
@@ -1704,6 +1743,9 @@ correct_batch_effects_df <- function(df_long, sample_annotation,
 #' @inheritParams correct_batch_effects
 #' @param ... Further arguments forwarded to [correct_batch_effects()].
 #' @return A numeric matrix of batch-corrected values (features \eqn{\times} samples).
+#' @examples
+#' # Use the unified replacement with `format = "wide"`.
+#' args(correct_batch_effects)
 #' @export
 correct_batch_effects_dm <- function(data_matrix, sample_annotation,
                                      continuous_func = NULL,
@@ -1744,6 +1786,9 @@ correct_batch_effects_dm <- function(data_matrix, sample_annotation,
 #' @param ... Further arguments passed to
 #'   \code{limma::removeBatchEffect()}.
 #' @return A data.frame in long format with batch effects removed in \code{measure_col}.
+#' @examples
+#' # Use the unified replacement with `format = "long"`.
+#' args(correct_with_removeBatchEffect)
 #' @export
 correct_with_removeBatchEffect_df <- function(df_long, sample_annotation = NULL,
                                               feature_id_col = "peptide_group_label",

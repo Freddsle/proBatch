@@ -272,6 +272,27 @@ pb_register_step <- function(
 #' @param package One non-missing, non-empty provider package name.
 #'
 #' @return The removed canonical names, invisibly.
+#' @examples
+#' local({
+#'     provider <- "proBatchExampleProvider"
+#'     on.exit(pb_unregister_steps(provider), add = TRUE)
+#'     pb_register_step(
+#'         "example_unregister_identity",
+#'         function(x) x,
+#'         package = provider,
+#'         aliases = "example_unregister_no_change"
+#'     )
+#'     alias_registered <- pb_has_step("example_unregister_no_change")
+#'     removed <- pb_unregister_steps(provider)
+#'     c(
+#'         alias_registered = alias_registered,
+#'         alias_removed = !pb_has_step("example_unregister_no_change"),
+#'         canonical_removed = identical(
+#'             removed,
+#'             "example_unregister_identity"
+#'         )
+#'     )
+#' })
 #' @export
 #' @md
 pb_unregister_steps <- function(package) {

@@ -44,20 +44,19 @@
 #' @examples
 #' data(example_proteome_matrix, package = "proBatch")
 #' data(example_sample_annotation, package = "proBatch")
-#' plot_NA_intensity(
-#'     example_proteome_matrix[1:100, ],
+#' example_matrix <- example_proteome_matrix[1:100, ]
+#' intensity_plot <- plot_NA_intensity(
+#'     example_matrix,
 #'     sample_annotation = example_sample_annotation,
 #'     sample_id_col = "FullRunName",
 #'     color_by = "Diet"
 #' )
-#' \donttest{
 #' pbf <- ProBatchFeatures(
-#'     data_matrix = example_proteome_matrix,
+#'     data_matrix = example_matrix,
 #'     sample_annotation = example_sample_annotation,
 #'     sample_id_col = "FullRunName"
 #' )
-#' plot_NA_intensity(pbf, color_by = "Diet")
-#' }
+#' pbf_intensity_plot <- plot_NA_intensity(pbf, color_by = "Diet")
 #' @export
 plot_NA_intensity <- function(x, ...) UseMethod("plot_NA_intensity")
 

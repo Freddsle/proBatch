@@ -1910,6 +1910,26 @@ plot_PVCA.df <- function(data_matrix,
 #' @param category_order Optional character vector specifying the order of categories in the stacked plot.
 #'
 #' @return A `ggplot` object showing the stacked PVCA weights.
+#'
+#' @examples
+#' pvca_dir <- tempfile("saved_pvca_")
+#' pvca_plot <- tryCatch({
+#'     assay_dir <- file.path(pvca_dir, "assay_1")
+#'     dir.create(assay_dir, recursive = TRUE)
+#'     saved_pvca <- data.frame(
+#'         label = c("Diet", "resid"),
+#'         weights = c(0.7, 0.3),
+#'         category = c("biological", "residual")
+#'     )
+#'     utils::write.csv(
+#'         saved_pvca,
+#'         file.path(assay_dir, "PVCA_results_aggregated.csv"),
+#'         row.names = FALSE
+#'     )
+#'     plot_PVCA_stacked_from_saved(pvca_dir)
+#' }, finally = {
+#'     unlink(pvca_dir, recursive = TRUE)
+#' })
 #' @export
 #' @md
 plot_PVCA_stacked_from_saved <- function(pvca_dir,
@@ -2325,7 +2345,6 @@ plot_PCA <- function(data_matrix, ...) UseMethod("plot_PCA")
 #'     FullRunName = sample_ids,
 #'     MS_batch = rep(c("batch_1", "batch_2"), each = 4)
 #' )
-#' \donttest{
 #' if (requireNamespace("Rtsne", quietly = TRUE)) {
 #'     tsne_plot <- plot_TSNE(
 #'         embedding_matrix,
@@ -2334,7 +2353,6 @@ plot_PCA <- function(data_matrix, ...) UseMethod("plot_PCA")
 #'         max_iter = 250,
 #'         random_seed = 7
 #'     )
-#' }
 #' }
 #' @method plot_TSNE default
 #' @export
@@ -2575,7 +2593,6 @@ plot_TSNE <- function(data_matrix, ...) UseMethod("plot_TSNE")
 #'     FullRunName = sample_ids,
 #'     MS_batch = rep(c("batch_1", "batch_2"), each = 4)
 #' )
-#' \donttest{
 #' if (requireNamespace("umap", quietly = TRUE)) {
 #'     umap_plot <- plot_UMAP(
 #'         embedding_matrix,
@@ -2583,7 +2600,6 @@ plot_TSNE <- function(data_matrix, ...) UseMethod("plot_TSNE")
 #'         n_neighbors = 3,
 #'         random_state = 7
 #'     )
-#' }
 #' }
 #' @method plot_UMAP default
 #' @export

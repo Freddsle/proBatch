@@ -52,6 +52,23 @@
 #'   multiple assays are requested a list is returned invisibly with elements
 #'   `grob` (the arranged heatmaps) and `heatmaps` (individual `pheatmap`
 #'   objects). Assays without missing values are skipped with a warning.
+#'
+#' @examples
+#' missing_matrix <- matrix(
+#'     seq_len(24),
+#'     nrow = 6,
+#'     dimnames = list(
+#'         paste0("feature_", seq_len(6)),
+#'         paste0("sample_", seq_len(4))
+#'     )
+#' )
+#' missing_matrix[cbind(seq_len(4), seq_len(4))] <- NA
+#' na_heatmap <- plot_NA_heatmap(
+#'     missing_matrix,
+#'     cluster_samples = FALSE,
+#'     cluster_features = FALSE,
+#'     draw = FALSE
+#' )
 
 
 #' @export
@@ -207,6 +224,29 @@ plot_NA_heatmap.ProBatchFeatures <- function(
 #'   `grob` (the arranged heatmaps) and `heatmaps` (individual `pheatmap`
 #'   objects). Assays without incomplete group-level patterns are skipped with a
 #'   warning.
+#'
+#' @examples
+#' missing_matrix <- matrix(
+#'     seq_len(24),
+#'     nrow = 6,
+#'     dimnames = list(
+#'         paste0("feature_", seq_len(6)),
+#'         paste0("sample_", seq_len(4))
+#'     )
+#' )
+#' missing_matrix[cbind(seq_len(4), seq_len(4))] <- NA
+#' sample_annotation <- data.frame(
+#'     condition = rep(c("control", "treated"), each = 2),
+#'     row.names = colnames(missing_matrix)
+#' )
+#' grouped_heatmap <- plot_grouped_NA_heatmap(
+#'     missing_matrix,
+#'     sample_annotation = sample_annotation,
+#'     color_by = "condition",
+#'     cluster_samples = FALSE,
+#'     cluster_features = FALSE,
+#'     draw = FALSE
+#' )
 #' @export
 plot_grouped_NA_heatmap <- function(x, ...) UseMethod("plot_grouped_NA_heatmap")
 
@@ -383,6 +423,18 @@ plot_grouped_NA_heatmap.ProBatchFeatures <- function(
 #' @param ... Additional arguments forwarded to [ggplot2::geom_density()].
 #'
 #' @return A `ggplot` object.
+#'
+#' @examples
+#' density_matrix <- matrix(
+#'     seq_len(32),
+#'     nrow = 8,
+#'     dimnames = list(
+#'         paste0("feature_", seq_len(8)),
+#'         paste0("sample_", seq_len(4))
+#'     )
+#' )
+#' density_matrix[cbind(seq_len(4), seq_len(4))] <- NA
+#' density_plot <- plot_NA_density(density_matrix)
 #' @export
 plot_NA_density <- function(x, ...) UseMethod("plot_NA_density")
 
@@ -544,6 +596,21 @@ plot_NA_density.ProBatchFeatures <- function(
 #' @param show_percent Logical; display percentages instead of raw counts.
 #'
 #' @return A `ggplot` object showing the frequency distribution.
+#'
+#' @examples
+#' missing_matrix <- matrix(
+#'     seq_len(24),
+#'     nrow = 6,
+#'     dimnames = list(
+#'         paste0("feature_", seq_len(6)),
+#'         paste0("sample_", seq_len(4))
+#'     )
+#' )
+#' missing_matrix[cbind(seq_len(4), seq_len(4))] <- NA
+#' frequency_plot <- plot_NA_frequency(
+#'     missing_matrix,
+#'     show_percent = TRUE
+#' )
 #' @export
 plot_NA_frequency <- function(x, ...) UseMethod("plot_NA_frequency")
 

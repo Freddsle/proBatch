@@ -350,6 +350,16 @@ merge_rare_levels <- function(column, rare_thr = 2) {
 #' @param columns_for_color_mapping character vector of columns to be mapped.
 #' @param sample_id_col character, the ID column.
 #' @return No return value, called for side effects (warning).
+#' @examples
+#' annotation <- data.frame(
+#'     sample = c("s1", "s2"),
+#'     batch = c("A", "B"),
+#'     injection_order = 1:2
+#' )
+#' tryCatch(
+#'     warn_unmapped_columns(annotation, "batch", "sample"),
+#'     warning = function(w) conditionMessage(w)
+#' )
 #' @export
 warn_unmapped_columns <- function(sample_annotation, columns_for_color_mapping, sample_id_col) {
     undefined_cols <- setdiff(
@@ -371,7 +381,15 @@ warn_unmapped_columns <- function(sample_annotation, columns_for_color_mapping, 
 #' Remove numeric columns from factor columns if overlap is detected.
 #' @param factor_columns character vector of factor columns.
 #' @param numeric_columns character vector of numeric columns.
-#' @return List with updated factor_columns and a warning if overlaps exist
+#' @return A character vector containing \code{factor_columns} after any
+#'   columns in \code{numeric_columns} have been removed.
+#' @examples
+#' factor_columns <- c("batch", "injection_order")
+#' overlap_result <- handle_factor_numeric_overlap(
+#'     factor_columns,
+#'     numeric_columns = "injection_order"
+#' )
+#' overlap_result
 #' @export
 handle_factor_numeric_overlap <- function(factor_columns, numeric_columns) {
     if (!is.null(numeric_columns)) {
@@ -396,6 +414,17 @@ handle_factor_numeric_overlap <- function(factor_columns, numeric_columns) {
 #' @param sample_annotation data frame of sample annotations.
 #' @param guess_factors logical indicating whether to guess numeric columns.
 #' @return Named list containing updated factor_columns and numeric_columns.
+#' @examples
+#' annotation <- data.frame(
+#'     batch = rep(c("A", "B"), 6),
+#'     injection_order = seq_len(12)
+#' )
+#' guessed <- guess_factor_columns_if_needed(
+#'     names(annotation),
+#'     annotation,
+#'     guess_factors = TRUE
+#' )
+#' guessed
 #' @export
 guess_factor_columns_if_needed <- function(factor_columns,
                                            sample_annotation,
@@ -451,6 +480,17 @@ guess_factor_columns_if_needed <- function(factor_columns,
 #' @param factor_columns character vector of factor columns.
 #' @param numeric_columns character vector of numeric columns.
 #' @return data frame with converted columns.
+#' @examples
+#' annotation <- data.frame(
+#'     batch = c("A", "B"),
+#'     injection_order = c("1", "2")
+#' )
+#' converted <- convert_annotation_classes(
+#'     annotation,
+#'     factor_columns = "batch",
+#'     numeric_columns = "injection_order"
+#' )
+#' vapply(converted, class, character(1))
 #' @export
 convert_annotation_classes <- function(df, factor_columns, numeric_columns) {
     message("converting columns to corresponding classes
