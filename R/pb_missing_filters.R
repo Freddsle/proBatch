@@ -47,8 +47,10 @@
 #'   `QFeatures` method where applicable.
 #' @return `pb_zeroIsNA()`, `pb_infIsNA()`, `pb_filterNA()` and
 #'   `pb_groupfilterNA()` return the updated `ProBatchFeatures` object.
-#'   `pb_nNA()` returns the output of the corresponding `QFeatures::nNA()` call
-#'   (a `list` of `DataFrame`s).
+#'   For one assay, `pb_nNA()` returns the corresponding `QFeatures::nNA()`
+#'   result (a list of `DataFrame`s). For multiple assays it returns a named
+#'   outer list with one such result per assay and a combined `nNA`
+#'   `DataFrame`.
 #' @details For grouped filtering, features are retained if they meet the
 #'   missingness criteria in at least one group defined by `group_cols`.
 #'   When `mask_failing = TRUE` (the default), the values in groups where

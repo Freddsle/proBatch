@@ -526,6 +526,7 @@ as_ProBatchFeatures <- function(object,
 # ---------------------------
 
 #' Access the operation log (structured)
+#' @md
 #' @param object A `ProBatchFeatures` object.
 #' @return S4Vectors::DataFrame
 #' @example inst/examples/ProBatchFeatures-basic.R
@@ -785,6 +786,7 @@ pb_pipeline_name <- function(object, assay = pb_current_assay(object)) {
 }
 
 #' Current (latest) assay name
+#' @md
 #' @param object A `ProBatchFeatures` object.
 #' @return character(1) assay identifier for the most recently stored assay
 #' @example inst/examples/ProBatchFeatures-basic.R
@@ -1153,6 +1155,7 @@ pb_assay_matrix <- function(object, assay = NULL, name = "intensity") {
 }
 
 #' Get current assay as LONG (via proBatch::matrix_to_long)
+#' @md
 #' @param object A `ProBatchFeatures` object.
 #' @param feature_id_col Column name used for feature identifiers in the long table.
 #' @param sample_id_col Column name used for sample identifiers in the long table.
@@ -1187,6 +1190,7 @@ pb_as_long <- function(
 }
 
 #' Get an assay matrix (wide)
+#' @md
 #' @param object A `ProBatchFeatures` object.
 #' @param assay Assay identifier to extract; defaults to the current assay.
 #' @param name Assay entry name inside the `SummarizedExperiment` to return.
@@ -1527,8 +1531,13 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 #'   resolved to their canonical names for operation logging.
 #' @param params_list list of parameter lists (same length as steps)
 #' @param level Optional level label to assign to the generated assay(s).
-#' @param store_fast_steps logical; if FALSE, fast steps are computed but not stored
-#' @param fast_steps which steps count as fast (default: c("log","log2","medianNorm"))
+#' @param store_fast_steps Logical; if `FALSE`, intermediate steps listed in
+#'   `fast_steps` are computed but not stored. A final `log` or `log2` step is
+#'   also virtual unless `final_name` is supplied. Setting
+#'   `store_fast_steps = TRUE` materializes it; other final steps are
+#'   materialized regardless.
+#' @param fast_steps Steps treated as fast (default:
+#'   `c("log", "log2", "medianNorm")`).
 #' @param store_intermediate logical; if TRUE store every step (overrides fast behavior)
 #' @param final_name Optional final assay name override in
 #'   `<level>::<pipeline>` form. It must differ from `from`. Stored assays and
@@ -1539,7 +1548,6 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 #' @param backend "memory","hdf5","auto"
 #' @param hdf5_path Optional file path used when `backend = "hdf5"`.
 #' @return ProBatchFeatures with the requested pipeline added (as log and/or assay)
-#'
 #' @details Registered steps record their canonical name and provider package.
 #'   When a step returns [pb_step_result()] and its assay is materialized, the
 #'   result's artifacts are stored in that assay's metadata under
@@ -2070,6 +2078,7 @@ pb_add_level <- function(
 }
 
 #' Subset `ProBatchFeatures` objects without dropping metadata.
+#' @md
 #'
 #' Ensures the `[` method returns a `ProBatchFeatures` instance so the
 #' subclass-specific slots remain available after subsetting.
@@ -2102,6 +2111,7 @@ setMethod(
 )
 
 #' Subset samples using `ProBatchFeatures` metadata.
+#' @md
 #'
 #' Resolve sample metadata from `colData(object)`, build a column mask, and
 #' delegate to the subclass-preserving `[` method so every assay is subset

@@ -4,11 +4,25 @@ proBatch  v2.1.0
   `validate_batch_design()`, `summarize_design()`, `detect_nested_batches()`,
   `detect_outlier_samples()`, and `subbatch_detection()`.
 
+## Standalone Core baseline
+- Established a provider-neutral Core boundary: `proBatch` owns its containers,
+  transformations, corrections, missing-value policies, lineage, diagnostics,
+  and embeddings without depending on `proBatchBench` or provider engines.
+- Consolidated duplicate public implementations so source order no longer
+  selects correction or registry behavior, and removed direct `plyr` and
+  `reshape2` requirements after their remaining source uses were removed.
+
 ## Breaking changes and defaults
+- Standardized correction missing-value handling on `"error"` (the default),
+  `"keep"`, `"drop_features"`, and `"fill"` with an explicit `fill_value`.
+  Legacy `FALSE`, numeric, and `"remove"`/`"rm"` spellings are translated with
+  a deprecation warning for one release; explicit `NULL` is now an error.
 - Explicit result names now share the stored-assay and virtual-target
   namespace. Conflicting names are rejected rather than silently suffixed, and
   `pb_filterNA()`/`pb_groupfilterNA()` no longer recycle an explicit scalar name
   across multiple assays.
+- Lineage replay and target retries now reject conflicting or ambiguous origins
+  while retaining exact idempotent retries.
 
 ## Provider-neutral extension contract
 - Extended the transformation registry with provider metadata, aliases,

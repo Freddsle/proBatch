@@ -1,4 +1,5 @@
 #' cluster the data matrix to visually inspect which confounder dominates
+#' @md
 #'
 #' @inheritParams proBatch
 #' @param distance distance metric used for clustering
@@ -22,7 +23,8 @@
 #' @param plot_ncol optional integer controlling the number of columns when
 #'   arranging multiple assays. Ignored by the default method.
 #' @param data_matrix Input object: matrix-like data or a `ProBatchFeatures` instance.
-#' @param pbf_name Assay name(s) used when `x` is a `ProBatchFeatures`.
+#' @param pbf_name Assay name(s) used when `data_matrix` is a
+#'   `ProBatchFeatures`.
 #'
 #' @name plot_hierarchical_clustering
 #'
@@ -234,6 +236,7 @@ plot_hierarchical_clustering.ProBatchFeatures <- function(data_matrix, pbf_name 
 plot_hierarchical_clustering <- function(data_matrix, ...) UseMethod("plot_hierarchical_clustering")
 
 #' Plot the heatmap of samples (cols) vs features (rows)
+#' @md
 #'
 #' @inheritParams proBatch
 #' @param factors_to_plot vector of technical and biological factors to be
@@ -459,6 +462,7 @@ plot_heatmap_diagnostic.ProBatchFeatures <- function(data_matrix, pbf_name = NUL
 plot_heatmap_diagnostic <- function(data_matrix, ...) UseMethod("plot_heatmap_diagnostic")
 
 #' Plot the heatmap
+#' @md
 #'
 #' @inheritParams proBatch
 #' @param data_matrix the matrix of data to be plotted
@@ -716,6 +720,7 @@ plot_heatmap_generic.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
 plot_heatmap_generic <- function(data_matrix, ...) UseMethod("plot_heatmap_generic")
 
 #' Calculate variance distribution by variable
+#' @md
 #'
 #' @inheritParams proBatch
 #' @param factors_for_PVCA vector of factors from \code{sample_annotation}, that
@@ -922,6 +927,7 @@ calculate_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
 calculate_PVCA <- function(data_matrix, ...) UseMethod("calculate_PVCA")
 
 #' Plot variance distribution by variable
+#' @md
 #'
 #' @inheritParams proBatch
 #' @param technical_factors vector \code{sample_annotation} column names that
@@ -1203,6 +1209,7 @@ plot_PVCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
 plot_PVCA <- function(data_matrix, ...) UseMethod("plot_PVCA")
 
 #' prepare the weights of Principal Variance Components
+#' @md
 #'
 #' @inheritParams proBatch
 #' @param technical_factors vector \code{sample_annotation} column names that
@@ -1606,6 +1613,7 @@ prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
 }
 
 #' plot PVCA, when the analysis is completed
+#' @md
 #'
 #' @param data_matrix Data frame of PVCA weights, typically the result of
 #'   `prepare_PVCA_df()`, or a `ProBatchFeatures` object.
@@ -1887,6 +1895,7 @@ plot_PVCA.df <- function(data_matrix,
 }
 
 #' Plot stacked PVCA results from saved CSV files
+#' @md
 #'
 #' When PVCA analysis has been run previously and the aggregated weights were
 #' written to disk (one `PVCA_results_aggregated.csv` per assay), this helper

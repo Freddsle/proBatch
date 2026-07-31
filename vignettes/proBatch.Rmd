@@ -25,7 +25,7 @@ abstract: |
   This vignette describes how to apply different functions from the `proBatch` package to diagnose and correct for batch effects. Most of the functions are applicable to any omics data; however, the package includes a number of functions designed specifically for mass spectrometry-based proteomics and has been tested on SWATH data.
   
   The `proBatch` package is designed for researchers with basic R knowledge but without extensive programming experience. 
-  The `proBatch` provides a comprehensive workflow for batch effect correction, including data preprocessing, batch effect diagnosis and correction, and post-correction evaluation using quality control metrics.
+  `proBatch` provides a comprehensive workflow for batch effect correction, including data preprocessing, batch effect diagnosis and correction, and post-correction evaluation using quality control metrics.
 editor_options:
   markdown:
     wrap: 72
@@ -127,11 +127,12 @@ preceding and following batch effects analysis and correction.
 
 # Preparation for the analysis
 
-## IInstallation
+## Installation
 
-`proBatch` is primarily a wrapper of functions from other packages,
-therefore it has numerous dependencies. If some of these dependencies
-are not installed, you will need to do that before running `proBatch`.
+`proBatch` provides a standalone set of core data-processing,
+batch-correction, and diagnostic functions. Some methods use optional
+backend packages; the corresponding examples below check that those
+backends are available before running.
 
 To install the latest version of proBatch package, you need `BiocManager`:
 
@@ -264,7 +265,7 @@ vignette, we use `Gene` name).
 The `proBatch` package can be applied to any dataset, for which an
 intensity matrix and a sample annotation tables are available. However,
 the package was primarily designed with proteomic data in mind, and
-thoroughly tested on SWATH data. Thus, as and example dataset we include
+thoroughly tested on SWATH data. Thus, as an example dataset we include
 a reduced SWATH-MS measurement file, generated from a BXD mouse aging
 study. In this study, the liver proteome of mouse from BXD reference
 population have been profiled to identify proteome changes associated
@@ -483,10 +484,10 @@ quantile normalization can help in case of divergent distributions.
 In large-scale experiments, the total intensity of the samples is likely
 to be different due to a number of reasons, such as different amount of
 sample loaded or fluctuations in measurement instrument sensitivity. To
-make samples comparable, they need to be scaled. This processed is
+make samples comparable, they need to be scaled. This process is
 called normalization. In `proBatch`, two normalization approaches are
 used: median centering and quantile normalization. The normalization
-function `normalize_data()` by default takes log-transformed data, and
+function `normalize_data_dm()` accepts a data matrix, and
 if needed, log-transformation can be done on-the-fly by specifying
 `log_base = 2` for log2-transformation.
 
@@ -534,7 +535,7 @@ quantile_normalized_matrix <- normalize_data_dm(
 > On some systems `preprocessCore` this code can throw an error. You can
 > try re-install it with disable threading:
 > `BiocManager::install("preprocessCore", configure.args = c(preprocessCore = "--disable-threading"), force= TRUE, update=TRUE, type = "source")` and restart your R session.
-> [Sourse](https://github.com/Bioconductor/bioconductor_docker/issues/2).
+> [Source](https://github.com/Bioconductor/bioconductor_docker/issues/2).
 
 After quantile or median normalization, you can easily check if the
 global pattern improved by generating mean or boxplots and comparing
@@ -832,6 +833,15 @@ be applied, or, to use across-feature information in a Bayesian
 framework, the ComBat approach can be used. If there is continuous drift
 in the data, one has to start from continuous drift correction.
 
+The unified correction functions accept the data as `x` and use
+`format = "long"` or `format = "wide"` to preserve its representation.
+Where missing-value handling is needed, the canonical policies are
+`"error"` (the default), `"keep"`, `"drop_features"`, and `"fill"`.
+Use `"keep"` only with a method that supports missing values, use
+`"drop_features"` to remove incomplete feature rows, or pair `"fill"`
+with an explicit numeric `fill_value`. ComBat requires an NA-free
+matrix, so its examples below use `"drop_features"`.
+
 ### Continuous drift correction
 
 Continuous drifts are specific to mass-spectrometry, thus, the
@@ -900,13 +910,13 @@ absolute and relative thresholds (`abs_threshold` and `pct_threshold`)
 on the number of missing values for each peptide can be passed as
 parameters to `adjust_batch_trend_df()`.
 
-### Discrete batch correction: combat or peptide-level median centering
+### Discrete batch correction: ComBat or feature-level centering
 
 Once the data are normalized and corrected for continuous drift, only
-discrete batch effects is left to be corrected.
+discrete batch effects are left to be corrected.
 
-Currently, two methods of batch correction are implemented: \* median
-centering (per feature per batch) \* ComBat
+The unified API supports median or mean centering per feature and batch,
+ComBat, and `limma::removeBatchEffect()`.
 
 #### Feature-level median centering
 
@@ -915,8 +925,12 @@ effects correction. However, if the variance is different between
 batches, other approaches need to be used.
 
 ```{r median_batch, fig.show='hold', fig.width=3, fig.height=2.4}
-peptide_median_df <- center_feature_batch_medians_df(
-    loess_fit_df, example_sample_annotation
+peptide_median_df <- center_feature_batch(
+    x = loess_fit_df,
+    sample_annotation = example_sample_annotation,
+    format = "long",
+    stat = "medians",
+    no_fit_imputed = FALSE
 )
 plot_single_feature(
     feature_name = "10231_QDVDVWLWQQEGSSK_2", df_long = peptide_median_df,
@@ -928,15 +942,19 @@ plot_single_feature(
 
 #### ComBat
 
-ComBat is well-suited for batches with distinct distributions, but
-restricted to peptides that don't have missing batch measurements.
-ComBat, uses parametric and non-parametric empirical Bayes framework for
-adjusting data for batch effects [11]. The function
-`correct_with_ComBat_df()` can incorporate several covariates and make
-data comparable across batches.
+ComBat is well-suited for batches with distinct distributions, but it
+requires an NA-free matrix. ComBat uses a parametric or non-parametric
+empirical Bayes framework for adjusting data for batch effects [11].
+The unified `correct_with_ComBat()` function can incorporate covariates
+and accepts long or wide data through its `format` argument.
 
 ```{r comBat, fig.show='hold'}
-comBat_df <- correct_with_ComBat_df(loess_fit_df, example_sample_annotation)
+comBat_df <- correct_with_ComBat(
+    x = loess_fit_df,
+    sample_annotation = example_sample_annotation,
+    format = "long",
+    fill_the_missing = "drop_features"
+)
 ```
 
 To illustrate the correction we use the '10231_QDVDVWLWQQEGSSK_2'
@@ -965,18 +983,21 @@ between batches similar to one another.
 ### Correct batch effects: universal function
 
 We provide a convenient all-in-one function for batch correction. The
-function `correct_batch_effects_df()` corrects MS signal drift and
-discrete shift in a single function call. Simply specify which discrete
-correction method is preferred at `discrete_func` either “ComBat” or
-“MedianCentering” and supplement other arguments such as `span`,
-`abs_threshold` or `pct_threshold` as in `adjust_batch_trend_df()`.
+function `correct_batch_effects()` corrects MS signal drift and a
+discrete shift in a single function call. Select the input
+representation with `format`, choose a discrete method such as
+`"ComBat"` or `"MedianCentering"` with `discrete_func`, and supplement
+other arguments such as `span`, `abs_threshold`, or `pct_threshold` as
+in `adjust_batch_trend_df()`.
 
 ```{r batch_corr_general, fig.show='hold'}
-batch_corrected_df <- correct_batch_effects_df(
-    df_long = quantile_normalized_long,
+batch_corrected_df <- correct_batch_effects(
+    x = quantile_normalized_long,
     sample_annotation = example_sample_annotation,
+    format = "long",
     discrete_func = "ComBat",
     continuous_func = "loess_regression",
+    fill_the_missing = "drop_features",
     abs_threshold = 5, pct_threshold = 0.20
 )
 batch_corrected_matrix <- long_to_matrix(batch_corrected_df)
@@ -989,7 +1010,7 @@ batch_corrected_matrix <- long_to_matrix(batch_corrected_df)
 In most cases, the batch effects correction method is evaluated by its
 ability to remove technical confounding, visible on hierarchical
 clustering or PCA. However, it is rarely shown whether the biological
-signal is not destroyed, or, better even, improved. Often, and increase
+signal is not destroyed, or, better even, improved. Often, an increase
 in the number of differentially expressed genes is presented as an
 improvement. However, every reasonably designed experiment has
 replicates that can serve as an excellent control. In addition, peptides
@@ -1003,7 +1024,7 @@ the tuning of the mass-spectrometer, which marks the boundary between
 batches 2 and 3. The correlation between these replicates can be
 illustrated by correlation plot heatmap.
 
-First, we specify, which samples we want to correlate
+First, we specify which samples we want to correlate.
 
 ```{r setup_corr_heatmap, fig.show='hold', fig.height=5, fig.width=8}
 earTags <- c(
@@ -1077,8 +1098,8 @@ grid.arrange(grobs = list(p1$gtable, p2$gtable), ncol = 2)
 ```
 
 
-Before the correction, samples from one batch correlate better and of
-ten higher than the replicates. However, after the correction, the
+Before the correction, samples from one batch correlate better and often
+higher than the replicates. However, after the correction, the
 correlation between replicates becomes higher than the correlation
 between non-related samples regardless of the batch.
 
@@ -1243,6 +1264,6 @@ platform for comprehensive analysis of (prote)omics data». Nat Methods
 retention time for more targeted measurement of peptides». Proteomics
 12:8 (2012), pp. 1111–1121.
 
-[11] A. W. B. Johnston, Y. Li, and L. Ogilvie. «Metagenomic marine
-nitrogen fixation–feast or famine?» Trends in microbiology 13:9 (2005),
-pp. 416–20.
+[11] W. E. Johnson, C. Li, and A. Rabinovic. «Adjusting batch effects in
+microarray expression data using empirical Bayes methods».
+Biostatistics 8:1 (2007), pp. 118–127.

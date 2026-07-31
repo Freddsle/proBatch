@@ -150,10 +150,14 @@ pbf <- pb_add_level(
 pbf
 ```
 
-If a precursor (peptide) maps to multiple protein groups, `map_strategy` parameter specifies how to resolve multimappers.
-Available options are "first", "longest", and "as_is". The "first" and "longest" strategies select a single ProteinID per peptide,
-where first takes the first match found in the mapping dataframe, and longest selects the ProteinID with the longest sequence, 
-while "as_is" assumes a one-to-one mapping between identifiers.
+If a precursor (peptide) maps to multiple protein groups, `map_strategy`
+specifies how to resolve multimappers. Available options are `"first"`,
+`"longest"`, and `"as_is"`. The first two strategies select a single
+ProteinID per peptide: `"first"` takes the first match in the mapping
+data frame, while `"longest"` prefers the match with the most
+semicolon-separated identifiers, then the longest string, then the first
+occurrence.
+`"as_is"` requires a one-to-one mapping between identifiers.
 
 
 ```{r check_pbf}
@@ -219,7 +223,10 @@ plot_NA_heatmap(
 )
 ```
 
-To display all features, set the parameter `drop_complete=F`. When the number of features or samples exceeds 5000, a random subset of 5000 rows/columns is used for visualization by default. To display the entire dataset, set `use_subset = T`.
+To display all features, set `drop_complete = FALSE`. When the number of
+features or samples exceeds 5000, a random subset of 5000 rows or columns
+is used for visualization by default. To display the entire dataset, set
+`use_subset = FALSE`.
 
 To display multiple assays in one plot,  specify them using `pbf_name` parameter:
 
@@ -274,7 +281,9 @@ To remove the residual systematic effects from the data, we further perform norm
 
 ## Step 2 - log2-transformation
 
-Proteomics data are commonly log-transformed to stabilize variance as required for furter statistical analyzes and data visualization. Here, we perform a log2-transformation of both peptide- and protein-level data:
+Proteomics data are commonly log-transformed to stabilize variance for
+statistical analysis and data visualization. Here, we perform a
+log2-transformation of both peptide- and protein-level data:
 
 ```{r run_log_transform}
 pbf <- log_transform_dm(
@@ -292,11 +301,11 @@ pbf <- log_transform_dm(
 pbf
 ```
 
-After log-transformation, the `ProBatchFeatures` instance `pbf` contains additional assays (`peptide::log2_on_raw` and
-`protein::log2_on_raw`). If the assay was transformed using "fast to recompute" step (for exmaple, log-transformation or median
-normalization), the transformed data will not be saved in the list of assays,
-but only re-computed for plotting. To force storing
-the results of this steps `store_fast_steps = T` parameter can be added.
+After log-transformation, `pbf` records the virtual targets
+`peptide::log2_on_raw` and `protein::log2_on_raw`. Because log-transformation is
+fast to recompute, these results are replayed when requested instead of being
+stored as assays by default. Set `store_fast_steps = TRUE` or supply an
+explicit `final_name` to materialize them.
 
 
 The intensity distributions of each sample after log-transformation can be visualized as boxplots to identify potential batch-specific shifts:
@@ -433,7 +442,19 @@ Although median normalization made itensity distributions more similar, the resi
 
 ## Step 4 - batch-effect correction
 
-The user can choose from two methods for batch effects correction: `ComBat` [@Johnson2006] from **sva** and `removeBatchEffect()` from **limma** [@Ritchie2015]. Both methods can be accessed via the same function `pb_transform()`.
+The user can choose from two Core-registered batch-effect correction
+steps: `combat`, backed by `ComBat` [@Johnson2006] from **sva**, and
+`limmaRBE`, backed by `removeBatchEffect()` from **limma**
+[@Ritchie2015]. Both steps can be applied and logged with
+`pb_transform()`.
+
+Correction methods use the common missing-value policies `"error"`,
+`"keep"`, `"drop_features"`, and `"fill"`. The default, `"error"`,
+stops when values are missing. `"keep"` passes missing values to a
+method that supports them, `"drop_features"` removes incomplete feature
+rows, and `"fill"` requires an explicit numeric `fill_value`. Here we
+choose `"drop_features"` so both correction backends receive complete
+feature rows.
 
 ```{r prepare_sample_annotations}
 # sample annotations used by both correction methods
@@ -452,7 +473,7 @@ pbf <- pb_transform(
         sample_annotation = sa,
         batch_col = "Lab",
         covariates_cols = c("Condition"),
-        fill_the_missing = FALSE
+        fill_the_missing = "drop_features"
     ))
 )
 
@@ -464,14 +485,19 @@ pbf <- pb_transform(
         sample_annotation = sa,
         batch_col = "Lab",
         covariates_cols = c("Condition"),
-        fill_the_missing = FALSE
+        fill_the_missing = "drop_features"
     ))
 )
 ```
 
-As batch effect correction does not listed as a `fast step`, two new protein-level assay are added to the `pbd`: 
-- [3] protein::limmaRBE_on_log2_on_raw and 
-- [4] protein::limmaRBE_on_medianNorm_on_log2_on_raw.
+Because batch-effect correction is not a `fast step`, two new
+protein-level assays are materialized:
+
+- `protein::limmaRBE_on_log2_on_raw`
+- `protein::limmaRBE_on_medianNorm_on_log2_on_raw`
+
+Both contain only complete feature rows because this example requested
+`"drop_features"`.
 
 ```{r inspect_pbf_after_limma}
 print(pbf)
@@ -490,7 +516,7 @@ pbf <- pb_transform(
         batch_col = "Lab",
         sample_id_col = "Run",
         par.prior = TRUE,
-        fill_the_missing = "remove"
+        fill_the_missing = "drop_features"
     ))
 )
 
@@ -503,24 +529,28 @@ pbf <- pb_transform(
         batch_col = "Lab",
         sample_id_col = "Run",
         par.prior = TRUE,
-        fill_the_missing = "remove"
+        fill_the_missing = "drop_features"
     ))
 )
 ```
-The `ComBat` method from the **sva** package cannot be applied to data containing missing values.  
-Therefore, features with any missing values are removed by default.  
-Alternatively, missing values can be imputed with a user-defined constant using the `fill_the_missing` parameter (default: `-1`).
+The `ComBat` method from the **sva** package cannot be applied to data
+containing missing values. We therefore requested
+`fill_the_missing = "drop_features"` explicitly. To replace missing
+values with a constant instead, use `fill_the_missing = "fill"` together
+with a finite numeric `fill_value`; omitting a policy retains the safer
+`"error"` default.
 
 ```{r inspect_pbf_after_combat}
 print(pbf)
 ```
 
-Similarly, two new protein-level assays were added to `pdf`: 
-- [5] protein::combat_on_log2_on_raw: ... with 244 rows 
-- [6] protein::combat_on_medianNorm_on_log2_on_raw: ... with 244 rows.
+Similarly, two new protein-level ComBat assays are materialized:
 
-And as we removed features with missing values, these assays contain less
-protein groups than the raw filtered data (331 rows).
+- `protein::combat_on_log2_on_raw`
+- `protein::combat_on_medianNorm_on_log2_on_raw`
+
+The corrected assays contain fewer protein groups than the filtered raw
+data whenever incomplete features were dropped.
 
 All steps can be applied to peptide-level data in the same way:
 
@@ -534,7 +564,7 @@ pbf <- pb_transform(
             sample_annotation = sa,
             batch_col = "Lab",
             covariates_cols = c("Condition"),
-            fill_the_missing = FALSE
+            fill_the_missing = "drop_features"
         )
     )
 )
@@ -549,7 +579,7 @@ pbf <- pb_transform(
             batch_col = "Lab",
             sample_id_col = "Run",
             par.prior = TRUE,
-            fill_the_missing = "remove"
+            fill_the_missing = "drop_features"
         )
     )
 )
@@ -557,9 +587,13 @@ pbf <- pb_transform(
 pbf
 ```
 
-Two new peptide-level assays were added to `pdf`: 
-- [7] peptide::limmaRBE_on_medianNorm_on_log2_on_raw: ... with  867 rows 
-- [8] peptide::combat_on_medianNorm_on_log2_on_raw: ... with  152 rows (as NA-containing features were removed before ComBat).
+Two new peptide-level assays are materialized:
+
+- `peptide::limmaRBE_on_medianNorm_on_log2_on_raw`
+- `peptide::combat_on_medianNorm_on_log2_on_raw`
+
+As at the protein level, each contains only feature rows that were
+complete across samples under the requested policy.
 
 ## Step 5 - assess processed assays
 
