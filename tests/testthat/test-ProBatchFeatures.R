@@ -117,6 +117,18 @@ test_that("constructor errors on malformed inputs (wide)", {
         ),
         "duplicate identifiers"
     )
+
+    for (invalid_name in list("", NA_character_, c("raw", "other"))) {
+        expect_error(
+            ProBatchFeatures(
+                example_proteome_matrix,
+                example_sample_annotation,
+                sample_id_col = "FullRunName",
+                name = invalid_name
+            ),
+            "Assay name must be a non-empty character scalar"
+        )
+    }
 })
 
 test_that("constructor (long) delegates to long_to_matrix", {

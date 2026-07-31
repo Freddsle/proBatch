@@ -235,13 +235,17 @@ setValidity("ProBatchFeatures", function(object) {
 # ---------------------------
 
 #' Construct a ProBatchFeatures object from a wide matrix + sample annotation.
+#' @md
 #' @param data_matrix numeric matrix (features x samples)
-#' @param sample_annotation data.frame with sample metadata (rows = samples)
-#' @param sample_id_col character(1), column in sample_annotation that matches colnames(data_matrix)
-#' If missing, rownames(sample_annotation) are used.
+#' @param sample_annotation Optional data frame with sample metadata (rows =
+#'   samples). When `NULL`, the object uses empty sample metadata.
+#' @param sample_id_col Character scalar naming the column in
+#'   `sample_annotation` that matches `colnames(data_matrix)`. Set it to `NULL`
+#'   or `""` to use row names instead.
 #' @param level character label like "peptide"/"protein" (default "feature").
-#' @param name character(1), optional; if missing, name is "<level>::raw".
-#' If only a single value is provided to the function, without specifying whether it is a name or level, it will be used as the name value.
+#' @param name Optional non-missing, non-empty character scalar. A pipeline
+#'   shorthand is combined with `level`; a full name must use
+#'   `<level>::<pipeline>`. If missing, the name is `<level>::raw`.
 #' @return A `ProBatchFeatures` object.
 #'
 #' @example inst/examples/ProBatchFeatures-basic.R
@@ -310,9 +314,13 @@ ProBatchFeatures <- function(
     # normalize name and always ensure "<level>::<pipeline>"
     if (is.null(name)) {
         name <- .pb_assay_name(level, "raw")
-    } else if (!grepl("::", name, fixed = TRUE)) {
-        name <- .pb_assay_name(level, name)
+    } else {
+        .pb_assay_parts(name)
+        if (!grepl("::", name, fixed = TRUE)) {
+            name <- .pb_assay_name(level, name)
+        }
     }
+    .pb_assay_parts(name, strict = TRUE)
     # Use QFeatures constructor to make a QFeatures, then wrap as ProBatchFeatures
     qf <- QFeatures(setNames(list(se), name),
         colData = cd
@@ -337,13 +345,15 @@ ProBatchFeatures <- function(
 }
 
 #' Construct from LONG df via proBatch::long_to_matrix
+#' @md
 #' @param df_long Data frame in long format with feature/sample/value columns.
 #' @param sample_annotation Optional sample metadata aligned to the samples.
 #' @param feature_id_col Column containing feature identifiers in `df_long`.
 #' @param sample_id_col Column containing sample identifiers in `df_long`.
 #' @param measure_col Column with the measured intensity values.
 #' @param level Character label describing the biological level of the assay.
-#' @param name Optional pipeline name; defaults to `<level>::raw` when missing.
+#' @param name Optional non-missing, non-empty pipeline or full assay name;
+#'   defaults to `<level>::raw` when missing.
 #' @return A `ProBatchFeatures` object constructed from the long-format input.
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
@@ -364,13 +374,7 @@ ProBatchFeatures_from_long <- function(
         sample_id_col  = sample_id_col,
         measure_col    = measure_col
     )
-    # normalize name here too (same logic as above)
-    if (is.null(name)) {
-        name <- .pb_assay_name(level, "raw")
-    } else if (!grepl("::", name, fixed = TRUE)) {
-        name <- .pb_assay_name(level, name)
-    }
-    # 2) delegate to the wide constructor
+    # 2) delegate naming and construction to the wide constructor
     ProBatchFeatures(
         data_matrix       = data_matrix,
         sample_annotation = sample_annotation,
