@@ -92,7 +92,8 @@ data frames can continue to call the helper directly.
 \examples{
 data(
     list = c("example_proteome_matrix", "example_sample_annotation"),
-    package = "proBatch")
+    package = "proBatch"
+)
 matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
 pvca_df_res <- prepare_PVCA_df(matrix_test, example_sample_annotation,
     technical_factors = c("MS_batch", "digestion_batch"),
@@ -101,7 +102,8 @@ pvca_df_res <- prepare_PVCA_df(matrix_test, example_sample_annotation,
 )
 colors_for_bars <- c("grey", "green", "blue", "red")
 names(colors_for_bars) <- c(
-    "residual", "biological", "biol:techn", "technical")
+    "residual", "biological", "biol:techn", "technical"
+)
 
 pvca_plot <- plot_PVCA.df(pvca_df_res, colors_for_bars)
 }

@@ -78,7 +78,8 @@ Log transformation of the data matrix format.
 \examples{
 data(
     list = c("example_proteome", "example_proteome_matrix"),
-    package = "proBatch")
+    package = "proBatch"
+)
 
 log_transformed_df <- log_transform_df(example_proteome)
 

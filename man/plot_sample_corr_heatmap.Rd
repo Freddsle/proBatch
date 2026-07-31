@@ -99,7 +99,8 @@ Plot correlation of selected samples
 \examples{
 data(
     list = c("example_sample_annotation", "example_proteome_matrix"),
-    package = "proBatch")
+    package = "proBatch"
+)
 specified_samples <- example_sample_annotation$FullRunName[
     which(example_sample_annotation$order \%in\% 110:115)
 ]

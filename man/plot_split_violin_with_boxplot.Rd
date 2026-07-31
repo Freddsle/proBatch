@@ -45,8 +45,11 @@ Plot split violin plot (convenient to compare distribution before and after)
 \examples{
 df <- data.frame(
     x = rep(c("A", "B"), each = 100), y = rnorm(200),
-    m = rep(c("C", "D"), 100))
+    m = rep(c("C", "D"), 100)
+)
 plot_split_violin_with_boxplot(
-    df, y_col = "y", col_for_color = "m", col_for_box = "x")
+    df,
+    y_col = "y", col_for_color = "m", col_for_box = "x"
+)
 
 }

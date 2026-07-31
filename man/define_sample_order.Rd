@@ -59,7 +59,8 @@ Defining sample order internally
 \examples{
 data(
     list = c("example_proteome", "example_sample_annotation"),
-    package = "proBatch")
+    package = "proBatch"
+)
 sample_order <- define_sample_order(
     order_col = "order",
     sample_annotation = example_sample_annotation,

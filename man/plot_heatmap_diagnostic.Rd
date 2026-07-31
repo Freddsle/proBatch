@@ -128,7 +128,8 @@ Plot the heatmap of samples (cols) vs features (rows)
 # Load necessary datasets
 data(
     list = c("example_proteome_matrix", "example_sample_annotation"),
-    package = "proBatch")
+    package = "proBatch"
+)
 
 # Use a smaller subset for the example
 example_proteome_matrix_small <- example_proteome_matrix[1:50, ]

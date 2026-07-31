@@ -82,7 +82,8 @@ protein and between proteins
 \examples{
 data(
     list = c("example_peptide_annotation", "example_proteome_matrix"),
-    package = "proBatch")
+    package = "proBatch"
+)
 peptide_corr_distribution <- plot_peptide_corr_distribution(
     example_proteome_matrix,
     example_peptide_annotation,
@@ -91,7 +92,8 @@ peptide_corr_distribution <- plot_peptide_corr_distribution(
 
 data(
     list = c("example_peptide_annotation", "example_proteome_matrix"),
-    package = "proBatch")
+    package = "proBatch"
+)
 corr_distribution <- calculate_peptide_corr_distr(
     example_proteome_matrix,
     example_peptide_annotation,

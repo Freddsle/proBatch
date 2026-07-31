@@ -139,7 +139,8 @@ plot PCA plot
 \examples{
 data(
     list = c("example_proteome_matrix", "example_sample_annotation"),
-    package = "proBatch")
+    package = "proBatch"
+)
 matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
 pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
     color_by = "MS_batch", plot_title = "PCA colored by MS batch"

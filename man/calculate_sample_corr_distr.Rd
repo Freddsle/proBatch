@@ -69,7 +69,8 @@ as replicated/same_batch/unrelated in output columns (see "Value").
 \examples{
 data(
     list = c("example_sample_annotation", "example_proteome_matrix"),
-    package = "proBatch")
+    package = "proBatch"
+)
 corr_distribution <- calculate_sample_corr_distr(
     data_matrix = example_proteome_matrix,
     sample_annotation = example_sample_annotation,

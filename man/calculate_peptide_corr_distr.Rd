@@ -45,7 +45,8 @@ Calculate peptide correlation between and within peptides of one protein
 \examples{
 data(
     list = c("example_peptide_annotation", "example_proteome_matrix"),
-    package = "proBatch")
+    package = "proBatch"
+)
 selected_genes <- c("BOVINE_A1ag", "BOVINE_FetuinB", "Cyfip1")
 gene_filter <- example_peptide_annotation$Gene \%in\% selected_genes
 peptides_ann <- example_peptide_annotation$peptide_group_label

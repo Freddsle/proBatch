@@ -74,7 +74,8 @@ Calculate CV distribution for each feature
 \examples{
 data(
     list = c("example_sample_annotation", "example_proteome"),
-    package = "proBatch")
+    package = "proBatch"
+)
 CV_df <- calculate_feature_CV(example_proteome,
     sample_annotation = example_sample_annotation,
     measure_col = "Intensity",

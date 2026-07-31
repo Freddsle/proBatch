@@ -83,7 +83,8 @@ prepare the weights of Principal Variance Components
 \examples{
 data(
     list = c("example_proteome_matrix", "example_sample_annotation"),
-    package = "proBatch")
+    package = "proBatch"
+)
 matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
 
 pvca_df_res <- prepare_PVCA_df(matrix_test, example_sample_annotation,

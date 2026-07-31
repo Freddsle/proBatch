@@ -118,7 +118,8 @@ cluster the data matrix to visually inspect which confounder dominates
 # Load necessary datasets
 data(
     list = c("example_proteome_matrix", "example_sample_annotation"),
-    package = "proBatch")
+    package = "proBatch"
+)
 
 selected_batches <- example_sample_annotation$MS_batch \%in\%
     c("Batch_1", "Batch_2")

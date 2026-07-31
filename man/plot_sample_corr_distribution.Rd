@@ -101,7 +101,8 @@ vs non-related sample correlation
 \examples{
 data(
     list = c("example_sample_annotation", "example_proteome_matrix"),
-    package = "proBatch")
+    package = "proBatch"
+)
 sample_corr_distribution_plot <- plot_sample_corr_distribution(
     example_proteome_matrix,
     example_sample_annotation,
@@ -112,7 +113,8 @@ sample_corr_distribution_plot <- plot_sample_corr_distribution(
 
 data(
     list = c("example_sample_annotation", "example_proteome_matrix"),
-    package = "proBatch")
+    package = "proBatch"
+)
 corr_distribution <- calculate_sample_corr_distr(
     data_matrix = example_proteome_matrix,
     sample_annotation = example_sample_annotation,

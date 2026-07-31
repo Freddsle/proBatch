@@ -144,7 +144,8 @@ Alternatively, one can call normalization function with
 \examples{
 data(
     list = c("example_proteome", "example_proteome_matrix"),
-    package = "proBatch")
+    package = "proBatch"
+)
 
 # Quantile normalization:
 quantile_normalized_matrix <- quantile_normalize_dm(example_proteome_matrix)

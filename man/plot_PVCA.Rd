@@ -139,7 +139,8 @@ Plot variance distribution by variable
 \examples{
 data(
     list = c("example_proteome_matrix", "example_sample_annotation"),
-    package = "proBatch")
+    package = "proBatch"
+)
 matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
 
 pvca_file <- tempfile("pvca", fileext = ".png")
