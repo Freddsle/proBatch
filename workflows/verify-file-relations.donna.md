@@ -180,11 +180,13 @@ assert_exact tests @/tests/testthat/test-correlation_based_diagnostics.R \
 assert_exact tested_by @/R/pb_missing_filters.R \
     @/tests/testthat/test-pb_missing_helpers.R
 assert_exact tests @/tests/testthat/test-pb_missing_helpers.R \
+    @/R/ProBatchFeatures.R \
     @/R/pb_missing_filters.R
 
 assert_exact tested_by @/R/ProBatchFeatures.R \
     @/tests/testthat/test-ProBatchFeatures.R \
-    @/tests/testthat/test-batch_effect_steps.R
+    @/tests/testthat/test-batch_effect_steps.R \
+    @/tests/testthat/test-pb_missing_helpers.R
 
 assert_exact tested_by @/R/zzz_helpers.R \
     @/tests/testthat/test-batch_effect_steps.R

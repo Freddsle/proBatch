@@ -163,13 +163,19 @@ output = { type = "files", pattern = "@/R/correlation-based_diagnostics.R" }
 
 [[rules]]
 relation = "tested_by"
-input = { type = "one_of", artifacts = ["@/R/pb_missing_filters.R"] }
+input = { type = "one_of", artifacts = [
+    "@/R/ProBatchFeatures.R",
+    "@/R/pb_missing_filters.R",
+] }
 output = { type = "files", pattern = "@/tests/testthat/test-pb_missing_helpers.R" }
 
 [[rules]]
 relation = "tests"
 input = { type = "one_of", artifacts = ["@/tests/testthat/test-pb_missing_helpers.R"] }
-output = { type = "files", pattern = "@/R/pb_missing_filters.R" }
+output = { type = "list", artifacts = [
+    "@/R/ProBatchFeatures.R",
+    "@/R/pb_missing_filters.R",
+] }
 
 [[rules]]
 relation = "tested_by"
