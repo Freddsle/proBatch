@@ -33,15 +33,24 @@ NULL
 #' @rdname transform_raw_data
 #' @export
 log_transform_df <- function(
-  df_long, log_base = 2, offset = 1,
-  measure_col = "Intensity"
+    df_long,
+    log_base = 2,
+    offset = 1,
+    measure_col = "Intensity"
 ) {
     if (!is.null(log_base)) {
         df_long <- df_long %>%
-            mutate(!!(paste("beforeLog", measure_col, sep = "_")) :=
-                !!(sym(measure_col))) %>%
-            mutate(!!(sym(measure_col)) :=
-                log(!!(sym(measure_col)) + offset, base = log_base))
+            mutate(
+                !!(paste("beforeLog", measure_col, sep = "_")) := !!(sym(
+                    measure_col
+                ))
+            ) %>%
+            mutate(
+                !!(sym(measure_col)) := log(
+                    !!(sym(measure_col)) + offset,
+                    base = log_base
+                )
+            )
     } else {
         warning("Log base is NULL, returning the original data frame")
     }
@@ -56,15 +65,21 @@ log_transform_df <- function(
 #' @rdname transform_raw_data
 #'
 unlog_df <- function(
-  df_long, log_base = 2, offset = 1,
-  measure_col = "Intensity"
+    df_long,
+    log_base = 2,
+    offset = 1,
+    measure_col = "Intensity"
 ) {
     if (!is.null(log_base)) {
         df_long <- df_long %>%
-            mutate(!!(paste("beforeUnLog", measure_col, sep = "_")) :=
-                !!(sym(measure_col))) %>%
-            mutate(!!(sym(measure_col)) :=
-                log_base^(!!sym(measure_col)) - offset)
+            mutate(
+                !!(paste("beforeUnLog", measure_col, sep = "_")) := !!(sym(
+                    measure_col
+                ))
+            ) %>%
+            mutate(
+                !!(sym(measure_col)) := log_base^(!!sym(measure_col)) - offset
+            )
     } else {
         warning("Log base is NULL, returning the original data frame")
     }
@@ -96,8 +111,13 @@ log_transform_dm.default <- function(x, log_base = 2, offset = 1, ...) {
 }
 
 .pb_run_single_step_transform <- function(
-  object, pbf_name, step, fun, params,
-  final_name = NULL, dots = list()
+    object,
+    pbf_name,
+    step,
+    fun,
+    params,
+    final_name = NULL,
+    dots = list()
 ) {
     assay_name <- .pb_resolve_assay_for_input(
         object = object,
@@ -105,14 +125,17 @@ log_transform_dm.default <- function(x, log_base = 2, offset = 1, ...) {
         inform_if_default = TRUE
     )
 
-    call_args <- c(list(
-        object = object,
-        from = assay_name,
-        steps = step,
-        funs = list(fun),
-        params_list = list(params),
-        final_name = final_name
-    ), dots)
+    call_args <- c(
+        list(
+            object = object,
+            from = assay_name,
+            steps = step,
+            funs = list(fun),
+            params_list = list(params),
+            final_name = final_name
+        ),
+        dots
+    )
 
     do.call(pb_transform, call_args)
 }
@@ -121,11 +144,14 @@ log_transform_dm.default <- function(x, log_base = 2, offset = 1, ...) {
 #' @method log_transform_dm ProBatchFeatures
 #' @export
 log_transform_dm.ProBatchFeatures <- function(
-  x, log_base = 2, offset = 1,
-  pbf_name = NULL, final_name = NULL, ...
+    x,
+    log_base = 2,
+    offset = 1,
+    pbf_name = NULL,
+    final_name = NULL,
+    ...
 ) {
-    step <- if (
-        !is.null(log_base) && log_base == 2 && offset == 1) {
+    step <- if (!is.null(log_base) && log_base == 2 && offset == 1) {
         "log2"
     } else {
         "log"
@@ -164,8 +190,12 @@ unlog_dm.default <- function(x, log_base = 2, offset = 1, ...) {
 #' @method unlog_dm ProBatchFeatures
 #' @export
 unlog_dm.ProBatchFeatures <- function(
-  x, log_base = 2, offset = 1,
-  pbf_name = NULL, final_name = NULL, ...
+    x,
+    log_base = 2,
+    offset = 1,
+    pbf_name = NULL,
+    final_name = NULL,
+    ...
 ) {
     .pb_run_single_step_transform(
         object = x,

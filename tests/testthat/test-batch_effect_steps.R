@@ -1,15 +1,26 @@
 test_that("pb_transform applies combat step via registry", {
     pb_test_load_example_data()
 
-    batch1_ids <- head(example_sample_annotation$FullRunName[example_sample_annotation$MS_batch == "Batch_1"], 4)
-    batch2_ids <- head(example_sample_annotation$FullRunName[example_sample_annotation$MS_batch == "Batch_2"], 4)
+    batch1_ids <- head(
+        example_sample_annotation$FullRunName[
+            example_sample_annotation$MS_batch == "Batch_1"
+        ],
+        4
+    )
+    batch2_ids <- head(
+        example_sample_annotation$FullRunName[
+            example_sample_annotation$MS_batch == "Batch_2"
+        ],
+        4
+    )
     sample_ids <- unique(c(batch1_ids, batch2_ids))
     sample_ids <- sample_ids[!is.na(sample_ids)]
 
     expect_gt(length(sample_ids), 4L)
 
     sample_ann <- example_sample_annotation[
-        match(sample_ids, example_sample_annotation$FullRunName), ,
+        match(sample_ids, example_sample_annotation$FullRunName),
+        ,
         drop = FALSE
     ]
 
@@ -57,12 +68,15 @@ test_that("pb_transform applies combat step via registry", {
 test_that("pb_transform applies limmaRBE step via registry", {
     pb_test_load_example_data()
 
-    batch_ids <- example_sample_annotation$FullRunName[example_sample_annotation$MS_batch %in% c("Batch_1", "Batch_2")]
+    batch_ids <- example_sample_annotation$FullRunName[
+        example_sample_annotation$MS_batch %in% c("Batch_1", "Batch_2")
+    ]
     sample_ids <- unique(batch_ids)
     sample_ids <- sample_ids[!is.na(sample_ids)]
 
     sample_ann <- example_sample_annotation[
-        match(sample_ids, example_sample_annotation$FullRunName), ,
+        match(sample_ids, example_sample_annotation$FullRunName),
+        ,
         drop = FALSE
     ]
 
@@ -114,7 +128,8 @@ test_that("medianNorm step handles fill_the_missing via pb_transform", {
     sub_matrix[1, 2] <- NA_real_
 
     sample_ann <- example_sample_annotation[
-        match(colnames(sub_matrix), example_sample_annotation$FullRunName), ,
+        match(colnames(sub_matrix), example_sample_annotation$FullRunName),
+        ,
         drop = FALSE
     ]
 
@@ -163,36 +178,57 @@ test_that("pb_transform applies loessLimmaRBE step via registry", {
     testthat::skip_if_not_installed("proBatch")
     pb_test_load_example_data()
 
-    batch1_ids <- example_sample_annotation$FullRunName[example_sample_annotation$MS_batch == "Batch_1"]
-    batch2_ids <- example_sample_annotation$FullRunName[example_sample_annotation$MS_batch == "Batch_2"]
+    batch1_ids <- example_sample_annotation$FullRunName[
+        example_sample_annotation$MS_batch == "Batch_1"
+    ]
+    batch2_ids <- example_sample_annotation$FullRunName[
+        example_sample_annotation$MS_batch == "Batch_2"
+    ]
     batch1_ids <- unique(batch1_ids[!is.na(batch1_ids)])
     batch2_ids <- unique(batch2_ids[!is.na(batch2_ids)])
     keep_n <- min(length(batch1_ids), length(batch2_ids), 12L)
-    testthat::skip_if(keep_n < 6L, "Need at least 6 samples per batch for loessLimmaRBE test")
+    testthat::skip_if(
+        keep_n < 6L,
+        "Need at least 6 samples per batch for loessLimmaRBE test"
+    )
 
     sample_ids <- c(head(batch1_ids, keep_n), head(batch2_ids, keep_n))
     sample_ids <- unique(sample_ids)
 
     sample_ann <- example_sample_annotation[
-        match(sample_ids, example_sample_annotation$FullRunName), ,
+        match(sample_ids, example_sample_annotation$FullRunName),
+        ,
         drop = FALSE
     ]
 
     candidate_matrix <- example_proteome_matrix[, sample_ids, drop = FALSE]
-    complete_feature_ids <- rownames(candidate_matrix)[complete.cases(candidate_matrix)]
+    complete_feature_ids <- rownames(candidate_matrix)[complete.cases(
+        candidate_matrix
+    )]
     testthat::skip_if(
         length(complete_feature_ids) < 8L,
         "Need at least 8 complete features for loessLimmaRBE test"
     )
-    sub_matrix <- candidate_matrix[head(complete_feature_ids, 8), , drop = FALSE]
-    testthat::skip_if(nrow(sub_matrix) < 2L, "Need at least two complete features for loessLimmaRBE test")
+    sub_matrix <- candidate_matrix[
+        head(complete_feature_ids, 8),
+        ,
+        drop = FALSE
+    ]
+    testthat::skip_if(
+        nrow(sub_matrix) < 2L,
+        "Need at least two complete features for loessLimmaRBE test"
+    )
 
     candidate_covariates <- c("Diet", "Sex")
     valid_covariates <- candidate_covariates[vapply(
         candidate_covariates,
         function(column_name) {
-            column_name %in% names(sample_ann) &&
-                length(unique(sample_ann[[column_name]][!is.na(sample_ann[[column_name]])])) >= 2L
+            column_name %in%
+                names(sample_ann) &&
+                length(unique(sample_ann[[column_name]][
+                    !is.na(sample_ann[[column_name]])
+                ])) >=
+                    2L
         },
         logical(1)
     )]
@@ -234,7 +270,10 @@ test_that("pb_transform applies loessLimmaRBE step via registry", {
     expect_gt(length(loess_idx), 0L)
     loess_entry <- log[loess_idx[length(loess_idx)], , drop = FALSE]
     expect_identical(as.character(loess_entry$from), "feature::raw")
-    expect_identical(as.character(loess_entry$to), "feature::loessLimmaRBE_on_raw")
+    expect_identical(
+        as.character(loess_entry$to),
+        "feature::loessLimmaRBE_on_raw"
+    )
     expect_identical(loess_entry$params[[1]]$order_col, "order")
 
     m_step <- pb_assay_matrix(pbf2, "feature::loessLimmaRBE_on_raw")

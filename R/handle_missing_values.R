@@ -1,14 +1,16 @@
 .pb_normalize_missing_policy <- function(
-  missing,
-  fill_value = NULL,
-  argument = "missing"
+    missing,
+    fill_value = NULL,
+    argument = "missing"
 ) {
     choices <- c("error", "keep", "drop_features", "fill")
     legacy <- NULL
 
     if (is.null(missing)) {
         stop(
-            "`", argument, " = NULL` is ambiguous. Use one of ",
+            "`",
+            argument,
+            " = NULL` is ambiguous. Use one of ",
             paste(sprintf('"%s"', choices), collapse = ", "),
             " and supply `fill_value` only with \"fill\".",
             call. = FALSE
@@ -21,7 +23,8 @@
     } else if (is.numeric(missing)) {
         if (length(missing) != 1L || is.na(missing) || !is.finite(missing)) {
             stop(
-                "A legacy numeric `", argument,
+                "A legacy numeric `",
+                argument,
                 "` must be one finite, non-missing value.",
                 call. = FALSE
             )
@@ -29,21 +32,34 @@
         if (!is.null(fill_value)) {
             stop(
                 "Do not supply `fill_value` together with a legacy numeric `",
-                argument, "`; use `", argument, " = \"fill\"` instead.",
+                argument,
+                "`; use `",
+                argument,
+                " = \"fill\"` instead.",
                 call. = FALSE
             )
         }
         legacy <- "numeric"
         fill_value <- missing
         missing <- "fill"
-    } else if (is.character(missing) && length(missing) == 1L &&
-        !is.na(missing) && missing %in% c("remove", "rm", "REMOVE")) {
+    } else if (
+        is.character(missing) &&
+            length(missing) == 1L &&
+            !is.na(missing) &&
+            missing %in% c("remove", "rm", "REMOVE")
+    ) {
         legacy <- missing
         missing <- "drop_features"
-    } else if (!is.character(missing) || length(missing) != 1L ||
-        is.na(missing) || !(missing %in% choices)) {
+    } else if (
+        !is.character(missing) ||
+            length(missing) != 1L ||
+            is.na(missing) ||
+            !(missing %in% choices)
+    ) {
         stop(
-            "`", argument, "` must be one of ",
+            "`",
+            argument,
+            "` must be one of ",
             paste(sprintf('"%s"', choices), collapse = ", "),
             ".",
             call. = FALSE
@@ -53,31 +69,47 @@
     if (!is.null(legacy)) {
         replacement <- if (identical(legacy, "numeric")) {
             paste0(
-                "`", argument, " = \"fill\"` with `fill_value = ",
-                format(fill_value), "`"
+                "`",
+                argument,
+                " = \"fill\"` with `fill_value = ",
+                format(fill_value),
+                "`"
             )
         } else {
             paste0("`", argument, " = \"", missing, "\"`")
         }
         warning(
-            "Legacy `", argument, " = ", legacy,
-            "` is deprecated; use ", replacement, ".",
+            "Legacy `",
+            argument,
+            " = ",
+            legacy,
+            "` is deprecated; use ",
+            replacement,
+            ".",
             call. = FALSE
         )
     }
 
     if (identical(missing, "fill")) {
-        if (!is.numeric(fill_value) || length(fill_value) != 1L ||
-            is.na(fill_value) || !is.finite(fill_value)) {
+        if (
+            !is.numeric(fill_value) ||
+                length(fill_value) != 1L ||
+                is.na(fill_value) ||
+                !is.finite(fill_value)
+        ) {
             stop(
                 "`fill_value` must be one finite, non-missing numeric value ",
-                "when `", argument, " = \"fill\"`.",
+                "when `",
+                argument,
+                " = \"fill\"`.",
                 call. = FALSE
             )
         }
     } else if (!is.null(fill_value)) {
         stop(
-            "`fill_value` is only valid when `", argument, " = \"fill\"`.",
+            "`fill_value` is only valid when `",
+            argument,
+            " = \"fill\"`.",
             call. = FALSE
         )
     }
@@ -112,10 +144,10 @@
 #'     fill_value = 0
 #' )
 handle_missing_values <- function(
-  data_matrix,
-  warning_message,
-  fill_the_missing = "error",
-  fill_value = NULL
+    data_matrix,
+    warning_message,
+    fill_the_missing = "error",
+    fill_value = NULL
 ) {
     if (!is.matrix(data_matrix) || !is.numeric(data_matrix)) {
         stop("`data_matrix` must be a numeric matrix.", call. = FALSE)

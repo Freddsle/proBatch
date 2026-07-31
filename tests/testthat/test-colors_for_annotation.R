@@ -33,13 +33,23 @@ test_that("sample_annotation_to_colors", {
     data(example_sample_annotation, package = "proBatch")
 
     factor_columns <- c(
-        "MS_batch", "EarTag", "Strain",
-        "Diet", "digestion_batch", "Sex"
+        "MS_batch",
+        "EarTag",
+        "Strain",
+        "Diet",
+        "digestion_batch",
+        "Sex"
     )
     numeric_columns <- c("DateTime", "order")
 
-    sample_annotation <- example_sample_annotation[, c(factor_columns, numeric_columns)]
-    sample_annotation[factor_columns] <- lapply(sample_annotation[factor_columns], factor)
+    sample_annotation <- example_sample_annotation[, c(
+        factor_columns,
+        numeric_columns
+    )]
+    sample_annotation[factor_columns] <- lapply(
+        sample_annotation[factor_columns],
+        factor
+    )
 
     expect_warning(
         color_scheme <- sample_annotation_to_colors(
@@ -64,7 +74,10 @@ test_that("color_list_to_df handles empty intersection", {
 
     color_list <- list(AnotherFactor = c("red", "blue"))
     expect_warning(
-        color_df <- proBatch:::color_list_to_df(color_list, example_sample_annotation),
+        color_df <- proBatch:::color_list_to_df(
+            color_list,
+            example_sample_annotation
+        ),
         "color list and sample annotation have different factors,
             using only intersection in color scheme!"
     )

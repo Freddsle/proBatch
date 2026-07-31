@@ -4,10 +4,15 @@
 .pb_step_aliases <- new.env(parent = emptyenv())
 
 .pb_registry_character_scalar <- function(value, argument) {
-    if (!is.character(value) || length(value) != 1L ||
-        is.na(value) || !nzchar(value)) {
+    if (
+        !is.character(value) ||
+            length(value) != 1L ||
+            is.na(value) ||
+            !nzchar(value)
+    ) {
         stop(
-            "`", argument,
+            "`",
+            argument,
             "` must be one non-missing, non-empty character value.",
             call. = FALSE
         )
@@ -18,7 +23,8 @@
 .pb_registry_character_vector <- function(value, argument) {
     if (!is.character(value) || anyNA(value) || any(!nzchar(value))) {
         stop(
-            "`", argument,
+            "`",
+            argument,
             "` must be a character vector of non-missing, non-empty values.",
             call. = FALSE
         )
@@ -44,8 +50,10 @@
     }
 
     environment_name <- environmentName(fun_environment)
-    if (!nzchar(environment_name) ||
-        environment_name %in% c("R_GlobalEnv", "Autoloads")) {
+    if (
+        !nzchar(environment_name) ||
+            environment_name %in% c("R_GlobalEnv", "Autoloads")
+    ) {
         return(NA_character_)
     }
 
@@ -65,7 +73,13 @@
 
 .pb_step_record_identical <- function(left, right) {
     fields <- c(
-        "name", "fun", "package", "kind", "requires", "aliases", "label"
+        "name",
+        "fun",
+        "package",
+        "kind",
+        "requires",
+        "aliases",
+        "label"
     )
     all(vapply(
         fields,
@@ -114,8 +128,11 @@
     if (is.null(package)) {
         return(NULL)
     }
-    if (!is.character(package) || length(package) != 1L ||
-        (!is.na(package) && !nzchar(package))) {
+    if (
+        !is.character(package) ||
+            length(package) != 1L ||
+            (!is.na(package) && !nzchar(package))
+    ) {
         stop(
             "`package` must be NULL, NA, or one non-empty character value.",
             call. = FALSE
@@ -130,7 +147,9 @@
         reasons <- c(
             reasons,
             paste0(
-                "provider namespace '", record$package, "' is not loaded"
+                "provider namespace '",
+                record$package,
+                "' is not loaded"
             )
         )
     }
@@ -139,8 +158,7 @@
             reasons,
             paste0(
                 "requires unavailable package",
-                if (length(availability$missing_requirements) ==
-                    1L) {
+                if (length(availability$missing_requirements) == 1L) {
                     ""
                 } else {
                     "s"
@@ -155,8 +173,11 @@
     }
 
     stop(
-        "Registered step '", record$name, "' is unavailable: ",
-        paste(reasons, collapse = "; "), ". ",
+        "Registered step '",
+        record$name,
+        "' is unavailable: ",
+        paste(reasons, collapse = "; "),
+        ". ",
         "Load the provider and make its requirements available, then register ",
         "the provider again if needed.",
         call. = FALSE
@@ -191,13 +212,13 @@
 #' @export
 #' @md
 pb_register_step <- function(
-  name,
-  fun,
-  package = NULL,
-  kind = "transform",
-  requires = character(),
-  aliases = character(),
-  label = name
+    name,
+    fun,
+    package = NULL,
+    kind = "transform",
+    requires = character(),
+    aliases = character(),
+    label = name
 ) {
     name <- .pb_registry_character_scalar(name, "name")
     if (!is.function(fun)) {
@@ -229,7 +250,8 @@ pb_register_step <- function(
             return(invisible(TRUE))
         }
         stop(
-            "Canonical step '", name,
+            "Canonical step '",
+            name,
             "' is already registered with different metadata or function. ",
             "Unregister its provider before registering a replacement.",
             call. = FALSE
@@ -239,8 +261,13 @@ pb_register_step <- function(
     if (exists(name, envir = .pb_step_aliases, inherits = FALSE)) {
         owner <- get(name, envir = .pb_step_aliases, inherits = FALSE)
         stop(
-            "Canonical step '", name, "' collides with alias '", name,
-            "' owned by canonical step '", owner, "'.",
+            "Canonical step '",
+            name,
+            "' collides with alias '",
+            name,
+            "' owned by canonical step '",
+            owner,
+            "'.",
             call. = FALSE
         )
     }
@@ -248,7 +275,10 @@ pb_register_step <- function(
     for (alias in aliases) {
         if (exists(alias, envir = .pb_step_records, inherits = FALSE)) {
             stop(
-                "Alias '", alias, "' collides with canonical step '", alias,
+                "Alias '",
+                alias,
+                "' collides with canonical step '",
+                alias,
                 "'.",
                 call. = FALSE
             )
@@ -256,8 +286,11 @@ pb_register_step <- function(
         if (exists(alias, envir = .pb_step_aliases, inherits = FALSE)) {
             owner <- get(alias, envir = .pb_step_aliases, inherits = FALSE)
             stop(
-                "Alias '", alias, "' is already owned by canonical step '",
-                owner, "'.",
+                "Alias '",
+                alias,
+                "' is already owned by canonical step '",
+                owner,
+                "'.",
                 call. = FALSE
             )
         }
@@ -365,9 +398,12 @@ pb_list_steps <- function(pattern = NULL, details = FALSE, available = NULL) {
     if (!is.null(pattern)) {
         pattern <- .pb_registry_character_scalar(pattern, "pattern")
     }
-    if (!is.null(available) &&
-        (!is.logical(available) || length(available) != 1L ||
-            is.na(available))) {
+    if (
+        !is.null(available) &&
+            (!is.logical(available) ||
+                length(available) != 1L ||
+                is.na(available))
+    ) {
         stop("`available` must be NULL, TRUE, or FALSE.", call. = FALSE)
     }
 
@@ -459,12 +495,15 @@ pb_list_steps <- function(pattern = NULL, details = FALSE, available = NULL) {
 #' @export
 #' @md
 pb_has_step <- function(name, available = FALSE) {
-    if (!is.logical(available) || length(available) != 1L ||
-        is.na(available)) {
+    if (!is.logical(available) || length(available) != 1L || is.na(available)) {
         stop("`available` must be TRUE or FALSE.", call. = FALSE)
     }
-    if (!is.character(name) || length(name) != 1L ||
-        is.na(name) || !nzchar(name)) {
+    if (
+        !is.character(name) ||
+            length(name) != 1L ||
+            is.na(name) ||
+            !nzchar(name)
+    ) {
         return(FALSE)
     }
 
@@ -479,13 +518,16 @@ pb_has_step <- function(name, available = FALSE) {
 }
 
 .pb_resolve_step <- function(
-  name,
-  package = NULL,
-  require_available = TRUE
+    name,
+    package = NULL,
+    require_available = TRUE
 ) {
     package <- .pb_expected_step_package(package)
-    if (!is.logical(require_available) || length(require_available) != 1L ||
-        is.na(require_available)) {
+    if (
+        !is.logical(require_available) ||
+            length(require_available) != 1L ||
+            is.na(require_available)
+    ) {
         stop("`require_available` must be TRUE or FALSE.", call. = FALSE)
     }
 
@@ -495,7 +537,9 @@ pb_has_step <- function(name, available = FALSE) {
             stop(
                 "Direct function comes from provider '",
                 .pb_step_provider_label(inferred_package),
-                "', not requested provider '", package, "'.",
+                "', not requested provider '",
+                package,
+                "'.",
                 call. = FALSE
             )
         }
@@ -520,14 +564,18 @@ pb_has_step <- function(name, available = FALSE) {
             "Register it with `pb_register_step()` before invoking it."
         } else if (is.na(package)) {
             paste0(
-                "Step '", name,
+                "Step '",
+                name,
                 "' recorded as an ordinary registration is not registered. ",
                 "Register the same function with `pb_register_step()` before ",
                 "replay."
             )
         } else {
             paste0(
-                "Step '", name, "' recorded from provider '", package,
+                "Step '",
+                name,
+                "' recorded from provider '",
+                package,
                 "' is not registered. Load that provider and register it ",
                 "with `pb_register_step()` before replay."
             )
@@ -536,7 +584,10 @@ pb_has_step <- function(name, available = FALSE) {
             stop(provider_guidance, call. = FALSE)
         }
         stop(
-            "Step '", name, "' is not registered. ", provider_guidance,
+            "Step '",
+            name,
+            "' is not registered. ",
+            provider_guidance,
             call. = FALSE
         )
     }
@@ -548,9 +599,15 @@ pb_has_step <- function(name, available = FALSE) {
             paste0("recorded provider '", package, "'")
         }
         stop(
-            "Step '", name, "' resolves to canonical step '", record$name,
-            "' from provider '", .pb_step_provider_label(record$package),
-            "', not ", expected_provider, ". ",
+            "Step '",
+            name,
+            "' resolves to canonical step '",
+            record$name,
+            "' from provider '",
+            .pb_step_provider_label(record$package),
+            "', not ",
+            expected_provider,
+            ". ",
             "Load and register the recorded provider before replay.",
             call. = FALSE
         )
@@ -575,29 +632,37 @@ pb_has_step <- function(name, available = FALSE) {
     if (is.function(fun_or_name)) {
         return(fun_or_name)
     }
-    if (isTRUE(use_registry) &&
-        is.character(fun_or_name) && length(fun_or_name) == 1L &&
-        !is.na(fun_or_name) && nzchar(fun_or_name) &&
-        pb_has_step(fun_or_name)) {
+    if (
+        isTRUE(use_registry) &&
+            is.character(fun_or_name) &&
+            length(fun_or_name) == 1L &&
+            !is.na(fun_or_name) &&
+            nzchar(fun_or_name) &&
+            pb_has_step(fun_or_name)
+    ) {
         return(.pb_resolve_step(fun_or_name)$fun)
     }
 
     # Preserve direct exact-name Core and base-function lookup for existing
     # pipelines whose functions predate provider registration.
     core_namespace <- topenv(environment())
-    if (is.character(fun_or_name) && length(fun_or_name) == 1L &&
-        !is.na(fun_or_name) && nzchar(fun_or_name) &&
-        exists(fun_or_name, envir = core_namespace, inherits = FALSE)) {
+    if (
+        is.character(fun_or_name) &&
+            length(fun_or_name) == 1L &&
+            !is.na(fun_or_name) &&
+            nzchar(fun_or_name) &&
+            exists(fun_or_name, envir = core_namespace, inherits = FALSE)
+    ) {
         return(get(fun_or_name, envir = core_namespace, inherits = FALSE))
     }
     match.fun(fun_or_name)
 }
 
 .pb_builtin_log2_step <- function(
-  m,
-  pseudo = NULL,
-  log_base = 2,
-  offset = NULL
+    m,
+    pseudo = NULL,
+    log_base = 2,
+    offset = NULL
 ) {
     log_transform_dm.default(
         m,
@@ -607,11 +672,11 @@ pb_has_step <- function(name, available = FALSE) {
 }
 
 .pb_builtin_log_step <- function(
-  m,
-  base = exp(1),
-  pseudo = NULL,
-  log_base = NULL,
-  offset = NULL
+    m,
+    base = exp(1),
+    pseudo = NULL,
+    log_base = NULL,
+    offset = NULL
 ) {
     log_transform_dm.default(
         m,
@@ -621,13 +686,13 @@ pb_has_step <- function(name, available = FALSE) {
 }
 
 .pb_builtin_median_norm_step <- function(
-  m,
-  sample_annotation = NULL,
-  sample_id_col = "FullRunName",
-  group_col = NULL,
-  inside_batch = FALSE,
-  fill_the_missing = "keep",
-  fill_value = NULL
+    m,
+    sample_annotation = NULL,
+    sample_id_col = "FullRunName",
+    group_col = NULL,
+    inside_batch = FALSE,
+    fill_the_missing = "keep",
+    fill_value = NULL
 ) {
     missing_policy <- .pb_normalize_missing_policy(
         fill_the_missing,

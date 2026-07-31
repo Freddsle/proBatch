@@ -1,7 +1,7 @@
 .pb_validate_identifiers <- function(
-  identifiers,
-  context,
-  require_unique = TRUE
+    identifiers,
+    context,
+    require_unique = TRUE
 ) {
     if (is.null(identifiers)) {
         stop(context, " must be named.", call. = FALSE)
@@ -16,7 +16,8 @@
         duplicates <- unique(identifiers[duplicated(identifiers)])
         if (length(duplicates)) {
             stop(
-                context, " contains duplicate identifiers: ",
+                context,
+                " contains duplicate identifiers: ",
                 paste(utils::head(duplicates, 10L), collapse = ", "),
                 ".",
                 call. = FALSE
@@ -28,10 +29,10 @@
 }
 
 .pb_validate_long_keys <- function(
-  value,
-  feature_id_col,
-  sample_id_col,
-  context = "Long input"
+    value,
+    feature_id_col,
+    sample_id_col,
+    context = "Long input"
 ) {
     if (!is.data.frame(value)) {
         stop(context, " must be a data frame.", call. = FALSE)
@@ -44,7 +45,8 @@
     missing_columns <- setdiff(required, names(value))
     if (length(missing_columns)) {
         stop(
-            context, " is missing identifier column(s): ",
+            context,
+            " is missing identifier column(s): ",
             paste(missing_columns, collapse = ", "),
             ".",
             call. = FALSE
@@ -71,7 +73,8 @@
         examples <- unique(keys[duplicate_keys, , drop = FALSE])
         examples <- examples[seq_len(min(10L, nrow(examples))), , drop = FALSE]
         stop(
-            context, " contains duplicate feature/sample keys: ",
+            context,
+            " contains duplicate feature/sample keys: ",
             paste(
                 paste0(examples$feature, "/", examples$sample),
                 collapse = ", "

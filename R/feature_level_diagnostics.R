@@ -104,12 +104,12 @@ NULL
 
 # Convert ProBatchFeatures inputs to long data and default sample metadata.
 .pb_feature_diag_prepare <- function(
-  df_long,
-  sample_annotation,
-  sample_id_col,
-  feature_id_col,
-  measure_col,
-  pbf_name = NULL
+    df_long,
+    sample_annotation,
+    sample_id_col,
+    feature_id_col,
+    measure_col,
+    pbf_name = NULL
 ) {
     .pb_prepare_long_inputs(
         df_long = df_long,
@@ -122,9 +122,9 @@ NULL
 }
 
 .pb_feature_diag_annotation_from_pbf <- function(
-  prep,
-  peptide_annotation,
-  feature_id_col
+    prep,
+    peptide_annotation,
+    feature_id_col
 ) {
     if (!is.null(peptide_annotation)) {
         annotation <- as.data.frame(
@@ -155,26 +155,32 @@ NULL
 #'
 #' @export
 #' @rdname feature_level_diagnostics
-plot_single_feature <- function(feature_name, df_long,
-                                sample_annotation = NULL,
-                                pbf_name = NULL,
-                                sample_id_col = "FullRunName",
-                                measure_col = "Intensity",
-                                feature_id_col = "peptide_group_label",
-                                geom = c("point", "line"),
-                                qual_col = NULL, qual_value = NULL,
-                                batch_col = "MS_batch",
-                                color_by_batch = FALSE,
-                                color_scheme = "brewer",
-                                order_col = "order",
-                                vline_color = "red",
-                                facet_col = NULL,
-                                filename = NULL, width = NA, height = NA,
-                                units = c("cm", "in", "mm"),
-                                plot_title = NULL,
-                                theme = "classic",
-                                ylimits = NULL,
-                                base_size = 20) {
+plot_single_feature <- function(
+    feature_name,
+    df_long,
+    sample_annotation = NULL,
+    pbf_name = NULL,
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    feature_id_col = "peptide_group_label",
+    geom = c("point", "line"),
+    qual_col = NULL,
+    qual_value = NULL,
+    batch_col = "MS_batch",
+    color_by_batch = FALSE,
+    color_scheme = "brewer",
+    order_col = "order",
+    vline_color = "red",
+    facet_col = NULL,
+    filename = NULL,
+    width = NA,
+    height = NA,
+    units = c("cm", "in", "mm"),
+    plot_title = NULL,
+    theme = "classic",
+    ylimits = NULL,
+    base_size = 20
+) {
     prep <- .pb_feature_diag_prepare(
         df_long = df_long,
         sample_annotation = sample_annotation,
@@ -197,15 +203,23 @@ plot_single_feature <- function(feature_name, df_long,
     # Check the consistency of sample annot. sample IDs
     # and measur.table sample IDs
     plot_df <- check_sample_consistency(
-        sample_annotation, sample_id_col, plot_df,
-        batch_col, order_col, facet_col
+        sample_annotation,
+        sample_id_col,
+        plot_df,
+        batch_col,
+        order_col,
+        facet_col
     )
-
 
     # Defining sample order for plotting
     sample_order <- define_sample_order(
-        order_col, sample_annotation, facet_col,
-        batch_col, plot_df, sample_id_col, color_by_batch
+        order_col,
+        sample_annotation,
+        facet_col,
+        batch_col,
+        plot_df,
+        sample_id_col,
+        color_by_batch
     )
     order_col <- sample_order$order_col
     plot_df <- sample_order$df_long
@@ -241,23 +255,28 @@ plot_single_feature <- function(feature_name, df_long,
         aes(x = !!sym(order_col), y = !!sym(measure_col))
     )
     if (identical(geom, "line")) {
-        gg <- gg + geom_line(
-            color = "darkgrey",
-            aes(group = !!sym(batch_col), linewidth = .3)
-        )
+        gg <- gg +
+            geom_line(
+                color = "darkgrey",
+                aes(group = !!sym(batch_col), linewidth = .3)
+            )
     }
     if (identical(geom, "point")) {
         gg <- gg + geom_point()
     }
     if (identical(geom, c("point", "line"))) {
         if (is.null(batch_col) || !is_factor) {
-            gg <- gg + geom_point() +
+            gg <- gg +
+                geom_point() +
                 geom_line(color = "black", alpha = .7, linetype = "dashed")
         } else {
             if (is_factor) {
-                gg <- gg + geom_point() +
+                gg <- gg +
+                    geom_point() +
                     geom_line(
-                        color = "black", alpha = .7, linetype = "dashed",
+                        color = "black",
+                        alpha = .7,
+                        linetype = "dashed",
                         aes(group = !!sym(batch_col))
                     )
             }
@@ -270,11 +289,14 @@ plot_single_feature <- function(feature_name, df_long,
     if (!is.null(qual_col)) {
         col_data <- plot_df %>%
             filter(!!(as.name(qual_col)) == qual_value)
-        gg <- gg + geom_point(
-            data = col_data,
-            aes(x = !!sym(order_col), y = !!sym(measure_col)),
-            color = "red", size = 1, shape = 8
-        )
+        gg <- gg +
+            geom_point(
+                data = col_data,
+                aes(x = !!sym(order_col), y = !!sym(measure_col)),
+                color = "red",
+                size = 1,
+                shape = 8
+            )
     }
 
     # add colors
@@ -287,42 +309,56 @@ plot_single_feature <- function(feature_name, df_long,
         fill_or_color = "color"
     )
     if (!is.null(qual_col) && !is.null(color_by_batch) && color_by_batch) {
-        warning("coloring both inferred values and batches may lead to confusing
-            visualisation, consider plotting separately")
+        warning(
+            "coloring both inferred values and batches may lead to confusing
+            visualisation, consider plotting separately"
+        )
     }
 
     # wrap into facets, if several features are displayed
     # split into facets
     if (!is.null(facet_col)) {
         if (facet_col != feature_id_col && length(feature_name) > 1) {
-            gg <- gg + facet_grid(reformulate(facet_col, feature_id_col),
-                scales = "free"
-            )
+            gg <- gg +
+                facet_grid(
+                    reformulate(facet_col, feature_id_col),
+                    scales = "free"
+                )
         } else {
             if (facet_col == feature_id_col && length(feature_name) > 1) {
-                gg <- gg + facet_wrap(as.formula(paste("~", feature_id_col)),
-                    scales = "free_y"
-                )
+                gg <- gg +
+                    facet_wrap(
+                        as.formula(paste("~", feature_id_col)),
+                        scales = "free_y"
+                    )
             } else {
-                gg <- gg + facet_wrap(as.formula(paste("~", facet_col)),
-                    scales = "free_x"
-                )
+                gg <- gg +
+                    facet_wrap(
+                        as.formula(paste("~", facet_col)),
+                        scales = "free_x"
+                    )
             }
         }
     } else {
         if (length(feature_name) > 1) {
-            gg <- gg + facet_wrap(as.formula(paste("~", feature_id_col)),
-                scales = "free_y"
-            )
+            gg <- gg +
+                facet_wrap(
+                    as.formula(paste("~", feature_id_col)),
+                    scales = "free_y"
+                )
         }
     }
 
     # add vertical lines, if required (for order-related effects)
     if (!is.null(batch_col) && is_factor) {
         gg <- add_vertical_batch_borders(
-            order_col, sample_id_col, batch_col,
+            order_col,
+            sample_id_col,
+            batch_col,
             vline_color,
-            facet_col, plot_df, gg
+            facet_col,
+            plot_df,
+            gg
         )
     }
 
@@ -335,8 +371,10 @@ plot_single_feature <- function(feature_name, df_long,
     if (!is.null(theme) && theme == "classic") {
         gg <- gg + theme_classic(base_size = base_size)
     } else {
-        message("plotting with default ggplot theme, only theme = 'classic'
-            implemented")
+        message(
+            "plotting with default ggplot theme, only theme = 'classic'
+            implemented"
+        )
     }
 
     # Change the limits of vertical axes
@@ -349,7 +387,8 @@ plot_single_feature <- function(feature_name, df_long,
     # numeric order, is displayed
     if (!is.numeric(plot_df[[order_col]])) {
         if (is.character(plot_df[[order_col]])) {
-            plot_df[[order_col]] <- factor(plot_df[[order_col]],
+            plot_df[[order_col]] <- factor(
+                plot_df[[order_col]],
                 levels = unique(plot_df[[order_col]])
             )
         }
@@ -358,8 +397,9 @@ plot_single_feature <- function(feature_name, df_long,
     }
 
     # Move the legend to the upper part of the plot to save the horizontal space
-    if (length(unique(plot_df[[order_col]])) > 30 && color_by_batch &&
-        is_factor) {
+    if (
+        length(unique(plot_df[[order_col]])) > 30 && color_by_batch && is_factor
+    ) {
         gg <- gg + theme(legend.position = "top")
     }
 
@@ -374,31 +414,34 @@ plot_single_feature <- function(feature_name, df_long,
 #' @rdname feature_level_diagnostics
 #'
 plot_peptides_of_one_protein <- function(
-  protein_name,
-  peptide_annotation = NULL,
-  protein_col = "ProteinName",
-  df_long, sample_annotation = NULL,
-  pbf_name = NULL,
-  sample_id_col = "FullRunName",
-  measure_col = "Intensity",
-  feature_id_col = "peptide_group_label",
-  geom = c("point", "line"),
-  qual_col = NULL, qual_value = NULL,
-  batch_col = "MS_batch",
-  color_by_batch = FALSE,
-  color_scheme = "brewer",
-  order_col = "order",
-  vline_color = "red",
-  facet_col = NULL,
-  filename = NULL,
-  width = NA, height = NA,
-  units = c("cm", "in", "mm"),
-  plot_title = sprintf(
-      "Peptides of %s protein",
-      protein_name
-  ),
-  theme = "classic",
-  base_size = 20
+    protein_name,
+    peptide_annotation = NULL,
+    protein_col = "ProteinName",
+    df_long,
+    sample_annotation = NULL,
+    pbf_name = NULL,
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    feature_id_col = "peptide_group_label",
+    geom = c("point", "line"),
+    qual_col = NULL,
+    qual_value = NULL,
+    batch_col = "MS_batch",
+    color_by_batch = FALSE,
+    color_scheme = "brewer",
+    order_col = "order",
+    vline_color = "red",
+    facet_col = NULL,
+    filename = NULL,
+    width = NA,
+    height = NA,
+    units = c("cm", "in", "mm"),
+    plot_title = sprintf(
+        "Peptides of %s protein",
+        protein_name
+    ),
+    theme = "classic",
+    base_size = 20
 ) {
     prep <- .pb_feature_diag_prepare(
         df_long = df_long,
@@ -459,24 +502,30 @@ plot_peptides_of_one_protein <- function(
 #' @rdname feature_level_diagnostics
 #'
 plot_spike_in <- function(
-  spike_ins = "BOVIN", peptide_annotation = NULL,
-  protein_col = "ProteinName",
-  df_long, sample_annotation = NULL,
-  sample_id_col = "FullRunName",
-  measure_col = "Intensity",
-  feature_id_col = "peptide_group_label",
-  geom = c("point", "line"),
-  qual_col = NULL, qual_value = NULL,
-  batch_col = "MS_batch",
-  color_by_batch = FALSE, color_scheme = "brewer",
-  order_col = "order",
-  vline_color = "red",
-  facet_col = NULL,
-  filename = NULL, width = NA, height = NA,
-  units = c("cm", "in", "mm"),
-  plot_title = sprintf("Spike-in %s plots", spike_ins),
-  theme = "classic",
-  base_size = 20
+    spike_ins = "BOVIN",
+    peptide_annotation = NULL,
+    protein_col = "ProteinName",
+    df_long,
+    sample_annotation = NULL,
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    feature_id_col = "peptide_group_label",
+    geom = c("point", "line"),
+    qual_col = NULL,
+    qual_value = NULL,
+    batch_col = "MS_batch",
+    color_by_batch = FALSE,
+    color_scheme = "brewer",
+    order_col = "order",
+    vline_color = "red",
+    facet_col = NULL,
+    filename = NULL,
+    width = NA,
+    height = NA,
+    units = c("cm", "in", "mm"),
+    plot_title = sprintf("Spike-in %s plots", spike_ins),
+    theme = "classic",
+    base_size = 20
 ) {
     prep <- .pb_feature_diag_prepare(
         df_long = df_long,
@@ -533,7 +582,8 @@ plot_spike_in <- function(
         measure_col = measure_col,
         feature_id_col = feature_id_col,
         geom = geom,
-        qual_col = qual_col, qual_value = qual_value,
+        qual_col = qual_col,
+        qual_value = qual_value,
         batch_col = batch_col,
         color_by_batch = color_by_batch,
         color_scheme = color_scheme,
@@ -555,25 +605,30 @@ plot_spike_in <- function(
 #' @rdname feature_level_diagnostics
 #'
 plot_iRT <- function(
-  irt_pattern = "iRT",
-  peptide_annotation = NULL,
-  protein_col = "ProteinName",
-  df_long, sample_annotation = NULL,
-  sample_id_col = "FullRunName",
-  measure_col = "Intensity",
-  feature_id_col = "peptide_group_label",
-  geom = c("point", "line"),
-  qual_col = NULL, qual_value = NULL,
-  batch_col = "MS_batch",
-  color_by_batch = FALSE, color_scheme = "brewer",
-  order_col = "order",
-  vline_color = "red",
-  facet_col = NULL,
-  filename = NULL, width = NA, height = NA,
-  units = c("cm", "in", "mm"),
-  plot_title = "iRT peptide profile",
-  theme = "classic",
-  base_size = 20
+    irt_pattern = "iRT",
+    peptide_annotation = NULL,
+    protein_col = "ProteinName",
+    df_long,
+    sample_annotation = NULL,
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    feature_id_col = "peptide_group_label",
+    geom = c("point", "line"),
+    qual_col = NULL,
+    qual_value = NULL,
+    batch_col = "MS_batch",
+    color_by_batch = FALSE,
+    color_scheme = "brewer",
+    order_col = "order",
+    vline_color = "red",
+    facet_col = NULL,
+    filename = NULL,
+    width = NA,
+    height = NA,
+    units = c("cm", "in", "mm"),
+    plot_title = "iRT peptide profile",
+    theme = "classic",
+    base_size = 20
 ) {
     prep <- .pb_feature_diag_prepare(
         df_long = df_long,
@@ -606,7 +661,8 @@ plot_iRT <- function(
         measure_col = measure_col,
         feature_id_col = feature_id_col,
         geom = geom,
-        qual_col = qual_col, qual_value = qual_value,
+        qual_col = qual_col,
+        qual_value = qual_value,
         batch_col = batch_col,
         color_by_batch = color_by_batch,
         color_scheme = color_scheme,
@@ -627,30 +683,35 @@ plot_iRT <- function(
 #' @export
 #' @rdname feature_level_diagnostics
 
-plot_with_fitting_curve <- function(feature_name,
-                                    fit_df, fit_value_col = "fit",
-                                    df_long, sample_annotation = NULL,
-                                    sample_id_col = "FullRunName",
-                                    measure_col = "Intensity",
-                                    feature_id_col = "peptide_group_label",
-                                    geom = c("point", "line"),
-                                    qual_col = NULL, qual_value = NULL,
-                                    batch_col = "MS_batch",
-                                    color_by_batch = FALSE,
-                                    color_scheme = "brewer",
-                                    order_col = "order",
-                                    vline_color = "grey",
-                                    facet_col = NULL,
-                                    filename = NULL, width = NA, height = NA,
-                                    units = c("cm", "in", "mm"),
-                                    plot_title = sprintf(
-                                        "Fitting curve of %s peptide",
-                                        paste(feature_name,
-                                            collapse = " "
-                                        )
-                                    ),
-                                    theme = "classic",
-                                    base_size = 20) {
+plot_with_fitting_curve <- function(
+    feature_name,
+    fit_df,
+    fit_value_col = "fit",
+    df_long,
+    sample_annotation = NULL,
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    feature_id_col = "peptide_group_label",
+    geom = c("point", "line"),
+    qual_col = NULL,
+    qual_value = NULL,
+    batch_col = "MS_batch",
+    color_by_batch = FALSE,
+    color_scheme = "brewer",
+    order_col = "order",
+    vline_color = "grey",
+    facet_col = NULL,
+    filename = NULL,
+    width = NA,
+    height = NA,
+    units = c("cm", "in", "mm"),
+    plot_title = sprintf(
+        "Fitting curve of %s peptide",
+        paste(feature_name, collapse = " ")
+    ),
+    theme = "classic",
+    base_size = 20
+) {
     prep <- .pb_feature_diag_prepare(
         df_long = df_long,
         sample_annotation = sample_annotation,
@@ -662,22 +723,27 @@ plot_with_fitting_curve <- function(feature_name,
     sample_annotation <- prep$sample_annotation
 
     if (length(feature_name) > 10) {
-        warning("Visualisation of individual features can be suboptimal,
-            consider exploring no more than 5 features at a time")
+        warning(
+            "Visualisation of individual features can be suboptimal,
+            consider exploring no more than 5 features at a time"
+        )
     }
     # Plotting single features as usually (only batch
     # coloring, if specified, is on
     # fitting-curve layer)
     gg <- plot_single_feature(
-        feature_name = feature_name, df_long = df_long,
+        feature_name = feature_name,
+        df_long = df_long,
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
         measure_col = measure_col,
         feature_id_col = feature_id_col,
         geom = geom,
-        qual_col = qual_col, qual_value = qual_value,
+        qual_col = qual_col,
+        qual_value = qual_value,
         batch_col = batch_col,
-        color_by_batch = FALSE, color_scheme = NULL,
+        color_by_batch = FALSE,
+        color_scheme = NULL,
         order_col = order_col,
         vline_color = vline_color,
         facet_col = facet_col,
@@ -695,14 +761,16 @@ plot_with_fitting_curve <- function(feature_name,
             df_long = fit_df,
             sample_id_col = sample_id_col,
             batch_col = batch_col,
-            order_col = order_col, facet_col = facet_col
+            order_col = order_col,
+            facet_col = facet_col
         )
         fit_df <- define_sample_order(
             order_col = order_col,
             sample_annotation = sample_annotation,
             df_long = fit_df,
             sample_id_col = sample_id_col,
-            facet_col = facet_col, batch_col = batch_col,
+            facet_col = facet_col,
+            batch_col = batch_col,
             color_by_batch = color_by_batch
         )$df_long
     }
@@ -712,36 +780,45 @@ plot_with_fitting_curve <- function(feature_name,
         n_batches <- length(unique(batch_vector))
         is_factor <- is_batch_factor(batch_vector, color_scheme)
         if (!is_factor) {
-            stop("coloring by fitting curve possible only for the batch factors
+            stop(
+                "coloring by fitting curve possible only for the batch factors
            corresponding to curve-fitting batches. Change color_by_batch = F
            to see the curves without colors or batch_col to the right
-           batch factor")
+           batch factor"
+            )
         }
 
-        gg <- gg + geom_line(
-            data = fit_df,
-            aes(
-                y = !!sym(fit_value_col), x = !!sym(order_col),
-                group = !!sym(batch_col),
-                color = !!sym(batch_col),
-                linewidth = 1.25
+        gg <- gg +
+            geom_line(
+                data = fit_df,
+                aes(
+                    y = !!sym(fit_value_col),
+                    x = !!sym(order_col),
+                    group = !!sym(batch_col),
+                    color = !!sym(batch_col),
+                    linewidth = 1.25
+                )
             )
-        )
 
-        gg <- add_color_scheme_discrete(color_scheme, n_batches,
+        gg <- add_color_scheme_discrete(
+            color_scheme,
+            n_batches,
             fill_or_color = "color",
-            gg = gg, batch_col = batch_col
+            gg = gg,
+            batch_col = batch_col
         )
     } else {
-        gg <- gg + geom_line(
-            data = fit_df,
-            aes(
-                y = !!sym(fit_value_col), x = !!sym(order_col),
-                group = !!sym(batch_col),
-                linewidth = 1.25
-            ),
-            color = "red"
-        )
+        gg <- gg +
+            geom_line(
+                data = fit_df,
+                aes(
+                    y = !!sym(fit_value_col),
+                    x = !!sym(order_col),
+                    group = !!sym(batch_col),
+                    linewidth = 1.25
+                ),
+                color = "red"
+            )
     }
 
     # save the plot

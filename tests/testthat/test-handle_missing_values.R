@@ -72,6 +72,7 @@ test_that("canonical keep, drop_features, and fill policies are deterministic", 
 
 test_that("drop_features never removes matching sample columns", {
     matrix <- matrix(
+        # fmt: skip
         c(
             1, 2, 3,
             2, 1, NA,

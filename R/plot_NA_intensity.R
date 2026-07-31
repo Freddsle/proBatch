@@ -61,16 +61,16 @@ plot_NA_intensity <- function(x, ...) UseMethod("plot_NA_intensity")
 #' @method plot_NA_intensity default
 #' @export
 plot_NA_intensity.default <- function(
-  x,
-  sample_annotation = NULL,
-  sample_id_col = NULL,
-  color_by = NULL,
-  color_scheme = "brewer",
-  col_vector = NULL,
-  spline_df = 3L,
-  point_alpha = 0.15,
-  point_size = 0.6,
-  ...
+    x,
+    sample_annotation = NULL,
+    sample_id_col = NULL,
+    color_by = NULL,
+    color_scheme = "brewer",
+    col_vector = NULL,
+    spline_df = 3L,
+    point_alpha = 0.15,
+    point_size = 0.6,
+    ...
 ) {
     data_matrix <- x
 
@@ -116,19 +116,19 @@ plot_NA_intensity.default <- function(
 #' @method plot_NA_intensity ProBatchFeatures
 #' @export
 plot_NA_intensity.ProBatchFeatures <- function(
-  x,
-  pbf_name = NULL,
-  color_by = NULL,
-  sample_id_col = NULL,
-  color_scheme = "brewer",
-  col_vector = NULL,
-  spline_df = 3L,
-  point_alpha = 0.15,
-  point_size = 0.6,
-  nrow = NULL,
-  ncol = NULL,
-  facet_scales = "free_y",
-  ...
+    x,
+    pbf_name = NULL,
+    color_by = NULL,
+    sample_id_col = NULL,
+    color_scheme = "brewer",
+    col_vector = NULL,
+    spline_df = 3L,
+    point_alpha = 0.15,
+    point_size = 0.6,
+    nrow = NULL,
+    ncol = NULL,
+    facet_scales = "free_y",
+    ...
 ) {
     object <- x
     assays <- .pb_missing_requested_assays(object, pbf_name)
@@ -188,10 +188,10 @@ plot_NA_intensity.ProBatchFeatures <- function(
 #'   `n_samples`, and optionally `.group`.
 #' @noRd
 .pb_NA_intensity_stats <- function(
-  data_matrix,
-  sample_annotation = NULL,
-  sample_id_col = NULL,
-  color_by = NULL
+    data_matrix,
+    sample_annotation = NULL,
+    sample_id_col = NULL,
+    color_by = NULL
 ) {
     if (!is.matrix(data_matrix)) {
         data_matrix <- as.matrix(data_matrix)
@@ -260,15 +260,15 @@ plot_NA_intensity.ProBatchFeatures <- function(
 #' Build the ggplot for missingness versus intensity.
 #' @noRd
 .pb_plot_NA_intensity <- function(
-  stats_df,
-  color_by,
-  color_scheme,
-  spline_df = 3L,
-  point_alpha = 0.15,
-  point_size = 0.6,
-  nrow = NULL,
-  ncol = NULL,
-  facet_scales = "free_y"
+    stats_df,
+    color_by,
+    color_scheme,
+    spline_df = 3L,
+    point_alpha = 0.15,
+    point_size = 0.6,
+    nrow = NULL,
+    ncol = NULL,
+    facet_scales = "free_y"
 ) {
     has_group <- ".group" %in% names(stats_df)
 
@@ -312,65 +312,71 @@ plot_NA_intensity.ProBatchFeatures <- function(
 
     if (spline_df > 0L) {
         smooth_formula <- y ~ splines::ns(x, df = spline_df)
-        p <- p + geom_smooth(
-            aes(weight = .data$n_samples),
-            method = "glm",
-            method.args = list(family = stats::quasibinomial()),
-            formula = smooth_formula,
-            se = FALSE,
-            linewidth = 1.2
-        )
+        p <- p +
+            geom_smooth(
+                aes(weight = .data$n_samples),
+                method = "glm",
+                method.args = list(family = stats::quasibinomial()),
+                formula = smooth_formula,
+                se = FALSE,
+                linewidth = 1.2
+            )
     }
 
     cor_df <- .pb_NA_intensity_cor_labels(stats_df, has_group)
     if (!is.null(cor_df) && nrow(cor_df)) {
         if (has_group) {
-            p <- p + geom_text(
-                data = cor_df,
-                aes(
-                    x = .data$x,
-                    y = .data$y,
-                    label = .data$label,
-                    color = .data$.group
-                ),
-                hjust = 1.1,
-                fontface = "bold",
-                size = 4,
-                parse = TRUE,
-                inherit.aes = FALSE,
-                show.legend = FALSE
-            )
+            p <- p +
+                geom_text(
+                    data = cor_df,
+                    aes(
+                        x = .data$x,
+                        y = .data$y,
+                        label = .data$label,
+                        color = .data$.group
+                    ),
+                    hjust = 1.1,
+                    fontface = "bold",
+                    size = 4,
+                    parse = TRUE,
+                    inherit.aes = FALSE,
+                    show.legend = FALSE
+                )
         } else {
-            p <- p + geom_text(
-                data = cor_df,
-                aes(x = .data$x, y = .data$y, label = .data$label),
-                hjust = 1.1,
-                fontface = "bold",
-                size = 4,
-                parse = TRUE,
-                inherit.aes = FALSE,
-                show.legend = FALSE
-            )
+            p <- p +
+                geom_text(
+                    data = cor_df,
+                    aes(x = .data$x, y = .data$y, label = .data$label),
+                    hjust = 1.1,
+                    fontface = "bold",
+                    size = 4,
+                    parse = TRUE,
+                    inherit.aes = FALSE,
+                    show.legend = FALSE
+                )
         }
     }
 
-    if ("pbf_name" %in% names(stats_df) &&
-        length(unique(stats_df$pbf_name)) > 1L) {
+    if (
+        "pbf_name" %in%
+            names(stats_df) &&
+            length(unique(stats_df$pbf_name)) > 1L
+    ) {
         layout <- .pb_missing_layout(
             length(unique(stats_df$pbf_name)),
             nrow = nrow,
             ncol = ncol
         )
-        p <- p + facet_wrap(
-            ~pbf_name,
-            nrow = layout$nrow,
-            ncol = layout$ncol,
-            scales = facet_scales
-        )
+        p <- p +
+            facet_wrap(
+                ~pbf_name,
+                nrow = layout$nrow,
+                ncol = layout$ncol,
+                scales = facet_scales
+            )
     }
 
-    p + .pb_missing_density_theme() +
-        theme(legend.position = "right")
+    p + .pb_missing_density_theme() + theme(legend.position = "right")
 }
 
 #' Compute per-group Spearman correlations for the annotation layer.
@@ -381,7 +387,8 @@ plot_NA_intensity.ProBatchFeatures <- function(
         assays <- unique(assay_values)
         labels <- lapply(assays, function(assay_name) {
             assay_stats <- stats_df[
-                assay_values == assay_name, ,
+                assay_values == assay_name,
+                ,
                 drop = FALSE
             ]
             assay_stats$pbf_name <- NULL
@@ -408,18 +415,22 @@ plot_NA_intensity.ProBatchFeatures <- function(
 
     if (has_group) {
         groups <- unique(stats_df$.group)
-        rhos <- vapply(groups, function(g) {
-            sub <- stats_df[stats_df$.group == g, , drop = FALSE]
-            if (nrow(sub) < 3L) {
-                return(NA_real_)
-            }
-            cor(
-                sub$mean_intensity,
-                sub$prop_missing,
-                method = "spearman",
-                use = "complete.obs"
-            )
-        }, numeric(1))
+        rhos <- vapply(
+            groups,
+            function(g) {
+                sub <- stats_df[stats_df$.group == g, , drop = FALSE]
+                if (nrow(sub) < 3L) {
+                    return(NA_real_)
+                }
+                cor(
+                    sub$mean_intensity,
+                    sub$prop_missing,
+                    method = "spearman",
+                    use = "complete.obs"
+                )
+            },
+            numeric(1)
+        )
         data.frame(
             .group = groups,
             label = paste0("rho == ", round(rhos, 2)),

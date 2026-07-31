@@ -43,14 +43,18 @@
 #' @export
 #'
 fit_nonlinear <- function(
-  df_feature_batch,
-  measure_col = "Intensity", order_col = "order",
-  feature_id = NULL, batch_id = NULL,
-  fit_func = "loess_regression",
-  optimize_span = FALSE,
-  no_fit_imputed = TRUE, qual_col = "m_score",
-  qual_value = 2,
-  min_measurements = 8, ...
+    df_feature_batch,
+    measure_col = "Intensity",
+    order_col = "order",
+    feature_id = NULL,
+    batch_id = NULL,
+    fit_func = "loess_regression",
+    optimize_span = FALSE,
+    no_fit_imputed = TRUE,
+    qual_col = "m_score",
+    qual_value = 2,
+    min_measurements = 8,
+    ...
 ) {
     df_feature_batch <- as.data.frame(df_feature_batch)
 
@@ -97,15 +101,24 @@ fit_nonlinear <- function(
         #       function, x_all, y, x_to_fit)
         if (fit_func == "loess_regression") {
             if (!optimize_span) {
-                fit_res <- loess_regression(x_to_fit, y_to_fit, x_all, y_all,
+                fit_res <- loess_regression(
+                    x_to_fit,
+                    y_to_fit,
+                    x_all,
+                    y_all,
                     feature_id = feature_id,
-                    batch_id = batch_id, ...
+                    batch_id = batch_id,
+                    ...
                 )
             } else {
                 fit_res <- loess_regression_opt(
-                    x_to_fit, y_to_fit, x_all, y_all,
+                    x_to_fit,
+                    y_to_fit,
+                    x_all,
+                    y_all,
                     feature_id = feature_id,
-                    batch_id = batch_id, ...
+                    batch_id = batch_id,
+                    ...
                 )
             }
         } else {
@@ -116,7 +129,8 @@ fit_nonlinear <- function(
     } else {
         warning(sprintf(
             "Curve fitting didn't have enough points to fit for feature %s in batch %s; returning NA values.",
-            feature_id, batch_id
+            feature_id,
+            batch_id
         ))
         fit_res <- rep(NA, length(y_all))
     }
@@ -126,8 +140,13 @@ fit_nonlinear <- function(
 
 #' @importFrom stats predict loess
 loess_regression <- function(
-  x_to_fit, y, x_all, y_all,
-  feature_id = NULL, batch_id = NULL, ...
+    x_to_fit,
+    y,
+    x_all,
+    y_all,
+    feature_id = NULL,
+    batch_id = NULL,
+    ...
 ) {
     loess_warning <- new.env(parent = emptyenv())
     fallback_fit <- rep(NA_real_, length(y_all))
@@ -156,7 +175,8 @@ loess_regression <- function(
         error = function(cond) {
             message(sprintf(
                 "Feature %s in batch %s could not be fit with LOESS:",
-                feature_id, batch_id
+                feature_id,
+                batch_id
             ))
             message(conditionMessage(cond))
             fallback_fit
@@ -165,7 +185,8 @@ loess_regression <- function(
     if (!is.null(loess_warning$msg)) {
         message(sprintf(
             "Feature %s in batch %s could not be fit with LOESS:",
-            feature_id, batch_id
+            feature_id,
+            batch_id
         ))
         message(loess_warning$msg)
         return(fallback_fit)
@@ -174,11 +195,15 @@ loess_regression <- function(
 }
 
 loess_regression_opt <- function(
-  x_to_fit, y, x_all, y_all,
-  feature_id = NULL, batch_id = NULL,
-  kernel = "normal",
-  bws = c(0.01, 0.5, 1, 1.5, 2, 5, 10),
-  ...
+    x_to_fit,
+    y,
+    x_all,
+    y_all,
+    feature_id = NULL,
+    batch_id = NULL,
+    kernel = "normal",
+    bws = c(0.01, 0.5, 1, 1.5, 2, 5, 10),
+    ...
 ) {
     loess_warning <- new.env(parent = emptyenv())
     fallback_fit <- rep(NA_real_, length(y_all))
@@ -194,7 +219,8 @@ loess_regression_opt <- function(
                 degr_freedom <- optimise_df(x_to_fit, bw)
                 fit <- loess(
                     y ~ x_to_fit,
-                    enp.target = degr_freedom, surface = "direct",
+                    enp.target = degr_freedom,
+                    surface = "direct",
                     ...
                 )
                 pred <- predict(fit, newdata = data.frame(x_to_fit = x_all))
@@ -213,7 +239,8 @@ loess_regression_opt <- function(
         error = function(cond) {
             message(sprintf(
                 "Feature %s in batch %s could not be fit with optimised LOESS:",
-                feature_id, batch_id
+                feature_id,
+                batch_id
             ))
             message(conditionMessage(cond))
             fallback_fit
@@ -222,7 +249,8 @@ loess_regression_opt <- function(
     if (!is.null(loess_warning$msg)) {
         message(sprintf(
             "Feature %s in batch %s could not be fit with optimised LOESS:",
-            feature_id, batch_id
+            feature_id,
+            batch_id
         ))
         message(loess_warning$msg)
         return(fallback_fit)
@@ -234,25 +262,39 @@ loess_regression_opt <- function(
 loocv.nw <- function(x, y, bw = 1.5, kernel = "normal") {
     ## Help function to calculate leave-one-out regression values
     loo.reg.value.bw <- function(i, x, y, bw, kernel = kernel) {
-        return(ksmooth(x[-i], y[-i],
-            x.points = x[i],
-            kernel = kernel, bandwidth = bw
-        )$y)
+        return(
+            ksmooth(
+                x[-i],
+                y[-i],
+                x.points = x[i],
+                kernel = kernel,
+                bandwidth = bw
+            )$y
+        )
     }
     ## Calculate LOO regression values using the help function above
     n <- max(length(x), length(y))
-    loo.values.bw <- vapply(seq_len(n),
+    loo.values.bw <- vapply(
+        seq_len(n),
         FUN = loo.reg.value.bw,
         FUN.VALUE = numeric(1),
-        x, y, bw, kernel
+        x,
+        y,
+        bw,
+        kernel
     )
     ## Calculate and return MSE
     return(mean((y - loo.values.bw)^2))
 }
 
-optimise_bw <- function(x, y, kernel = "normal",
-                        bws = c(0.01, 0.5, 1, 1.5, 2, 5, 10)) {
-    cv.nw_mult <- vapply(bws,
+optimise_bw <- function(
+    x,
+    y,
+    kernel = "normal",
+    bws = c(0.01, 0.5, 1, 1.5, 2, 5, 10)
+) {
+    cv.nw_mult <- vapply(
+        bws,
         FUN = function(bw) loocv.nw(x, y, bw, kernel),
         FUN.VALUE = numeric(1)
     )

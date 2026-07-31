@@ -3,8 +3,12 @@ test_that("sample_mean_plots", {
 
     matrix <- example_proteome_matrix[1:20, ]
     pb_test_expect_warnings(
-        meanplot <- plot_sample_mean(matrix, example_sample_annotation,
-            order_col = "order", batch_col = "MS_batch", color_by_batch = TRUE
+        meanplot <- plot_sample_mean(
+            matrix,
+            example_sample_annotation,
+            order_col = "order",
+            batch_col = "MS_batch",
+            color_by_batch = TRUE
         ),
         c(
             "inferring order-related batch borders for a plot;",
@@ -25,7 +29,9 @@ test_that("boxplot_plots", {
 
     proteome <- example_proteome[1:20, ]
     pb_test_expect_warnings(
-        boxplot <- plot_boxplot(proteome, example_sample_annotation,
+        boxplot <- plot_boxplot(
+            proteome,
+            example_sample_annotation,
             batch_col = "MS_batch"
         ),
         c(
@@ -54,16 +60,22 @@ test_that("mean plot adds vertical lines and y limits", {
         order = 1:3
     )
 
-    expect_warning(meanplot <- plot_sample_mean(
-        matrix,
-        sample_annotation,
-        order_col = "order",
-        batch_col = "MS_batch",
-        vline_color = "blue",
-        ylimits = c(0, 10)
-    ))
+    expect_warning(
+        meanplot <- plot_sample_mean(
+            matrix,
+            sample_annotation,
+            order_col = "order",
+            batch_col = "MS_batch",
+            vline_color = "blue",
+            ylimits = c(0, 10)
+        )
+    )
 
-    expect_true(any(vapply(meanplot$layers, function(x) inherits(x$geom, "GeomVline"), logical(1))))
+    expect_true(any(vapply(
+        meanplot$layers,
+        function(x) inherits(x$geom, "GeomVline"),
+        logical(1)
+    )))
     expect_equal(meanplot$coordinates$limits$y, c(0, 10))
 })
 
@@ -77,12 +89,14 @@ test_that("axis rotation when order is character", {
         order = 1:3
     )
 
-    expect_warning(meanplot <- plot_sample_mean(
-        matrix,
-        sample_annotation,
-        order_col = "FullRunName",
-        batch_col = "MS_batch"
-    ))
+    expect_warning(
+        meanplot <- plot_sample_mean(
+            matrix,
+            sample_annotation,
+            order_col = "FullRunName",
+            batch_col = "MS_batch"
+        )
+    )
 
     expect_equal(meanplot$theme$axis.text.x$angle, 90)
 })
@@ -106,17 +120,22 @@ test_that("boxplot without outliers", {
         factor_columns = c("MS_batch"),
         numeric_columns = c("order")
     )
-    expect_warning(boxplot <- plot_boxplot(
-        df_long,
-        sample_annotation,
-        order_col = "order",
-        batch_col = "MS_batch",
-        outliers = FALSE,
-        color_scheme = color_scheme
-    ), "outliers will be removed")
+    expect_warning(
+        boxplot <- plot_boxplot(
+            df_long,
+            sample_annotation,
+            order_col = "order",
+            batch_col = "MS_batch",
+            outliers = FALSE,
+            color_scheme = color_scheme
+        ),
+        "outliers will be removed"
+    )
 
-    expect_true(is.null(boxplot$layers[[1]]$geom_params$outlier.shape) ||
-        is.na(boxplot$layers[[1]]$geom_params$outlier.shape))
+    expect_true(
+        is.null(boxplot$layers[[1]]$geom_params$outlier.shape) ||
+            is.na(boxplot$layers[[1]]$geom_params$outlier.shape)
+    )
 })
 
 
@@ -130,7 +149,8 @@ test_that("plot_sample_mean with ProBatchFeatures", {
         name = "raw"
     )
     expect_warning(
-        meanplot <- plot_sample_mean(pbf,
+        meanplot <- plot_sample_mean(
+            pbf,
             sample_id_col = "FullRunName",
             batch_col = "MS_batch",
             pbf_name = "feature::raw"
@@ -159,7 +179,12 @@ test_that("plot_boxplot ProBatchFeatures arranges assays and preserves subset or
     expect_equal(length(res$plots), length(names(pbf)))
     expect_true(all(vapply(res$plots, inherits, logical(1), "ggplot")))
     expect_equal(
-        vapply(res$plots, function(x) x$labels$title, character(1), USE.NAMES = FALSE),
+        vapply(
+            res$plots,
+            function(x) x$labels$title,
+            character(1),
+            USE.NAMES = FALSE
+        ),
         c("feature, raw", "feature, log2-raw")
     )
 
@@ -175,7 +200,12 @@ test_that("plot_boxplot ProBatchFeatures arranges assays and preserves subset or
     expect_equal(names(res_subset$plots), subset_assays)
     expect_true(all(vapply(res_subset$plots, inherits, logical(1), "ggplot")))
     expect_equal(
-        vapply(res_subset$plots, function(x) x$labels$title, character(1), USE.NAMES = FALSE),
+        vapply(
+            res_subset$plots,
+            function(x) x$labels$title,
+            character(1),
+            USE.NAMES = FALSE
+        ),
         c("feature, log2-raw", "feature, raw")
     )
 })

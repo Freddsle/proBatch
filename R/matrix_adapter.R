@@ -55,16 +55,16 @@
 #'     sample_id_col = "sample"
 #' )
 pb_apply_matrix_method <- function(
-  x,
-  fun,
-  sample_annotation = NULL,
-  feature_id_col = "peptide_group_label",
-  sample_id_col = "FullRunName",
-  measure_col = "Intensity",
-  missing = "error",
-  fill_value = NULL,
-  keep_all = "default",
-  ...
+    x,
+    fun,
+    sample_annotation = NULL,
+    feature_id_col = "peptide_group_label",
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    missing = "error",
+    fill_value = NULL,
+    keep_all = "default",
+    ...
 ) {
     if (inherits(x, "ProBatchFeatures")) {
         stop(
@@ -92,10 +92,12 @@ pb_apply_matrix_method <- function(
     }
 
     canonical_missing <- c("error", "keep", "drop_features", "fill")
-    if (!is.character(missing) ||
-        length(missing) != 1L ||
-        is.na(missing) ||
-        !missing %in% canonical_missing) {
+    if (
+        !is.character(missing) ||
+            length(missing) != 1L ||
+            is.na(missing) ||
+            !missing %in% canonical_missing
+    ) {
         stop(
             "`missing` must be one of: ",
             paste(shQuote(canonical_missing), collapse = ", "),
@@ -208,10 +210,16 @@ pb_apply_matrix_method <- function(
 }
 
 .pb_adapter_scalar_name <- function(value, argument) {
-    if (!is.character(value) || length(value) != 1L ||
-        is.na(value) || !nzchar(value)) {
+    if (
+        !is.character(value) ||
+            length(value) != 1L ||
+            is.na(value) ||
+            !nzchar(value)
+    ) {
         stop(
-            "`", argument, "` must be a non-empty character scalar.",
+            "`",
+            argument,
+            "` must be a non-empty character scalar.",
             call. = FALSE
         )
     }
@@ -242,10 +250,10 @@ pb_apply_matrix_method <- function(
 }
 
 .pb_adapter_long_to_matrix <- function(
-  value,
-  feature_id_col,
-  sample_id_col,
-  measure_col
+    value,
+    feature_id_col,
+    sample_id_col,
+    measure_col
 ) {
     if (anyDuplicated(names(value))) {
         stop("Long input must have unique column names.", call. = FALSE)
@@ -262,7 +270,8 @@ pb_apply_matrix_method <- function(
     }
     if (!is.numeric(value[[measure_col]])) {
         stop(
-            "Long input measurement column `", measure_col,
+            "Long input measurement column `",
+            measure_col,
             "` must be numeric.",
             call. = FALSE
         )
@@ -310,9 +319,9 @@ pb_apply_matrix_method <- function(
 }
 
 .pb_adapter_align_annotation <- function(
-  sample_annotation,
-  sample_ids,
-  sample_id_col
+    sample_annotation,
+    sample_ids,
+    sample_id_col
 ) {
     if (is.null(sample_annotation)) {
         annotation <- data.frame(
@@ -391,19 +400,21 @@ pb_apply_matrix_method <- function(
 }
 
 .pb_adapter_validate_output <- function(
-  result,
-  input_matrix,
-  missing,
-  allow_unnamed_features = FALSE
+    result,
+    input_matrix,
+    missing,
+    allow_unnamed_features = FALSE
 ) {
     restore_unnamed_features <- isTRUE(allow_unnamed_features) &&
         is.null(rownames(input_matrix)) &&
         is.null(rownames(result))
-    if (restore_unnamed_features &&
-        is.matrix(result) &&
-        is.numeric(result) &&
-        nrow(result) &&
-        ncol(result)) {
+    if (
+        restore_unnamed_features &&
+            is.matrix(result) &&
+            is.numeric(result) &&
+            nrow(result) &&
+            ncol(result)
+    ) {
         if (nrow(result) != nrow(input_matrix)) {
             stop(
                 "Method output cannot change the number of features when ",
@@ -439,8 +450,10 @@ pb_apply_matrix_method <- function(
     expected_sample_order <- colnames(input_matrix)[
         colnames(input_matrix) %in% colnames(result)
     ]
-    if (!identical(rownames(result), expected_feature_order) ||
-        !identical(colnames(result), expected_sample_order)) {
+    if (
+        !identical(rownames(result), expected_feature_order) ||
+            !identical(colnames(result), expected_sample_order)
+    ) {
         stop(
             "Method output must preserve input feature and sample order; ",
             "ordered subsetting is allowed.",
@@ -450,7 +463,9 @@ pb_apply_matrix_method <- function(
     if (!identical(missing, "keep") && anyNA(result)) {
         stop(
             "Method output contains missing values that are incompatible with ",
-            "`missing = \"", missing, "\"`.",
+            "`missing = \"",
+            missing,
+            "\"`.",
             call. = FALSE
         )
     }
@@ -461,13 +476,13 @@ pb_apply_matrix_method <- function(
 }
 
 .pb_adapter_restore_long <- function(
-  original,
-  result,
-  annotation,
-  feature_id_col,
-  sample_id_col,
-  measure_col,
-  keep_all
+    original,
+    result,
+    annotation,
+    feature_id_col,
+    sample_id_col,
+    measure_col,
+    keep_all
 ) {
     feature_index <- match(
         as.character(original[[feature_id_col]]),
@@ -497,11 +512,14 @@ pb_apply_matrix_method <- function(
             restored[[column]] <- annotation[[column]][annotation_rows]
         }
     } else if (identical(keep_all, "minimal")) {
-        restored <- restored[, unique(c(
-            feature_id_col,
-            sample_id_col,
-            measure_col
-        )), drop = FALSE]
+        restored <- restored[,
+            unique(c(
+                feature_id_col,
+                sample_id_col,
+                measure_col
+            )),
+            drop = FALSE
+        ]
     }
     restored
 }

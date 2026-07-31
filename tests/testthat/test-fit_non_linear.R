@@ -2,10 +2,15 @@ test_that("fit works", {
     data(example_proteome, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
 
-    test_annotation <- example_sample_annotation[example_sample_annotation$MS_batch == "Batch_1", ]
+    test_annotation <- example_sample_annotation[
+        example_sample_annotation$MS_batch == "Batch_1",
+    ]
     selected_files <- test_annotation$FullRunName
 
-    df_selected <- example_proteome[example_proteome$peptide_group_label == example_proteome$peptide_group_label[1], ]
+    df_selected <- example_proteome[
+        example_proteome$peptide_group_label ==
+            example_proteome$peptide_group_label[1],
+    ]
     df_selected <- df_selected[df_selected$FullRunName %in% selected_files, ]
     df_selected <- merge(df_selected, test_annotation, by = "FullRunName")
 
@@ -36,7 +41,12 @@ test_that("fit_nonlinear returns fitted curve with sufficient data", {
         Intensity = sin(1:10),
         m_score = rep(0, 10)
     )
-    vals <- fit_nonlinear(df, min_measurements = 5, qual_col = NULL, no_fit_imputed = FALSE)
+    vals <- fit_nonlinear(
+        df,
+        min_measurements = 5,
+        qual_col = NULL,
+        no_fit_imputed = FALSE
+    )
     expect_length(vals, nrow(df))
     expect_true(any(!is.na(vals)))
 })
@@ -48,7 +58,12 @@ test_that("fit_nonlinear returns NA vector when insufficient data", {
         m_score = c(0, 2, 2, 0)
     )
     vals <- suppressWarnings(
-        fit_nonlinear(df, min_measurements = 5, qual_col = NULL, no_fit_imputed = FALSE)
+        fit_nonlinear(
+            df,
+            min_measurements = 5,
+            qual_col = NULL,
+            no_fit_imputed = FALSE
+        )
     )
     expect_true(all(is.na(vals)))
 })

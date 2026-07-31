@@ -40,10 +40,10 @@ pb_test_expect_warnings <- function(object, patterns, fixed = FALSE) {
 }
 
 pb_test_make_pbf <- function(
-  n_rows = 30,
-  n_cols = 6,
-  add_log2 = FALSE,
-  complete = FALSE
+    n_rows = 30,
+    n_cols = 6,
+    add_log2 = FALSE,
+    complete = FALSE
 ) {
     pb_test_load_example_data()
 
@@ -52,7 +52,9 @@ pb_test_make_pbf <- function(
         matrix_small[is.na(matrix_small)] <- 0
     }
     sample_ids <- colnames(matrix_small)
-    sample_ann <- example_sample_annotation[match(sample_ids, example_sample_annotation$FullRunName), ]
+    sample_ann <- example_sample_annotation[
+        match(sample_ids, example_sample_annotation$FullRunName),
+    ]
 
     pbf <- suppressMessages(ProBatchFeatures(
         data_matrix = matrix_small,

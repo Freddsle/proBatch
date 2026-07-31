@@ -1,6 +1,8 @@
-.pb_resolve_assay_for_input <- function(object,
-                                        pbf_name = NULL,
-                                        inform_if_default = FALSE) {
+.pb_resolve_assay_for_input <- function(
+    object,
+    pbf_name = NULL,
+    inform_if_default = FALSE
+) {
     stopifnot(is(object, "ProBatchFeatures"))
 
     if (is.null(pbf_name)) {
@@ -27,12 +29,12 @@
 }
 
 .pb_resolve_assays_for_input <- function(
-  object,
-  pbf_name = NULL,
-  default = c("current", "all"),
-  deduplicate = FALSE,
-  inform_if_default = FALSE,
-  empty_message = "Provide at least one `pbf_name` to plot."
+    object,
+    pbf_name = NULL,
+    default = c("current", "all"),
+    deduplicate = FALSE,
+    inform_if_default = FALSE,
+    empty_message = "Provide at least one `pbf_name` to plot."
 ) {
     stopifnot(is(object, "ProBatchFeatures"))
     default <- match.arg(default)
@@ -40,17 +42,23 @@
 
     if (using_default) {
         assays <-
-            if (identical(
-                default,
-                "all"
-            )) {
+            if (
+                identical(
+                    default,
+                    "all"
+                )
+            ) {
                 names(object)
             } else {
                 pb_current_assay(object)
             }
     } else {
-        if (!is.character(pbf_name) || !length(pbf_name) ||
-            anyNA(pbf_name) || any(!nzchar(pbf_name))) {
+        if (
+            !is.character(pbf_name) ||
+                !length(pbf_name) ||
+                anyNA(pbf_name) ||
+                any(!nzchar(pbf_name))
+        ) {
             stop(
                 "`pbf_name` must contain non-missing, non-empty assay names.",
                 call. = FALSE
@@ -85,11 +93,11 @@
 }
 
 .pb_default_sample_annotation <- function(
-  object,
-  sample_annotation = NULL,
-  sample_id_col = "FullRunName",
-  sample_ids = NULL,
-  drop_rownames = FALSE
+    object,
+    sample_annotation = NULL,
+    sample_id_col = "FullRunName",
+    sample_ids = NULL,
+    drop_rownames = FALSE
 ) {
     if (!is.null(sample_annotation)) {
         annotation <- as.data.frame(sample_annotation, stringsAsFactors = FALSE)
@@ -102,7 +110,8 @@
         if (!is.null(rn) && !anyNA(rn) && length(rn) == nrow(annotation)) {
             annotation[[sample_id_col]] <- rn
         } else if (
-            !is.null(sample_ids) && length(sample_ids) == nrow(annotation)) {
+            !is.null(sample_ids) && length(sample_ids) == nrow(annotation)
+        ) {
             annotation[[sample_id_col]] <- sample_ids
         }
     }
@@ -115,10 +124,10 @@
 }
 
 .pb_default_feature_annotation <- function(
-  object,
-  assay_name,
-  feature_annotation = NULL,
-  feature_id_col = "peptide_group_label"
+    object,
+    assay_name,
+    feature_annotation = NULL,
+    feature_id_col = "peptide_group_label"
 ) {
     if (!is.null(feature_annotation)) {
         annotation <- as.data.frame(
@@ -148,11 +157,13 @@
     annotation
 }
 
-.pb_pbf_to_long <- function(object,
-                            assay_name,
-                            feature_id_col = "peptide_group_label",
-                            sample_id_col = "FullRunName",
-                            measure_col = "Intensity") {
+.pb_pbf_to_long <- function(
+    object,
+    assay_name,
+    feature_id_col = "peptide_group_label",
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity"
+) {
     matrix_to_long(
         data_matrix = pb_assay_matrix(object, assay = assay_name),
         feature_id_col = feature_id_col,
@@ -161,12 +172,14 @@
     )
 }
 
-.pb_prepare_long_inputs <- function(df_long,
-                                    sample_annotation,
-                                    sample_id_col,
-                                    feature_id_col,
-                                    measure_col,
-                                    pbf_name = NULL) {
+.pb_prepare_long_inputs <- function(
+    df_long,
+    sample_annotation,
+    sample_id_col,
+    feature_id_col,
+    measure_col,
+    pbf_name = NULL
+) {
     object <- NULL
     assay_name <- NULL
 

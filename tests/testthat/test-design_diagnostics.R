@@ -57,7 +57,10 @@ test_that("summarize_design drops non-informative one-level terms", {
 
     expect_s3_class(summary, "pb_design_summary")
     expect_equal(summary$design_matrix_dim[["n_terms"]], 2)
-    expect_true(any(grepl("Dropped non-informative design terms", summary$notes)))
+    expect_true(any(grepl(
+        "Dropped non-informative design terms",
+        summary$notes
+    )))
 })
 
 test_that("detect_nested_batches identifies nesting in synthetic metadata", {
@@ -73,7 +76,10 @@ test_that("detect_nested_batches identifies nesting in synthetic metadata", {
     expect_s3_class(res, "pb_nested_batches")
     expect_true(res$adjacency["run", "site"])
     expect_false(res$adjacency["site", "run"])
-    expect_true(is.null(res$ordering) || match("run", res$ordering) < match("site", res$ordering))
+    expect_true(
+        is.null(res$ordering) ||
+            match("run", res$ordering) < match("site", res$ordering)
+    )
 })
 
 test_that("detect_outlier_samples flags an injected outlier", {
@@ -215,7 +221,11 @@ test_that("design diagnostics accept ProBatchFeatures inputs", {
         k_max = 3
     )
     expect_s3_class(subbatches, "pb_subbatches")
-    b1_row <- subbatches$summary[subbatches$summary$batch == "B1", , drop = FALSE]
+    b1_row <- subbatches$summary[
+        subbatches$summary$batch == "B1",
+        ,
+        drop = FALSE
+    ]
     expect_true(nrow(b1_row) == 1)
     expect_true(b1_row$k >= 2)
 })
@@ -225,10 +235,17 @@ test_that("design diagnostics honor explicit pbf_name assay selection", {
     n_features <- 120
     n_per_batch <- 20
 
-    batch1 <- matrix(rexp(n_features * n_per_batch, rate = 1 / 100), nrow = n_features)
-    batch2 <- matrix(rexp(n_features * n_per_batch, rate = 1 / 100), nrow = n_features)
+    batch1 <- matrix(
+        rexp(n_features * n_per_batch, rate = 1 / 100),
+        nrow = n_features
+    )
+    batch2 <- matrix(
+        rexp(n_features * n_per_batch, rate = 1 / 100),
+        nrow = n_features
+    )
     shifted_idx <- sample(seq_len(n_features), size = round(0.35 * n_features))
-    batch2[shifted_idx, ] <- batch2[shifted_idx, ] * runif(length(shifted_idx), 1.8, 5.0)
+    batch2[shifted_idx, ] <- batch2[shifted_idx, ] *
+        runif(length(shifted_idx), 1.8, 5.0)
 
     mat_raw <- cbind(batch1, batch2)
     colnames(mat_raw) <- paste0("s", seq_len(ncol(mat_raw)))

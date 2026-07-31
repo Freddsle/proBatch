@@ -8,12 +8,12 @@
 }
 
 .pb_split_arg_by_assay <- function(
-  arg,
-  assays,
-  atomic_vector_mode = c(
-      "shared",
-      "per_assay"
-  )
+    arg,
+    assays,
+    atomic_vector_mode = c(
+        "shared",
+        "per_assay"
+    )
 ) {
     atomic_vector_mode <- match.arg(atomic_vector_mode)
     n <- length(assays)
@@ -35,9 +35,11 @@
     if (!list_like && is.atomic(arg)) {
         # Treat atomic vectors (e.g., character vectors of column names)
         # as shared arguments unless explicitly named or requested otherwise.
-        if (atomic_vector_mode == "shared" &&
-            length(arg) > 1L &&
-            is.null(names(arg))) {
+        if (
+            atomic_vector_mode == "shared" &&
+                length(arg) > 1L &&
+                is.null(names(arg))
+        ) {
             for (i in seq_len(n)) {
                 res[[i]] <- arg
             }
@@ -79,25 +81,32 @@
 }
 
 .pb_resolve_titles <- function(
-  assays, plot_title, default_fun = .pb_default_title
+    assays,
+    plot_title,
+    default_fun = .pb_default_title
 ) {
     title_list <- .pb_split_arg_by_assay(
         arg = plot_title,
         assays = assays,
         atomic_vector_mode = "per_assay"
     )
-    vapply(seq_along(assays), function(i) {
-        val <- title_list[[i]]
-        if (is.null(val) || length(val) == 0L) {
-            return(default_fun(assays[[i]]))
-        }
-        val_chr <- as.character(val)
-        if (!length(val_chr) || !nzchar(val_chr[1])) {
-            default_fun(assays[[i]])
-        } else {
-            val_chr[1]
-        }
-    }, character(1), USE.NAMES = FALSE)
+    vapply(
+        seq_along(assays),
+        function(i) {
+            val <- title_list[[i]]
+            if (is.null(val) || length(val) == 0L) {
+                return(default_fun(assays[[i]]))
+            }
+            val_chr <- as.character(val)
+            if (!length(val_chr) || !nzchar(val_chr[1])) {
+                default_fun(assays[[i]])
+            } else {
+                val_chr[1]
+            }
+        },
+        character(1),
+        USE.NAMES = FALSE
+    )
 }
 
 .pb_break_long_assay_title <- function(title, max_length = 35L) {
@@ -121,7 +130,9 @@
 }
 
 .pb_refactor_assay_titles <- function(
-  titles, use_shared_title = TRUE, max_length = 35L
+    titles,
+    use_shared_title = TRUE,
+    max_length = 35L
 ) {
     if (!length(titles)) {
         return(list(titles = titles, shared_title = NULL))
@@ -142,7 +153,9 @@
         if (min_len > 0) {
             for (i in seq_len(min_len)) {
                 parts_i <- vapply(
-                    split_titles, function(x) x[[i]], character(1)
+                    split_titles,
+                    function(x) x[[i]],
+                    character(1)
                 )
                 parts_i <- trimws(parts_i)
                 unique_parts <- unique(parts_i[nzchar(parts_i)])
@@ -157,23 +170,30 @@
         if (length(shared_parts)) {
             shared_title <- paste(shared_parts, collapse = " - ")
             remove_len <- length(shared_parts)
-            titles <- vapply(seq_along(split_titles), function(idx) {
-                parts <- split_titles[[idx]]
-                if (length(parts) > remove_len) {
-                    remainder <- parts[-seq_len(remove_len)]
-                    remainder <- remainder[nzchar(remainder)]
-                    if (length(remainder)) {
-                        return(paste(remainder, collapse = " - "))
+            titles <- vapply(
+                seq_along(split_titles),
+                function(idx) {
+                    parts <- split_titles[[idx]]
+                    if (length(parts) > remove_len) {
+                        remainder <- parts[-seq_len(remove_len)]
+                        remainder <- remainder[nzchar(remainder)]
+                        if (length(remainder)) {
+                            return(paste(remainder, collapse = " - "))
+                        }
                     }
-                }
-                original_titles[[idx]]
-            }, character(1), USE.NAMES = FALSE)
+                    original_titles[[idx]]
+                },
+                character(1),
+                USE.NAMES = FALSE
+            )
         }
     }
 
     titles <- trimws(titles)
     titles <- vapply(
-        titles, .pb_break_long_assay_title, character(1),
+        titles,
+        .pb_break_long_assay_title,
+        character(1),
         max_length = max_length
     )
 
@@ -211,10 +231,15 @@
     values[[1]]
 }
 
-.pb_prepare_multi_assay <- function(object, pbf_name, dots, plot_title,
-                                    default_title_fun = .pb_default_title,
-                                    set_silent = FALSE,
-                                    refactor_titles = TRUE) {
+.pb_prepare_multi_assay <- function(
+    object,
+    pbf_name,
+    dots,
+    plot_title,
+    default_title_fun = .pb_default_title,
+    set_silent = FALSE,
+    refactor_titles = TRUE
+) {
     assays <- .pb_assays_to_plot(object, pbf_name)
 
     filename_list <- NULL
@@ -223,13 +248,18 @@
         dots$filename <- NULL
     }
 
-    if (isTRUE(set_silent) && length(assays) > 1L && !"silent" %in%
-        names(dots)) {
+    if (
+        isTRUE(set_silent) &&
+            length(assays) > 1L &&
+            !"silent" %in%
+                names(dots)
+    ) {
         dots$silent <- TRUE
     }
 
     resolved_titles <- .pb_resolve_titles(
-        assays, plot_title,
+        assays,
+        plot_title,
         default_fun = default_title_fun
     )
     if (isTRUE(refactor_titles)) {
@@ -284,10 +314,12 @@
     }
 
     assay_arg_names <- names(assay_args)
-    if (is.null(assay_arg_names) ||
-        anyNA(assay_arg_names) ||
-        any(!nzchar(assay_arg_names)) ||
-        anyDuplicated(assay_arg_names)) {
+    if (
+        is.null(assay_arg_names) ||
+            anyNA(assay_arg_names) ||
+            any(!nzchar(assay_arg_names)) ||
+            anyDuplicated(assay_arg_names)
+    ) {
         stop(
             "`assay_args` must have unique, non-missing selected-assay names.",
             call. = FALSE
@@ -305,7 +337,10 @@
     }
 
     reserved <- c(
-        "data_matrix", "sample_annotation", "sample_id_col", "plot_title",
+        "data_matrix",
+        "sample_annotation",
+        "sample_id_col",
+        "plot_title",
         "use_plotlyrender"
     )
     for (assay in assay_arg_names) {
@@ -315,18 +350,23 @@
         }
         if (!is.list(args) || is.data.frame(args)) {
             stop(
-                "`assay_args[['", assay, "']]` must be a named argument list.",
+                "`assay_args[['",
+                assay,
+                "']]` must be a named argument list.",
                 call. = FALSE
             )
         }
         arg_names <- names(args)
-        if (length(args) &&
-            (is.null(arg_names) ||
-                anyNA(arg_names) ||
-                any(!nzchar(arg_names)) ||
-                anyDuplicated(arg_names))) {
+        if (
+            length(args) &&
+                (is.null(arg_names) ||
+                    anyNA(arg_names) ||
+                    any(!nzchar(arg_names)) ||
+                    anyDuplicated(arg_names))
+        ) {
             stop(
-                "`assay_args[['", assay,
+                "`assay_args[['",
+                assay,
                 "']]` must contain uniquely named arguments.",
                 call. = FALSE
             )
@@ -334,7 +374,8 @@
         collisions <- intersect(arg_names, reserved)
         if (length(collisions)) {
             stop(
-                "`assay_args[['", assay,
+                "`assay_args[['",
+                assay,
                 "']]` cannot override reserved argument(s): ",
                 paste(collisions, collapse = ", "),
                 ".",
@@ -348,7 +389,9 @@
 }
 
 .pb_prepare_shape_column <- function(
-  shape_by, sample_annotation, data_label = "sample_annotation"
+    shape_by,
+    sample_annotation,
+    data_label = "sample_annotation"
 ) {
     if (is.null(shape_by) || !length(shape_by)) {
         return(list(shape_by = NULL, sample_annotation = sample_annotation))
@@ -362,7 +405,9 @@
     if (!shape_by %in% colnames(sample_annotation)) {
         stop(
             sprintf(
-                "Shaping column '%s' not found in %s", shape_by, data_label
+                "Shaping column '%s' not found in %s",
+                shape_by,
+                data_label
             )
         )
     }
@@ -375,18 +420,20 @@
     list(shape_by = shape_by, sample_annotation = sample_annotation)
 }
 
-.pb_validate_batch_facet_inputs <- function(df_plot,
-                                            batch_col,
-                                            color_by_batch,
-                                            color_scheme,
-                                            facet_col,
-                                            resolve_color_scheme = TRUE,
-                                            missing_batch_message = NULL,
-                                            missing_batch_stop = NULL,
-                                            null_batch_message = NULL,
-                                            null_batch_warning = NULL,
-                                            missing_facet_message = NULL,
-                                            missing_facet_stop = NULL) {
+.pb_validate_batch_facet_inputs <- function(
+    df_plot,
+    batch_col,
+    color_by_batch,
+    color_scheme,
+    facet_col,
+    resolve_color_scheme = TRUE,
+    missing_batch_message = NULL,
+    missing_batch_stop = NULL,
+    null_batch_message = NULL,
+    null_batch_warning = NULL,
+    missing_facet_message = NULL,
+    missing_facet_stop = NULL
+) {
     if (!is.null(batch_col)) {
         if (!(batch_col %in% names(df_plot))) {
             if (!is.null(missing_batch_message)) {
@@ -397,8 +444,11 @@
             }
             stop(missing_batch_stop)
         }
-        if (isTRUE(resolve_color_scheme) && color_by_batch &&
-            (batch_col %in% names(color_scheme))) {
+        if (
+            isTRUE(resolve_color_scheme) &&
+                color_by_batch &&
+                (batch_col %in% names(color_scheme))
+        ) {
             color_scheme <- color_scheme[[batch_col]]
         }
     } else if (isTRUE(color_by_batch)) {
@@ -428,54 +478,65 @@
 }
 
 .pb_validate_embedding_collection_options <- function(
-  use_plotlyrender,
-  return_gridExtra,
-  plot_ncol,
-  return_subplots,
-  subplot_ncol,
-  share_axes
+    use_plotlyrender,
+    return_gridExtra,
+    plot_ncol,
+    return_subplots,
+    subplot_ncol,
+    share_axes
 ) {
     logical_args <- list(
         use_plotlyrender = use_plotlyrender,
         return_gridExtra = return_gridExtra,
         return_subplots = return_subplots
     )
-    invalid_logical <- vapply(logical_args, function(value) {
-        !is.logical(value) || length(value) != 1L || is.na(value)
-    }, logical(1))
+    invalid_logical <- vapply(
+        logical_args,
+        function(value) {
+            !is.logical(value) || length(value) != 1L || is.na(value)
+        },
+        logical(1)
+    )
     if (any(invalid_logical)) {
         stop(
-            "`", names(logical_args)[which(invalid_logical)[1L]],
+            "`",
+            names(logical_args)[which(invalid_logical)[1L]],
             "` must be TRUE or FALSE.",
             call. = FALSE
         )
     }
 
-    if (!is.null(plot_ncol) &&
-        (!is.numeric(plot_ncol) ||
-            length(plot_ncol) != 1L ||
-            is.na(plot_ncol) ||
-            !is.finite(plot_ncol) ||
-            plot_ncol < 1 ||
-            plot_ncol %% 1 != 0)) {
+    if (
+        !is.null(plot_ncol) &&
+            (!is.numeric(plot_ncol) ||
+                length(plot_ncol) != 1L ||
+                is.na(plot_ncol) ||
+                !is.finite(plot_ncol) ||
+                plot_ncol < 1 ||
+                plot_ncol %% 1 != 0)
+    ) {
         stop("`plot_ncol` must be a positive integer or NULL.", call. = FALSE)
     }
-    if (!is.null(subplot_ncol) &&
-        (!is.numeric(subplot_ncol) ||
-            length(subplot_ncol) != 1L ||
-            is.na(subplot_ncol) ||
-            !is.finite(subplot_ncol) ||
-            subplot_ncol < 1 ||
-            subplot_ncol %% 1 != 0)) {
+    if (
+        !is.null(subplot_ncol) &&
+            (!is.numeric(subplot_ncol) ||
+                length(subplot_ncol) != 1L ||
+                is.na(subplot_ncol) ||
+                !is.finite(subplot_ncol) ||
+                subplot_ncol < 1 ||
+                subplot_ncol %% 1 != 0)
+    ) {
         stop(
             "`subplot_ncol` must be a positive integer or NULL.",
             call. = FALSE
         )
     }
-    if (!is.logical(share_axes) ||
-        !length(share_axes) ||
-        length(share_axes) > 2L ||
-        anyNA(share_axes)) {
+    if (
+        !is.logical(share_axes) ||
+            !length(share_axes) ||
+            length(share_axes) > 2L ||
+            anyNA(share_axes)
+    ) {
         stop(
             "`share_axes` must be one logical value or two logical values for x and y.",
             call. = FALSE
@@ -484,8 +545,10 @@
 
     if (length(share_axes) == 1L) {
         share_x <- share_y <- share_axes
-    } else if (!is.null(names(share_axes)) &&
-        all(c("x", "y") %in% names(share_axes))) {
+    } else if (
+        !is.null(names(share_axes)) &&
+            all(c("x", "y") %in% names(share_axes))
+    ) {
         share_x <- unname(share_axes[["x"]])
         share_y <- unname(share_axes[["y"]])
     } else {
@@ -497,13 +560,13 @@
 }
 
 .pb_finalize_embedding_collection <- function(
-  plot_list,
-  use_plotlyrender,
-  return_gridExtra,
-  plot_ncol,
-  return_subplots,
-  subplot_ncol,
-  share_axes
+    plot_list,
+    use_plotlyrender,
+    return_gridExtra,
+    plot_ncol,
+    return_subplots,
+    subplot_ncol,
+    share_axes
 ) {
     validated_options <- .pb_validate_embedding_collection_options(
         use_plotlyrender = use_plotlyrender,
@@ -546,13 +609,16 @@
             }
             subplot_obj <- do.call(
                 plotly::subplot,
-                c(plot_list, list(
-                    nrows = ceiling(n_plots / ncol),
-                    shareX = share_x,
-                    shareY = share_y,
-                    titleX = TRUE,
-                    titleY = TRUE
-                ))
+                c(
+                    plot_list,
+                    list(
+                        nrows = ceiling(n_plots / ncol),
+                        shareX = share_x,
+                        shareY = share_y,
+                        titleX = TRUE,
+                        titleY = TRUE
+                    )
+                )
             )
             if (!is.null(shared_title) && nzchar(shared_title)) {
                 subplot_obj <- plotly::layout(
@@ -581,8 +647,11 @@
 }
 
 .pb_arrange_plot_list <- function(
-  plot_list, convert_fun = NULL, draw = TRUE, plot_ncol = NULL,
-  return_gridExtra = FALSE
+    plot_list,
+    convert_fun = NULL,
+    draw = TRUE,
+    plot_ncol = NULL,
+    return_gridExtra = FALSE
 ) {
     if (!length(plot_list)) {
         return(invisible(NULL))
@@ -617,10 +686,12 @@
     shared_title <- attr(plot_list, "pb_shared_title", exact = TRUE)
     top_arg <- list()
     if (!is.null(shared_title) && nzchar(shared_title)) {
-        top_arg <- list(top = grid::textGrob(
-            shared_title,
-            gp = grid::gpar(fontface = "bold")
-        ))
+        top_arg <- list(
+            top = grid::textGrob(
+                shared_title,
+                gp = grid::gpar(fontface = "bold")
+            )
+        )
     }
     arranged <- do.call(
         gridExtra::arrangeGrob,
@@ -657,7 +728,10 @@
 }
 
 .pb_prepare_annotation_for_samples <- function(
-  sample_annotation, sample_id_col, sample_ids, allow_partial = FALSE
+    sample_annotation,
+    sample_id_col,
+    sample_ids,
+    allow_partial = FALSE
 ) {
     if (is.null(sample_annotation)) {
         stop(
@@ -674,7 +748,9 @@
     }
 
     sample_annotation <-
-        sample_annotation[!duplicated(sample_annotation[[sample_id_col]]), ,
+        sample_annotation[
+            !duplicated(sample_annotation[[sample_id_col]]),
+            ,
             drop = FALSE
         ]
     match_idx <- match(sample_ids, sample_annotation[[sample_id_col]])
@@ -699,14 +775,18 @@
     sample_annotation[match_idx, , drop = FALSE]
 }
 
-.pb_align_matrix_and_annotation <- function(data_matrix,
-                                            sample_annotation,
-                                            sample_id_col,
-                                            check_args = list(),
-                                            allow_partial_annotation = TRUE) {
+.pb_align_matrix_and_annotation <- function(
+    data_matrix,
+    sample_annotation,
+    sample_id_col,
+    check_args = list(),
+    allow_partial_annotation = TRUE
+) {
     internal_feature_id_col <- ".pb_feature_id"
-    while (internal_feature_id_col %in%
-        c(colnames(data_matrix), sample_id_col)) {
+    while (
+        internal_feature_id_col %in%
+            c(colnames(data_matrix), sample_id_col)
+    ) {
         internal_feature_id_col <- paste0(internal_feature_id_col, "_")
     }
     df_long <- matrix_to_long(
@@ -714,12 +794,15 @@
         feature_id_col = internal_feature_id_col,
         sample_id_col = sample_id_col
     )
-    check_call <- utils::modifyList(list(
-        sample_annotation = sample_annotation,
-        sample_id_col = sample_id_col,
-        df_long = df_long,
-        merge = FALSE
-    ), check_args)
+    check_call <- utils::modifyList(
+        list(
+            sample_annotation = sample_annotation,
+            sample_id_col = sample_id_col,
+            df_long = df_long,
+            merge = FALSE
+        ),
+        check_args
+    )
     df_long <- do.call(check_sample_consistency, check_call)
     data_matrix <- long_to_matrix(
         df_long,
@@ -746,15 +829,20 @@
 }
 
 .pb_handle_missing_wrapper <- function(
-  data_matrix, warning_message, fill_the_missing, drop_on_false = FALSE
+    data_matrix,
+    warning_message,
+    fill_the_missing,
+    drop_on_false = FALSE
 ) {
     if (!anyNA(data_matrix)) {
         return(data_matrix)
     }
 
     warning(warning_message)
-    if ((isFALSE(fill_the_missing) || is.null(fill_the_missing)) &&
-        isTRUE(drop_on_false)) {
+    if (
+        (isFALSE(fill_the_missing) || is.null(fill_the_missing)) &&
+            isTRUE(drop_on_false)
+    ) {
         keep_rows <- complete.cases(data_matrix)
         if (!any(keep_rows)) {
             stop(
@@ -783,8 +871,10 @@
     if (removal_requested) {
         original <- data_matrix
         keep_rows <- complete.cases(data_matrix)
-        if (nrow(data_matrix) == ncol(data_matrix) &&
-            isSymmetric(data_matrix, na.rm = TRUE)) {
+        if (
+            nrow(data_matrix) == ncol(data_matrix) &&
+                isSymmetric(data_matrix, na.rm = TRUE)
+        ) {
             if (!any(keep_rows)) {
                 warning("All rows contain missing values; returning 0x0 matrix")
                 data_matrix <- data_matrix[FALSE, FALSE, drop = FALSE]
@@ -796,8 +886,10 @@
                 data_matrix <- data_matrix[keep_rows, keep_rows, drop = FALSE]
             }
         } else {
-            if (nrow(data_matrix) == ncol(data_matrix) &&
-                !isSymmetric(data_matrix, na.rm = TRUE)) {
+            if (
+                nrow(data_matrix) == ncol(data_matrix) &&
+                    !isSymmetric(data_matrix, na.rm = TRUE)
+            ) {
                 warning(
                     "Matrix is square but not symmetric; removing rows with ",
                     "missing values"
@@ -827,9 +919,11 @@
     }
 
     fill_value <- fill_the_missing
-    if (!is.numeric(fill_value) ||
-        length(fill_value) != 1L ||
-        is.na(fill_value)) {
+    if (
+        !is.numeric(fill_value) ||
+            length(fill_value) != 1L ||
+            is.na(fill_value)
+    ) {
         warning("filling value is not a finite numeric scalar; coercing to 0")
         fill_value <- 0
     }
@@ -848,13 +942,13 @@
 }
 
 .pb_resolve_color_list <- function(
-  color_list,
-  annotation_df,
-  id_col,
-  columns,
-  warn_message = NULL,
-  numeric_columns = NULL,
-  guess_factors = TRUE
+    color_list,
+    annotation_df,
+    id_col,
+    columns,
+    warn_message = NULL,
+    numeric_columns = NULL,
+    guess_factors = TRUE
 ) {
     if (is.null(columns) || !length(columns)) {
         return(color_list)
@@ -888,11 +982,11 @@
 }
 
 .pb_prepare_annotation_df <- function(
-  annotation_df,
-  id_col,
-  columns,
-  auto_columns = NULL,
-  target_ids = NULL
+    annotation_df,
+    id_col,
+    columns,
+    auto_columns = NULL,
+    target_ids = NULL
 ) {
     if (is.null(annotation_df)) {
         return(list(df = NULL, columns = NULL, missing_ids = character()))
@@ -912,7 +1006,11 @@
             return(list(
                 df = NULL,
                 columns = NULL,
-                missing_ids = if (is.null(target_ids)) character() else as.character(target_ids)
+                missing_ids = if (is.null(target_ids)) {
+                    character()
+                } else {
+                    as.character(target_ids)
+                }
             ))
         }
     }
@@ -1002,15 +1100,15 @@
 }
 
 .pb_prepare_pheatmap_annotations <- function(
-  data_matrix,
-  column_annotation_df,
-  row_annotation_df,
-  col_ann_id_col,
-  row_ann_id_col,
-  columns_for_cols,
-  columns_for_rows,
-  annotation_color_cols,
-  annotation_color_rows
+    data_matrix,
+    column_annotation_df,
+    row_annotation_df,
+    col_ann_id_col,
+    row_ann_id_col,
+    columns_for_cols,
+    columns_for_rows,
+    annotation_color_cols,
+    annotation_color_rows
 ) {
     col_info <- .pb_prepare_annotation_df(
         column_annotation_df,
@@ -1074,7 +1172,12 @@
 }
 
 .pb_open_graphics_device <- function(
-  filename, width, height, units, plot_title = NULL, png_res = 300
+    filename,
+    width,
+    height,
+    units,
+    plot_title = NULL,
+    png_res = 300
 ) {
     if (is.null(filename)) {
         return(list(opened = FALSE, close = function() invisible(NULL)))
@@ -1099,11 +1202,17 @@
 
     if (ext == "pdf") {
         grDevices::pdf(
-            file = filename, width = width, height = height, title = plot_title
+            file = filename,
+            width = width,
+            height = height,
+            title = plot_title
         )
     } else if (ext == "png") {
         grDevices::png(
-            filename = filename, width = width, height = height, units = unit,
+            filename = filename,
+            width = width,
+            height = height,
+            units = unit,
             res = png_res
         )
     } else {
@@ -1119,16 +1228,16 @@
 }
 
 .pb_prepare_embedding_inputs <- function(
-  data_matrix,
-  sample_annotation,
-  sample_id_col,
-  feature_id_col,
-  color_by = NULL,
-  fill_the_missing = -1,
-  warning_message = NULL,
-  allow_partial_annotation = FALSE,
-  check_args = list(),
-  drop_on_false = TRUE
+    data_matrix,
+    sample_annotation,
+    sample_id_col,
+    feature_id_col,
+    color_by = NULL,
+    fill_the_missing = -1,
+    warning_message = NULL,
+    allow_partial_annotation = FALSE,
+    check_args = list(),
+    drop_on_false = TRUE
 ) {
     if (is.data.frame(data_matrix)) {
         data_matrix <- check_feature_id_col_in_dm(

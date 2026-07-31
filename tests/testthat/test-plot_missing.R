@@ -1,4 +1,5 @@
 toy_matrix <- matrix(
+    # fmt: skip
     c(
         10, NA, 12,
         7, 8, 9,
@@ -10,6 +11,7 @@ toy_matrix <- matrix(
 )
 
 toy_matrix2 <- matrix(
+    # fmt: skip
     c(
         NA, 2, 3,
         4, NA, 6,
@@ -114,6 +116,7 @@ test_that(".pb_group_missing_matrix aggregates observed fractions by group", {
     )
 
     expected <- matrix(
+        # fmt: skip
         c(
             1, 1, 0,
             0.5, 1, 1
@@ -145,6 +148,7 @@ test_that(".pb_group_missing_matrix binarizes grouped fractions at 0.5 when requ
     )
 
     expected <- matrix(
+        # fmt: skip
         c(
             1, 1, 0,
             1, 1, 1
@@ -170,6 +174,7 @@ test_that(".pb_group_missing_matrix applies numeric binarization before drop_com
     )
 
     expected <- matrix(
+        # fmt: skip
         c(
             1, 0,
             0, 1
@@ -194,6 +199,7 @@ test_that(".pb_group_missing_matrix supports multi-column grouping", {
     )
 
     expected <- matrix(
+        # fmt: skip
         c(
             1, 0,
             0, 1,
@@ -457,7 +463,12 @@ test_that("plot_NA_heatmap.ProBatchFeatures arranges multiple assays", {
     expect_s3_class(res$grob, "gtable")
     expect_length(res$heatmaps, 2L)
     expect_equal(names(res$heatmaps), c(toy_assay, toy_assay_alt))
-    expect_true(all(vapply(res$heatmaps, inherits, logical(1), what = "pheatmap")))
+    expect_true(all(vapply(
+        res$heatmaps,
+        inherits,
+        logical(1),
+        what = "pheatmap"
+    )))
 })
 
 test_that("plot_NA_heatmap.ProBatchFeatures accepts explicit main without collision", {
@@ -499,7 +510,12 @@ test_that("plot_grouped_NA_heatmap.ProBatchFeatures supports grouped observed fr
     expect_s3_class(res$grob, "gtable")
     expect_length(res$heatmaps, 2L)
     expect_equal(names(res$heatmaps), c(toy_assay, toy_assay_alt))
-    expect_true(all(vapply(res$heatmaps, inherits, logical(1), what = "pheatmap")))
+    expect_true(all(vapply(
+        res$heatmaps,
+        inherits,
+        logical(1),
+        what = "pheatmap"
+    )))
 })
 
 test_that("multiple requested heatmaps remain arranged with one surviving assay", {
@@ -575,13 +591,13 @@ test_that("plot_NA_density.default supports grouped densities", {
     )
 
     expect_s3_class(density_plot, "ggplot")
-    grouped_data <- density_plot$data[
-        ,
+    grouped_data <- density_plot$data[,
         c("mean", "Type", ".pb_density_group"),
         drop = FALSE
     ]
     grouped_data <- grouped_data[
-        order(grouped_data$.pb_density_group, grouped_data$mean), ,
+        order(grouped_data$.pb_density_group, grouped_data$mean),
+        ,
         drop = FALSE
     ]
     expected <- data.frame(
@@ -784,7 +800,11 @@ test_that("plot_NA_frequency.ProBatchFeatures facets assays", {
     expect_s3_class(frequency_plot, "ggplot")
     freq_data <- frequency_plot$data
     freq_data$pbf_name <- as.character(freq_data$pbf_name)
-    freq_data <- freq_data[order(freq_data$pbf_name, freq_data$valid_counts), , drop = FALSE]
+    freq_data <- freq_data[
+        order(freq_data$pbf_name, freq_data$valid_counts),
+        ,
+        drop = FALSE
+    ]
     expected <- data.frame(
         valid_counts = rep(c(2L, 3L), 2L),
         count = rep(c(2L, 1L), 2L),

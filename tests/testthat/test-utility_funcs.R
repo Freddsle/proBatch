@@ -7,26 +7,38 @@ test_that("check_sample_consistency", {
         sample_annotation = example_sample_annotation,
         df_long = example_proteome,
         sample_id_col = "FullRunName",
-        batch_col = NULL, order_col = NULL, facet_col = NULL
+        batch_col = NULL,
+        order_col = NULL,
+        facet_col = NULL
     )
 
-    expect_equal(ncol(df_test), ncol(example_sample_annotation) + ncol(example_proteome) - 1)
+    expect_equal(
+        ncol(df_test),
+        ncol(example_sample_annotation) + ncol(example_proteome) - 1
+    )
     expect_equal(nrow(df_test), nrow(example_proteome))
 
     options(warn = 0)
     expect_warning(check_sample_consistency(
-        sample_annotation = NULL, df_long = example_proteome,
+        sample_annotation = NULL,
+        df_long = example_proteome,
         sample_id_col = "FullRunName",
-        batch_col = NULL, order_col = NULL, facet_col = NULL
+        batch_col = NULL,
+        order_col = NULL,
+        facet_col = NULL
     ))
 
     falsified_annotation <- example_sample_annotation
-    colnames(falsified_annotation)[colnames(falsified_annotation) == "FullRunName"] <- "FalseRunName"
+    colnames(falsified_annotation)[
+        colnames(falsified_annotation) == "FullRunName"
+    ] <- "FalseRunName"
     expect_error(check_sample_consistency(
         sample_annotation = falsified_annotation,
         df_long = example_proteome,
         sample_id_col = "FullRunName",
-        batch_col = NULL, order_col = NULL, facet_col = NULL
+        batch_col = NULL,
+        order_col = NULL,
+        facet_col = NULL
     ))
 
     duplicate_annotation <- example_sample_annotation
@@ -53,7 +65,8 @@ test_that("define_sample_order", {
     sample_order <- define_sample_order(
         order_col = order_col,
         sample_annotation = example_sample_annotation,
-        facet_col = NULL, batch_col = "MS_batch",
+        facet_col = NULL,
+        batch_col = "MS_batch",
         df_long = example_proteome,
         sample_id_col = "FullRunName",
         color_by_batch = TRUE
@@ -70,7 +83,8 @@ test_that("define_sample_order", {
         sample_order <- define_sample_order(
             order_col = order_col,
             sample_annotation = example_sample_annotation,
-            facet_col = NULL, batch_col = "MS_batch",
+            facet_col = NULL,
+            batch_col = "MS_batch",
             df_long = example_proteome,
             sample_id_col = "FullRunName",
             color_by_batch = TRUE

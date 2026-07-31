@@ -90,7 +90,12 @@
 NULL
 
 .pb_apply_missing_qf_step <- function(
-  object, assays, fun, step, params, fun_name = step
+    object,
+    assays,
+    fun,
+    step,
+    params,
+    fun_name = step
 ) {
     for (nm in assays) {
         prior <- object
@@ -172,13 +177,13 @@ pb_nNA <- function(object, pbf_name = names(object), ...) {
 }
 
 .pb_groupfilterNA_matrix <- function(
-  data_matrix,
-  sample_annotation,
-  group_cols,
-  min_valid = 2L,
-  pNA = NULL,
-  mask_failing = TRUE,
-  ...
+    data_matrix,
+    sample_annotation,
+    group_cols,
+    min_valid = 2L,
+    pNA = NULL,
+    mask_failing = TRUE,
+    ...
 ) {
     sample_annotation <- as.data.frame(sample_annotation)
     temporary <- suppressMessages(ProBatchFeatures(
@@ -206,11 +211,11 @@ pb_nNA <- function(object, pbf_name = names(object), ...) {
 #' @rdname pb_missing_helpers
 #' @export
 pb_filterNA <- function(
-  object,
-  pbf_name = NULL,
-  inplace = FALSE,
-  final_name = NULL,
-  ...
+    object,
+    pbf_name = NULL,
+    inplace = FALSE,
+    final_name = NULL,
+    ...
 ) {
     stopifnot(is(object, "ProBatchFeatures"))
     stopifnot(is.logical(inplace), length(inplace) == 1L)
@@ -292,20 +297,22 @@ pb_filterNA <- function(
 #' @rdname pb_missing_helpers
 #' @export
 pb_groupfilterNA <- function(
-  object,
-  pbf_name = NULL,
-  group_cols,
-  min_valid = 2L,
-  pNA = NULL,
-  inplace = FALSE,
-  final_name = NULL,
-  mask_failing = TRUE,
-  ...
+    object,
+    pbf_name = NULL,
+    group_cols,
+    min_valid = 2L,
+    pNA = NULL,
+    inplace = FALSE,
+    final_name = NULL,
+    mask_failing = TRUE,
+    ...
 ) {
     stopifnot(is(object, "ProBatchFeatures"))
     stopifnot(
-        is.logical(inplace), length(inplace) == 1L,
-        is.logical(mask_failing), length(mask_failing) == 1L
+        is.logical(inplace),
+        length(inplace) == 1L,
+        is.logical(mask_failing),
+        length(mask_failing) == 1L
     )
 
     if (missing(group_cols) || is.null(group_cols) || !length(group_cols)) {
@@ -330,9 +337,13 @@ pb_groupfilterNA <- function(
     }
 
     if (!is.null(pNA)) {
-        if (!is.numeric(pNA) || length(pNA) != 1L || is.na(pNA) || pNA < 0 ||
-            pNA >
-                1) {
+        if (
+            !is.numeric(pNA) ||
+                length(pNA) != 1L ||
+                is.na(pNA) ||
+                pNA < 0 ||
+                pNA > 1
+        ) {
             stop(
                 "`pNA` must be a single numeric value between 0 and 1.",
                 call. = FALSE
@@ -388,7 +399,9 @@ pb_groupfilterNA <- function(
         missing_cols <- setdiff(group_cols, names(cd_df))
         if (length(missing_cols)) {
             stop(
-                "Assay '", nm, "' is missing group column(s): ",
+                "Assay '",
+                nm,
+                "' is missing group column(s): ",
                 paste(missing_cols, collapse = ", "),
                 call. = FALSE
             )
@@ -396,27 +409,34 @@ pb_groupfilterNA <- function(
 
         group_df <- cd_df[, group_cols, drop = FALSE]
         has_na_group <- vapply(
-            group_df, function(col) any(is.na(col)), logical(1L)
+            group_df,
+            function(col) any(is.na(col)),
+            logical(1L)
         )
         if (any(has_na_group)) {
             bad_cols <- paste(group_cols[has_na_group], collapse = ", ")
             stop(
-                "Group column(s) ", bad_cols,
-                " contain NA values in assay '", nm, "'.",
+                "Group column(s) ",
+                bad_cols,
+                " contain NA values in assay '",
+                nm,
+                "'.",
                 call. = FALSE
             )
         }
 
         group_factor <- interaction(group_df, drop = TRUE, lex.order = TRUE)
         split_indices <- split(
-            seq_along(group_factor), group_factor,
+            seq_along(group_factor),
+            group_factor,
             drop = TRUE
         )
 
         feature_ids <- rownames(current)
         if (is.null(feature_ids)) {
             stop(
-                "Assay '", nm,
+                "Assay '",
+                nm,
                 "' has no rownames; cannot perform grouped filtering.",
                 call. = FALSE
             )
@@ -430,9 +450,15 @@ pb_groupfilterNA <- function(
                 group_size <- length(idx_cols)
                 if (!is.null(min_valid) && group_size < min_valid) {
                     stop(
-                        "Assay '", nm, "' has group '", grp_name,
-                        "' with ", group_size,
-                        " sample(s); requires at least ", min_valid, ".",
+                        "Assay '",
+                        nm,
+                        "' has group '",
+                        grp_name,
+                        "' with ",
+                        group_size,
+                        " sample(s); requires at least ",
+                        min_valid,
+                        ".",
                         call. = FALSE
                     )
                 }
@@ -574,8 +600,10 @@ pb_groupfilterNA <- function(
             }
         }
         stop(
-            "Assay(s) ", paste(missing, collapse = ", "),
-            " are not stored in the object.", extra_msg,
+            "Assay(s) ",
+            paste(missing, collapse = ", "),
+            " are not stored in the object.",
+            extra_msg,
             call. = FALSE
         )
     }
@@ -592,7 +620,8 @@ pb_groupfilterNA <- function(
         bad <- intersect(nm[nzchar(nm)], forbidden)
         if (length(bad)) {
             stop(
-                "Argument(s) ", paste(bad, collapse = ", "),
+                "Argument(s) ",
+                paste(bad, collapse = ", "),
                 " must not be supplied via `...`.",
                 call. = FALSE
             )
@@ -636,7 +665,11 @@ pb_groupfilterNA <- function(
     if (length(final_name) != length(assays)) {
         stop(
             "`final_name` must contain exactly one name per selected assay ",
-            "(expected ", length(assays), ", got ", length(final_name), "); ",
+            "(expected ",
+            length(assays),
+            ", got ",
+            length(final_name),
+            "); ",
             "scalar names are not recycled.",
             call. = FALSE
         )

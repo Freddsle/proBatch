@@ -14,10 +14,12 @@ test_that("hierarchical_clustering", {
     )
 
     pb_test_expect_warnings(
-        hiearchical <- plot_hierarchical_clustering(matrix_test,
+        hiearchical <- plot_hierarchical_clustering(
+            matrix_test,
             sample_annotation = example_sample_annotation,
             factors_to_plot = c("MS_batch", "Diet"),
-            distance = "euclidean", agglomeration = "complete",
+            distance = "euclidean",
+            agglomeration = "complete",
             color_list = color_list,
             label_samples = FALSE
         ),
@@ -43,7 +45,6 @@ test_that("heatmap_plot", {
     example_sample_annotation <- example_sample_annotation %>%
         select("FullRunName", "MS_batch", "Sex", "digestion_batch", "Diet")
 
-
     color_list <- sample_annotation_to_colors(
         example_sample_annotation,
         sample_id_col = "FullRunName",
@@ -56,7 +57,8 @@ test_that("heatmap_plot", {
             sample_annotation = example_sample_annotation,
             factors_to_plot = c("MS_batch", "Sex", "digestion_batch", "Diet"),
             cluster_cols = TRUE,
-            show_rownames = TRUE, show_colnames = FALSE,
+            show_rownames = TRUE,
+            show_colnames = FALSE,
             color_list = color_list
         )
     )
@@ -92,7 +94,8 @@ test_that("plot_PCA warns on missing values and honors x/y PC selection", {
         pca <- plot_PCA(
             data_matrix = example_proteome_matrix,
             sample_annotation = example_sample_annotation,
-            color_by = "MS_batch", plot_title = "PCA colored by MS batch",
+            color_by = "MS_batch",
+            plot_title = "PCA colored by MS batch",
             fill_the_missing = -1
         ),
         c(
@@ -108,7 +111,8 @@ test_that("plot_PCA warns on missing values and honors x/y PC selection", {
     expect_equal(pca$labels$colour, "MS_batch")
 
     pca_xy <- suppressWarnings(plot_PCA(
-        example_proteome_matrix, example_sample_annotation,
+        example_proteome_matrix,
+        example_sample_annotation,
         color_by = "MS_batch",
         fill_the_missing = -1,
         x_nPC = 2,
@@ -128,7 +132,8 @@ test_that("plot_PCA.default accepts and validates the generic dots contract", {
         match(
             colnames(matrix_test),
             example_sample_annotation$FullRunName
-        ), ,
+        ),
+        ,
         drop = FALSE
     ]
 
@@ -148,11 +153,15 @@ test_that("plot_PCA builds numeric annotations with discrete or continuous color
     matrix_test <- example_proteome_matrix[1:20, 1:8]
     sample_ids <- colnames(matrix_test)
     sample_annotation <- example_sample_annotation[
-        match(sample_ids, example_sample_annotation$FullRunName), ,
+        match(sample_ids, example_sample_annotation$FullRunName),
+        ,
         drop = FALSE
     ]
 
-    sample_annotation$numeric_group <- rep(1:2, length.out = nrow(sample_annotation))
+    sample_annotation$numeric_group <- rep(
+        1:2,
+        length.out = nrow(sample_annotation)
+    )
     discrete_palette <- c("1" = "#1B9E77", "2" = "#D95F02")
     discrete_plot <- suppressWarnings(plot_PCA(
         matrix_test,
@@ -185,7 +194,8 @@ test_that("plot_PCA supports marginal density plots", {
     pb_test_load_example_data()
 
     pca <- suppressMessages(suppressWarnings(plot_PCA(
-        example_proteome_matrix, example_sample_annotation,
+        example_proteome_matrix,
+        example_sample_annotation,
         color_by = "MS_batch",
         fill_the_missing = -1,
         marginal_density = TRUE
@@ -198,7 +208,8 @@ test_that("plot_PCA supports marginal density plots", {
         match(
             colnames(matrix_test),
             example_sample_annotation$FullRunName
-        ), ,
+        ),
+        ,
         drop = FALSE
     ]
     annotation_test$Dim1 <- factor(
@@ -219,12 +230,17 @@ test_that("plot_PCA supports marginal density plots", {
         color_scheme = collision_colors,
         marginal_density = "Dim1"
     )))
-    expect_true(inherits(collision_pca, "ggplot") ||
-        grid::is.grob(collision_pca))
+    expect_true(
+        inherits(collision_pca, "ggplot") ||
+            grid::is.grob(collision_pca)
+    )
 })
 
-pb_test_embedding_fixture <- function(n_features = 12L, n_samples = 8L,
-                                      with_missing = FALSE) {
+pb_test_embedding_fixture <- function(
+    n_features = 12L,
+    n_samples = 8L,
+    with_missing = FALSE
+) {
     sample_ids <- paste0("sample_", seq_len(n_samples))
     feature_ids <- paste0("feature_", seq_len(n_features))
     values <- outer(
@@ -254,16 +270,21 @@ pb_test_embedding_fixture <- function(n_features = 12L, n_samples = 8L,
         matrix = values,
         annotation = annotation,
         aligned_annotation = annotation[
-            match(sample_ids, annotation$FullRunName), ,
+            match(sample_ids, annotation$FullRunName),
+            ,
             drop = FALSE
         ]
     )
 }
 
 pb_test_fake_embedding <- function(input, n_components = 2L) {
-    components <- vapply(seq_len(n_components), function(component) {
-        rowSums(input * component) + seq_len(nrow(input)) / (component + 1)
-    }, numeric(nrow(input)))
+    components <- vapply(
+        seq_len(n_components),
+        function(component) {
+            rowSums(input * component) + seq_len(nrow(input)) / (component + 1)
+        },
+        numeric(nrow(input))
+    )
     matrix(components, nrow = nrow(input), ncol = n_components)
 }
 
@@ -277,10 +298,12 @@ test_that("matrix embeddings align annotations and forward backend arguments", {
         Rtsne = function(X, ...) {
             captured$tsne_input <- X
             captured$tsne_args <- list(...)
-            list(Y = pb_test_fake_embedding(
-                X,
-                n_components = captured$tsne_args$dims
-            ))
+            list(
+                Y = pb_test_fake_embedding(
+                    X,
+                    n_components = captured$tsne_args$dims
+                )
+            )
         },
         .package = "Rtsne"
     )
@@ -289,10 +312,12 @@ test_that("matrix embeddings align annotations and forward backend arguments", {
             captured$umap_input <- d
             captured$umap_config <- config
             captured$umap_args <- list(...)
-            list(layout = pb_test_fake_embedding(
-                d,
-                n_components = config$n_components
-            ))
+            list(
+                layout = pb_test_fake_embedding(
+                    d,
+                    n_components = config$n_components
+                )
+            )
         },
         .package = "umap"
     )
@@ -407,7 +432,8 @@ test_that("matrix embeddings align annotations and forward backend arguments", {
         match(
             colnames(fixture$matrix),
             reserved_annotation$FullRunName
-        ), ,
+        ),
+        ,
         drop = FALSE
     ]
     reserved_plot <- expect_no_warning(plot_TSNE(
@@ -679,11 +705,13 @@ test_that("explicit embedding seeds reproduce backend coordinates", {
         {
             if (caller_rng_existed) {
                 assign(".Random.seed", original_caller_rng, envir = .GlobalEnv)
-            } else if (exists(
-                ".Random.seed",
-                envir = .GlobalEnv,
-                inherits = FALSE
-            )) {
+            } else if (
+                exists(
+                    ".Random.seed",
+                    envir = .GlobalEnv,
+                    inherits = FALSE
+                )
+            ) {
                 rm(".Random.seed", envir = .GlobalEnv)
             }
         },
@@ -777,13 +805,15 @@ test_that("matrix embeddings return plotly objects only when requested", {
 
     reserved_annotation <- fixture$aligned_annotation
     reserved_annotation$.color_value <- factor(
-        rep(c("round", "angular", "angular", "round"),
+        rep(
+            c("round", "angular", "angular", "round"),
             length.out = nrow(reserved_annotation)
         )
     )
     reserved_annotation$.shape_value <- seq_len(nrow(reserved_annotation))
     reserved_annotation$.hover_text <- paste0(
-        "annotation_", seq_len(nrow(reserved_annotation))
+        "annotation_",
+        seq_len(nrow(reserved_annotation))
     )
     captured <- new.env(parent = emptyenv())
     testthat::local_mocked_bindings(
@@ -829,8 +859,10 @@ test_that("matrix embeddings return plotly objects only when requested", {
         function(mapping) all.vars(mapping)[[1L]],
         character(1L)
     )
-    expect_false(any(internal_columns %in%
-        c(".color_value", ".shape_value", ".hover_text")))
+    expect_false(any(
+        internal_columns %in%
+            c(".color_value", ".shape_value", ".hover_text")
+    ))
     expect_identical(
         as.character(captured$args$data[[internal_columns[["symbol"]]]]),
         as.character(reserved_annotation$.color_value)
@@ -870,20 +902,23 @@ test_that("ProBatchFeatures t-SNE preserves assay order and per-assay arguments"
         .package = "Rtsne"
     )
 
-    assay_args <- setNames(list(
+    assay_args <- setNames(
         list(
-            perplexity = 2,
-            max_iter = 251,
-            random_seed = 101,
-            theta = 0.11
+            list(
+                perplexity = 2,
+                max_iter = 251,
+                random_seed = 101,
+                theta = 0.11
+            ),
+            list(
+                perplexity = 2,
+                max_iter = 252,
+                random_seed = 202,
+                theta = 0.22
+            )
         ),
-        list(
-            perplexity = 2,
-            max_iter = 252,
-            random_seed = 202,
-            theta = 0.22
-        )
-    ), assays)
+        assays
+    )
     assay_titles <- setNames(c("Requested first", "Requested second"), assays)
 
     expect_no_warning(
@@ -997,13 +1032,16 @@ test_that("ProBatchFeatures interactive embeddings return lists or subplots", {
         .package = "umap"
     )
 
-    tsne_args <- setNames(lapply(seq_along(assays), function(index) {
-        list(
-            perplexity = 2,
-            max_iter = 250 + index,
-            random_seed = 300 + index
-        )
-    }), assays)
+    tsne_args <- setNames(
+        lapply(seq_along(assays), function(index) {
+            list(
+                perplexity = 2,
+                max_iter = 250 + index,
+                random_seed = 300 + index
+            )
+        }),
+        assays
+    )
     expect_no_warning(
         tsne_list <- plot_TSNE(
             pbf,
@@ -1019,13 +1057,16 @@ test_that("ProBatchFeatures interactive embeddings return lists or subplots", {
     expect_named(tsne_list, assays)
     expect_true(all(vapply(tsne_list, inherits, logical(1), "plotly")))
 
-    umap_args <- setNames(lapply(seq_along(assays), function(index) {
-        list(
-            n_neighbors = 2 + index,
-            random_state = 400 + index,
-            preserve.seed = index == 1L
-        )
-    }), assays)
+    umap_args <- setNames(
+        lapply(seq_along(assays), function(index) {
+            list(
+                n_neighbors = 2 + index,
+                random_state = 400 + index,
+                preserve.seed = index == 1L
+            )
+        }),
+        assays
+    )
     expect_no_warning(
         umap_list <- plot_UMAP(
             data_matrix = pbf,
@@ -1116,9 +1157,12 @@ test_that("ProBatchFeatures embedding collection controls are validated", {
         "cannot override reserved"
     )
 
-    valid_args <- setNames(lapply(assays, function(assay) {
-        list(perplexity = 2, max_iter = 250, random_seed = 9)
-    }), assays)
+    valid_args <- setNames(
+        lapply(assays, function(assay) {
+            list(perplexity = 2, max_iter = 250, random_seed = 9)
+        }),
+        assays
+    )
     expect_error(
         plot_TSNE(
             pbf,
@@ -1189,7 +1233,11 @@ test_that("plot_heatmap_diagnostic ProBatchFeatures arranges assays and preserve
 
     expect_type(res, "list")
     expect_equal(length(res$plots), length(names(pbf)))
-    expect_true(all(vapply(res$plots, function(x) inherits(x, "pheatmap"), logical(1))))
+    expect_true(all(vapply(
+        res$plots,
+        function(x) inherits(x, "pheatmap"),
+        logical(1)
+    )))
 
     subset_assays <- names(pbf)[2:1]
     res_subset <- suppressWarnings(plot_heatmap_diagnostic(
@@ -1204,7 +1252,11 @@ test_that("plot_heatmap_diagnostic ProBatchFeatures arranges assays and preserve
 
     expect_type(res_subset, "list")
     expect_equal(names(res_subset$plots), subset_assays)
-    expect_true(all(vapply(res_subset$plots, function(x) inherits(x, "pheatmap"), logical(1))))
+    expect_true(all(vapply(
+        res_subset$plots,
+        function(x) inherits(x, "pheatmap"),
+        logical(1)
+    )))
 })
 
 test_that("plot_PCA ProBatchFeatures returns ggplot for single assay", {
@@ -1255,7 +1307,8 @@ test_that("PVCA ownership and historical df registration stay consolidated", {
                 length(list.files(
                     file.path(candidate, "R"),
                     pattern = "[.]R$"
-                )) > 0L
+                )) >
+                    0L
         },
         logical(1L)
     )
@@ -1268,28 +1321,34 @@ test_that("PVCA ownership and historical df registration stay consolidated", {
         mustWork = TRUE
     )
     r_dir <- file.path(source_root, "R")
-    definitions <- do.call(rbind, lapply(
-        sort(list.files(r_dir, pattern = "[.]R$", full.names = TRUE)),
-        function(file) {
-            expressions <- parse(file = file)
-            rows <- lapply(expressions, function(expression) {
-                is_assignment <- is.call(expression) &&
-                    identical(expression[[1L]], as.name("<-"))
-                is_function <- is_assignment &&
-                    is.call(expression[[3L]]) &&
-                    identical(expression[[3L]][[1L]], as.name("function"))
-                if (!is_function) {
-                    return(NULL)
-                }
-                data.frame(
-                    symbol = paste(deparse(expression[[2L]]), collapse = ""),
-                    file = basename(file),
-                    stringsAsFactors = FALSE
-                )
-            })
-            do.call(rbind, rows)
-        }
-    ))
+    definitions <- do.call(
+        rbind,
+        lapply(
+            sort(list.files(r_dir, pattern = "[.]R$", full.names = TRUE)),
+            function(file) {
+                expressions <- parse(file = file)
+                rows <- lapply(expressions, function(expression) {
+                    is_assignment <- is.call(expression) &&
+                        identical(expression[[1L]], as.name("<-"))
+                    is_function <- is_assignment &&
+                        is.call(expression[[3L]]) &&
+                        identical(expression[[3L]][[1L]], as.name("function"))
+                    if (!is_function) {
+                        return(NULL)
+                    }
+                    data.frame(
+                        symbol = paste(
+                            deparse(expression[[2L]]),
+                            collapse = ""
+                        ),
+                        file = basename(file),
+                        stringsAsFactors = FALSE
+                    )
+                })
+                do.call(rbind, rows)
+            }
+        )
+    )
 
     public_symbols <- c(
         "calculate_PVCA",

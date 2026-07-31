@@ -6,7 +6,11 @@ test_that("quantile_normalize", {
 
     quant_matrix <- normalize.quantiles(matrix_test)
 
-    expect_equal(quant_matrix[1:10], quant_normalized_matrix[1:10], ignore_attr = TRUE)
+    expect_equal(
+        quant_matrix[1:10],
+        quant_normalized_matrix[1:10],
+        ignore_attr = TRUE
+    )
 })
 
 test_that("normalize_sample_medians", {
@@ -20,20 +24,46 @@ test_that("normalize_sample_medians", {
     )
     sampled_rows <- example_proteome$FullRunName %in% samples
     sample_df <- example_proteome[sampled_rows, ]
-    median_centered_data <- normalize_sample_medians_df(sample_df,
+    median_centered_data <- normalize_sample_medians_df(
+        sample_df,
         keep_all = "all"
     )
 
-    expect_equal(median_centered_data$median_global[1], 30277.6, tolerance = 1e-2, ignore_attr = TRUE)
-    expect_equal(median_centered_data$median_run[2], 29252.14, tolerance = 1e-2, ignore_attr = TRUE)
+    expect_equal(
+        median_centered_data$median_global[1],
+        30277.6,
+        tolerance = 1e-2,
+        ignore_attr = TRUE
+    )
+    expect_equal(
+        median_centered_data$median_run[2],
+        29252.14,
+        tolerance = 1e-2,
+        ignore_attr = TRUE
+    )
 
-    expect_equal(median_centered_data$Intensity[1], 2728887.42, tolerance = 1e-2, ignore_attr = TRUE)
-    expect_equal(median_centered_data$Intensity[549], 35191.95, tolerance = 1e-2, ignore_attr = TRUE)
-    expect_equal(median_centered_data$preNorm_Intensity[549], 25479.8, ignore_attr = TRUE)
+    expect_equal(
+        median_centered_data$Intensity[1],
+        2728887.42,
+        tolerance = 1e-2,
+        ignore_attr = TRUE
+    )
+    expect_equal(
+        median_centered_data$Intensity[549],
+        35191.95,
+        tolerance = 1e-2,
+        ignore_attr = TRUE
+    )
+    expect_equal(
+        median_centered_data$preNorm_Intensity[549],
+        25479.8,
+        ignore_attr = TRUE
+    )
 })
 
 test_that("normalize_sample_medians inside batch using metadata", {
     mat <- matrix(
+        # fmt: skip
         c(
             10, 20, 30, 40,
             15, 25, 35, 45,
@@ -52,6 +82,7 @@ test_that("normalize_sample_medians inside batch using metadata", {
     )
 
     expected <- matrix(
+        # fmt: skip
         c(
             15, 15, 32.5, 32.5,
             20, 20, 37.5, 37.5,
@@ -69,7 +100,12 @@ test_that("normalize_sample_medians inside batch using metadata", {
         group_col = "Batch",
         inside_batch = TRUE
     )
-    expect_equal(inside_batch_norm, expected, tolerance = 1e-8, ignore_attr = TRUE)
+    expect_equal(
+        inside_batch_norm,
+        expected,
+        tolerance = 1e-8,
+        ignore_attr = TRUE
+    )
 
     df_long <- matrix_to_long(mat)
     inside_batch_df <- normalize_sample_medians_df(
@@ -86,7 +122,11 @@ test_that("normalize_sample_medians inside batch using metadata", {
     )
     expect_equal(reconstructed, expected, tolerance = 1e-8, ignore_attr = TRUE)
 
-    stats_df <- unique(inside_batch_df[, c("FullRunName", "median_run", "median_global")])
+    stats_df <- unique(inside_batch_df[, c(
+        "FullRunName",
+        "median_run",
+        "median_global"
+    )])
     stats_df <- stats_df[order(stats_df$FullRunName), ]
     expect_equal(stats_df$median_run, c(12.5, 22.5, 30, 40))
     expect_equal(stats_df$median_global, c(17.5, 17.5, 32.5, 32.5))
@@ -107,11 +147,29 @@ test_that("normalize_sample_medians inside batch using metadata", {
 test_that("normalize_data_dm forwards offset to log transform", {
     data(example_proteome_matrix, package = "proBatch")
     mat <- example_proteome_matrix[1:5, 1:4]
-    res_quant <- normalize_data_dm(mat, normalize_func = "quantile", log_base = 2, offset = 0.5)
-    expected_quant <- quantile_normalize_dm(log_transform_dm(mat, log_base = 2, offset = 0.5))
+    res_quant <- normalize_data_dm(
+        mat,
+        normalize_func = "quantile",
+        log_base = 2,
+        offset = 0.5
+    )
+    expected_quant <- quantile_normalize_dm(log_transform_dm(
+        mat,
+        log_base = 2,
+        offset = 0.5
+    ))
     expect_equal(res_quant, expected_quant, ignore_attr = TRUE)
 
-    res_median <- normalize_data_dm(mat, normalize_func = "medianCentering", log_base = 2, offset = 0.5)
-    expected_median <- normalize_sample_medians_dm(log_transform_dm(mat, log_base = 2, offset = 0.5))
+    res_median <- normalize_data_dm(
+        mat,
+        normalize_func = "medianCentering",
+        log_base = 2,
+        offset = 0.5
+    )
+    expected_median <- normalize_sample_medians_dm(log_transform_dm(
+        mat,
+        log_base = 2,
+        offset = 0.5
+    ))
     expect_equal(res_median, expected_median, ignore_attr = TRUE)
 })

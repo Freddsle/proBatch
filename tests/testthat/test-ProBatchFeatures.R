@@ -17,18 +17,27 @@ test_that("constructor (wide) builds a valid ProBatchFeatures object", {
     # object-level colData must preserve sample annotation (columns + values)
     expect_equal(nrow(colData(pbf)), ncol(example_proteome_matrix))
     expect_gt(ncol(colData(pbf)), 0L)
-    expect_true(all(colnames(example_sample_annotation) %in% colnames(colData(pbf))))
+    expect_true(all(
+        colnames(example_sample_annotation) %in% colnames(colData(pbf))
+    ))
 
     # Expected sample annotation in matrix-column order
     exp_sa <- example_sample_annotation[
-        match(colnames(example_proteome_matrix), example_sample_annotation$FullRunName), ,
+        match(
+            colnames(example_proteome_matrix),
+            example_sample_annotation$FullRunName
+        ),
+        ,
         drop = FALSE
     ]
     rownames(exp_sa) <- exp_sa$FullRunName
 
     # values equal (ignore attributes/factors)
     expect_equal(
-        as.data.frame(colData(pbf))[, colnames(example_sample_annotation), drop = FALSE],
+        as.data.frame(colData(pbf))[,
+            colnames(example_sample_annotation),
+            drop = FALSE
+        ],
         exp_sa,
         ignore_attr = TRUE
     )
@@ -72,22 +81,38 @@ test_that("constructor errors on malformed inputs (wide)", {
     dm <- example_proteome_matrix
     colnames(dm) <- NULL
     expect_error(
-        ProBatchFeatures(dm, example_sample_annotation, sample_id_col = "FullRunName"),
+        ProBatchFeatures(
+            dm,
+            example_sample_annotation,
+            sample_id_col = "FullRunName"
+        ),
         "must have column names"
     )
 
     # sample_id_col not present => error
     expect_error(
-        ProBatchFeatures(example_proteome_matrix, example_sample_annotation, sample_id_col = "NOPE"),
+        ProBatchFeatures(
+            example_proteome_matrix,
+            example_sample_annotation,
+            sample_id_col = "NOPE"
+        ),
         "not found in sample_annotation"
     )
 
     # missing sample in annotation => error
     ann2 <- example_sample_annotation
     # drop one sample row
-    ann2 <- ann2[ann2$FullRunName != colnames(example_proteome_matrix)[1], , drop = FALSE]
+    ann2 <- ann2[
+        ann2$FullRunName != colnames(example_proteome_matrix)[1],
+        ,
+        drop = FALSE
+    ]
     expect_error(
-        ProBatchFeatures(example_proteome_matrix, ann2, sample_id_col = "FullRunName"),
+        ProBatchFeatures(
+            example_proteome_matrix,
+            ann2,
+            sample_id_col = "FullRunName"
+        ),
         "Sample annotation missing for"
     )
 
@@ -95,7 +120,11 @@ test_that("constructor errors on malformed inputs (wide)", {
     ann3 <- example_sample_annotation
     ann3$FullRunName[1] <- NA
     expect_error(
-        ProBatchFeatures(example_proteome_matrix, ann3, sample_id_col = "FullRunName"),
+        ProBatchFeatures(
+            example_proteome_matrix,
+            ann3,
+            sample_id_col = "FullRunName"
+        ),
         "NA or empty identifiers"
     )
 
@@ -174,18 +203,18 @@ test_that("pb_as_long reuses matrix_to_long and round-trips vs direct call", {
     long_a <- pb_as_long(
         pbf,
         feature_id_col = "peptide_group_label",
-        sample_id_col  = "FullRunName",
-        measure_col    = "Intensity"
+        sample_id_col = "FullRunName",
+        measure_col = "Intensity"
     )
 
     # direct call (reference)
     se <- pbf[["feature::raw"]]
     long_b <- proBatch::matrix_to_long(
-        data_matrix       = pb_as_wide(pbf),
+        data_matrix = pb_as_wide(pbf),
         sample_annotation = as.data.frame(colData(se)),
-        feature_id_col    = "peptide_group_label",
-        measure_col       = "Intensity",
-        sample_id_col     = "FullRunName"
+        feature_id_col = "peptide_group_label",
+        measure_col = "Intensity",
+        sample_id_col = "FullRunName"
     )
 
     # Compare after sorting; we only check essential columns
@@ -205,7 +234,8 @@ test_that("pb_subset_samples filters all assays using sample metadata", {
     matrix_small <- example_proteome_matrix[1:10, 1:6, drop = FALSE]
     sample_ids <- colnames(matrix_small)
     sample_ann <- example_sample_annotation[
-        match(sample_ids, example_sample_annotation$FullRunName), ,
+        match(sample_ids, example_sample_annotation$FullRunName),
+        ,
         drop = FALSE
     ]
     sample_ann$SampleName <- sample_ann$FullRunName
@@ -283,7 +313,8 @@ test_that("three-index sample subsetting preserves assays", {
     matrix_small <- example_proteome_matrix[1:10, 1:6, drop = FALSE]
     sample_ids <- colnames(matrix_small)
     sample_ann <- example_sample_annotation[
-        match(sample_ids, example_sample_annotation$FullRunName), ,
+        match(sample_ids, example_sample_annotation$FullRunName),
+        ,
         drop = FALSE
     ]
     pbf <- suppressMessages(ProBatchFeatures(
@@ -324,7 +355,12 @@ test_that("internal logging helper updates oplog and chain", {
     data(example_proteome_matrix, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
 
-    pbf <- ProBatchFeatures(example_proteome_matrix, example_sample_annotation, "FullRunName", "raw")
+    pbf <- ProBatchFeatures(
+        example_proteome_matrix,
+        example_sample_annotation,
+        "FullRunName",
+        "raw"
+    )
 
     # use internal helper via triple colon
     pbf <- proBatch:::.pb_add_log_entry(
@@ -955,7 +991,8 @@ test_that("lineage traversal rejects ambiguous and cyclic logs", {
     )
     reversed_ambiguous <- ambiguous
     reversed_ambiguous@oplog <- get_operation_log(ambiguous)[
-        rev(seq_len(nrow(get_operation_log(ambiguous)))), ,
+        rev(seq_len(nrow(get_operation_log(ambiguous)))),
+        ,
         drop = FALSE
     ]
     expect_error(
@@ -992,15 +1029,25 @@ test_that("internal add-assay-with-link links one-to-one when rows match", {
     data(example_proteome_matrix, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
 
-    pbf <- ProBatchFeatures(example_proteome_matrix, example_sample_annotation, "FullRunName", name = "raw")
+    pbf <- ProBatchFeatures(
+        example_proteome_matrix,
+        example_sample_annotation,
+        "FullRunName",
+        name = "raw"
+    )
 
     # create a new assay with identical rownames -> should link 1:1
     se_new <- SummarizedExperiment(
-        assays  = list(intensity = pb_as_wide(pbf)),
+        assays = list(intensity = pb_as_wide(pbf)),
         colData = colData(pbf[["feature::raw"]])
     )
 
-    pbf2 <- proBatch:::.pb_add_assay_with_link(pbf, se = se_new, to = "feature::raw_copy", from = "feature::raw")
+    pbf2 <- proBatch:::.pb_add_assay_with_link(
+        pbf,
+        se = se_new,
+        to = "feature::raw_copy",
+        from = "feature::raw"
+    )
     expect_true(validObject(pbf2))
     expect_true(isTRUE(S4Vectors::metadata(pbf2)$linked_last))
 
@@ -1013,7 +1060,12 @@ test_that("internal add-assay-with-link links one-to-one when rows match", {
     # remove a DateTime column to avoid colData conflict error
     colData(se_mod)$DateTime <- NULL
 
-    pbf3 <- proBatch:::.pb_add_assay_with_link(pbf2, se = se_mod, to = "feature::raw_changed", from = "feature::raw_copy")
+    pbf3 <- proBatch:::.pb_add_assay_with_link(
+        pbf2,
+        se = se_mod,
+        to = "feature::raw_changed",
+        from = "feature::raw_copy"
+    )
     expect_false(isTRUE(S4Vectors::metadata(pbf3)$linked_last))
 })
 
@@ -1156,7 +1208,12 @@ test_that("validity checks fail on malformed oplog", {
     data(example_proteome_matrix, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
 
-    pbf <- ProBatchFeatures(example_proteome_matrix, example_sample_annotation, "FullRunName", "raw")
+    pbf <- ProBatchFeatures(
+        example_proteome_matrix,
+        example_sample_annotation,
+        "FullRunName",
+        "raw"
+    )
 
     # Remove a required column
     bad <- get_operation_log(pbf)
@@ -1167,13 +1224,13 @@ test_that("validity checks fail on malformed oplog", {
 
     # Wrong types for params/timestamp
     bad2 <- S4Vectors::DataFrame(
-        step      = "x",
-        fun       = "f",
-        from      = "a",
-        to        = "b",
-        params    = 1L, # not list
+        step = "x",
+        fun = "f",
+        from = "a",
+        to = "b",
+        params = 1L, # not list
         timestamp = "2020-01-01", # not POSIXct
-        pkg       = "p"
+        pkg = "p"
     )
     pbf_bad2 <- pbf
     pbf_bad2@oplog <- bad2
@@ -1186,30 +1243,32 @@ test_that("pb_add_level: 1:1 linking works and uses addAssayLinkOneToOne", {
 
     # Build a tiny peptide assay
     set.seed(1)
-    m_pep <- matrix(round(rnorm(6), 3),
+    m_pep <- matrix(
+        round(rnorm(6), 3),
         nrow = 3,
         dimnames = list(paste0("pep", 1:3), paste0("S", 1:2))
     )
     sa <- data.frame(
         FullRunName = colnames(m_pep),
-        Lab = c("A", "A"), Condition = c("X", "Y"),
+        Lab = c("A", "A"),
+        Condition = c("X", "Y"),
         row.names = colnames(m_pep),
         stringsAsFactors = FALSE
     )
 
     pbf <- ProBatchFeatures(
-        data_matrix       = m_pep,
+        data_matrix = m_pep,
         sample_annotation = sa,
-        sample_id_col     = "FullRunName",
-        level             = "peptide" # => "peptide::raw"
+        sample_id_col = "FullRunName",
+        level = "peptide" # => "peptide::raw"
     )
 
     # Add a child assay with IDENTICAL rownames (1:1). Different pipeline.
     pbf2 <- pb_add_level(
-        object      = pbf,
-        from        = "peptide::raw",
-        new_matrix  = m_pep,
-        to_level    = "peptide",
+        object = pbf,
+        from = "peptide::raw",
+        new_matrix = m_pep,
+        to_level = "peptide",
         to_pipeline = "copy"
     )
 
@@ -1241,17 +1300,20 @@ test_that("pb_add_level: many-to-one linking (peptide -> protein) with map_strat
 
     # Peptide matrix (3 peptides x 2 samples)
     m_pep <- matrix(
+        # fmt: skip
         c(
             10, 11,
             20, 21,
             30, 31
         ),
-        nrow = 3, byrow = TRUE,
+        nrow = 3,
+        byrow = TRUE,
         dimnames = list(c("PEP1", "PEP2", "PEP3"), c("S1", "S2"))
     )
     sa <- data.frame(
         FullRunName = c("S1", "S2"),
-        Lab = "LAB", Condition = c("C1", "C2"),
+        Lab = "LAB",
+        Condition = c("C1", "C2"),
         row.names = c("S1", "S2"),
         stringsAsFactors = FALSE
     )
@@ -1259,13 +1321,15 @@ test_that("pb_add_level: many-to-one linking (peptide -> protein) with map_strat
 
     # Protein matrix (child rows are exact group strings)
     m_prot <- matrix(
+        # fmt: skip
         c(
             100, 101,
             200, 201,
             300, 301,
             400, 401
         ),
-        nrow = 4, byrow = TRUE,
+        nrow = 4,
+        byrow = TRUE,
         dimnames = list(c("A", "B", "BBB;B", "C"), c("S1", "S2"))
     )
 
@@ -1358,19 +1422,25 @@ test_that("pb_add_level: map_strategy='as_is' errors on duplicate parents", {
     skip_if_not_installed("QFeatures")
     skip_if_not_installed("SummarizedExperiment")
 
-    m_pep <- matrix(1,
-        nrow = 2, ncol = 2,
+    m_pep <- matrix(
+        1,
+        nrow = 2,
+        ncol = 2,
         dimnames = list(c("PEP1", "PEP2"), c("S1", "S2"))
     )
     sa <- data.frame(
         FullRunName = c("S1", "S2"),
-        Lab = "L", Condition = c("C1", "C2"),
-        row.names = c("S1", "S2"), stringsAsFactors = FALSE
+        Lab = "L",
+        Condition = c("C1", "C2"),
+        row.names = c("S1", "S2"),
+        stringsAsFactors = FALSE
     )
     pbf <- ProBatchFeatures(m_pep, sa, "FullRunName", level = "peptide")
 
-    m_prot <- matrix(1,
-        nrow = 2, ncol = 2,
+    m_prot <- matrix(
+        1,
+        nrow = 2,
+        ncol = 2,
         dimnames = list(c("A", "B"), c("S1", "S2"))
     )
     # Duplicate mapping for PEP1 -> A and PEP1 -> B
@@ -1401,31 +1471,48 @@ test_that("addAssay colData conflict on DateTime is avoided by using object-leve
 
     # synthetic data with POSIXct DateTime in colData
     m <- matrix(1:6, nrow = 3, dimnames = list(paste0("f", 1:3), c("S1", "S2")))
-    dt <- as.POSIXct(c("2024-01-01 00:00:00", "2024-01-02 00:00:00"), tz = "UTC")
+    dt <- as.POSIXct(
+        c("2024-01-01 00:00:00", "2024-01-02 00:00:00"),
+        tz = "UTC"
+    )
     sa <- data.frame(
-        FullRunName = c("S1", "S2"), DateTime = dt, Lab = "A",
-        Condition = c("X", "Y"), row.names = c("S1", "S2"), stringsAsFactors = FALSE
+        FullRunName = c("S1", "S2"),
+        DateTime = dt,
+        Lab = "A",
+        Condition = c("X", "Y"),
+        row.names = c("S1", "S2"),
+        stringsAsFactors = FALSE
     )
 
     pbf <- ProBatchFeatures(m, sa, "FullRunName", level = "feature") # feature::raw
 
     # First child assay with identical colData: ok
     se1 <- SummarizedExperiment(
-        assays  = list(intensity = m),
+        assays = list(intensity = m),
         colData = colData(pbf) # object-level colData (good)
     )
-    pbf <- proBatch:::.pb_add_assay_with_link(pbf, se = se1, to = "feature::copy", from = "feature::raw")
+    pbf <- proBatch:::.pb_add_assay_with_link(
+        pbf,
+        se = se1,
+        to = "feature::copy",
+        from = "feature::raw"
+    )
     expect_true(isTRUE(S4Vectors::metadata(pbf)$linked_last))
 
     # Now create a NEW assay but (intentionally) give it assay-level colData copy and mutate DateTime
     se2 <- SummarizedExperiment(
-        assays  = list(intensity = m),
+        assays = list(intensity = m),
         colData = colData(pbf[["feature::copy"]])
     )
     colData(se2)$DateTime[1] <- se2$DateTime[1] + 3600 # conflict
 
     colData(se2) <- colData(pbf)
-    pbf2 <- proBatch:::.pb_add_assay_with_link(pbf, se = se2, to = "feature::copy2", from = "feature::copy")
+    pbf2 <- proBatch:::.pb_add_assay_with_link(
+        pbf,
+        se = se2,
+        to = "feature::copy2",
+        from = "feature::copy"
+    )
     expect_true(validObject(pbf2))
 })
 
@@ -1468,7 +1555,10 @@ test_that(".pb_harmonize_colData accepts matching integer-like factors", {
     )
 
     expect_identical(colData(harmonized)$run_number, factor_cd$run_number)
-    expect_identical(colData(reverse_harmonized)$run_number, integer_cd$run_number)
+    expect_identical(
+        colData(reverse_harmonized)$run_number,
+        integer_cd$run_number
+    )
 
     colData(factor_se)$run_number <- factor(rep(NA_character_, 3L))
     colData(integer_se)$run_number <- rep(NA_integer_, 3L)
@@ -1532,16 +1622,25 @@ test_that(".pb_add_assay_with_link links 1:1 even if row order differs", {
     skip_if_not_installed("QFeatures")
     skip_if_not_installed("SummarizedExperiment")
 
-    m <- matrix(runif(6), nrow = 3, dimnames = list(paste0("f", 1:3), c("S1", "S2")))
+    m <- matrix(
+        runif(6),
+        nrow = 3,
+        dimnames = list(paste0("f", 1:3), c("S1", "S2"))
+    )
     sa <- data.frame(FullRunName = c("S1", "S2"), row.names = c("S1", "S2"))
     pbf <- ProBatchFeatures(m, sa, "FullRunName", name = "raw")
 
     m2 <- m[sample(rownames(m)), ] # shuffled rows
     se2 <- SummarizedExperiment(
-        assays  = list(intensity = m2),
+        assays = list(intensity = m2),
         colData = colData(pbf)
     )
-    pbf2 <- proBatch:::.pb_add_assay_with_link(pbf, se = se2, to = "feature::copy", from = "feature::raw")
+    pbf2 <- proBatch:::.pb_add_assay_with_link(
+        pbf,
+        se = se2,
+        to = "feature::copy",
+        from = "feature::raw"
+    )
     expect_true(isTRUE(metadata(pbf2)$linked_last))
 })
 
@@ -1549,14 +1648,28 @@ test_that("pb_add_level preserves object-level colData and avoids conflicts", {
     skip_if_not_installed("QFeatures")
     skip_if_not_installed("SummarizedExperiment")
 
-    m_pep <- matrix(runif(6), nrow = 3, dimnames = list(paste0("PEP", 1:3), c("S1", "S2")))
-    dt <- as.POSIXct(c("2024-06-01 08:00:00", "2024-06-01 08:10:00"), tz = "UTC")
+    m_pep <- matrix(
+        runif(6),
+        nrow = 3,
+        dimnames = list(paste0("PEP", 1:3), c("S1", "S2"))
+    )
+    dt <- as.POSIXct(
+        c("2024-06-01 08:00:00", "2024-06-01 08:10:00"),
+        tz = "UTC"
+    )
     sa <- data.frame(FullRunName = c("S1", "S2"), row.names = c("S1", "S2"))
     pbf <- ProBatchFeatures(m_pep, sa, "FullRunName", level = "peptide") # peptide::raw
 
     # protein matrix and mapping (many-to-one)
-    m_prot <- matrix(runif(6), nrow = 3, dimnames = list(c("A", "B", "C"), c("S1", "S2")))
-    map <- data.frame(Precursor.Id = rownames(m_pep), Protein.Ids = c("A", "A", "B"))
+    m_prot <- matrix(
+        runif(6),
+        nrow = 3,
+        dimnames = list(c("A", "B", "C"), c("S1", "S2"))
+    )
+    map <- data.frame(
+        Precursor.Id = rownames(m_pep),
+        Protein.Ids = c("A", "A", "B")
+    )
     pbf2 <- pb_add_level(
         object = pbf,
         from = "peptide::raw",
@@ -1570,20 +1683,32 @@ test_that("pb_add_level preserves object-level colData and avoids conflicts", {
     expect_true(validObject(pbf2))
     expect_true("protein::raw" %in% names(pbf2))
     # identical colData across assays
-    expect_identical(rownames(colData(pbf2)), rownames(colData(pbf2[["protein::raw"]])))
+    expect_identical(
+        rownames(colData(pbf2)),
+        rownames(colData(pbf2[["protein::raw"]]))
+    )
 })
 
 test_that("pb_add_level errors if any parent (from) is missing in mapping_df", {
     skip_if_not_installed("QFeatures")
     skip_if_not_installed("SummarizedExperiment")
 
-    m_pep <- matrix(1, nrow = 2, ncol = 2, dimnames = list(c("PEP1", "PEP2"), c("S1", "S2")))
+    m_pep <- matrix(
+        1,
+        nrow = 2,
+        ncol = 2,
+        dimnames = list(c("PEP1", "PEP2"), c("S1", "S2"))
+    )
     sa <- data.frame(FullRunName = c("S1", "S2"), row.names = c("S1", "S2"))
     pbf <- ProBatchFeatures(m_pep, sa, "FullRunName", level = "peptide")
 
     m_prot <- matrix(1, nrow = 1, ncol = 2, dimnames = list("A", c("S1", "S2")))
     # Only PEP1 mapped; PEP2 missing
-    map <- data.frame(Precursor.Id = "PEP1", Protein.Ids = "A", stringsAsFactors = FALSE)
+    map <- data.frame(
+        Precursor.Id = "PEP1",
+        Protein.Ids = "A",
+        stringsAsFactors = FALSE
+    )
 
     expect_error(
         pb_add_level(
@@ -1604,13 +1729,22 @@ test_that("pb_add_level errors when selection leaves NA parents (no exact child 
     skip_if_not_installed("QFeatures")
     skip_if_not_installed("SummarizedExperiment")
 
-    m_pep <- matrix(1, nrow = 1, ncol = 2, dimnames = list("PEP1", c("S1", "S2")))
+    m_pep <- matrix(
+        1,
+        nrow = 1,
+        ncol = 2,
+        dimnames = list("PEP1", c("S1", "S2"))
+    )
     sa <- data.frame(FullRunName = c("S1", "S2"), row.names = c("S1", "S2"))
     pbf <- ProBatchFeatures(m_pep, sa, "FullRunName", level = "peptide")
 
     m_prot <- matrix(1, nrow = 1, ncol = 2, dimnames = list("A", c("S1", "S2")))
     # Map to non-existing child "Z" (not in r_to), so no exact match remains
-    map <- data.frame(Precursor.Id = "PEP1", Protein.Ids = "Z", stringsAsFactors = FALSE)
+    map <- data.frame(
+        Precursor.Id = "PEP1",
+        Protein.Ids = "Z",
+        stringsAsFactors = FALSE
+    )
 
     expect_error(
         pb_add_level(
@@ -1664,8 +1798,18 @@ test_that("show() lists global and level-specific pipelines", {
         map_strategy = "first"
     )
 
-    pbf <- pb_transform(pbf, from = "peptide::raw", steps = "log2", store_fast_steps = TRUE)
-    pbf <- pb_transform(pbf, from = "protein::raw", steps = "log2", store_fast_steps = TRUE)
+    pbf <- pb_transform(
+        pbf,
+        from = "peptide::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    )
+    pbf <- pb_transform(
+        pbf,
+        from = "protein::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    )
 
     out <- paste(capture.output(show(pbf)), collapse = "\n")
     expect_match(out, "add_level\\(protein\\)_byVar")
@@ -1682,8 +1826,17 @@ test_that("pb_assay_matrix and pb_as_long compute fast logged assays on demand",
         nrow = 2,
         dimnames = list(c("f1", "f2"), c("s1", "s2"))
     )
-    sa <- data.frame(Sample = c("s1", "s2"), row.names = c("s1", "s2"), stringsAsFactors = FALSE)
-    pbf <- ProBatchFeatures(mat, sa, sample_id_col = "Sample", level = "peptide")
+    sa <- data.frame(
+        Sample = c("s1", "s2"),
+        row.names = c("s1", "s2"),
+        stringsAsFactors = FALSE
+    )
+    pbf <- ProBatchFeatures(
+        mat,
+        sa,
+        sample_id_col = "Sample",
+        level = "peptide"
+    )
 
     pbf <- log_transform_dm(
         pbf,
@@ -1739,7 +1892,7 @@ test_that("as_ProBatchFeatures wraps single-assay QFeatures with renaming", {
     rownames(cd) <- example_sample_annotation$FullRunName[sample_order]
 
     se <- SummarizedExperiment::SummarizedExperiment(
-        assays  = list(intensity = example_proteome_matrix),
+        assays = list(intensity = example_proteome_matrix),
         colData = cd
     )
 
@@ -1765,7 +1918,10 @@ test_that("as_ProBatchFeatures wraps single-assay QFeatures with renaming", {
     cd_qf <- as.data.frame(colData(qf))
     expect_equal(cd_pbf[names(cd_qf)], cd_qf, ignore_attr = TRUE)
     expect_true("sample_id" %in% names(cd_pbf))
-    expect_identical(cd_pbf$sample_id, rownames(SummarizedExperiment::colData(qf)))
+    expect_identical(
+        cd_pbf$sample_id,
+        rownames(SummarizedExperiment::colData(qf))
+    )
 
     qf2 <- QFeatures::QFeatures(
         experiments = list(peptideRaw = se),
@@ -1791,11 +1947,11 @@ test_that("as_ProBatchFeatures warns on multi-assay naming mismatches", {
     rownames(cd) <- example_sample_annotation$FullRunName[sample_order]
 
     se1 <- SummarizedExperiment::SummarizedExperiment(
-        assays  = list(intensity = example_proteome_matrix),
+        assays = list(intensity = example_proteome_matrix),
         colData = cd
     )
     se2 <- SummarizedExperiment::SummarizedExperiment(
-        assays  = list(intensity = example_proteome_matrix),
+        assays = list(intensity = example_proteome_matrix),
         colData = cd
     )
 
@@ -1839,7 +1995,6 @@ test_that("pb_transform honors final_name without colliding with pipeline-derive
     )
 
     expect_true("feature::medianNorm_on_log2_on_raw" %in% names(pbf))
-
 
     suppressWarnings(
         pbf <- pb_transform(
@@ -2090,7 +2245,8 @@ test_that("provider aliases log canonical identity and replay strictly", {
 
     explicit_annotation <- as.data.frame(colData(object[["feature::raw"]]))
     explicit_annotation <- explicit_annotation[
-        rev(seq_len(nrow(explicit_annotation))), ,
+        rev(seq_len(nrow(explicit_annotation))),
+        ,
         drop = FALSE
     ]
     explicit <- pb_transform(
@@ -2310,10 +2466,12 @@ test_that("ordinary registrations retain NA provider identity in replay", {
     ordinary_environment <- new.env(parent = baseenv())
     ordinary_step <- eval(
         quote(function(data_matrix, sample_annotation) {
-            if (!identical(
-                rownames(sample_annotation),
-                colnames(data_matrix)
-            )) {
+            if (
+                !identical(
+                    rownames(sample_annotation),
+                    colnames(data_matrix)
+                )
+            ) {
                 stop("sample annotation was not aligned")
             }
             data_matrix + 3

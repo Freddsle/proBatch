@@ -9,7 +9,11 @@ test_that("find_duplicated_columns detects duplicates in data frames", {
     )
 
     duplicates <- find_duplicated_columns(df)
-    pairs <- vapply(duplicates, function(x) paste(sort(x), collapse = ","), character(1))
+    pairs <- vapply(
+        duplicates,
+        function(x) paste(sort(x), collapse = ","),
+        character(1)
+    )
 
     expect_setequal(pairs, c("a,b", "d,e"))
     expect_identical(find_duplicated_columns(df["a"]), list())
@@ -36,7 +40,11 @@ test_that("find_duplicated_columns.ProBatchFeatures inspects sample metadata by 
     )
 
     dup_pairs <- find_duplicated_columns(pbf)
-    pair_strings <- vapply(dup_pairs, function(x) paste(sort(x), collapse = ","), character(1))
+    pair_strings <- vapply(
+        dup_pairs,
+        function(x) paste(sort(x), collapse = ","),
+        character(1)
+    )
     expect_true("Diet,Diet_copy" %in% pair_strings)
 })
 
@@ -56,14 +64,27 @@ test_that("find_duplicated_columns.ProBatchFeatures can inspect rowData and cust
     assay_name <- pb_current_assay(pbf)
     peptide_anno <- example_peptide_annotation
     peptide_anno$Protein_copy <- peptide_anno$ProteinName
-    idx <- match(rownames(example_proteome_matrix), peptide_anno$peptide_group_label)
+    idx <- match(
+        rownames(example_proteome_matrix),
+        peptide_anno$peptide_group_label
+    )
     peptide_anno <- peptide_anno[idx, , drop = FALSE]
     rownames(peptide_anno) <- peptide_anno$peptide_group_label
     peptide_anno$peptide_group_label <- NULL
-    SummarizedExperiment::rowData(pbf[[assay_name]]) <- S4Vectors::DataFrame(peptide_anno)
+    SummarizedExperiment::rowData(pbf[[assay_name]]) <- S4Vectors::DataFrame(
+        peptide_anno
+    )
 
-    row_pairs <- find_duplicated_columns(pbf, component = "rowData", assay = assay_name)
-    row_strings <- vapply(row_pairs, function(x) paste(sort(x), collapse = ","), character(1))
+    row_pairs <- find_duplicated_columns(
+        pbf,
+        component = "rowData",
+        assay = assay_name
+    )
+    row_strings <- vapply(
+        row_pairs,
+        function(x) paste(sort(x), collapse = ","),
+        character(1)
+    )
     expect_true("ProteinName,Protein_copy" %in% row_strings)
 
     custom_df <- data.frame(x = 1:3, y = 1:3)
@@ -82,7 +103,11 @@ test_that("metadata diagnostics accept data.table inputs", {
     )
 
     dup <- find_duplicated_columns(dt)
-    dup_pairs <- vapply(dup, function(x) paste(sort(x), collapse = ","), character(1))
+    dup_pairs <- vapply(
+        dup,
+        function(x) paste(sort(x), collapse = ","),
+        character(1)
+    )
     expect_setequal(dup_pairs, c("a,b", "c,d"))
 
     summary_dt <- metadata_column_summary(dt)
@@ -134,18 +159,30 @@ test_that("metadata_column_summary.ProBatchFeatures summarises object metadata",
     col_summary <- metadata_column_summary(pbf)
     expect_true("Diet_copy" %in% col_summary$colname)
     diet_row <- col_summary[col_summary$colname == "Diet_copy", , drop = FALSE]
-    expect_equal(diet_row$n_unique, length(unique(example_sample_annotation$Diet)))
+    expect_equal(
+        diet_row$n_unique,
+        length(unique(example_sample_annotation$Diet))
+    )
 
     assay_name <- pb_current_assay(pbf)
     peptide_anno <- example_peptide_annotation
     peptide_anno$Protein_copy <- peptide_anno$ProteinName
-    idx <- match(rownames(example_proteome_matrix), peptide_anno$peptide_group_label)
+    idx <- match(
+        rownames(example_proteome_matrix),
+        peptide_anno$peptide_group_label
+    )
     peptide_anno <- peptide_anno[idx, , drop = FALSE]
     rownames(peptide_anno) <- peptide_anno$peptide_group_label
     peptide_anno$peptide_group_label <- NULL
-    SummarizedExperiment::rowData(pbf[[assay_name]]) <- S4Vectors::DataFrame(peptide_anno)
+    SummarizedExperiment::rowData(pbf[[assay_name]]) <- S4Vectors::DataFrame(
+        peptide_anno
+    )
 
-    row_summary <- metadata_column_summary(pbf, component = "rowData", assay = assay_name)
+    row_summary <- metadata_column_summary(
+        pbf,
+        component = "rowData",
+        assay = assay_name
+    )
     expect_true("Protein_copy" %in% row_summary$colname)
 
     custom_df <- data.frame(u = c(1, 2, 3), v = c(1, 2, 3))
@@ -168,9 +205,27 @@ test_that("ProBatchFeatures metadata methods share rowData assay resolution rule
     expect_no_error(filter_metadata_columns(pbf, component = "rowData"))
 
     bad_inputs <- list(
-        function() find_duplicated_columns(pbf, component = "rowData", assay = character(0)),
-        function() metadata_column_summary(pbf, component = "rowData", assay = character(0)),
-        function() filter_metadata_columns(pbf, component = "rowData", assay = character(0))
+        function() {
+            find_duplicated_columns(
+                pbf,
+                component = "rowData",
+                assay = character(0)
+            )
+        },
+        function() {
+            metadata_column_summary(
+                pbf,
+                component = "rowData",
+                assay = character(0)
+            )
+        },
+        function() {
+            filter_metadata_columns(
+                pbf,
+                component = "rowData",
+                assay = character(0)
+            )
+        }
     )
 
     for (call in bad_inputs) {
@@ -243,11 +298,16 @@ test_that("filter_metadata_columns.ProBatchFeatures filters metadata and can upd
     assay_name <- pb_current_assay(pbf)
     peptide_anno <- example_peptide_annotation
     peptide_anno$Protein_copy <- peptide_anno$ProteinName
-    idx <- match(rownames(example_proteome_matrix), peptide_anno$peptide_group_label)
+    idx <- match(
+        rownames(example_proteome_matrix),
+        peptide_anno$peptide_group_label
+    )
     peptide_anno <- peptide_anno[idx, , drop = FALSE]
     rownames(peptide_anno) <- peptide_anno$peptide_group_label
     peptide_anno$peptide_group_label <- NULL
-    SummarizedExperiment::rowData(pbf[[assay_name]]) <- S4Vectors::DataFrame(peptide_anno)
+    SummarizedExperiment::rowData(pbf[[assay_name]]) <- S4Vectors::DataFrame(
+        peptide_anno
+    )
 
     updated <- filter_metadata_columns(
         pbf,

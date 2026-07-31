@@ -8,12 +8,20 @@ test_that("log_transformed_matrix", {
     matrix_test <- example_proteome_matrix[1:10, ]
 
     # log2, offset 0.5
-    log2_transformed_matrix <- log_transform_dm(matrix_test, log_base = 2, offset = 0.5)
+    log2_transformed_matrix <- log_transform_dm(
+        matrix_test,
+        log_base = 2,
+        offset = 0.5
+    )
     manual_log2 <- log(matrix_test + 0.5, base = 2)
     expect_equal(manual_log2, log2_transformed_matrix, ignore_attr = TRUE)
 
     # log10, offset 1
-    log10_transformed_matrix <- log_transform_dm(matrix_test, log_base = 10, offset = 1)
+    log10_transformed_matrix <- log_transform_dm(
+        matrix_test,
+        log_base = 10,
+        offset = 1
+    )
     manual_log10 <- log(matrix_test + 1, base = 10)
     expect_equal(manual_log10, log10_transformed_matrix, ignore_attr = TRUE)
 
@@ -57,7 +65,8 @@ test_that("log_transform_dm: numeric matrix transforms correctly", {
 
 test_that("log_transform_dm: error on non-numeric matrix", {
     mat_char <- matrix(c("a", "b", "c", "d"), nrow = 2)
-    expect_error(log_transform_dm(mat_char, log_base = 2, offset = 1),
+    expect_error(
+        log_transform_dm(mat_char, log_base = 2, offset = 1),
         regexp = "data_matrix must be numeric"
     )
 })
@@ -92,17 +101,30 @@ test_that("log_transform_df: data frame long format transforms correctly", {
     # Case: log_base = 2, offset = 0.5
     base <- 2
     offset <- 0.5
-    df_logged <- log_transform_df(df_long, log_base = base, offset = offset, measure_col = "Intensity")
+    df_logged <- log_transform_df(
+        df_long,
+        log_base = base,
+        offset = offset,
+        measure_col = "Intensity"
+    )
 
     # Expect a new column "beforeLog_Intensity" equal to original
     expect_true("beforeLog_Intensity" %in% names(df_logged))
     expect_equal(df_logged$beforeLog_Intensity, df_long$Intensity)
 
     # Expect transformed column equals log(Intensity + offset, base = 2)
-    expect_equal(df_logged$Intensity, log(df_long$Intensity + offset, base = base))
+    expect_equal(
+        df_logged$Intensity,
+        log(df_long$Intensity + offset, base = base)
+    )
 
     # Round-trip via unlog_df
-    df_unlogged <- unlog_df(df_logged, log_base = base, offset = offset, measure_col = "Intensity")
+    df_unlogged <- unlog_df(
+        df_logged,
+        log_base = base,
+        offset = offset,
+        measure_col = "Intensity"
+    )
     # Should add "beforeUnLog_Intensity"
     expect_true("beforeUnLog_Intensity" %in% names(df_unlogged))
     # The “beforeUnLog_Intensity” should equal the logged values
@@ -120,7 +142,12 @@ test_that("unlog_df: handles negative or zero after unlog (informative check)", 
     )
     base <- 2
     offset <- 1
-    df_unlogged <- unlog_df(df_long, log_base = base, offset = offset, measure_col = "Intensity")
+    df_unlogged <- unlog_df(
+        df_long,
+        log_base = base,
+        offset = offset,
+        measure_col = "Intensity"
+    )
     # Compute manually: 2^(-10) - 1
     expected_val <- 2^(-10) - 1
     expect_equal(df_unlogged$Intensity, expected_val)
@@ -138,7 +165,11 @@ test_that("log_transform_df produces expected values", {
 
     expect_true("beforeLog_Intensity" %in% names(log_df))
     expect_equal(log_df$Intensity, expected, ignore_attr = TRUE)
-    expect_equal(log_df$beforeLog_Intensity, df_test$Intensity, ignore_attr = TRUE)
+    expect_equal(
+        log_df$beforeLog_Intensity,
+        df_test$Intensity,
+        ignore_attr = TRUE
+    )
 
     expect_warning(log_transform_df(df_test, log_base = NULL))
 })

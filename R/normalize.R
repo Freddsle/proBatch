@@ -64,17 +64,20 @@ quantile_normalize_dm <- function(data_matrix) {
 }
 
 .pb_subset_normalized_output <- function(
-  df,
-  keep_all,
-  sample_id_col,
-  feature_id_col,
-  measure_col,
-  old_measure_col,
-  qual_col = NULL
+    df,
+    keep_all,
+    sample_id_col,
+    feature_id_col,
+    measure_col,
+    old_measure_col,
+    qual_col = NULL
 ) {
     default_cols <- names(df)
     minimal_cols <- c(
-        sample_id_col, feature_id_col, measure_col, old_measure_col
+        sample_id_col,
+        feature_id_col,
+        measure_col,
+        old_measure_col
     )
 
     if (!is.null(qual_col) && qual_col %in% names(df)) {
@@ -94,14 +97,14 @@ quantile_normalize_dm <- function(data_matrix) {
 #' @rdname normalize
 #'
 quantile_normalize_df <- function(
-  df_long,
-  feature_id_col = "peptide_group_label",
-  sample_id_col = "FullRunName",
-  measure_col = "Intensity",
-  no_fit_imputed = TRUE,
-  qual_col = NULL,
-  qual_value = 2,
-  keep_all = "default"
+    df_long,
+    feature_id_col = "peptide_group_label",
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    no_fit_imputed = TRUE,
+    qual_col = NULL,
+    qual_value = 2,
+    keep_all = "default"
 ) {
     if (is.null(qual_col) & no_fit_imputed) {
         warning(
@@ -127,8 +130,10 @@ quantile_normalize_df <- function(
         )
     } else {
         if (!is.null(qual_col) && (qual_col %in% names(df_long))) {
-            warning("imputed value (requant) column is in the data, are you sure you
-                want to use imputed (requant) values in quantile inference?")
+            warning(
+                "imputed value (requant) column is in the data, are you sure you
+                want to use imputed (requant) values in quantile inference?"
+            )
         }
         data_matrix <- long_to_matrix(
             df_long,
@@ -156,16 +161,24 @@ quantile_normalize_df <- function(
 
     normalized_df <- normalized_df %>%
         merge(
-            df_long %>% select(-one_of(setdiff(
-                names(normalized_df),
-                c(feature_id_col, sample_id_col, measure_col)
-            ))),
+            df_long %>%
+                select(
+                    -one_of(setdiff(
+                        names(normalized_df),
+                        c(feature_id_col, sample_id_col, measure_col)
+                    ))
+                ),
             by = c(feature_id_col, sample_id_col)
         )
 
     normalized_df <- .pb_subset_normalized_output(
-        normalized_df, keep_all, sample_id_col,
-        feature_id_col, measure_col, old_measure_col, qual_col
+        normalized_df,
+        keep_all,
+        sample_id_col,
+        feature_id_col,
+        measure_col,
+        old_measure_col,
+        qual_col
     )
 
     return(normalized_df)
@@ -175,11 +188,13 @@ quantile_normalize_df <- function(
 #' @export
 #' @rdname normalize
 #'
-normalize_sample_medians_dm <- function(data_matrix,
-                                        sample_annotation = NULL,
-                                        sample_id_col = "FullRunName",
-                                        group_col = NULL,
-                                        inside_batch = FALSE) {
+normalize_sample_medians_dm <- function(
+    data_matrix,
+    sample_annotation = NULL,
+    sample_id_col = "FullRunName",
+    group_col = NULL,
+    inside_batch = FALSE
+) {
     norm_res <- .pb_median_center_matrix(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
@@ -191,11 +206,11 @@ normalize_sample_medians_dm <- function(data_matrix,
 }
 
 .pb_median_center_matrix <- function(
-  data_matrix,
-  sample_annotation = NULL,
-  sample_id_col = "FullRunName",
-  group_col = NULL,
-  inside_batch = FALSE
+    data_matrix,
+    sample_annotation = NULL,
+    sample_id_col = "FullRunName",
+    group_col = NULL,
+    inside_batch = FALSE
 ) {
     if (!is.matrix(data_matrix)) {
         data_matrix <- as.matrix(data_matrix)
@@ -276,7 +291,9 @@ normalize_sample_medians_dm <- function(data_matrix,
             next
         }
         medians <- apply(
-            sub_matrix[valid_rows, , drop = FALSE], 2, median,
+            sub_matrix[valid_rows, , drop = FALSE],
+            2,
+            median,
             na.rm = TRUE
         )
         global_median <- median(
@@ -303,17 +320,19 @@ normalize_sample_medians_dm <- function(data_matrix,
 #'
 #' @export
 #' @rdname normalize
-normalize_sample_medians_df <- function(df_long,
-                                        feature_id_col = "peptide_group_label",
-                                        sample_id_col = "FullRunName",
-                                        measure_col = "Intensity",
-                                        no_fit_imputed = FALSE,
-                                        qual_col = NULL,
-                                        qual_value = 2,
-                                        keep_all = "default",
-                                        sample_annotation = NULL,
-                                        group_col = NULL,
-                                        inside_batch = FALSE) {
+normalize_sample_medians_df <- function(
+    df_long,
+    feature_id_col = "peptide_group_label",
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    no_fit_imputed = FALSE,
+    qual_col = NULL,
+    qual_value = 2,
+    keep_all = "default",
+    sample_annotation = NULL,
+    group_col = NULL,
+    inside_batch = FALSE
+) {
     df_processed <- df_long
     if (no_fit_imputed) {
         if (!(qual_col %in% names(df_processed))) {
@@ -323,13 +342,19 @@ normalize_sample_medians_df <- function(df_long,
         }
         message("removing imputed values (requants) from the matrix")
         df_processed <- df_processed %>%
-            mutate(!!sym(measure_col) := ifelse(!!sym(qual_col) == qual_value,
-                NA, !!sym(measure_col)
-            ))
+            mutate(
+                !!sym(measure_col) := ifelse(
+                    !!sym(qual_col) == qual_value,
+                    NA,
+                    !!sym(measure_col)
+                )
+            )
     } else {
         if (!is.null(qual_col) && (qual_col %in% names(df_processed))) {
-            warning("imputed value (requant) column is in the data, are you sure you
-              want to use imputed (requant) values in sample median inference?")
+            warning(
+                "imputed value (requant) column is in the data, are you sure you
+              want to use imputed (requant) values in sample median inference?"
+            )
         }
     }
 
@@ -348,8 +373,13 @@ normalize_sample_medians_df <- function(df_long,
             mutate(!!(sym(measure_col)) := !!(sym(measure_col)) + diff_norm)
 
         normalized_df <- .pb_subset_normalized_output(
-            normalized_df, keep_all, sample_id_col,
-            feature_id_col, measure_col, old_measure_col, qual_col
+            normalized_df,
+            keep_all,
+            sample_id_col,
+            feature_id_col,
+            measure_col,
+            old_measure_col,
+            qual_col
         )
 
         return(normalized_df)
@@ -431,8 +461,13 @@ normalize_sample_medians_df <- function(df_long,
     }
 
     normalized_df <- .pb_subset_normalized_output(
-        normalized_df, keep_all, sample_id_col,
-        feature_id_col, measure_col, old_measure_col, qual_col
+        normalized_df,
+        keep_all,
+        sample_id_col,
+        feature_id_col,
+        measure_col,
+        old_measure_col,
+        qual_col
     )
 
     return(normalized_df)
@@ -442,15 +477,17 @@ normalize_sample_medians_df <- function(df_long,
 #' @export
 #' @rdname normalize
 normalize_data_dm <- function(
-  data_matrix,
-  normalize_func = c("quantile", "medianCentering"),
-  log_base = NULL, offset = 1
+    data_matrix,
+    normalize_func = c("quantile", "medianCentering"),
+    log_base = NULL,
+    offset = 1
 ) {
     normalize_func <- match.arg(normalize_func)
     if (!is.null(log_base)) {
         data_matrix <- log_transform_dm(
             data_matrix,
-            log_base = log_base, offset = offset
+            log_base = log_base,
+            offset = offset
         )
     }
 
@@ -470,24 +507,25 @@ normalize_data_dm <- function(
 #' @export
 #' @rdname normalize
 normalize_data_df <- function(
-  df_long,
-  normalize_func = c("quantile", "medianCentering"),
-  log_base = NULL, offset = 1,
-  feature_id_col = "peptide_group_label",
-  sample_id_col = "FullRunName",
-  measure_col = "Intensity",
-  no_fit_imputed = TRUE,
-  qual_col = NULL,
-  qual_value = 2,
-  keep_all = "default"
+    df_long,
+    normalize_func = c("quantile", "medianCentering"),
+    log_base = NULL,
+    offset = 1,
+    feature_id_col = "peptide_group_label",
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    no_fit_imputed = TRUE,
+    qual_col = NULL,
+    qual_value = 2,
+    keep_all = "default"
 ) {
     normalize_func <- match.arg(normalize_func)
-
 
     if (!is.null(log_base)) {
         df_long <- log_transform_df(
             df_long,
-            log_base = log_base, offset = offset
+            log_base = log_base,
+            offset = offset
         )
     }
 

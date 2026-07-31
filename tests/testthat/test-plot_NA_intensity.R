@@ -1,20 +1,24 @@
 toy_matrix_nai <- matrix(
+    # fmt: skip
     c(
         10, NA, 12,
         7, 8, 9,
         NA, 5, 6
     ),
-    nrow = 3, byrow = TRUE,
+    nrow = 3,
+    byrow = TRUE,
     dimnames = list(paste0("prot", 1:3), paste0("S", 1:3))
 )
 
 toy_matrix_nai2 <- matrix(
+    # fmt: skip
     c(
         NA, 2, 3,
         4, NA, 6,
         7, 8, 9
     ),
-    nrow = 3, byrow = TRUE,
+    nrow = 3,
+    byrow = TRUE,
     dimnames = list(paste0("prot", 1:3), paste0("S", 1:3))
 )
 

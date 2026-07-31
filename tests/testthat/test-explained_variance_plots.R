@@ -3,7 +3,9 @@ test_that("pvca_plot", {
 
     matrix_test <- example_proteome_matrix[1:150, ]
     pb_test_expect_warnings(
-        pvca <- plot_PVCA(matrix_test, example_sample_annotation,
+        pvca <- plot_PVCA(
+            matrix_test,
+            example_sample_annotation,
             technical_factors = c("MS_batch", "digestion_batch"),
             biological_factors = c("Diet", "Sex", "Strain")
         ),
@@ -14,9 +16,22 @@ test_that("pvca_plot", {
         fixed = TRUE
     )
 
-    expect_equal(pvca$data$weights[1], 0.39166175, tolerance = 3e-2, ignore_attr = TRUE)
-    expect_equal(as.character(pvca$data$label[3]), "MS_batch", ignore_attr = TRUE)
-    expect_equal(as.character(pvca$data$label[2]), "Sex:Strain", ignore_attr = TRUE)
+    expect_equal(
+        pvca$data$weights[1],
+        0.39166175,
+        tolerance = 3e-2,
+        ignore_attr = TRUE
+    )
+    expect_equal(
+        as.character(pvca$data$label[3]),
+        "MS_batch",
+        ignore_attr = TRUE
+    )
+    expect_equal(
+        as.character(pvca$data$label[2]),
+        "Sex:Strain",
+        ignore_attr = TRUE
+    )
 
     expect_equal(pvca$data$category[1], "biological")
     expect_equal(pvca$data$category[3], "technical")
@@ -70,8 +85,13 @@ test_that("calculate_PVCA ProBatchFeatures routes assays and preserves return sh
 
     calls <- list()
     testthat::local_mocked_bindings(
-        calculate_PVCA.default = function(data_matrix, sample_annotation,
-                                          feature_id_col, sample_id_col, ...) {
+        calculate_PVCA.default = function(
+            data_matrix,
+            sample_annotation,
+            feature_id_col,
+            sample_id_col,
+            ...
+        ) {
             calls[[length(calls) + 1L]] <<- list(
                 data_matrix = data_matrix,
                 sample_annotation = sample_annotation,
@@ -105,7 +125,11 @@ test_that("calculate_PVCA ProBatchFeatures routes assays and preserves return sh
         rep(0.75, length(selected_assays))
     )
     expect_equal(
-        vapply(calls, function(call) call$sample_annotation$route_marker[[1]], character(1)),
+        vapply(
+            calls,
+            function(call) call$sample_annotation$route_marker[[1]],
+            character(1)
+        ),
         selected_assays
     )
     for (i in seq_along(selected_assays)) {
@@ -134,8 +158,14 @@ test_that("prepare_PVCA_df normalizes residual labels and optionally writes CSV"
     calculated <- data.frame(
         weights = c(0.20, 0.15, 0.10, 0.05, 0.03, 0.18, 0.17, 0.12),
         label = c(
-            "Residuals", "Residual", "resid", "RESIDUAL", "bElOw 1%",
-            "batch", "biology", "batch:biology"
+            "Residuals",
+            "Residual",
+            "resid",
+            "RESIDUAL",
+            "bElOw 1%",
+            "batch",
+            "biology",
+            "batch:biology"
         ),
         stringsAsFactors = FALSE
     )
@@ -157,11 +187,25 @@ test_that("prepare_PVCA_df normalizes residual labels and optionally writes CSV"
         path_to_save_results = output_dir
     )
 
-    residual_labels <- c("Residuals", "Residual", "resid", "RESIDUAL", "bElOw 1%")
-    expect_true(all(prepared$category[prepared$label %in% residual_labels] == "residual"))
+    residual_labels <- c(
+        "Residuals",
+        "Residual",
+        "resid",
+        "RESIDUAL",
+        "bElOw 1%"
+    )
+    expect_true(all(
+        prepared$category[prepared$label %in% residual_labels] == "residual"
+    ))
     expect_identical(prepared$category[prepared$label == "batch"], "technical")
-    expect_identical(prepared$category[prepared$label == "biology"], "biological")
-    expect_identical(prepared$category[prepared$label == "batch:biology"], "biol:techn")
+    expect_identical(
+        prepared$category[prepared$label == "biology"],
+        "biological"
+    )
+    expect_identical(
+        prepared$category[prepared$label == "batch:biology"],
+        "biol:techn"
+    )
 
     output_file <- file.path(output_dir, "PVCA_results_aggregated.csv")
     expect_true(file.exists(output_file))
@@ -190,7 +234,10 @@ test_that("plot_PVCA.df adds values to prepared data", {
     expect_true(any(text_layers))
 
     built <- ggplot2::ggplot_build(pvca_plot)
-    expect_setequal(built$data[[which(text_layers)[1]]]$label, sprintf("%.2f", prepared$weights))
+    expect_setequal(
+        built$data[[which(text_layers)[1]]]$label,
+        sprintf("%.2f", prepared$weights)
+    )
 })
 
 test_that("plot_PVCA_stacked_from_saved rebuilds a core stacked summary", {
@@ -229,6 +276,9 @@ test_that("plot_PVCA_stacked_from_saved rebuilds a core stacked summary", {
 
     expect_s3_class(stacked, "ggplot")
     expect_equal(stacked$labels$title, "Saved\nPVCA")
-    expect_setequal(as.character(unique(stacked$data$assay)), c("assay_a", "assay_b"))
+    expect_setequal(
+        as.character(unique(stacked$data$assay)),
+        c("assay_a", "assay_b")
+    )
     expect_equal(levels(stacked$data$assay), c("assay_b", "assay_a"))
 })

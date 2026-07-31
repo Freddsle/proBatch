@@ -54,13 +54,19 @@ test_that(".pb_resolve_assay_for_input validates NA assay names", {
     object <- structure(list(), class = "ProBatchFeatures")
 
     expect_error(
-        proBatch:::`.pb_resolve_assay_for_input`(object, pbf_name = NA_character_),
+        proBatch:::`.pb_resolve_assay_for_input`(
+            object,
+            pbf_name = NA_character_
+        ),
         "`pbf_name` must contain exactly one non-empty assay name."
     )
 })
 
 test_that(".pb_resolve_assays_for_input validates and deduplicates selections", {
-    object <- structure(list(assay1 = 1, assay2 = 2), class = "ProBatchFeatures")
+    object <- structure(
+        list(assay1 = 1, assay2 = 2),
+        class = "ProBatchFeatures"
+    )
 
     expect_equal(
         proBatch:::`.pb_resolve_assays_for_input`(

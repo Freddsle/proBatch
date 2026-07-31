@@ -2,15 +2,17 @@
 compute_cv <- function(data, measure_col, group_vars, cv_name) {
     data %>%
         group_by(across(all_of(group_vars))) %>%
-        mutate(!!sym(cv_name) := {
-            mu <- mean(.data[[measure_col]], na.rm = TRUE)
-            sdv <- sd(.data[[measure_col]], na.rm = TRUE)
-            ifelse(
-                is.finite(mu) & abs(mu) > .Machine$double.eps,
-                100 * sdv / mu,
-                NA_real_
-            )
-        }) %>%
+        mutate(
+            !!sym(cv_name) := {
+                mu <- mean(.data[[measure_col]], na.rm = TRUE)
+                sdv <- sd(.data[[measure_col]], na.rm = TRUE)
+                ifelse(
+                    is.finite(mu) & abs(mu) > .Machine$double.eps,
+                    100 * sdv / mu,
+                    NA_real_
+                )
+            }
+        ) %>%
         ungroup()
 }
 
@@ -56,13 +58,17 @@ compute_cv <- function(data, measure_col, group_vars, cv_name) {
 #'     biospecimen_id_col = "EarTag"
 #' )
 calculate_feature_CV <- function(
-  df_long, sample_annotation = NULL,
-  feature_id_col = "peptide_group_label",
-  sample_id_col = "FullRunName",
-  measure_col = "Intensity", batch_col = NULL,
-  biospecimen_id_col = NULL,
-  unlog = TRUE, log_base = 2, offset = 0,
-  pbf_name = NULL
+    df_long,
+    sample_annotation = NULL,
+    feature_id_col = "peptide_group_label",
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    batch_col = NULL,
+    biospecimen_id_col = NULL,
+    unlog = TRUE,
+    log_base = 2,
+    offset = 0,
+    pbf_name = NULL
 ) {
     if (is(df_long, "ProBatchFeatures")) {
         if (is.null(sample_id_col)) {
@@ -90,7 +96,9 @@ calculate_feature_CV <- function(
     }
     if (!is.null(sample_annotation)) {
         df_long <- check_sample_consistency(
-            sample_annotation, sample_id_col, df_long
+            sample_annotation,
+            sample_id_col,
+            df_long
         )
     }
     # Biospecimen ID fallback
@@ -111,7 +119,8 @@ calculate_feature_CV <- function(
         message("reversing log-transformation for CV calculation!")
         df_long <- unlog_df(
             df_long,
-            log_base = log_base, offset = offset,
+            log_base = log_base,
+            offset = offset,
             measure_col = measure_col
         )
     }
@@ -120,7 +129,8 @@ calculate_feature_CV <- function(
     if (!is.null(batch_col)) {
         df_long <- df_long %>%
             group_by(
-                !!sym(feature_id_col), !!sym(batch_col),
+                !!sym(feature_id_col),
+                !!sym(batch_col),
                 !!sym(biospecimen_id_col)
             ) %>%
             mutate(n_total = sum(!is.na(!!sym(measure_col)))) %>%
@@ -156,13 +166,20 @@ calculate_feature_CV <- function(
     # optionally stratify by batch for per-batch diagnostics.
     total_groups <- c(base_group, biospecimen_id_col, step_group) %>% compact()
     perbatch_groups <- c(
-        base_group, biospecimen_id_col, batch_col, step_group
-    ) %>% compact()
+        base_group,
+        biospecimen_id_col,
+        batch_col,
+        step_group
+    ) %>%
+        compact()
 
     # Compute per-batch CV (if batch_col given)
     if (!is.null(batch_col)) {
         df_long <- compute_cv(
-            df_long, measure_col, perbatch_groups, "CV_perBatch"
+            df_long,
+            measure_col,
+            perbatch_groups,
+            "CV_perBatch"
         )
     } else {
         warning(
@@ -209,11 +226,13 @@ calculate_feature_CV <- function(
 #' plot_CV_distr.df(cv_example, log_y_scale = FALSE)
 #' @export
 plot_CV_distr.df <- function(
-  CV_df,
-  plot_title = NULL,
-  filename = NULL, theme = "classic", log_y_scale = TRUE,
-  batch_col = NULL,
-  value_col = c("auto", "CV_total", "CV_perBatch")
+    CV_df,
+    plot_title = NULL,
+    filename = NULL,
+    theme = "classic",
+    log_y_scale = TRUE,
+    batch_col = NULL,
+    value_col = c("auto", "CV_total", "CV_perBatch")
 ) {
     hide_single_x <- FALSE
     value_col <- match.arg(value_col)
@@ -226,7 +245,8 @@ plot_CV_distr.df <- function(
     }
     if (!value_col %in% names(CV_df)) {
         stop(
-            "Selected `value_col` ('", value_col,
+            "Selected `value_col` ('",
+            value_col,
             "') is not available in `CV_df`."
         )
     }
@@ -259,9 +279,11 @@ plot_CV_distr.df <- function(
         gg <- gg + theme_classic()
     }
     if (hide_single_x) {
-        gg <- gg + theme(
-            axis.text.x = element_blank(), axis.ticks.x = element_blank()
-        )
+        gg <- gg +
+            theme(
+                axis.text.x = element_blank(),
+                axis.ticks.x = element_blank()
+            )
     }
     if (log_y_scale) {
         gg <- gg + scale_y_log10()
@@ -305,18 +327,20 @@ plot_CV_distr.df <- function(
 #'     plot_title = NULL, filename = NULL, theme = "classic"
 #' )
 plot_CV_distr <- function(
-  df_long, sample_annotation = NULL,
-  feature_id_col = "peptide_group_label",
-  sample_id_col = "FullRunName",
-  measure_col = "Intensity",
-  biospecimen_id_col = "EarTag",
-  batch_col = NULL,
-  unlog = TRUE,
-  log_base = 2,
-  offset = 1,
-  plot_title = NULL,
-  filename = NULL, theme = "classic",
-  pbf_name = NULL
+    df_long,
+    sample_annotation = NULL,
+    feature_id_col = "peptide_group_label",
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    biospecimen_id_col = "EarTag",
+    batch_col = NULL,
+    unlog = TRUE,
+    log_base = 2,
+    offset = 1,
+    plot_title = NULL,
+    filename = NULL,
+    theme = "classic",
+    pbf_name = NULL
 ) {
     CV_df <- calculate_feature_CV(
         df_long = df_long,
@@ -332,7 +356,8 @@ plot_CV_distr <- function(
         pbf_name = pbf_name
     )
     value_col_plot <- if (
-        !is.null(batch_col) && "CV_perBatch" %in% names(CV_df)) {
+        !is.null(batch_col) && "CV_perBatch" %in% names(CV_df)
+    ) {
         "CV_perBatch"
     } else {
         "CV_total"
@@ -341,7 +366,8 @@ plot_CV_distr <- function(
     # keep only finite CV values - check, message, and filter
     if (any(!is.finite(CV_df[[value_col_plot]]))) {
         message(
-            "Some CV values are not finite in ", value_col_plot,
+            "Some CV values are not finite in ",
+            value_col_plot,
             ", filtering them out - number of such rows: ",
             sum(!is.finite(CV_df[[value_col_plot]]))
         )
@@ -355,7 +381,8 @@ plot_CV_distr <- function(
 
     gg <- plot_CV_distr.df(
         CV_df,
-        plot_title = plot_title, filename = filename,
+        plot_title = plot_title,
+        filename = filename,
         theme = theme,
         batch_col = batch_col,
         value_col = value_col_plot

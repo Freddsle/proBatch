@@ -104,10 +104,22 @@ test_that("registry details retain legacy and provider metadata", {
     details <- pb_list_steps("^registry_d1$", details = TRUE)
     expect_s4_class(details, "DataFrame")
     expect_true(
-        all(c(
-            "step", "pkg", "env", "n_formals", "name", "package", "kind",
-            "label", "requires", "aliases", "available"
-        ) %in% colnames(details))
+        all(
+            c(
+                "step",
+                "pkg",
+                "env",
+                "n_formals",
+                "name",
+                "package",
+                "kind",
+                "label",
+                "requires",
+                "aliases",
+                "available"
+            ) %in%
+                colnames(details)
+        )
     )
     expect_identical(as.character(details$step), "registry_detail")
     expect_identical(as.character(details$name), "registry_detail")
@@ -240,7 +252,8 @@ test_that("availability reports unloaded providers and requirements", {
             package = unavailable_provider
         ),
         paste0(
-            "recorded from provider '", unavailable_provider,
+            "recorded from provider '",
+            unavailable_provider,
             "' is not registered"
         ),
         fixed = TRUE

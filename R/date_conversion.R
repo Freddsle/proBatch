@@ -28,37 +28,44 @@
 #' @export
 #'
 dates_to_posix <- function(
-  sample_annotation,
-  time_column = c("RunDate", "RunTime"),
-  new_time_column = "DateTime",
-  dateTimeFormat = c("%b_%d", "%H:%M:%S"),
-  tz = "GMT", locale = "en_US.UTF-8"
+    sample_annotation,
+    time_column = c("RunDate", "RunTime"),
+    new_time_column = "DateTime",
+    dateTimeFormat = c("%b_%d", "%H:%M:%S"),
+    tz = "GMT",
+    locale = "en_US.UTF-8"
 ) {
     old_locale <- Sys.getlocale("LC_TIME")
     on.exit(Sys.setlocale("LC_TIME", old_locale), add = TRUE)
     Sys.setlocale("LC_TIME", locale)
 
-    if (length(time_column) > 1 && length(dateTimeFormat) !=
-        length(time_column)) {
+    if (
+        length(time_column) > 1 && length(dateTimeFormat) != length(time_column)
+    ) {
         stop("`dateTimeFormat` must match length of `time_column`")
     }
 
     if (length(time_column) == 1) {
-        if (is.null(new_time_column)) new_time_column <- time_column
+        if (is.null(new_time_column)) {
+            new_time_column <- time_column
+        }
         time_col <- as.character(sample_annotation[[time_column]])
-        sample_annotation[[new_time_column]] <- as.POSIXct(time_col,
-            format = paste(dateTimeFormat, collapse = " "), ,
+        sample_annotation[[new_time_column]] <- as.POSIXct(
+            time_col,
+            format = paste(dateTimeFormat, collapse = " "),
+            ,
             tz = tz
         )
     } else {
         sample_annotation <- sample_annotation %>%
             mutate(dateTime = paste(!!!syms(time_column), sep = " ")) %>%
-            mutate(dateTime = as.POSIXct(dateTime,
-                format = paste(dateTimeFormat,
-                    collapse = " "
-                ),
-                tz = tz
-            )) %>%
+            mutate(
+                dateTime = as.POSIXct(
+                    dateTime,
+                    format = paste(dateTimeFormat, collapse = " "),
+                    tz = tz
+                )
+            ) %>%
             rename(!!new_time_column := dateTime)
     }
     return(sample_annotation)
@@ -94,12 +101,12 @@ dates_to_posix <- function(
 #'
 #' @name date_to_sample_order
 date_to_sample_order <- function(
-  sample_annotation,
-  time_column = c("RunDate", "RunTime"),
-  new_time_column = "DateTime",
-  dateTimeFormat = c("%b_%d", "%H:%M:%S"),
-  new_order_col = "order",
-  instrument_col = "instrument"
+    sample_annotation,
+    time_column = c("RunDate", "RunTime"),
+    new_time_column = "DateTime",
+    dateTimeFormat = c("%b_%d", "%H:%M:%S"),
+    new_order_col = "order",
+    instrument_col = "instrument"
 ) {
     sample_annotation <- dates_to_posix(
         sample_annotation = sample_annotation,

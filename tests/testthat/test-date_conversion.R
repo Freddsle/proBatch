@@ -4,7 +4,8 @@ test_that("dates_to_posix", {
     sample_annotation <- example_sample_annotation[1:5, ]
     sample_annotation$DateTime <- NULL
 
-    new_annotation <- dates_to_posix(sample_annotation,
+    new_annotation <- dates_to_posix(
+        sample_annotation,
         time_column = c("RunDate", "RunTime"),
         new_time_column = "DateTime",
         dateTimeFormat = c("%b_%d", "%H:%M:%S"),
@@ -27,7 +28,8 @@ test_that("date_to_sample_order", {
     sample_annotation_test$DateTime <- NULL
     sample_annotation_test$order <- NULL
 
-    new_annotation_worder <- date_to_sample_order(sample_annotation_test,
+    new_annotation_worder <- date_to_sample_order(
+        sample_annotation_test,
         time_column = c("RunDate", "RunTime"),
         new_time_column = "new_DateTime",
         dateTimeFormat = c("%b_%d", "%H:%M:%S"),
@@ -69,7 +71,10 @@ test_that("dates_to_posix: single-column fallback works", {
     expect_s3_class(out$RunDate, "POSIXct")
 
     # check that day is parsed correctly
-    expect_equal(format(out$RunDate[1], "%d"), format(as.Date(df$RunDate[1], "%b_%d"), "%d"))
+    expect_equal(
+        format(out$RunDate[1], "%d"),
+        format(as.Date(df$RunDate[1], "%b_%d"), "%d")
+    )
 })
 
 test_that("dates_to_posix: error when lengths mismatch", {

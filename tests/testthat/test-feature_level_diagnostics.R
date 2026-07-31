@@ -11,7 +11,10 @@ test_that("single_feature_plot", {
         "inferring order-related batch borders for a plot;"
     )
 
-    expect_equal(single_feature$plot_env$feature_name, "46213_NVGVSFYADKPEVTQEQK_2")
+    expect_equal(
+        single_feature$plot_env$feature_name,
+        "46213_NVGVSFYADKPEVTQEQK_2"
+    )
 
     expect_equal(as_label(single_feature$mapping$x), "order")
     expect_equal(as_label(single_feature$mapping$y), "Intensity")
@@ -41,17 +44,22 @@ test_that("peptides_of_one_protein_plot", {
         peptides_plot <- plot_peptides_of_one_protein(
             protein_name = "Haao",
             peptide_annotation = example_peptide_annotation,
-            protein_col = "Gene", df_long = example_proteome,
+            protein_col = "Gene",
+            df_long = example_proteome,
             sample_annotation = example_sample_annotation,
             color_by_batch = TRUE,
-            order_col = "order", sample_id_col = "FullRunName",
+            order_col = "order",
+            sample_id_col = "FullRunName",
             batch_col = "MS_batch",
             color_scheme = color_scheme
         ),
         "inferring order-related batch borders for a plot;"
     )
 
-    expect_equal(peptides_plot$plot_env$feature_name[1], "10231_QDVDVWLWQQEGSSK_2")
+    expect_equal(
+        peptides_plot$plot_env$feature_name[1],
+        "10231_QDVDVWLWQQEGSSK_2"
+    )
     expect_equal(peptides_plot$plot_env$feature_name[2], "10768_RLESELDGLR_2")
 
     expect_equal(as_label(peptides_plot$mapping$x), "order")
@@ -72,14 +80,21 @@ test_that("spike_in_peptides_plot", {
     spike_in <- plot_spike_in(
         spike_ins = "BOVINE_A1ag",
         peptide_annotation = example_peptide_annotation,
-        protein_col = "Gene", df_long = example_proteome,
+        protein_col = "Gene",
+        df_long = example_proteome,
         sample_annotation = example_sample_annotation,
         plot_title = "Spike-in BOVINE protein peptides",
         vline_color = NULL
     )
 
-    expect_equal(spike_in$plot_env$feature_name[1], "10062_NVGVSFYADKPEVTQEQK_3")
-    expect_equal(spike_in$plot_env$feature_name[2], "10063_NVGVSFYADKPEVTQEQKK_3")
+    expect_equal(
+        spike_in$plot_env$feature_name[1],
+        "10062_NVGVSFYADKPEVTQEQK_3"
+    )
+    expect_equal(
+        spike_in$plot_env$feature_name[2],
+        "10063_NVGVSFYADKPEVTQEQKK_3"
+    )
 
     expect_equal(as_label(spike_in$mapping$x), "order")
     expect_equal(as_label(spike_in$mapping$y), "Intensity")
@@ -124,25 +139,35 @@ test_that("fitting_trend_plots", {
     data(example_proteome, package = "proBatch")
     pb_test_load_example_data()
 
-    short_df <- example_proteome[example_proteome$peptide_group_label %in%
-        unique(example_proteome$peptide_group_label)[1:3], ]
+    short_df <- example_proteome[
+        example_proteome$peptide_group_label %in%
+            unique(example_proteome$peptide_group_label)[1:3],
+    ]
 
     expect_warning(
-        loess_fit <- adjust_batch_trend_df(short_df, example_sample_annotation, span = 0.7),
+        loess_fit <- adjust_batch_trend_df(
+            short_df,
+            example_sample_annotation,
+            span = 0.7
+        ),
         "`qual_col` is NULL, setting `no_fit_imputed = FALSE` so imputed flags are ignored."
     )
 
     expect_warning(
         fit_plot <- plot_with_fitting_curve(
             feature_name = "10062_NVGVSFYADKPEVTQEQK_3",
-            fit_df = loess_fit, fit_value_col = "fit",
+            fit_df = loess_fit,
+            fit_value_col = "fit",
             df_long = example_proteome,
             sample_annotation = example_sample_annotation
         ),
         "inferring order-related batch borders for a plot;"
     )
 
-    expect_equal(fit_plot$plot_env$feature_name[1], "10062_NVGVSFYADKPEVTQEQK_3")
+    expect_equal(
+        fit_plot$plot_env$feature_name[1],
+        "10062_NVGVSFYADKPEVTQEQK_3"
+    )
 
     expect_equal(as_label(fit_plot$mapping$x), "order")
     expect_equal(as_label(fit_plot$mapping$y), "Intensity")
@@ -162,9 +187,16 @@ make_feature_pbf_fixture <- function() {
         match(colnames(matrix_small), example_sample_annotation$FullRunName),
     ]
     peptide_ann <- example_peptide_annotation[
-        match(rownames(matrix_small), example_peptide_annotation$peptide_group_label),
+        match(
+            rownames(matrix_small),
+            example_peptide_annotation$peptide_group_label
+        ),
     ]
-    peptide_ann <- peptide_ann[!is.na(peptide_ann$peptide_group_label), , drop = FALSE]
+    peptide_ann <- peptide_ann[
+        !is.na(peptide_ann$peptide_group_label),
+        ,
+        drop = FALSE
+    ]
 
     pbf <- suppressMessages(ProBatchFeatures(
         data_matrix = matrix_small,
@@ -209,7 +241,9 @@ test_that("feature-level diagnostics accept PBF and rowname-based annotation", {
     gene_counts <- table(peptide_ann$Gene)
     gene_target <- names(gene_counts[gene_counts >= 2])[1]
     if (!length(gene_target) || is.na(gene_target)) {
-        skip("Need at least one protein with >=2 peptides for protein panel test.")
+        skip(
+            "Need at least one protein with >=2 peptides for protein panel test."
+        )
     }
 
     rownames(peptide_ann) <- peptide_ann$peptide_group_label
@@ -270,7 +304,9 @@ test_that("feature-level single/protein plots support explicit PBF assay selecti
     gene_counts <- table(peptide_ann$Gene)
     gene_target <- names(gene_counts[gene_counts >= 2])[1]
     if (!length(gene_target) || is.na(gene_target)) {
-        skip("Need at least one protein with >=2 peptides for assay selection test.")
+        skip(
+            "Need at least one protein with >=2 peptides for assay selection test."
+        )
     }
 
     protein_default <- suppressWarnings(plot_peptides_of_one_protein(
@@ -305,7 +341,10 @@ test_that("feature-level single/protein plots support explicit PBF assay selecti
         df_long = raw_long,
         sample_annotation = sample_ann
     ))
-    expect_equal(protein_raw$data$Intensity, protein_raw_expected$data$Intensity)
+    expect_equal(
+        protein_raw$data$Intensity,
+        protein_raw_expected$data$Intensity
+    )
 })
 
 test_that("fitting diagnostics accept ProBatchFeatures inputs", {

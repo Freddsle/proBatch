@@ -26,11 +26,13 @@ test_that("PVCA stacked-summary symbols are declared globally", {
     expressions <- parse(file.path(source_root, "R", "proBatch.R"))
     global_calls <- list()
     collect_global_calls <- function(expression) {
-        if (is.call(expression) &&
-            identical(
-                paste(deparse(expression[[1L]]), collapse = ""),
-                "utils::globalVariables"
-            )) {
+        if (
+            is.call(expression) &&
+                identical(
+                    paste(deparse(expression[[1L]]), collapse = ""),
+                    "utils::globalVariables"
+                )
+        ) {
             global_calls[[length(global_calls) + 1L]] <<- expression
         }
         if (is.recursive(expression)) {

@@ -27,18 +27,21 @@
 }
 
 .pb_finalize_initial_assessment_plot <- function(
-  gg, order_values, ylimits = NULL,
-  rotate_x = FALSE,
-  color_by_batch = FALSE,
-  is_factor = FALSE
+    gg,
+    order_values,
+    ylimits = NULL,
+    rotate_x = FALSE,
+    color_by_batch = FALSE,
+    is_factor = FALSE
 ) {
     if (!is.null(ylimits)) {
         gg <- gg + coord_cartesian(ylim = ylimits)
     }
     if (isTRUE(rotate_x)) {
-        gg <- gg + theme(
-            axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-        )
+        gg <- gg +
+            theme(
+                axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+            )
     }
     if (length(unique(order_values)) > 30 && color_by_batch && is_factor) {
         gg <- gg + theme(legend.position = "top")
@@ -47,11 +50,11 @@
 }
 
 .pb_validate_initial_assessment_inputs <- function(
-  df_plot,
-  batch_col,
-  color_by_batch,
-  color_scheme,
-  facet_col
+    df_plot,
+    batch_col,
+    color_by_batch,
+    color_scheme,
+    facet_col
 ) {
     .pb_validate_batch_facet_inputs(
         df_plot = df_plot,
@@ -62,7 +65,9 @@
         missing_batch_message = "batches cannot be colored as the batch column or sample ID column
                     is not defined, check sample_annotation and data matrix",
         missing_batch_stop = paste0(
-            "Batch column '", batch_col, "' not found in data."
+            "Batch column '",
+            batch_col,
+            "' not found in data."
         ),
         null_batch_message = "batches cannot be colored as the batch column is defined as NULL,
                 continuing without colors",
@@ -73,29 +78,36 @@
             facet_col
         ),
         missing_facet_stop = sprintf(
-            "Faceting column '%s' not found in data.", facet_col
+            "Faceting column '%s' not found in data.",
+            facet_col
         )
     )
 }
 
 .pb_prepare_initial_assessment_order <- function(
-  df_plot,
-  order_col,
-  sample_annotation,
-  facet_col,
-  batch_col,
-  sample_id_col,
-  color_by_batch
+    df_plot,
+    order_col,
+    sample_annotation,
+    facet_col,
+    batch_col,
+    sample_id_col,
+    color_by_batch
 ) {
     sample_order <- define_sample_order(
-        order_col, sample_annotation, facet_col,
-        batch_col, df_plot,
-        sample_id_col, color_by_batch
+        order_col,
+        sample_annotation,
+        facet_col,
+        batch_col,
+        df_plot,
+        sample_id_col,
+        color_by_batch
     )
     order_col <- sample_order$order_col
     df_plot <- sample_order$df_long
-    if (!is.numeric(df_plot[[order_col]]) &&
-        is.character(df_plot[[order_col]])) {
+    if (
+        !is.numeric(df_plot[[order_col]]) &&
+            is.character(df_plot[[order_col]])
+    ) {
         df_plot[[order_col]] <- factor(
             df_plot[[order_col]],
             levels = unique(df_plot[[order_col]])
@@ -105,20 +117,22 @@
 }
 
 .pb_finalize_initial_assessment_output <- function(
-  gg,
-  theme_name,
-  base_size,
-  order_values,
-  ylimits,
-  color_by_batch,
-  is_factor,
-  units,
-  width,
-  height,
-  filename
+    gg,
+    theme_name,
+    base_size,
+    order_values,
+    ylimits,
+    color_by_batch,
+    is_factor,
+    units,
+    width,
+    height,
+    filename
 ) {
     gg <- .pb_apply_initial_assessment_theme(
-        gg = gg, theme_name = theme_name, base_size = base_size
+        gg = gg,
+        theme_name = theme_name,
+        base_size = base_size
     )
     gg <- .pb_finalize_initial_assessment_plot(
         gg = gg,
@@ -137,22 +151,25 @@
 #' @method plot_sample_mean default
 #' @export
 plot_sample_mean.default <- function(
-  x, sample_annotation,
-  sample_id_col = "FullRunName",
-  batch_col = "MS_batch",
-  color_by_batch = FALSE,
-  color_scheme = "brewer",
-  order_col = "order",
-  vline_color = "grey",
-  facet_col = NULL,
-  filename = NULL, width = NA, height = NA,
-  units = c("cm", "in", "mm"),
-  plot_title = NULL,
-  theme_name = c("classic", "minimal", "bw", "light", "dark"),
-  base_size = 20,
-  ylimits = NULL,
-  pbf_name = NULL,
-  ...
+    x,
+    sample_annotation,
+    sample_id_col = "FullRunName",
+    batch_col = "MS_batch",
+    color_by_batch = FALSE,
+    color_scheme = "brewer",
+    order_col = "order",
+    vline_color = "grey",
+    facet_col = NULL,
+    filename = NULL,
+    width = NA,
+    height = NA,
+    units = c("cm", "in", "mm"),
+    plot_title = NULL,
+    theme_name = c("classic", "minimal", "bw", "light", "dark"),
+    base_size = 20,
+    ylimits = NULL,
+    pbf_name = NULL,
+    ...
 ) {
     data_matrix <- x
     if (is.null(sample_annotation)) {
@@ -171,11 +188,17 @@ plot_sample_mean.default <- function(
     names(df_ave)[names(df_ave) == "temp_id"] <- sample_id_col
 
     df_ave <- check_sample_consistency(
-        sample_annotation, sample_id_col, df_ave,
-        batch_col, order_col, facet_col
+        sample_annotation,
+        sample_id_col,
+        df_ave,
+        batch_col,
+        order_col,
+        facet_col
     )
-    message("Sample ID is kept only if they have a match in annotation data frame,
-            otherwise the sample ID is removed from the plot")
+    message(
+        "Sample ID is kept only if they have a match in annotation data frame,
+            otherwise the sample ID is removed from the plot"
+    )
 
     is_factor <- FALSE
     validated <- .pb_validate_initial_assessment_inputs(
@@ -205,7 +228,8 @@ plot_sample_mean.default <- function(
 
     gg <- color_by_factor(
         color_by_batch = color_by_batch,
-        batch_col = batch_col, gg = gg,
+        batch_col = batch_col,
+        gg = gg,
         color_scheme = color_scheme,
         sample_annotation = df_ave,
         fill_or_color = "color"
@@ -224,20 +248,28 @@ plot_sample_mean.default <- function(
     }
     if (!is.null(batch_col) && is_factor && !is.null(vline_color)) {
         gg <- add_vertical_batch_borders(
-            order_col, sample_id_col, batch_col,
+            order_col,
+            sample_id_col,
+            batch_col,
             vline_color,
-            facet_col, df_ave, gg
+            facet_col,
+            df_ave,
+            gg
         )
     }
 
     if (!is.null(facet_col)) {
-        gg <- gg + facet_wrap(as.formula(paste("~", facet_col)),
-            dir = "v", scales = "free_x"
-        )
+        gg <- gg +
+            facet_wrap(
+                as.formula(paste("~", facet_col)),
+                dir = "v",
+                scales = "free_x"
+            )
     }
 
     if (!is.null(plot_title)) {
-        gg <- gg + ggtitle(plot_title) +
+        gg <- gg +
+            ggtitle(plot_title) +
             theme(plot.title = element_text(face = "bold", hjust = 0.5))
     }
     .pb_finalize_initial_assessment_output(
@@ -260,22 +292,26 @@ plot_sample_mean.default <- function(
 #' @method plot_boxplot default
 #' @export
 plot_boxplot.default <- function(
-  x, sample_annotation,
-  sample_id_col = "FullRunName",
-  measure_col = "Intensity",
-  batch_col = "MS_batch",
-  color_by_batch = TRUE,
-  color_scheme = "brewer",
-  order_col = "order",
-  facet_col = NULL,
-  filename = NULL, width = NA, height = NA,
-  units = c("cm", "in", "mm"),
-  plot_title = NULL,
-  theme_name = c("classic", "minimal", "bw", "light", "dark"),
-  base_size = 20,
-  ylimits = NULL, outliers = TRUE,
-  pbf_name = NULL,
-  ...
+    x,
+    sample_annotation,
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    batch_col = "MS_batch",
+    color_by_batch = TRUE,
+    color_scheme = "brewer",
+    order_col = "order",
+    facet_col = NULL,
+    filename = NULL,
+    width = NA,
+    height = NA,
+    units = c("cm", "in", "mm"),
+    plot_title = NULL,
+    theme_name = c("classic", "minimal", "bw", "light", "dark"),
+    base_size = 20,
+    ylimits = NULL,
+    outliers = TRUE,
+    pbf_name = NULL,
+    ...
 ) {
     df_long <- x
     if (is.null(sample_annotation)) {
@@ -286,8 +322,12 @@ plot_boxplot.default <- function(
     }
 
     df_long <- check_sample_consistency(
-        sample_annotation, sample_id_col, df_long,
-        batch_col, order_col, facet_col
+        sample_annotation,
+        sample_id_col,
+        df_long,
+        batch_col,
+        order_col,
+        facet_col
     )
 
     is_factor <- FALSE
@@ -314,10 +354,14 @@ plot_boxplot.default <- function(
     order_col <- order_info$order_col
     df_long <- order_info$df_plot
 
-    gg <- ggplot(df_long, aes(
-        x = !!sym(order_col), y = !!sym(measure_col),
-        group = !!sym(order_col)
-    ))
+    gg <- ggplot(
+        df_long,
+        aes(
+            x = !!sym(order_col),
+            y = !!sym(measure_col),
+            group = !!sym(order_col)
+        )
+    )
     if (outliers) {
         gg <- gg + geom_boxplot(outlier.size = 0.15)
     } else {
@@ -346,16 +390,21 @@ plot_boxplot.default <- function(
     gg <- gg + labs(x = axis_x_label, y = measure_col)
 
     if (!is.null(facet_col)) {
-        gg <- gg + facet_wrap(as.formula(paste("~", facet_col)),
-            dir = "v", scales = "free_x"
-        )
+        gg <- gg +
+            facet_wrap(
+                as.formula(paste("~", facet_col)),
+                dir = "v",
+                scales = "free_x"
+            )
     }
 
     if (!is.null(plot_title)) {
-        gg <- gg + ggtitle(plot_title) +
+        gg <- gg +
+            ggtitle(plot_title) +
             theme(
                 plot.title = element_text(
-                    hjust = 0.5, face = "bold",
+                    hjust = 0.5,
+                    face = "bold",
                     size = 16
                 )
             )
@@ -370,10 +419,12 @@ plot_boxplot.default <- function(
                 titles = resolved_title,
                 use_shared_title = FALSE
             )
-            gg <- gg + ggtitle(title_info$titles[[1L]]) +
+            gg <- gg +
+                ggtitle(title_info$titles[[1L]]) +
                 theme(
                     plot.title = element_text(
-                        hjust = 0.5, face = "bold",
+                        hjust = 0.5,
+                        face = "bold",
                         size = 16
                     )
                 )
@@ -404,7 +455,10 @@ plot_boxplot.default <- function(
 #' @method plot_sample_mean ProBatchFeatures
 #' @export
 plot_sample_mean.ProBatchFeatures <- function(
-  x, pbf_name = NULL, plot_title = NULL, ...
+    x,
+    pbf_name = NULL,
+    plot_title = NULL,
+    ...
 ) {
     object <- x # Use 'x' as per convention
 
@@ -439,10 +493,13 @@ plot_sample_mean.ProBatchFeatures <- function(
 #' @method plot_boxplot ProBatchFeatures
 #' @export
 plot_boxplot.ProBatchFeatures <- function(
-  x, pbf_name = NULL, sample_id_col = NULL, plot_title = NULL,
-  plot_ncol = NULL,
-  return_gridExtra = FALSE,
-  ...
+    x,
+    pbf_name = NULL,
+    sample_id_col = NULL,
+    plot_title = NULL,
+    plot_ncol = NULL,
+    return_gridExtra = FALSE,
+    ...
 ) {
     object <- x # Use 'x' as per convention
 
@@ -479,7 +536,8 @@ plot_boxplot.ProBatchFeatures <- function(
         df_long <- df_long[!is.na(df_long$Intensity), ]
 
         overlap_cols <- setdiff(
-            intersect(names(sample_annotation), names(df_long)), sample_id_col
+            intersect(names(sample_annotation), names(df_long)),
+            sample_id_col
         )
         if (length(overlap_cols) > 0) {
             df_long <-
@@ -488,14 +546,17 @@ plot_boxplot.ProBatchFeatures <- function(
 
         call_args <- .pb_per_assay_dots(dots, filename_list, i)
 
-        call_args <- c(list(
-            x = df_long,
-            sample_annotation = sample_annotation,
-            sample_id_col = sample_id_col,
-            measure_col = "Intensity",
-            plot_title = titles[i],
-            pbf_name = assay_nm
-        ), call_args)
+        call_args <- c(
+            list(
+                x = df_long,
+                sample_annotation = sample_annotation,
+                sample_id_col = sample_id_col,
+                measure_col = "Intensity",
+                plot_title = titles[i],
+                pbf_name = assay_nm
+            ),
+            call_args
+        )
 
         plot_list[[i]] <- do.call(plot_boxplot.default, call_args)
     }
@@ -504,7 +565,8 @@ plot_boxplot.ProBatchFeatures <- function(
 
     .pb_arrange_plot_list(
         plot_list,
-        plot_ncol = plot_ncol, convert_fun = ggplotGrob,
+        plot_ncol = plot_ncol,
+        convert_fun = ggplotGrob,
         return_gridExtra = return_gridExtra
     )
 }

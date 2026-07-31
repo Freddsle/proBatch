@@ -28,15 +28,20 @@ long_to_matrix <- function(
         sample_id_col = sample_id_col
     )
     casting_formula <- as.formula(paste(
-        feature_id_col, sample_id_col,
+        feature_id_col,
+        sample_id_col,
         sep = " ~ "
     ))
     if (!is.null(qual_col)) {
         message("removing imputed values (requants)")
         df_long <- df_long %>%
-            mutate(!!sym(measure_col) := ifelse(
-                !!sym(qual_col) == qual_value, NA, !!sym(measure_col)
-            ))
+            mutate(
+                !!sym(measure_col) := ifelse(
+                    !!sym(qual_col) == qual_value,
+                    NA,
+                    !!sym(measure_col)
+                )
+            )
     }
     proteome_wide <- df_long %>%
         tidyr::pivot_wider(
@@ -79,7 +84,8 @@ long_to_matrix <- function(
 #' @export
 #'
 matrix_to_long <- function(
-    data_matrix, sample_annotation = NULL,
+    data_matrix,
+    sample_annotation = NULL,
     feature_id_col = "peptide_group_label",
     measure_col = "Intensity",
     sample_id_col = "FullRunName",
@@ -119,8 +125,10 @@ matrix_to_long <- function(
             sample_annotation = sample_annotation,
             sample_id_col = sample_id_col,
             df_long = df_long,
-            batch_col = NULL, order_col = NULL,
-            facet_col = NULL, merge = TRUE
+            batch_col = NULL,
+            order_col = NULL,
+            facet_col = NULL,
+            merge = TRUE
         )
     }
 

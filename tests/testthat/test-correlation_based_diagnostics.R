@@ -9,7 +9,11 @@ test_that("corr_matrix_plots", {
         "annotation_row and / or annotation_col are not specified for heatmap"
     )
     expect_s3_class(corr_matrix_pheatmap, "pheatmap")
-    expect_equal(corr_matrix_pheatmap$gtable$layout$name[4], "legend", ignore_attr = TRUE)
+    expect_equal(
+        corr_matrix_pheatmap$gtable$layout$name[4],
+        "legend",
+        ignore_attr = TRUE
+    )
 })
 
 
@@ -30,7 +34,8 @@ test_that("protein_corrplot_plots", {
             protein_name = "Haao",
             peptide_annotation = example_peptide_annotation,
             protein_col = "Gene",
-            cluster_rows = TRUE, cluster_cols = TRUE,
+            cluster_rows = TRUE,
+            cluster_cols = TRUE,
             color_list = color_list
         )
     )
@@ -38,9 +43,21 @@ test_that("protein_corrplot_plots", {
     expect_equal(corrplot$tree_row$method, "complete", ignore_attr = TRUE)
     expect_equal(corrplot$tree_row$dist.method, "euclidean", ignore_attr = TRUE)
 
-    expect_equal(corrplot$tree_row$labels[1], "10231_QDVDVWLWQQEGSSK_2", ignore_attr = TRUE)
-    expect_equal(corrplot$tree_row$labels[2], "10768_RLESELDGLR_2", ignore_attr = TRUE)
-    expect_equal(corrplot$tree_row$labels[3], "1131_AQGSVALSVTQDPAR_2", ignore_attr = TRUE)
+    expect_equal(
+        corrplot$tree_row$labels[1],
+        "10231_QDVDVWLWQQEGSSK_2",
+        ignore_attr = TRUE
+    )
+    expect_equal(
+        corrplot$tree_row$labels[2],
+        "10768_RLESELDGLR_2",
+        ignore_attr = TRUE
+    )
+    expect_equal(
+        corrplot$tree_row$labels[3],
+        "1131_AQGSVALSVTQDPAR_2",
+        ignore_attr = TRUE
+    )
 })
 
 
@@ -55,25 +72,55 @@ test_that("sample_corr_heatmap", {
         sample_heatmap <- plot_sample_corr_heatmap(
             example_proteome_matrix,
             samples_to_plot = specified_samples,
-            cluster_rows = TRUE, cluster_cols = TRUE,
-            annotation_names_col = TRUE, annotation_legend = FALSE,
+            cluster_rows = TRUE,
+            cluster_cols = TRUE,
+            annotation_names_col = TRUE,
+            annotation_legend = FALSE,
             show_colnames = FALSE
         ),
         "annotation_row and / or annotation_col are not specified for heatmap"
     )
 
     expect_equal(sample_heatmap$tree_row$method, "complete", ignore_attr = TRUE)
-    expect_equal(sample_heatmap$tree_row$dist.method, "euclidean", ignore_attr = TRUE)
+    expect_equal(
+        sample_heatmap$tree_row$dist.method,
+        "euclidean",
+        ignore_attr = TRUE
+    )
 
     expect_equal(sample_heatmap$tree_col$method, "complete", ignore_attr = TRUE)
-    expect_equal(sample_heatmap$tree_col$dist.method, "euclidean", ignore_attr = TRUE)
+    expect_equal(
+        sample_heatmap$tree_col$dist.method,
+        "euclidean",
+        ignore_attr = TRUE
+    )
 
-    expect_equal(sample_heatmap$tree_row$labels[1], "I171013_BXD61_CD_ET2145_Run113", ignore_attr = TRUE)
-    expect_equal(sample_heatmap$tree_row$labels[2], "I171013_BXD70_HF_ET1728_Run114", ignore_attr = TRUE)
-    expect_equal(sample_heatmap$tree_row$labels[3], "I171016_BXD89_CD_ET2078_Run115", ignore_attr = TRUE)
+    expect_equal(
+        sample_heatmap$tree_row$labels[1],
+        "I171013_BXD61_CD_ET2145_Run113",
+        ignore_attr = TRUE
+    )
+    expect_equal(
+        sample_heatmap$tree_row$labels[2],
+        "I171013_BXD70_HF_ET1728_Run114",
+        ignore_attr = TRUE
+    )
+    expect_equal(
+        sample_heatmap$tree_row$labels[3],
+        "I171016_BXD89_CD_ET2078_Run115",
+        ignore_attr = TRUE
+    )
 
-    expect_equal(sample_heatmap$gtable$layout[[1]], c(1, 2, 4, 4, 4, 3), ignore_attr = TRUE)
-    expect_equal(sample_heatmap$gtable$layout$name[[4]], "matrix", ignore_attr = TRUE)
+    expect_equal(
+        sample_heatmap$gtable$layout[[1]],
+        c(1, 2, 4, 4, 4, 3),
+        ignore_attr = TRUE
+    )
+    expect_equal(
+        sample_heatmap$gtable$layout$name[[4]],
+        "matrix",
+        ignore_attr = TRUE
+    )
 })
 
 
@@ -81,18 +128,31 @@ test_that("sample_distribution_plot", {
     pb_test_load_example_data()
 
     matrix_test <- example_proteome_matrix[1:20, ]
-    sample_dist <- plot_sample_corr_distribution(matrix_test,
+    sample_dist <- plot_sample_corr_distribution(
+        matrix_test,
         example_sample_annotation,
         batch_col = "MS_batch",
         biospecimen_id_col = "EarTag",
         plot_param = "batch_replicate"
     )
 
-    expect_equal(as_label(sample_dist$mapping$x), "batch_replicate", ignore_attr = TRUE)
-    expect_equal(as_label(sample_dist$mapping$y), "correlation", ignore_attr = TRUE)
+    expect_equal(
+        as_label(sample_dist$mapping$x),
+        "batch_replicate",
+        ignore_attr = TRUE
+    )
+    expect_equal(
+        as_label(sample_dist$mapping$y),
+        "correlation",
+        ignore_attr = TRUE
+    )
 
     expect_s3_class(sample_dist$plot_env$corr_distribution, "data.frame")
-    expect_equal(sample_dist$plot_env$plot_param, "batch_replicate", ignore_attr = TRUE)
+    expect_equal(
+        sample_dist$plot_env$plot_param,
+        "batch_replicate",
+        ignore_attr = TRUE
+    )
     expect_s3_class(sample_dist$plot_env$gg, "ggplot")
 })
 
@@ -113,10 +173,26 @@ test_that("calculate_sample_corr_distribution", {
 
     sample_cols <- paste("FullRunName", seq_len(2), sep = "_")
 
-    expect_equal("batch_replicate" %in% names(corr_distribution), TRUE, ignore_attr = TRUE)
-    expect_equal("correlation" %in% names(corr_distribution), TRUE, ignore_attr = TRUE)
-    expect_equal("replicate" %in% names(corr_distribution), TRUE, ignore_attr = TRUE)
-    expect_equal(all(sample_cols %in% names(corr_distribution)), TRUE, ignore_attr = TRUE)
+    expect_equal(
+        "batch_replicate" %in% names(corr_distribution),
+        TRUE,
+        ignore_attr = TRUE
+    )
+    expect_equal(
+        "correlation" %in% names(corr_distribution),
+        TRUE,
+        ignore_attr = TRUE
+    )
+    expect_equal(
+        "replicate" %in% names(corr_distribution),
+        TRUE,
+        ignore_attr = TRUE
+    )
+    expect_equal(
+        all(sample_cols %in% names(corr_distribution)),
+        TRUE,
+        ignore_attr = TRUE
+    )
 })
 
 
@@ -131,11 +207,23 @@ test_that("peptide_distribution_plots", {
         protein_col = "Gene"
     )
 
-    expect_equal(as_label(peptide_dist$mapping$x), "same_protein", ignore_attr = TRUE)
-    expect_equal(as_label(peptide_dist$mapping$y), "correlation", ignore_attr = TRUE)
+    expect_equal(
+        as_label(peptide_dist$mapping$x),
+        "same_protein",
+        ignore_attr = TRUE
+    )
+    expect_equal(
+        as_label(peptide_dist$mapping$y),
+        "correlation",
+        ignore_attr = TRUE
+    )
 
     expect_s3_class(peptide_dist$plot_env$corr_distribution, "data.frame")
-    expect_equal(peptide_dist$plot_env$median_same_prot, 0.7337642, tolerance = 1e-6)
+    expect_equal(
+        peptide_dist$plot_env$median_same_prot,
+        0.7337642,
+        tolerance = 1e-6
+    )
 })
 
 make_corr_pbf_fixture <- function() {
@@ -162,9 +250,16 @@ make_corr_pbf_fixture <- function() {
     assay_name <- pb_current_assay(pbf)
     matrix_log <- suppressMessages(pb_assay_matrix(pbf, assay = assay_name))
     peptide_ann <- example_peptide_annotation[
-        match(rownames(matrix_log), example_peptide_annotation$peptide_group_label),
+        match(
+            rownames(matrix_log),
+            example_peptide_annotation$peptide_group_label
+        ),
     ]
-    peptide_ann <- peptide_ann[!is.na(peptide_ann$peptide_group_label), , drop = FALSE]
+    peptide_ann <- peptide_ann[
+        !is.na(peptide_ann$peptide_group_label),
+        ,
+        drop = FALSE
+    ]
 
     list(
         pbf = pbf,
@@ -348,8 +443,14 @@ test_that("plot_sample_corr_heatmap() supports explicit PBF assay selection", {
         cluster_rows = TRUE,
         cluster_cols = TRUE
     )
-    expect_equal(heatmap_raw$tree_row$height, heatmap_raw_expected$tree_row$height)
-    expect_equal(heatmap_raw$tree_col$height, heatmap_raw_expected$tree_col$height)
+    expect_equal(
+        heatmap_raw$tree_row$height,
+        heatmap_raw_expected$tree_row$height
+    )
+    expect_equal(
+        heatmap_raw$tree_col$height,
+        heatmap_raw_expected$tree_col$height
+    )
 })
 
 test_that("calculate_peptide_corr_distr() supports explicit PBF assay selection", {
@@ -453,7 +554,9 @@ test_that("peptide correlation diagnostics accept PBF with rowname-only annotati
     gene_counts <- table(peptide_corr_df$Gene1)
     gene_target <- names(gene_counts[gene_counts >= 2])[1]
     if (!length(gene_target) || is.na(gene_target)) {
-        skip("Need at least one protein with >=2 peptides for correlation heatmap.")
+        skip(
+            "Need at least one protein with >=2 peptides for correlation heatmap."
+        )
     }
 
     protein_corrplot <- suppressWarnings(plot_protein_corrplot(

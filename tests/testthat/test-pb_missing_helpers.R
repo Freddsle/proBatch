@@ -20,7 +20,11 @@ make_test_pbf <- function(mat, sa_extra = NULL) {
 }
 
 run_missing_filter_retry <- function(
-  kind, object, source_name, target_name, params = list()
+    kind,
+    object,
+    source_name,
+    target_name,
+    params = list()
 ) {
     args <- list(
         object = object,
@@ -39,7 +43,7 @@ run_missing_filter_retry <- function(
 
 virtualise_test_assay <- function(object, source_name) {
     suppressMessages(suppressWarnings(
-        object[, , source_name, drop = FALSE]
+        object[,, source_name, drop = FALSE]
     ))
 }
 
@@ -163,7 +167,9 @@ test_that("pb_filterNA stores filtered assays when not operating in place", {
     expect_identical(as.character(log$step), "filterNA")
     expect_identical(as.character(log$from), assay_name)
     expect_identical(as.character(log$to), new_name)
-    expect_true(isFALSE(log$params[[1]]$inplace) || is.null(log$params[[1]]$inplace))
+    expect_true(
+        isFALSE(log$params[[1]]$inplace) || is.null(log$params[[1]]$inplace)
+    )
 })
 
 test_that("pb_filterNA modifies stored assays in place when requested", {
@@ -374,6 +380,7 @@ test_that("missing filters reject non-exact explicit virtual-target collisions",
 
 test_that("missing filters make stored and virtual exact retries idempotent", {
     mat <- matrix(
+        # fmt: skip
         c(
             1, NA, 3, 4,
             5, 6, 7, 8
@@ -663,6 +670,7 @@ test_that("missing filters disambiguate generated names across the result namesp
 
 test_that("pb_groupfilterNA retains union of group-wise valid features in place", {
     mat <- matrix(
+        # fmt: skip
         c(
             1, 2, 3, 4,
             NA, NA, 5, 6,
@@ -747,6 +755,7 @@ test_that("pb_groupfilterNA reports links removed by in-place replacement", {
 
 test_that("pb_groupfilterNA stores union of group-wise valid features when not operating in place", {
     mat <- matrix(
+        # fmt: skip
         c(
             1, 2, 3, 4,
             NA, NA, 5, 6,
@@ -794,6 +803,7 @@ test_that("pb_groupfilterNA stores union of group-wise valid features when not o
 
 test_that("pb_groupfilterNA respects pNA thresholds when supplied", {
     mat <- matrix(
+        # fmt: skip
         c(
             1, 2, 3, 4,
             NA, 2, NA, 4,
@@ -829,6 +839,7 @@ test_that("pb_groupfilterNA respects pNA thresholds when supplied", {
 
 test_that("pb_groupfilterNA combines min_valid and pNA per group", {
     mat <- matrix(
+        # fmt: skip
         c(
             1, 2, 3, 4, 5, 6,
             NA, 2, 3, 7, 8, 9,
@@ -880,6 +891,7 @@ test_that("pb_groupfilterNA validates presence of grouping columns", {
 
 test_that("pb_groupfilterNA errors when a group has too few samples", {
     mat <- matrix(
+        # fmt: skip
         c(
             1, 2, 3,
             4, 5, NA
@@ -939,12 +951,14 @@ test_that("pb_missing helpers error on non-materialised assays with guidance", {
 # ------------------------------------------------------------------
 
 .mask_mat <- matrix(
+    # fmt: skip
     c(
         1, 2, 3, 4,
         NA, 7, 5, 6,
         8, 9, NA, 10
     ),
-    nrow = 3, byrow = TRUE,
+    nrow = 3,
+    byrow = TRUE,
     dimnames = list(paste0("f", 1:3), paste0("s", 1:4))
 )
 .mask_sa <- data.frame(

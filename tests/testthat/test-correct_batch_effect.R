@@ -2,13 +2,17 @@ test_that("center_feature_batch_medians", {
     data(example_proteome, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
 
-    rows <- which(example_proteome$peptide_group_label == "10062_NVGVSFYADKPEVTQEQK_3")
+    rows <- which(
+        example_proteome$peptide_group_label == "10062_NVGVSFYADKPEVTQEQK_3"
+    )
 
     proteome <- example_proteome[rows, ]
     median_proteome <- center_feature_batch(
-        proteome, example_sample_annotation,
+        proteome,
+        example_sample_annotation,
         no_fit_imputed = FALSE,
-        stat = "median", format = "long"
+        stat = "median",
+        format = "long"
     )
 
     n_batch <- length(unique(median_proteome$MS_batch))
@@ -105,18 +109,27 @@ test_that("adjust_batch_trend", {
     data(example_proteome, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
 
-    short_df <- example_proteome[example_proteome[["peptide_group_label"]]
-    %in% c("10062_NVGVSFYADKPEVTQEQK_3", "101233_QGFNVVVESGAGEASK_2"), ]
+    short_df <- example_proteome[
+        example_proteome[["peptide_group_label"]] %in%
+            c("10062_NVGVSFYADKPEVTQEQK_3", "101233_QGFNVVVESGAGEASK_2"),
+    ]
 
-    adjusted <- adjust_batch_trend_df(short_df, example_sample_annotation,
+    adjusted <- adjust_batch_trend_df(
+        short_df,
+        example_sample_annotation,
         span = 0.7,
-        abs_threshold = 5, pct_threshold = 0.20, keep_all = "all",
+        abs_threshold = 5,
+        pct_threshold = 0.20,
+        keep_all = "all",
         no_fit_imputed = FALSE
     )
 
     n_batch <- length(unique(example_sample_annotation$MS_batch))
 
-    expect_equal(adjusted[["peptide_group_label"]][1], "10062_NVGVSFYADKPEVTQEQK_3")
+    expect_equal(
+        adjusted[["peptide_group_label"]][1],
+        "10062_NVGVSFYADKPEVTQEQK_3"
+    )
     expect_equal(length(unique(adjusted$MS_batch)), n_batch)
     expect_equal(adjusted$fit[[1]], 1830358, tolerance = 1, ignore_attr = TRUE)
     expect_false("diff.na" %in% names(adjusted))
@@ -127,7 +140,10 @@ test_that("correct_with_ComBat_df", {
     data(example_proteome, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
 
-    short_df <- example_proteome[example_proteome[["peptide_group_label"]] %in% c("10062_NVGVSFYADKPEVTQEQK_3", "10063_NVGVSFYADKPEVTQEQKK_3"), ]
+    short_df <- example_proteome[
+        example_proteome[["peptide_group_label"]] %in%
+            c("10062_NVGVSFYADKPEVTQEQK_3", "10063_NVGVSFYADKPEVTQEQKK_3"),
+    ]
     combat_df <- correct_with_ComBat(
         short_df,
         example_sample_annotation,
@@ -162,11 +178,25 @@ test_that("correct_with_ComBat_df", {
         )
     )
 
-    expect_equal(combat_df[["peptide_group_label"]][1], "10062_NVGVSFYADKPEVTQEQK_3")
-    expect_equal(combat_df[1, ][["Intensity"]], combat_example[combat_df[1, ][["peptide_group_label"]], combat_df[1, ][["FullRunName"]]], tolerance = 1)
+    expect_equal(
+        combat_df[["peptide_group_label"]][1],
+        "10062_NVGVSFYADKPEVTQEQK_3"
+    )
+    expect_equal(
+        combat_df[1, ][["Intensity"]],
+        combat_example[
+            combat_df[1, ][["peptide_group_label"]],
+            combat_df[1, ][["FullRunName"]]
+        ],
+        tolerance = 1
+    )
 
-    batch_1 <- example_sample_annotation$FullRunName[example_sample_annotation$MS_batch == "Batch_1"]
-    batch_2 <- example_sample_annotation$FullRunName[example_sample_annotation$MS_batch == "Batch_2"]
+    batch_1 <- example_sample_annotation$FullRunName[
+        example_sample_annotation$MS_batch == "Batch_1"
+    ]
+    batch_2 <- example_sample_annotation$FullRunName[
+        example_sample_annotation$MS_batch == "Batch_2"
+    ]
 
     matrix_batch_1 <- short_df[short_df$FullRunName %in% batch_1, ]
     matrix_batch_2 <- short_df[short_df$FullRunName %in% batch_2, ]
@@ -667,10 +697,14 @@ test_that("correct_batch_effects_df wrapper", {
     data(example_proteome, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
 
-    short_df <- example_proteome[example_proteome[["peptide_group_label"]] %in%
-        c("10062_NVGVSFYADKPEVTQEQK_3", "101233_QGFNVVVESGAGEASK_2"), ]
+    short_df <- example_proteome[
+        example_proteome[["peptide_group_label"]] %in%
+            c("10062_NVGVSFYADKPEVTQEQK_3", "101233_QGFNVVVESGAGEASK_2"),
+    ]
 
-    corrected <- correct_batch_effects(short_df, example_sample_annotation,
+    corrected <- correct_batch_effects(
+        short_df,
+        example_sample_annotation,
         continuous_func = "loess_regression",
         discrete_func = "MedianCentering",
         span = 0.7,
@@ -687,8 +721,11 @@ test_that("correct_batch_effects_df wrapper", {
 test_that("correct_batch_effects_dm returns matrix", {
     pb_test_load_example_data()
 
-    corrected <- correct_batch_effects(example_proteome_matrix, example_sample_annotation,
-        discrete_func = "MedianCentering", no_fit_imputed = FALSE,
+    corrected <- correct_batch_effects(
+        example_proteome_matrix,
+        example_sample_annotation,
+        discrete_func = "MedianCentering",
+        no_fit_imputed = FALSE,
         fill_the_missing = "keep",
         format = "wide"
     )
@@ -726,7 +763,10 @@ test_that("deprecated batch-correction wrappers forward compatibility calls", {
         stringsAsFactors = FALSE
     )
     df_long <- data.frame(
-        peptide_group_label = rep(rownames(data_matrix), times = ncol(data_matrix)),
+        peptide_group_label = rep(
+            rownames(data_matrix),
+            times = ncol(data_matrix)
+        ),
         FullRunName = rep(colnames(data_matrix), each = nrow(data_matrix)),
         Intensity = as.vector(data_matrix),
         stringsAsFactors = FALSE
@@ -824,20 +864,27 @@ test_that("correction wrappers have one top-level definition each", {
         pattern = "[.]R$",
         full.names = TRUE
     ))
-    definitions <- unlist(lapply(r_files, function(file) {
-        expressions <- parse(file = file)
-        vapply(expressions, function(expression) {
-            is_assignment <- is.call(expression) &&
-                identical(expression[[1L]], as.name("<-"))
-            is_function <- is_assignment &&
-                is.call(expression[[3L]]) &&
-                identical(expression[[3L]][[1L]], as.name("function"))
-            if (!is_function || !is.symbol(expression[[2L]])) {
-                return(NA_character_)
-            }
-            as.character(expression[[2L]])
-        }, character(1L))
-    }), use.names = FALSE)
+    definitions <- unlist(
+        lapply(r_files, function(file) {
+            expressions <- parse(file = file)
+            vapply(
+                expressions,
+                function(expression) {
+                    is_assignment <- is.call(expression) &&
+                        identical(expression[[1L]], as.name("<-"))
+                    is_function <- is_assignment &&
+                        is.call(expression[[3L]]) &&
+                        identical(expression[[3L]][[1L]], as.name("function"))
+                    if (!is_function || !is.symbol(expression[[2L]])) {
+                        return(NA_character_)
+                    }
+                    as.character(expression[[2L]])
+                },
+                character(1L)
+            )
+        }),
+        use.names = FALSE
+    )
     definitions <- definitions[!is.na(definitions)]
 
     wrapper_symbols <- c(
@@ -862,12 +909,19 @@ test_that("adjust_batch_trend_df keeps order column", {
     data(example_proteome, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
 
-    short_df <- example_proteome[example_proteome[["peptide_group_label"]] %in%
-        c("10062_NVGVSFYADKPEVTQEQK_3", "101233_QGFNVVVESGAGEASK_2"), ]
+    short_df <- example_proteome[
+        example_proteome[["peptide_group_label"]] %in%
+            c("10062_NVGVSFYADKPEVTQEQK_3", "101233_QGFNVVVESGAGEASK_2"),
+    ]
 
-    adjusted <- adjust_batch_trend_df(short_df, example_sample_annotation,
-        order_col = "order", keep_all = "all", fit_func = "loess_regression",
-        min_measurements = 8, no_fit_imputed = FALSE
+    adjusted <- adjust_batch_trend_df(
+        short_df,
+        example_sample_annotation,
+        order_col = "order",
+        keep_all = "all",
+        fit_func = "loess_regression",
+        min_measurements = 8,
+        no_fit_imputed = FALSE
     )
 
     expect_true("order" %in% names(adjusted))
@@ -878,7 +932,12 @@ test_that("adjust_batch_trend_df keeps order column", {
 test_that("adjust_batch_trend_dm forwards arguments", {
     observed <- new.env(parent = emptyenv())
     testthat::local_mocked_bindings(
-        adjust_batch_trend_df = function(df_long, sample_annotation, span, ...) {
+        adjust_batch_trend_df = function(
+            df_long,
+            sample_annotation,
+            span,
+            ...
+        ) {
             observed$span <- span
             df_long
         },
