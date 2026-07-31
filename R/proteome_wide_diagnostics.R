@@ -2254,7 +2254,7 @@ plot_PCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
 }
 
 #' @export
-plot_PCA <- function(x, ...) UseMethod("plot_PCA")
+plot_PCA <- function(data_matrix, ...) UseMethod("plot_PCA")
 .pb_create_embedding_ggplot <- function(embedding_matrix, sample_ids, sample_annotation,
                                         sample_id_col, color_by, shape_by,
                                         color_scheme, point_size, point_alpha,

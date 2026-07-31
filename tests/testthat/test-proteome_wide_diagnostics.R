@@ -81,7 +81,8 @@ test_that("plot_PCA warns on missing values and honors x/y PC selection", {
 
     pb_test_expect_warnings(
         pca <- plot_PCA(
-            example_proteome_matrix, example_sample_annotation,
+            data_matrix = example_proteome_matrix,
+            sample_annotation = example_sample_annotation,
             color_by = "MS_batch", plot_title = "PCA colored by MS batch",
             fill_the_missing = -1
         ),
