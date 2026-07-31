@@ -4,6 +4,11 @@ proBatch  v2.1.0
   `validate_batch_design()`, `summarize_design()`, `detect_nested_batches()`,
   `detect_outlier_samples()`, and `subbatch_detection()`.
 
+## Provider-neutral extension contract
+- Extended the transformation registry with provider metadata, aliases,
+  availability reporting, collision-safe idempotent registration, and
+  provider-scoped cleanup through `pb_unregister_steps()`.
+
 ## Deprecations
 - Added `center_feature_batch()`: unified API for per-batch centering by `stat` (`"medians"` or `"means"`) and `format` (`"long"` or `"wide"`).
   - For `format = "wide"`, the function round-trips via `matrix_to_long()`/`long_to_matrix()` to reuse a single core implementation.
