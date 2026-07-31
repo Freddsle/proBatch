@@ -27,7 +27,8 @@
   point_alpha = 0.8,
   marginal_density = FALSE,
   x_nPC = NULL,
-  y_nPC = NULL
+  y_nPC = NULL,
+  ...
 )
 
 \method{plot_PCA}{ProBatchFeatures}(
@@ -110,6 +111,9 @@ to override \code{PC_to_plot}.}
 \item{y_nPC}{Optional integer PC index for the y axis. Use together with \code{x_nPC}
 to override \code{PC_to_plot}.}
 
+\item{...}{For \code{ProBatchFeatures} input, additional arguments forwarded to
+\code{plot_PCA.default()}. The default method rejects unused arguments.}
+
 \item{pbf_name}{Assay name(s) used when \code{data_matrix} is a
 \code{ProBatchFeatures}.}
 
@@ -117,8 +121,6 @@ to override \code{PC_to_plot}.}
 list containing the arranged \code{grob} and named ordered \code{plots}.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
-
-\item{...}{Additional arguments forwarded to lower-level plotting helpers.}
 }
 \value{
 A \code{ggplot} PCA scatterplot colored by the column specified in

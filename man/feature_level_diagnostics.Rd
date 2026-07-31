@@ -233,7 +233,7 @@ pdf and png format is supported}
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
-\item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
+\item{theme}{ggplot theme, by default \code{classic}. Can be easily overridden}
 
 \item{ylimits}{range of y-axis to plot feature-level trends}
 

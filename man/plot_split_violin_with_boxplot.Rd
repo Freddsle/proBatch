@@ -32,7 +32,7 @@ plot_split_violin_with_boxplot(
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
-\item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
+\item{theme}{ggplot theme, by default \code{classic}. Can be easily overridden}
 }
 \value{
 ggplot object

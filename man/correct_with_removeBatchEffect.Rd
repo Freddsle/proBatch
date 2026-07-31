@@ -22,14 +22,35 @@ correct_with_removeBatchEffect(
 \arguments{
 \item{x}{Data in long (\code{data.frame}) or wide (\code{matrix}) form, controlled by \code{format}.}
 
+\item{sample_annotation}{data frame with:
+\enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
+  \item biological covariates
+  \item technical covariates (batches etc) }.
+  See \code{help("example_sample_annotation")}}
+
+\item{feature_id_col}{name of the column with feature/gene/peptide/protein
+ID used in the long format representation \code{df_long}. In the wide
+formatted representation \code{data_matrix} this corresponds to the row
+names.}
+
+\item{measure_col}{if \code{df_long} is among the parameters, it is the
+column with expression/abundance/intensity; otherwise, it is used
+internally for consistency.}
+
+\item{sample_id_col}{name of the column in \code{sample_annotation} table,
+where the filenames (colnames of the \code{data_matrix} are found).}
+
+\item{batch_col}{column in \code{sample_annotation} that should be used for
+batch comparison (or other, non-batch factor to be mapped to color in plots).}
+
 \item{format}{One of \code{"long"} or \code{"wide"}.}
 
 \item{covariates_cols}{Optional \code{sample_annotation} columns for the design matrix (biological or nuisance covariates).}
 
 \item{fill_the_missing}{Missing-value policy applied before modeling:
 \code{"error"} (default), \code{"keep"}, \code{"drop_features"}, or
-\code{"fill"}. With \code{"keep"}, NA values are passed to limma's
-linear modeling as is. The design matrix (\code{batch_col} and
+\code{"fill"}. With \code{"keep"}, NA values are passed unchanged to
+\code{limma::removeBatchEffect()}. The design matrix (\code{batch_col} and
 \code{covariates_cols}) must be NA-free for every policy.}
 
 \item{keep_all}{For long format, columns to retain (see \code{subset_keep_cols()}).}

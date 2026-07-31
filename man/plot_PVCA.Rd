@@ -97,14 +97,15 @@ pdf and png format is supported}
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
-\item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
+\item{theme}{ggplot theme, by default \code{classic}. Can be easily overridden}
 
 \item{base_size}{base size of the text in the plot}
 
 \item{path_to_save_results}{optional directory where aggregated PVCA results
 are written as CSV.}
 
-\item{...}{Additional arguments passed to lower-level methods.}
+\item{...}{Additional arguments passed to lower-level methods. The default
+method accepts \code{add_values = TRUE} to annotate bars with rounded weights.}
 
 \item{pbf_name}{Assay name(s) used when \code{data_matrix} is a \code{ProBatchFeatures}.}
 
@@ -125,8 +126,6 @@ factor in descending order.}
 
 \item{category_order}{optional character vector specifying the category order
 in a stacked PVCA plot.}
-
-\item{add_values}{logical; when \code{TRUE}, annotates each bar with its rounded weight.}
 }
 \value{
 \code{ggplot} object with the plot

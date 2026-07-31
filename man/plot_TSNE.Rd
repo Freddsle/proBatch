@@ -79,7 +79,7 @@ first two dimensions are plotted.}
 \code{max(1, floor((n_samples - 1) / 3))} are reduced with a warning.}
 
 \item{initial_dims}{Positive integer number of input dimensions retained by
-the backend's initial PCA step.}
+the initial PCA step performed by the backend.}
 
 \item{max_iter}{Positive integer number of t-SNE iterations.}
 

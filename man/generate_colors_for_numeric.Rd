@@ -2,7 +2,7 @@
 % Please edit documentation in R/colors_for_annotation.R
 \name{generate_colors_for_numeric}
 \alias{generate_colors_for_numeric}
-\title{Generates color vector from continous palette}
+\title{Generates color vector from continuous palette}
 \usage{
 generate_colors_for_numeric(palette_type = "brewer", i = 1)
 }

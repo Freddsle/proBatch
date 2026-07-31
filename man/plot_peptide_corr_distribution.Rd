@@ -64,7 +64,7 @@ pdf and png format is supported}
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
-\item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
+\item{theme}{ggplot theme, by default \code{classic}. Can be easily overridden}
 
 \item{pbf_name}{Assay name used when `data_matrix` is a `ProBatchFeatures`
 object. If `NULL`, [pb_current_assay()] is used.}

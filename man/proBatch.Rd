@@ -93,7 +93,7 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 \item{keep_all}{when transforming the data (normalize, correct) - acceptable
 values: all/default/minimal (which set of columns be kept).}
 
-\item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
+\item{theme}{ggplot theme, by default \code{classic}. Can be easily overridden}
 
 \item{filename}{path where the results are saved.
 If null the object is returned to the active window;
@@ -113,7 +113,7 @@ No return value.
 }
 \description{
 The proBatch package contains functions for analyzing and correcting batch
-effects (unwanted technical variation) from high-thoughput experiments.
+effects (unwanted technical variation) from high-throughput experiments.
 Although the package has primarily been developed for mass spectrometry
 proteomics (DIA/SWATH), it has been designed be applicable to most omic data
 with minor adaptations.

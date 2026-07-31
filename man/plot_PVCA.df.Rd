@@ -61,7 +61,7 @@ pdf and png format is supported}
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
-\item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
+\item{theme}{ggplot theme, by default \code{classic}. Can be easily overridden}
 
 \item{base_size}{base size of the text in the plot}
 
@@ -69,25 +69,11 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 
-\item{...}{Additional arguments. When \code{data_matrix} is a
-\code{ProBatchFeatures}, these are forwarded to \code{prepare_PVCA_df()}.}
-
-\item{stacked_bar}{Logical; combine multiple \code{ProBatchFeatures} assays in one
-stacked bar chart.}
-
-\item{stacked_plot_title}{Optional character vector used as the stacked plot
-title; elements are joined with newlines.}
-
-\item{sort_stacked}{Optional factor label used to order stacked assay bars by
-descending explained variance.}
-
-\item{category_order}{Optional character vector specifying stacked category
-order.}
-
-\item{path_to_save_results}{Optional directory where aggregated PVCA result
-CSV files are written.}
-
-\item{add_values}{Logical; annotate bars with rounded weight values.}
+\item{...}{Additional arguments. For a \code{ProBatchFeatures} input,
+\code{stacked_bar}, \code{stacked_plot_title}, \code{sort_stacked}, and \code{category_order}
+control multi-assay presentation; remaining computation arguments,
+including \code{path_to_save_results}, are forwarded to \code{prepare_PVCA_df()}.
+For all inputs, \code{add_values = TRUE} annotates bars with rounded weights.}
 }
 \value{
 \code{ggplot} object with bars as weights, colored by bio/tech factors

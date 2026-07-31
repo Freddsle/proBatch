@@ -85,7 +85,7 @@ excluded.}
 \item{color_for_missing}{special color to make missing values.
 Usually black or white, depending on \code{heatmap_color}}
 
-\item{heatmap_color}{vector of colors used in heatmap (typicall a gradient)}
+\item{heatmap_color}{vector of colors used in heatmap (typically a gradient)}
 
 \item{filename}{path where the results are saved.
 If null the object is returned to the active window;

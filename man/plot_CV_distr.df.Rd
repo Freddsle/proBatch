@@ -25,7 +25,7 @@ If null the object is returned to the active window;
 otherwise, the object is save into the file. Currently only
 pdf and png format is supported}
 
-\item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
+\item{theme}{ggplot theme, by default \code{classic}. Can be easily overridden}
 
 \item{log_y_scale}{(logical) whether to display the CV on log-scale}
 
