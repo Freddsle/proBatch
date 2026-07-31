@@ -86,6 +86,13 @@ to run them. A newly created workflow remains `implementation in progress`
 until its artifact validates, renders correctly, and completes a representative
 execution; only then may the catalog mark it `implemented`.
 
+The planned
+`@/workflows/evaluate-deferred-core-improvements.donna.md` workflow is the last
+follow-up for rejected-split ideas. Do not implement or present it as
+executable until the standalone baseline is complete and each retained idea has
+independent benefit, compatibility, dependency, specification, and test
+evidence.
+
 Use `@/workflows/verify-specifications.donna.md` for the specification
 verification triggers listed in the workflow catalog.
 

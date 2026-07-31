@@ -157,3 +157,11 @@ Each public R symbol MUST have one effective top-level definition so source orde
 Public exports, methods, parameters, and examples MUST be maintained in Roxygen2 sources under `./R/`; agents MUST leave `./NAMESPACE` and `./man/` generation to the maintainer.
 
 Changes to Core behavior MUST include focused testthat coverage and synchronized editable Roxygen2 sources, vignettes, dependency metadata, Depmesh relations, and release notes when those artifact families are affected.
+
+## Deferred rejected-split improvements
+
+The standalone baseline MUST NOT adopt remaining rejected-split redesigns merely because comparator code exists.
+
+After the standalone baseline and installed import surface are verified, `./workflows/evaluate-deferred-core-improvements.donna.md` MAY evaluate remaining comparator ideas as the final planned workflow. A candidate MUST demonstrate a concrete Core or downstream benefit, MUST be specified independently of the rejected implementation, and MUST include compatibility, dependency, and focused-test evidence before implementation.
+
+That workflow MUST reject or defer candidates whose benefit is speculative, provider-specific, duplicative of the baseline contract, or disproportionate to their public compatibility cost. It MUST NOT inherit the rejected split's package version, supported R version, blanket dependency removals, or broad identifier rules without separate maintainer acceptance.

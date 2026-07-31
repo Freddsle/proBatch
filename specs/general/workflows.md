@@ -141,11 +141,23 @@ A completed workflow family MAY be removed after one historical workflow record 
 - Expected verification: every agent-owned child workflow completes; version records agree; release notes cover user-visible changes; maintainer-owned generation and checks are confirmed; no runtime, cache, or check artifacts are included.
 - Completion outcome: the repository and verified source archive are ready for a separately authorized release or submission action; the workflow MUST NOT push, tag, upload, or submit by itself.
 
+### Evaluate deferred Core improvements
+
+- Artifact: `./workflows/evaluate-deferred-core-improvements.donna.md`
+- State: planned
+- Purpose: evaluate the rejected split's remaining Core-oriented ideas after the standalone baseline, then implement only improvements with independently specified and measurable Core or downstream benefit.
+- Triggers: completion of the standalone Core baseline and installed import-surface verification, followed by an explicit maintainer request to assess deferred comparator ideas.
+- Major stages: pin the accepted baseline and comparator evidence; inventory only unresolved Core-oriented candidates; reject speculative, provider-specific, duplicative, or disproportionate changes; specify each retained candidate independently; obtain maintainer acceptance; implement bounded changes with focused tests; run specification, relation, documentation-source, test, vignette, and package verification as triggered.
+- Expected verification: every adopted change has a current specification, compatibility and dependency assessment, focused tests, and evidence of concrete benefit; Core remains independent of Bench and provider engines; rejected candidates and their reasons are recorded; no package-version, R-version, blanket dependency, or broad identifier choice is inherited without separate maintainer acceptance.
+- Completion outcome: worthwhile deferred Core improvements are incorporated deliberately and all other comparator ideas have an explicit rejection or deferral record; the workflow performs no release, push, tag, upload, or submission.
+
 ## Workflow composition
 
 `./workflows/check-package.donna.md` SHOULD invoke the documentation-source, test, and vignette workflows as child workflows when their checks cannot be performed equivalently by its deterministic agent-safe stages.
 
 `./workflows/prepare-release.donna.md` MUST coordinate specification verification, file-relation verification, documentation-source review, tests, vignettes, and maintainer-owned generation and package checks. It SHOULD invoke the specialized permanent workflows rather than duplicating their repair logic.
+
+`./workflows/evaluate-deferred-core-improvements.donna.md` MUST run only after the standalone baseline is complete and MUST compose the specialized verification workflows triggered by each accepted candidate rather than duplicating their repair logic.
 
 The specialized workflows MUST remain independently runnable so maintainers can obtain focused feedback without executing the complete release pipeline.
 
@@ -160,6 +172,7 @@ Planned workflows SHOULD be implemented in the following order:
 5. `./workflows/build-vignettes.donna.md`
 6. `./workflows/check-package.donna.md`
 7. `./workflows/prepare-release.donna.md`
+8. `./workflows/evaluate-deferred-core-improvements.donna.md`
 
 A planned workflow MUST NOT be presented as executable until its artifact exists, validates, renders correctly, and has completed at least one representative execution.
 
