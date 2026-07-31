@@ -2,7 +2,6 @@
 # filters for missing values in ProBatchFeatures
 ####################################################
 #' Apply `QFeatures` missing-data helpers to stored assays
-#' @md
 #'
 #' These wrappers delegate to the corresponding `QFeatures` generics while
 #' ensuring that the requested assays remain part of the `ProBatchFeatures`
@@ -62,6 +61,7 @@
 #'   links when feature rows change; QFeatures warns when this occurs. Use
 #'   `inplace = FALSE` to keep existing links unchanged.
 #' @name pb_missing_helpers
+#' @md
 NULL
 
 .pb_apply_missing_qf_step <- function(object, assays, fun, step, params, fun_name = step) {

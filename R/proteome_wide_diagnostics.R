@@ -1895,7 +1895,6 @@ plot_PVCA.df <- function(data_matrix,
 }
 
 #' Plot stacked PVCA results from saved CSV files
-#' @md
 #'
 #' When PVCA analysis has been run previously and the aggregated weights were
 #' written to disk (one `PVCA_results_aggregated.csv` per assay), this helper
@@ -1913,13 +1912,14 @@ plot_PVCA.df <- function(data_matrix,
 #' @param theme Plot theme; only `"classic"` is currently implemented.
 #' @param base_size Base font size passed to `theme_classic()`.
 #' @param filename Optional path to save the stacked plot.
-#' @param width Plot width forwarded to [save_ggplot()].
-#' @param height Plot height forwarded to [save_ggplot()].
-#' @param units Plot units forwarded to [save_ggplot()].
+#' @param width Plot width forwarded to [ggplot2::ggsave()].
+#' @param height Plot height forwarded to [ggplot2::ggsave()].
+#' @param units Plot units forwarded to [ggplot2::ggsave()].
 #' @param category_order Optional character vector specifying the order of categories in the stacked plot.
 #'
 #' @return A `ggplot` object showing the stacked PVCA weights.
 #' @export
+#' @md
 plot_PVCA_stacked_from_saved <- function(pvca_dir,
                                          sort_stacked = NULL,
                                          colors_for_bars = NULL,
@@ -2279,7 +2279,6 @@ plot_PCA.ProBatchFeatures <- function(data_matrix, pbf_name = NULL,
 plot_PCA <- function(data_matrix, ...) UseMethod("plot_PCA")
 
 #' Plot a t-SNE embedding of samples
-#' @md
 #'
 #' Compute t-SNE with samples as observations (matrix columns) and return a
 #' static `ggplot` by default. Interactive Plotly rendering is optional.
@@ -2343,6 +2342,7 @@ plot_PCA <- function(data_matrix, ...) UseMethod("plot_PCA")
 #' }
 #' @method plot_TSNE default
 #' @export
+#' @md
 plot_TSNE.default <- function(data_matrix,
                               sample_annotation,
                               feature_id_col = "peptide_group_label",
@@ -2537,7 +2537,6 @@ plot_TSNE.ProBatchFeatures <- function(data_matrix,
 plot_TSNE <- function(data_matrix, ...) UseMethod("plot_TSNE")
 
 #' Plot a UMAP embedding of samples
-#' @md
 #'
 #' Compute UMAP with samples as observations (matrix columns) and return a
 #' static `ggplot` by default. Interactive Plotly rendering is optional.
@@ -2588,6 +2587,7 @@ plot_TSNE <- function(data_matrix, ...) UseMethod("plot_TSNE")
 #' }
 #' @method plot_UMAP default
 #' @export
+#' @md
 plot_UMAP.default <- function(data_matrix,
                               sample_annotation,
                               feature_id_col = "peptide_group_label",

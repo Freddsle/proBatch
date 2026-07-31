@@ -2092,7 +2092,6 @@ pb_add_level <- function(
 }
 
 #' Subset `ProBatchFeatures` objects without dropping metadata.
-#' @md
 #'
 #' Ensures the `[` method returns a `ProBatchFeatures` instance so the
 #' subclass-specific slots remain available after subsetting.
@@ -2108,6 +2107,7 @@ pb_add_level <- function(
 #' @rdname ProBatchFeatures-subset
 #' @aliases ProBatchFeatures-subset [,ProBatchFeatures,ANY,ANY,ANY-method
 #' @export
+#' @md
 setMethod(
     "[",
     c("ProBatchFeatures", "ANY", "ANY", "ANY"),
@@ -2125,7 +2125,6 @@ setMethod(
 )
 
 #' Subset samples using `ProBatchFeatures` metadata.
-#' @md
 #'
 #' Resolve sample metadata from `colData(object)`, build a column mask, and
 #' delegate to the subclass-preserving `[` method so every assay is subset
@@ -2159,6 +2158,7 @@ setMethod(
 #'     subset_values = "Pool"
 #' )
 #' @export
+#' @md
 pb_subset_samples <- function(object,
                               sample_id_col = "FullRunName",
                               subset_by = sample_id_col,

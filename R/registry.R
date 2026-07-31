@@ -158,7 +158,6 @@
 }
 
 #' Register a provider-neutral transformation step
-#' @md
 #'
 #' Registers one canonical step and optional aliases for use by
 #' [pb_transform()], [pb_eval()], and [pb_apply_matrix_method()]. Registration
@@ -184,6 +183,7 @@
 #' @return `TRUE`, invisibly.
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
+#' @md
 pb_register_step <- function(
   name,
   fun,
@@ -265,7 +265,6 @@ pb_register_step <- function(
 }
 
 #' Unregister all transformation steps from one provider
-#' @md
 #'
 #' Removes every canonical registration and alias owned by `package`. Calling
 #' the function when the provider owns no registrations is a no-op.
@@ -274,6 +273,7 @@ pb_register_step <- function(
 #'
 #' @return The removed canonical names, invisibly.
 #' @export
+#' @md
 pb_unregister_steps <- function(package) {
     package <- .pb_registry_character_scalar(package, "package")
     canonical_names <- ls(envir = .pb_step_records, all.names = TRUE)
@@ -308,7 +308,6 @@ pb_unregister_steps <- function(package) {
 }
 
 #' List registered transformation steps
-#' @md
 #'
 #' Returns canonical step names. Pattern matching considers canonical names,
 #' aliases, and display labels. Availability filtering reports current state
@@ -331,6 +330,7 @@ pb_unregister_steps <- function(package) {
 #' pb_list_steps(details = TRUE)
 #' pb_list_steps("^l")
 #' @export
+#' @md
 pb_list_steps <- function(pattern = NULL, details = FALSE, available = NULL) {
     if (!is.logical(details) || length(details) != 1L || is.na(details)) {
         stop("`details` must be TRUE or FALSE.", call. = FALSE)
@@ -417,7 +417,6 @@ pb_list_steps <- function(pattern = NULL, details = FALSE, available = NULL) {
 }
 
 #' Test whether a transformation step is registered or available
-#' @md
 #'
 #' Canonical names and aliases resolve to the same registration.
 #'
@@ -431,6 +430,7 @@ pb_list_steps <- function(pattern = NULL, details = FALSE, available = NULL) {
 #' pb_has_step("medianNorm")
 #' pb_has_step("combat", available = TRUE)
 #' @export
+#' @md
 pb_has_step <- function(name, available = FALSE) {
     if (!is.logical(available) || length(available) != 1L ||
         is.na(available)) {
