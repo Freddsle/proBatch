@@ -1710,18 +1710,29 @@ pb_aggregate_level <- function(
 }
 
 #' Add a new level from an external matrix and link to an existing assay
+#' @md
 #' @param object ProBatchFeatures
 #' @param from assay name (e.g., "peptide::raw")
 #' @param new_matrix numeric matrix (features x samples)
-#' @param mapping_df data.frame with mapping from 'from' IDs to 'to' IDs
-#' @param from_id column in mapping_df for 'from' IDs (e.g., "Precursor.Id")
-#' @param to_id column in mapping_df for 'to' IDs (e.g., "Protein.Ids")
+#' @param mapping_df Data frame mapping `from` IDs to `to` IDs. Required only
+#'   when source and target row identifiers are not identical one-to-one.
+#' @param from_id Source-ID column in `mapping_df` (for example,
+#'   `"Precursor.Id"`); required with `mapping_df`.
+#' @param to_id Target-ID column in `mapping_df` (for example,
+#'   `"Protein.Ids"`); required with `mapping_df`.
 #' @param map_strategy how to resolve multiple to-ids per from-id:
-#' "as_is" (error if not 1:1), "first" (take first), "longest" (take longest string)
+#'   `"as_is"` (error if not one-to-one), `"first"` (take the first exact
+#'   target), or `"longest"` (prefer the exact target with the most
+#'   semicolon-separated identifiers, then the longest string, then its first
+#'   occurrence).
 #' @param link_var rowData variable name to use for linking (e.g., "ProteinID")
 #' @param to_level e.g. "protein"
 #' @param to_pipeline optional pipeline name (default carries over from 'from')
-#' @param name optional final assay name override
+#' @param name Optional final assay name override in
+#'   `<level>::<pipeline>` form. Stored assays and virtual operation-log
+#'   targets share one result namespace. A collision is accepted only for an
+#'   exact idempotent retry with identical data, parent, mapping, and stable
+#'   lineage origin.
 #' @param backend "memory","hdf5","auto"
 #' @param hdf5_path optional filepath for HDF5Array
 #' @return ProBatchFeatures with new assay and link added
@@ -1745,21 +1756,186 @@ pb_add_level <- function(
     stopifnot(is(object, "ProBatchFeatures"))
     backend <- match.arg(backend)
     map_strategy <- match.arg(map_strategy)
+    .pb_assay_parts(from, strict = TRUE)
 
     # ----- Determine target assay name -----
     from_parts <- strsplit(from, "::", fixed = TRUE)[[1]]
     from_pipeline <- if (length(from_parts) >= 2) from_parts[2] else "raw"
     pipeline <- to_pipeline %||% from_pipeline
+    if (!is.null(name)) {
+        .pb_assay_parts(name, strict = TRUE)
+    }
     to <- if (!is.null(name)) name else .pb_assay_name(to_level, pipeline)
-    # Idempotency: if identical assay recorded, do nothing
-    if (to %in% names(object) && from %in% names(object)) {
-        message("Assay '", to, "' already exists and is linked; skipping addition.")
+    .pb_assay_parts(to, strict = TRUE)
+
+    # ----- Build SE for new_matrix and align samples to 'from' assay -----
+    if (!(from %in% names(object))) {
+        stop("Assay '", from, "' is not stored in the object.")
+    }
+    m <- as.matrix(new_matrix)
+    if (!is.numeric(m)) {
+        stop("`new_matrix` must be a numeric matrix.", call. = FALSE)
+    }
+    if (!nrow(m) || !ncol(m)) {
+        stop(
+            "`new_matrix` must contain at least one feature and one sample.",
+            call. = FALSE
+        )
+    }
+    rownames(m) <- .pb_validate_identifiers(
+        rownames(m),
+        "`new_matrix` feature axis"
+    )
+    colnames(m) <- .pb_validate_identifiers(
+        colnames(m),
+        "`new_matrix` sample axis"
+    )
+    r_from <- .pb_validate_identifiers(
+        rownames(assay(object[[from]], "intensity")),
+        paste0("Source assay '", from, "' feature axis")
+    )
+    r_to <- rownames(m)
+    one_to_one <- identical(r_from, r_to)
+    virtual_target <- !(to %in% names(object)) &&
+        nrow(object@oplog) &&
+        any(as.character(object@oplog$to) == to)
+    if (virtual_target) {
+        stop(
+            "Result target '", to,
+            "' is reserved by the operation log and cannot be used for ",
+            "an added level.",
+            call. = FALSE
+        )
+    }
+
+    parent_ids <- NULL
+    parent_keys <- NULL
+    if (!one_to_one) {
+        if (is.null(mapping_df) || is.null(from_id) || is.null(to_id)) {
+            stop(
+                "Provide mapping_df, from_id and to_id to establish ",
+                "cross-level links."
+            )
+        }
+        mapping_df <- as.data.frame(mapping_df, stringsAsFactors = FALSE)
+        if (anyDuplicated(names(mapping_df))) {
+            stop("`mapping_df` must have unique column names.", call. = FALSE)
+        }
+        mapping_id_args <- list(from_id = from_id, to_id = to_id)
+        invalid_id_arg <- vapply(mapping_id_args, function(value) {
+            !is.character(value) ||
+                length(value) != 1L ||
+                is.na(value) ||
+                !nzchar(value)
+        }, logical(1))
+        if (any(invalid_id_arg)) {
+            stop(
+                "`", names(mapping_id_args)[which(invalid_id_arg)[1L]],
+                "` must be one non-empty mapping column name.",
+                call. = FALSE
+            )
+        }
+        missing_mapping_columns <- setdiff(
+            unlist(mapping_id_args, use.names = FALSE),
+            names(mapping_df)
+        )
+        if (length(missing_mapping_columns)) {
+            stop(
+                "`mapping_df` is missing column(s): ",
+                paste(missing_mapping_columns, collapse = ", "),
+                ".",
+                call. = FALSE
+            )
+        }
+        mapping_from <- .pb_validate_identifiers(
+            mapping_df[[from_id]],
+            paste0("`mapping_df$", from_id, "`"),
+            require_unique = FALSE
+        )
+        mapping_to <- .pb_validate_identifiers(
+            mapping_df[[to_id]],
+            paste0("`mapping_df$", to_id, "`"),
+            require_unique = FALSE
+        )
+
+        r_from_set <- unique(r_from)
+        r_to_set <- unique(r_to)
+        miss_from <- setdiff(
+            r_from_set,
+            mapping_from
+        )
+        if (length(miss_from)) {
+            stop(
+                "Mapping incomplete: ", length(miss_from),
+                " parent IDs from '", from, "' have no mapping. Examples: ",
+                paste(head(miss_from, 10), collapse = ", ")
+            )
+        }
+        keep_mapping <- mapping_from %in% r_from_set &
+            mapping_to %in% r_to_set
+        mapping <- data.frame(
+            from_key = mapping_from[keep_mapping],
+            to_key = mapping_to[keep_mapping],
+            stringsAsFactors = FALSE
+        )
+        by_parent <- split(mapping$to_key, mapping$from_key)
+        by_parent <- lapply(by_parent, unique)
+        picked <- vapply(
+            by_parent,
+            .choose_target,
+            character(1),
+            r_to = r_to,
+            map_strategy = map_strategy
+        )
+
+        parent_ids <- rownames(object[[from]])
+        parent_keys <- unname(picked[parent_ids])
+        if (anyNA(parent_keys)) {
+            bad <- parent_ids[is.na(parent_keys)]
+            stop(
+                "Linking failed: ", length(bad),
+                " parents have no exact match under map_strategy='",
+                map_strategy, "'. Examples: ",
+                paste(head(bad, 10), collapse = ", ")
+            )
+        }
+    }
+
+    origin <- if (one_to_one) {
+        list(
+            step = sprintf("add_level(%s)_1to1", to_level),
+            fun = "addAssayLinkOneToOne",
+            params = list()
+        )
+    } else {
+        list(
+            step = sprintf("add_level(%s)_byVar", to_level),
+            fun = "addAssayLink",
+            params = list(
+                varFrom = link_var,
+                varTo = link_var,
+                map_strategy = map_strategy,
+                from_id = from_id,
+                to_id = to_id,
+                mapping = stats::setNames(parent_keys, parent_ids)
+            )
+        )
+    }
+    retry_status <- .pb_target_retry_status(
+        object = object,
+        to = to,
+        from = from,
+        data = m,
+        step = origin$step,
+        fun = origin$fun,
+        params = origin$params,
+        pkg = "proBatch"
+    )
+    if (identical(retry_status, "stored_idempotent")) {
+        message("Assay '", to, "' is an exact existing retry; skipping addition.")
         return(object)
     }
 
-    # ----- Build SE for new_matrix and align samples to 'from' assay -----
-    m <- as.matrix(new_matrix)
-    if (is.null(colnames(m))) stop("new_matrix must have column names (sample IDs).")
     from_cd <- colData(object[[from]])
     if (!setequal(rownames(from_cd), colnames(m))) {
         stop("Samples of new_matrix don't match samples in '", from, "'.")
@@ -1777,78 +1953,19 @@ pb_add_level <- function(
 
     # ----- Linking logic -----
     # Case A: identical rownames -> 1:1 link
-    r_from <- rownames(assay(object[[from]], "intensity"))
-    r_to <- rownames(assay(object[[to]], "intensity"))
-    if (identical(r_from, r_to)) {
+    if (one_to_one) {
         object <- addAssayLinkOneToOne(object, from = from, to = to)
         object <- .pb_add_log_entry(object,
-            step = sprintf("add_level(%s)_1to1", to_level),
-            fun = "addAssayLinkOneToOne",
+            step = origin$step,
+            fun = origin$fun,
             from = from, to = to,
-            params = list()
+            params = origin$params
         )
         return(object)
     }
 
     # Case B: many-to-one (typical peptide->protein) using addAssayLink()
     # We need a variable present in rowData(from) and rowData(to) to match on.
-    # For the child (protein) side we set varTo to its rownames:
-    rowData(object[[to]])[[link_var]] <- rownames(object[[to]])
-
-    # For the parent (peptide) side, set varFrom using the mapping_df
-    # mapping_df[from_id] -> mapping_df[to_id]
-    if (is.null(mapping_df) || is.null(from_id) || is.null(to_id)) {
-        stop("Provide mapping_df, from_id and to_id to establish cross-level links.")
-    }
-
-    # in mapping_df, ensure that parents are fully covered; children need not all be referenced
-    r_from_set <- unique(r_from)
-    r_to_set <- unique(r_to)
-    # every parent must appear at least once in mapping_df
-    miss_from <- setdiff(r_from_set, as.character(mapping_df[[from_id]]))
-    if (length(miss_from)) {
-        stop(
-            "Mapping incomplete: ", length(miss_from),
-            " parent IDs from '", from, "' have no mapping. Examples: ",
-            paste(head(miss_from, 10), collapse = ", ")
-        )
-    }
-    # keep only rows that refer to existing parents/children
-    mapping_df <- mapping_df[
-        as.character(mapping_df[[from_id]]) %in% r_from_set &
-            as.character(mapping_df[[to_id]]) %in% r_to_set, ,
-        drop = FALSE
-    ]
-
-    # Build a named vector: from_key -> to_key
-    # If multiple protein groups per precursor, resolve by map_strategy
-    df <- mapping_df[, c(from_id, to_id)]
-    names(df) <- c("from_key", "to_key")
-
-    # Normalize to character
-    df$from_key <- as.character(df$from_key)
-    df$to_key <- as.character(df$to_key)
-
-    # Group mapping rows by parent (peptide/precursor)
-    # group by parent and drop duplicate targets per parent
-    by_parent <- split(df$to_key, df$from_key)
-    by_parent <- lapply(by_parent, unique)
-
-    # Resolve duplicates per from_key - apply chooser per parent
-    picked <- vapply(by_parent, .choose_target, character(1), r_to = r_to, map_strategy = map_strategy)
-
-    parent_ids <- rownames(object[[from]])
-    parent_keys <- unname(picked[parent_ids])
-
-    if (anyNA(parent_keys)) {
-        bad <- parent_ids[is.na(parent_keys)]
-        stop(
-            "Linking failed: ", length(bad),
-            " parents have no exact match under map_strategy='", map_strategy, "'. Examples: ",
-            paste(head(bad, 10), collapse = ", ")
-        )
-    }
-
     # Write linking variables:
     rowData(object[[to]])[[link_var]] <- r_to
     rowData(object[[from]])[[link_var]] <- parent_keys
@@ -1862,13 +1979,10 @@ pb_add_level <- function(
     # ----- Log -----
     # Log
     object <- .pb_add_log_entry(object,
-        step = sprintf("add_level(%s)_byVar", to_level),
-        fun = "addAssayLink",
+        step = origin$step,
+        fun = origin$fun,
         from = from, to = to,
-        params = list(
-            varFrom = link_var, varTo = link_var,
-            map_strategy = map_strategy
-        )
+        params = origin$params
     )
     object
 }

@@ -435,6 +435,170 @@ test_that("stored assay retries require identical data and parent lineage", {
     )
 })
 
+test_that("pb_add_level validates exact retries and target reservations", {
+    matrix <- matrix(
+        seq_len(6),
+        nrow = 3,
+        dimnames = list(paste0("f", 1:3), c("S1", "S2"))
+    )
+    sample_annotation <- data.frame(
+        FullRunName = colnames(matrix),
+        row.names = colnames(matrix)
+    )
+    pbf <- ProBatchFeatures(
+        matrix,
+        sample_annotation,
+        "FullRunName",
+        name = "raw"
+    )
+    target <- "copy::raw"
+    added <- pb_add_level(
+        pbf,
+        from = "feature::raw",
+        new_matrix = matrix,
+        to_level = "copy",
+        name = target
+    )
+    retried <- pb_add_level(
+        added,
+        from = "feature::raw",
+        new_matrix = matrix,
+        to_level = "copy",
+        name = target
+    )
+
+    expect_identical(names(retried), names(added))
+    expect_identical(
+        nrow(get_operation_log(retried)),
+        nrow(get_operation_log(added))
+    )
+    expect_error(
+        pb_add_level(
+            pbf,
+            from = "feature::raw",
+            new_matrix = matrix,
+            to_level = "copy",
+            name = c("copy::raw", "copy::other")
+        ),
+        "Assay name must be a non-empty character scalar"
+    )
+    expect_error(
+        pb_add_level(
+            added,
+            from = "feature::raw",
+            new_matrix = matrix + 1,
+            to_level = "copy",
+            name = target
+        ),
+        "conflicting data"
+    )
+    expect_error(
+        pb_add_level(
+            added,
+            from = "feature::raw",
+            new_matrix = matrix,
+            to_level = "different_level",
+            name = target
+        ),
+        "different parent or stable lineage origin"
+    )
+
+    other_se <- SummarizedExperiment(
+        assays = list(intensity = matrix),
+        colData = colData(added[["feature::raw"]])
+    )
+    with_other_parent <- proBatch:::.pb_add_assay_with_link(
+        added,
+        se = other_se,
+        to = "feature::other",
+        from = "feature::raw"
+    )
+    expect_error(
+        pb_add_level(
+            with_other_parent,
+            from = "feature::other",
+            new_matrix = matrix,
+            to_level = "copy",
+            name = target
+        ),
+        "different parent"
+    )
+
+    reserved_target <- "copy::reserved"
+    reserved <- proBatch:::.pb_add_log_entry(
+        pbf,
+        step = "reserved",
+        fun = "identity",
+        from = "feature::raw",
+        to = reserved_target,
+        params = list(),
+        pkg = "proBatch"
+    )
+    expect_error(
+        pb_add_level(
+            reserved,
+            from = "feature::raw",
+            new_matrix = matrix,
+            to_level = "copy",
+            name = reserved_target
+        ),
+        "reserved by the operation log"
+    )
+    expect_false(reserved_target %in% names(reserved))
+})
+
+test_that("pb_add_level validates numeric data and both identifier axes", {
+    input <- matrix(
+        seq_len(6),
+        nrow = 3,
+        dimnames = list(paste0("f", 1:3), c("S1", "S2"))
+    )
+    annotation <- data.frame(
+        FullRunName = colnames(input),
+        row.names = colnames(input)
+    )
+    object <- ProBatchFeatures(
+        input,
+        annotation,
+        sample_id_col = "FullRunName",
+        name = "raw"
+    )
+    add_invalid <- function(value) {
+        pb_add_level(
+            object,
+            from = "feature::raw",
+            new_matrix = value,
+            to_level = "copy"
+        )
+    }
+
+    character_matrix <- matrix(
+        letters[seq_along(input)],
+        nrow = nrow(input),
+        dimnames = dimnames(input)
+    )
+    expect_error(add_invalid(character_matrix), "numeric matrix")
+
+    empty_matrix <- input[FALSE, , drop = FALSE]
+    expect_error(add_invalid(empty_matrix), "at least one feature")
+
+    unnamed_features <- input
+    rownames(unnamed_features) <- NULL
+    expect_error(add_invalid(unnamed_features), "feature axis must be named")
+
+    duplicate_features <- input
+    rownames(duplicate_features)[[2L]] <- rownames(duplicate_features)[[1L]]
+    expect_error(add_invalid(duplicate_features), "duplicate identifiers")
+
+    empty_sample <- input
+    colnames(empty_sample)[[1L]] <- ""
+    expect_error(add_invalid(empty_sample), "NA or empty identifiers")
+
+    duplicate_samples <- input
+    colnames(duplicate_samples)[[2L]] <- colnames(duplicate_samples)[[1L]]
+    expect_error(add_invalid(duplicate_samples), "duplicate identifiers")
+})
+
 test_that("virtual targets reserve the stored assay namespace", {
     matrix <- matrix(
         c(2, 4, 8, 16),
@@ -1126,6 +1290,37 @@ test_that("pb_add_level: many-to-one linking (peptide -> protein) with map_strat
     )
     rf <- rowData(p_first[["peptide::raw"]])$ProteinID
     expect_identical(unname(rf), c("A", "A", "B"))
+
+    p_first_retry <- pb_add_level(
+        object = p_first,
+        from = "peptide::raw",
+        new_matrix = m_prot,
+        to_level = "protein",
+        mapping_df = map,
+        from_id = "Precursor.Id",
+        to_id = "Protein.Ids",
+        map_strategy = "first"
+    )
+    expect_identical(names(p_first_retry), names(p_first))
+    expect_identical(
+        nrow(get_operation_log(p_first_retry)),
+        nrow(get_operation_log(p_first))
+    )
+
+    changed_map <- map[c(1L, 2L, 4L, 3L, 5L), , drop = FALSE]
+    expect_error(
+        pb_add_level(
+            object = p_first,
+            from = "peptide::raw",
+            new_matrix = m_prot,
+            to_level = "protein",
+            mapping_df = changed_map,
+            from_id = "Precursor.Id",
+            to_id = "Protein.Ids",
+            map_strategy = "first"
+        ),
+        "different parent or stable lineage origin"
+    )
 
     al_first <- QFeatures::assayLink(p_first, "protein::raw")
     expect_s4_class(al_first, "AssayLink")
