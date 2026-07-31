@@ -82,8 +82,7 @@ warning. Explicit \code{NULL} is an error.}
 \item{covariates_cols}{Optional character vector of \code{sample_annotation} columns
 included in \code{mod} for ComBat (biological or nuisance covariates).}
 
-\item{...}{Additional parameters passed to \code{adjust_batch_trend_df()} and
-the chosen \code{fit_func}.}
+\item{...}{Further arguments forwarded to \code{\link[=correct_batch_effects]{correct_batch_effects()}}.}
 
 \item{fill_value}{Finite numeric scalar used only with
 \code{fill_the_missing = "fill"}.}
@@ -92,5 +91,5 @@ the chosen \code{fit_func}.}
 A numeric matrix of batch-corrected values (features \eqn{\times} samples).
 }
 \description{
-Use [correct_batch_effects()] with `format="wide"`.
+Use \code{\link[=correct_batch_effects]{correct_batch_effects()}} with \code{format="wide"}.
 }

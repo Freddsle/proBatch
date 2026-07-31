@@ -2,21 +2,8 @@
 % Please edit documentation in R/correct_batch_effects.R
 \name{correct_with_removeBatchEffect_dm}
 \alias{correct_with_removeBatchEffect_dm}
-\title{Batch effect correction with removeBatchEffect from limma}
+\title{DEPRECATED: correct_with_removeBatchEffect_dm}
 \usage{
-correct_with_removeBatchEffect_dm(
-  data_matrix,
-  sample_annotation,
-  feature_id_col = "peptide_group_label",
-  measure_col = "Intensity",
-  sample_id_col = "FullRunName",
-  batch_col = "MS_batch",
-  covariates_cols = NULL,
-  fill_the_missing = "error",
-  ...,
-  fill_value = NULL
-)
-
 correct_with_removeBatchEffect_dm(
   data_matrix,
   sample_annotation,
@@ -31,50 +18,66 @@ correct_with_removeBatchEffect_dm(
 )
 }
 \arguments{
-\item{data_matrix}{data matrix with features in rows and samples in columns}
+\item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
+feature IDs in rownames and file/sample names as colnames.
+See "example_proteome_matrix" for more details (to call the description,
+use \code{help("example_proteome_matrix")})}
 
-\item{sample_annotation}{data frame with sample annotations}
+\item{sample_annotation}{data frame with:
+\enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
+  \item biological covariates
+  \item technical covariates (batches etc) }.
+  See \code{help("example_sample_annotation")}}
 
-\item{feature_id_col}{column name in \code{data_matrix} with feature IDs}
+\item{feature_id_col}{name of the column with feature/gene/peptide/protein
+ID used in the long format representation \code{df_long}. In the wide
+formatted representation \code{data_matrix} this corresponds to the row
+names.}
 
-\item{measure_col}{column name in \code{data_matrix} with measured values}
+\item{measure_col}{if \code{df_long} is among the parameters, it is the
+column with expression/abundance/intensity; otherwise, it is used
+internally for consistency.}
 
-\item{sample_id_col}{column name in \code{sample_annotation} with sample IDs}
+\item{sample_id_col}{name of the column in \code{sample_annotation} table,
+where the filenames (colnames of the \code{data_matrix} are found).}
 
-\item{batch_col}{column name in \code{sample_annotation} with batch IDs}
+\item{batch_col}{column in \code{sample_annotation} that should be used for
+batch comparison (or other, non-batch factor to be mapped to color in plots).}
 
-\item{covariates_cols}{vector of column names in \code{sample_annotation}
-with covariates to include in the model}
+\item{covariates_cols}{Optional character vector of \code{sample_annotation} columns
+included in \code{mod} for ComBat (biological or nuisance covariates).}
 
-\item{fill_the_missing}{Missing-value policy inherited from
-\code{correct_batch_effects()}. Explicit \code{NULL} is an error.}
+\item{fill_the_missing}{Missing-value policy applied \emph{before} discrete
+correction: \code{"error"} (default), \code{"keep"},
+\code{"drop_features"}, or \code{"fill"}. With \code{"keep"}, missing
+values are passed through; ComBat still requires an NA-free matrix, while
+removeBatchEffect can model expression values containing NA. For one
+release, \code{FALSE}, a numeric scalar, and \code{"remove"},
+\code{"rm"}, or \code{"REMOVE"} are translated with a deprecation
+warning. Explicit \code{NULL} is an error.}
 
-\item{...}{other parameters to pass to \code{removeBatchEffect}}
+\item{...}{Further arguments passed to \code{limma::removeBatchEffect()}.}
 
 \item{fill_value}{Finite numeric scalar used only with
 \code{fill_the_missing = "fill"}.}
 }
 \value{
-data matrix with batch effects removed
+A numeric matrix with batch effects removed
+(features \eqn{\times} samples).
 }
 \description{
-Batch effect correction with removeBatchEffect.
+Use \code{\link[=correct_with_removeBatchEffect]{correct_with_removeBatchEffect()}} with \code{format="wide"}.
 }
-\section{Functions}{
-\itemize{
-\item \code{correct_with_removeBatchEffect_dm()}: Deprecated wrapper for
-`correct_with_removeBatchEffect(format = "wide")`.
-
-}}
 \examples{
 data(
     list = c("example_sample_annotation", "example_proteome_matrix"),
     package = "proBatch"
 )
 example_proteome_small <- example_proteome_matrix[1:100, ]
-batch_corrected_matrix <- correct_with_removeBatchEffect_dm(
+batch_corrected_matrix <- correct_with_removeBatchEffect(
     example_proteome_small,
     example_sample_annotation,
+    format = "wide",
     batch_col = "MS_batch",
     covariates_cols = c("Diet", "Sex"),
     fill_the_missing = "drop_features"

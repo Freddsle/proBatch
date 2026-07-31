@@ -68,5 +68,5 @@ included in \code{mod} for ComBat (biological or nuisance covariates).}
 A numeric matrix of ComBat-corrected values (features \eqn{\times} samples).
 }
 \description{
-Use [correct_with_ComBat()] with `format="wide"`.
+Use \code{\link[=correct_with_ComBat]{correct_with_ComBat()}} with \code{format="wide"}.
 }

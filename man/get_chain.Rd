@@ -7,20 +7,24 @@
 get_chain(object, as_string = FALSE, assay = NULL)
 }
 \arguments{
-\item{object}{A `ProBatchFeatures` object.}
+\item{object}{A \code{ProBatchFeatures} object.}
 
-\item{as_string}{logical(1). if `TRUE` returns the chain as a single string
-of the form `"combat_on_mediannorm_on_log"`.}
+\item{as_string}{logical(1). if \code{TRUE} returns the chain as a single string
+of the form \code{"combat_on_mediannorm_on_log"}.}
 
 \item{assay}{Optional assay identifier. When supplied, derive that assay's
-lineage from operation-log edges. When `NULL`, return the legacy global
-`chain` slot.}
+lineage from operation-log edges. When \code{NULL}, return the legacy global
+\code{chain} slot.}
 }
 \value{
 Character vector or string describing the processing chain.
 }
 \description{
 Retrieve operation chain as vector or single string "combat_on_mediannorm_on_log"
+}
+\details{
+Logged lineage is validated before a chain is returned. Ambiguous
+or cyclic lineage causes an error, including when \code{assay = NULL}.
 }
 \examples{
 # Shared setup for ProBatchFeatures documentation examples -----------------

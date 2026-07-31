@@ -3,27 +3,26 @@
 \name{[,ProBatchFeatures,ANY,ANY,ANY-method}
 \alias{[,ProBatchFeatures,ANY,ANY,ANY-method}
 \alias{ProBatchFeatures-subset}
-\title{Subset `ProBatchFeatures` objects without dropping metadata.}
+\title{Subset \code{ProBatchFeatures} objects without dropping metadata.}
 \usage{
 \S4method{[}{ProBatchFeatures,ANY,ANY,ANY}(x, i, j, k, ..., drop = TRUE)
 }
 \arguments{
-\item{x}{A `ProBatchFeatures` object.}
+\item{x}{A \code{ProBatchFeatures} object.}
 
-\item{i}{Row indices passed to the underlying `QFeatures` subset.}
+\item{i}{Row indices passed to the underlying \code{QFeatures} subset.}
 
-\item{j}{Column indices passed to the underlying `QFeatures` subset.}
+\item{j}{Column indices passed to the underlying \code{QFeatures} subset.}
 
-\item{k}{Assay indices passed to the underlying `QFeatures` subset.}
+\item{k}{Assay indices passed to the underlying \code{QFeatures} subset.}
 
 \item{...}{Additional arguments forwarded to the next method.}
 
-\item{drop}{Logical flag controlling dimension dropping; defaults to `TRUE`.}
+\item{drop}{Logical flag controlling dimension dropping; defaults to \code{TRUE}.}
 }
 \value{
-A `ProBatchFeatures` object containing the requested subset.
+A \code{ProBatchFeatures} object containing the requested subset.
 }
 \description{
-Ensures the `[` method returns a `ProBatchFeatures` instance so the
-subclass-specific slots remain available after subsetting.
+Subset \code{ProBatchFeatures} objects without dropping metadata.
 }

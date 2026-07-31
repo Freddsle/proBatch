@@ -2,7 +2,7 @@
 % Please edit documentation in R/ProBatchFeatures.R
 \name{pb_subset_samples}
 \alias{pb_subset_samples}
-\title{Subset samples using `ProBatchFeatures` metadata.}
+\title{Subset samples using \code{ProBatchFeatures} metadata.}
 \usage{
 pb_subset_samples(
   object,
@@ -12,23 +12,21 @@ pb_subset_samples(
 )
 }
 \arguments{
-\item{object}{A `ProBatchFeatures` object.}
+\item{object}{A \code{ProBatchFeatures} object.}
 
 \item{sample_id_col}{Character scalar naming the sample identifier column in
-`colData(object)`. When the column is absent, row names are used.}
+\code{colData(object)}. When the column is absent, row names are used.}
 
 \item{subset_by}{Character scalar naming the metadata column used for
-filtering. Defaults to `sample_id_col`.}
+filtering. Defaults to \code{sample_id_col}.}
 
-\item{subset_values}{Values to retain from `subset_by`.}
+\item{subset_values}{Values to retain from \code{subset_by}.}
 }
 \value{
-A `ProBatchFeatures` object restricted to the selected samples.
+A \code{ProBatchFeatures} object restricted to the selected samples.
 }
 \description{
-Resolve sample metadata from `colData(object)`, build a column mask, and
-delegate to the subclass-preserving `[` method so every assay is subset
-consistently.
+Subset samples using \code{ProBatchFeatures} metadata.
 }
 \examples{
 data(example_proteome_matrix, package = "proBatch")

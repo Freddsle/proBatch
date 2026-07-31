@@ -25,15 +25,15 @@
 }
 \arguments{
 \item{data_matrix}{Data frame of PVCA weights, typically the result of
-`prepare_PVCA_df()`, or a `ProBatchFeatures` object.}
+\code{prepare_PVCA_df()}, or a \code{ProBatchFeatures} object.}
 
-\item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
+\item{pbf_name}{Assay name(s) used when \code{data_matrix} is a \code{ProBatchFeatures}.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
-  \item biological covariates
-  \item technical covariates (batches etc) }.
-  See \code{help("example_sample_annotation")}}
+\item biological covariates
+\item technical covariates (batches etc) }.
+See \code{help("example_sample_annotation")}}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
@@ -69,10 +69,10 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 
-\item{...}{Additional arguments. When `data_matrix` is a
-`ProBatchFeatures`, these are forwarded to `prepare_PVCA_df()`.}
+\item{...}{Additional arguments. When \code{data_matrix} is a
+\code{ProBatchFeatures}, these are forwarded to \code{prepare_PVCA_df()}.}
 
-\item{stacked_bar}{Logical; combine multiple `ProBatchFeatures` assays in one
+\item{stacked_bar}{Logical; combine multiple \code{ProBatchFeatures} assays in one
 stacked bar chart.}
 
 \item{stacked_plot_title}{Optional character vector used as the stacked plot
@@ -96,9 +96,9 @@ CSV files are written.}
 plot PVCA, when the analysis is completed
 }
 \details{
-`plot_PVCA.df()` is retained as a directly callable compatibility
-  helper and registered for the historical `"df"` S3 class. Prepared PVCA
-  data frames can continue to call the helper directly.
+\code{plot_PVCA.df()} is retained as a directly callable compatibility
+helper and registered for the historical \code{"df"} S3 class. Prepared PVCA
+data frames can continue to call the helper directly.
 }
 \examples{
 data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")

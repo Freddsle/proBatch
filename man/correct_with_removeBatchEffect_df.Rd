@@ -60,8 +60,8 @@ warning. Explicit \code{NULL} is an error.}
 \item{keep_all}{when transforming the data (normalize, correct) - acceptable
 values: all/default/minimal (which set of columns be kept).}
 
-\item{...}{Additional parameters passed to \code{adjust_batch_trend_df()} and
-the chosen \code{fit_func}.}
+\item{...}{Further arguments passed to
+\code{limma::removeBatchEffect()}.}
 
 \item{fill_value}{Finite numeric scalar used only with
 \code{fill_the_missing = "fill"}.}
@@ -70,5 +70,5 @@ the chosen \code{fit_func}.}
 A data.frame in long format with batch effects removed in \code{measure_col}.
 }
 \description{
-Use [correct_with_removeBatchEffect()] with `format="long"`.
+Use \code{\link[=correct_with_removeBatchEffect]{correct_with_removeBatchEffect()}} with \code{format="long"}.
 }

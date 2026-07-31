@@ -2,22 +2,25 @@
 % Please edit documentation in R/ProBatchFeatures.R
 \name{pb_assay_matrix}
 \alias{pb_assay_matrix}
-\title{Convenience accessor for assay matrix by name/index (returns the 'intensity' assay)}
+\title{Convenience accessor for stored or virtual assay matrices}
 \usage{
 pb_assay_matrix(object, assay = NULL, name = "intensity")
 }
 \arguments{
-\item{object}{A `ProBatchFeatures` object.}
+\item{object}{A \code{ProBatchFeatures} object.}
 
 \item{assay}{Assay identifier to extract; defaults to the current assay.}
 
-\item{name}{Assay entry to read from the underlying `SummarizedExperiment`.}
+\item{name}{Assay entry to read from the underlying \code{SummarizedExperiment}.}
 }
 \value{
-assay data matrix with features in rows and samples in columns
+Assay data matrix with features in rows and samples in columns.
 }
 \description{
-Convenience accessor for assay matrix by name/index (returns the 'intensity' assay)
+Stored assays are read directly. A virtual target recorded in the operation
+log is replayed through its recorded canonical step and provider; replay
+fails with guidance if that provider is no longer registered or available.
+Ambiguous or cyclic operation-log lineage also causes an error.
 }
 \examples{
 # Shared setup for ProBatchFeatures documentation examples -----------------

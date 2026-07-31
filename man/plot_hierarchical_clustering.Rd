@@ -38,7 +38,7 @@
 )
 }
 \arguments{
-\item{data_matrix}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
+\item{data_matrix}{Input object: matrix-like data or a \code{ProBatchFeatures} instance.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -86,29 +86,30 @@ pdf and png format is supported}
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{return_ggplot}{logical; when \code{TRUE}, the dendrogram is returned
-as a `ggplot` object. Used internally to capture plots for multi-assay
+as a \code{ggplot} object. Used internally to capture plots for multi-assay
 workflows. Defaults to \code{FALSE} for the default method.}
 
 \item{...}{other parameters of \code{plotDendroAndColors} from
 \code{WGCNA} package}
 
-\item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
+\item{pbf_name}{Assay name(s) used when \code{data_matrix} is a
+\code{ProBatchFeatures}.}
 
 \item{return_gridExtra}{logical; when plotting multiple assays from a
-`ProBatchFeatures` object, returning \code{TRUE} provides a list with the
-arranged grob and individual plots (see `gridExtra::arrangeGrob`). Ignored
+\code{ProBatchFeatures} object, returning \code{TRUE} provides a list with the
+arranged grob and individual plots (see \code{gridExtra::arrangeGrob}). Ignored
 by the default method.}
 
 \item{plot_ncol}{optional integer controlling the number of columns when
 arranging multiple assays. Ignored by the default method.}
 }
 \value{
-For the default method, either `NULL` (when relying on base
-  graphics) or a `ggplot` object when `return_ggplot = TRUE`. The
-  `ProBatchFeatures` method returns a single `ggplot` (for one assay) or an
-  arranged grob/`ggplot` collection when multiple assays are plotted; if
-  `ggplotify` is unavailable, a list of per-assay results is returned
-  invisibly.
+For the default method, either \code{NULL} (when relying on base
+graphics) or a \code{ggplot} object when \code{return_ggplot = TRUE}. The
+\code{ProBatchFeatures} method returns a single \code{ggplot} (for one assay) or an
+arranged grob/\code{ggplot} collection when multiple assays are plotted; if
+\code{ggplotify} is unavailable, a list of per-assay results is returned
+invisibly.
 }
 \description{
 cluster the data matrix to visually inspect which confounder dominates
@@ -138,6 +139,6 @@ hierarchical_clustering_plot <- plot_hierarchical_clustering(
 }
 \seealso{
 \code{\link[stats]{hclust}},
-  \code{\link{sample_annotation_to_colors}},
-  \code{\link[WGCNA]{plotDendroAndColors}}
+\code{\link{sample_annotation_to_colors}},
+\code{\link[WGCNA]{plotDendroAndColors}}
 }

@@ -34,7 +34,8 @@ linear modeling as is. The design matrix (\code{batch_col} and
 
 \item{keep_all}{For long format, columns to retain (see \code{subset_keep_cols()}).}
 
-\item{...}{Further arguments passed to \code{sva::ComBat()}.}
+\item{...}{Further arguments passed to
+\code{limma::removeBatchEffect()}.}
 
 \item{fill_value}{Finite numeric scalar used only with
 \code{fill_the_missing = "fill"}.}
@@ -55,11 +56,12 @@ data(
 batch_corrected_matrix <- correct_with_removeBatchEffect(
     example_proteome_matrix,
     example_sample_annotation,
+    format = "wide",
     batch_col = "MS_batch",
-    covariates_cols = c("Condition", "Type"),
+    covariates_cols = c("Diet", "Sex"),
     fill_the_missing = "drop_features"
 )
 }
 \seealso{
-\code{\link{removeBatchEffect}}
+\code{\link[limma:removeBatchEffect]{removeBatchEffect}}
 }

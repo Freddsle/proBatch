@@ -4,8 +4,6 @@
 \alias{correct_batch_effects}
 \alias{adjust_batch_trend_dm}
 \alias{adjust_batch_trend_df}
-\alias{correct_batch_effects_df}
-\alias{correct_batch_effects_dm}
 \title{Batch correction methods for normalized data}
 \usage{
 adjust_batch_trend_dm(
@@ -61,47 +59,6 @@ correct_batch_effects(
   par.prior = TRUE,
   covariates_cols = NULL,
   min_measurements = 8,
-  ...,
-  fill_value = NULL
-)
-
-correct_batch_effects_df(
-  df_long,
-  sample_annotation,
-  continuous_func = NULL,
-  discrete_func = c("MedianCentering", "MeanCentering", "ComBat", "removeBatchEffect"),
-  batch_col = "MS_batch",
-  feature_id_col = "peptide_group_label",
-  sample_id_col = "FullRunName",
-  measure_col = "Intensity",
-  order_col = "order",
-  keep_all = "default",
-  no_fit_imputed = TRUE,
-  qual_col = NULL,
-  qual_value = NULL,
-  fill_the_missing = "error",
-  par.prior = TRUE,
-  covariates_cols = NULL,
-  min_measurements = 8,
-  ...,
-  fill_value = NULL
-)
-
-correct_batch_effects_dm(
-  data_matrix,
-  sample_annotation,
-  continuous_func = NULL,
-  discrete_func = c("MedianCentering", "MeanCentering", "ComBat", "removeBatchEffect"),
-  batch_col = "MS_batch",
-  feature_id_col = "peptide_group_label",
-  sample_id_col = "FullRunName",
-  measure_col = "Intensity",
-  order_col = "order",
-  min_measurements = 8,
-  no_fit_imputed = TRUE,
-  fill_the_missing = "error",
-  par.prior = TRUE,
-  covariates_cols = NULL,
   ...,
   fill_value = NULL
 )
@@ -161,8 +118,9 @@ value for imputed values (requant values).}
 
 \item{min_measurements}{Minimum number of samples per batch required for fitting.}
 
-\item{...}{Additional parameters passed to \code{adjust_batch_trend_df()} and
-the chosen \code{fit_func}.}
+\item{...}{Further arguments passed to the continuous fitter when enabled
+and to \code{limma::removeBatchEffect()} when that discrete method is
+selected. They are not forwarded to centering or ComBat.}
 
 \item{df_long}{data frame where each row is a single feature in a single
 sample. It minimally has a \code{sample_id_col}, a \code{feature_id_col}
@@ -250,7 +208,7 @@ combine continuous and/or discrete corrections in one call.
 
 Adjust batch signal trend with the custom (continuous) fit.
 Should be followed by discrete corrections,
-e.g. \code{center_feature_batch_medians_df()} or \code{correct_with_ComBat_df()}.
+e.g. \code{center_feature_batch()} or \code{correct_with_ComBat()}.
 Available for both long format data frame (\code{adjust_batch_trend_df()})
 and data matrix (\code{adjust_batch_trend_dm()}).
 
@@ -263,31 +221,32 @@ data(
     list = c("example_sample_annotation", "example_proteome"),
     package = "proBatch"
 )
-median_centered_df <- center_feature_batch_medians_df(
-    example_proteome, example_sample_annotation
+# 1) Per-feature median centering
+median_centered_df <- center_feature_batch(
+    x = example_proteome,
+    sample_annotation = example_sample_annotation,
+    format = "long",
+    stat = "medians",
+    no_fit_imputed = FALSE
 )
 
-combat_corrected_df <- correct_with_ComBat_df(
-    example_proteome,
-    example_sample_annotation,
-    fill_the_missing = "drop_features"
-)
-
-# 3) ComBat (discrete) — drop NA features first if needed
+# 2) ComBat (discrete) — drop NA features first if needed
 combat_corrected_df <- correct_with_ComBat(
     x = example_proteome,
     sample_annotation = example_sample_annotation,
     format = "long",
-    fill_the_missing = "drop_features"
+    fill_the_missing = "drop_features",
+    no_fit_imputed = FALSE
 )
 
-# 4) Continuous drift correction (LOESS), then discrete centering if desired
+# 3) Continuous drift correction (LOESS), then discrete centering if desired
 test_peptides <- unique(example_proteome$peptide_group_label)[1:3]
 test_df <- subset(example_proteome, peptide_group_label \%in\% test_peptides)
 adjusted_df <- adjust_batch_trend_df(
     df_long = test_df,
     sample_annotation = example_sample_annotation,
-    span = 0.7, min_measurements = 8
+    span = 0.7, min_measurements = 8,
+    no_fit_imputed = FALSE
 )
 plot_fit <- plot_with_fitting_curve(
     unique(adjusted_df$peptide_group_label),
@@ -297,7 +256,7 @@ plot_fit <- plot_with_fitting_curve(
     sample_annotation = example_sample_annotation
 )
 
-# 5) One-call wrapper (continuous + discrete)
+# 4) One-call wrapper (continuous + discrete)
 batch_corrected_matrix <- correct_batch_effects(
     x = example_proteome, sample_annotation = example_sample_annotation,
     format = "long",
@@ -305,6 +264,7 @@ batch_corrected_matrix <- correct_batch_effects(
     discrete_func = "MedianCentering",
     batch_col = "MS_batch",
     fill_the_missing = "keep",
+    no_fit_imputed = FALSE,
     span = 0.7, min_measurements = 8
 )
 

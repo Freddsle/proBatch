@@ -13,7 +13,7 @@ pb_as_long(
 )
 }
 \arguments{
-\item{object}{A `ProBatchFeatures` object.}
+\item{object}{A \code{ProBatchFeatures} object.}
 
 \item{feature_id_col}{Column name used for feature identifiers in the long table.}
 

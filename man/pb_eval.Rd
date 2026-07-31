@@ -13,13 +13,17 @@ pb_eval(object, from, steps, funs = NULL, params_list = NULL)
 
 \item{steps}{character vector, e.g. c("log2","medianNorm","combat")}
 
-\item{funs}{optional same-length vector/list of functions/names (default: steps
-for registry lookup)}
+\item{funs}{Optional same-length vector or list of functions or registered
+canonical names or aliases (default: \code{steps}).}
 
 \item{params_list}{list of parameter lists (same length as steps)}
 }
 \value{
-numeric matrix (features x samples)
+Numeric matrix (features x samples). If a step returns a
+\code{\link[=pb_step_result]{pb_step_result()}}, only its validated \code{data} component is returned;
+artifacts are not persisted by this non-storing API. Every step must
+retain all samples in input order and may return an input-ordered feature
+subset.
 }
 \description{
 Evaluate a pipeline and return the matrix, without storing

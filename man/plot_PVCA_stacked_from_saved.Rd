@@ -21,10 +21,10 @@ plot_PVCA_stacked_from_saved(
 }
 \arguments{
 \item{pvca_dir}{Directory that contains per-assay
-`PVCA_results_aggregated.csv` files (the function searches recursively).}
+\code{PVCA_results_aggregated.csv} files (the function searches recursively).}
 
 \item{sort_stacked}{Optional factor label used to order the rows of the
-stacked plot (matching `sort_stacked` in [plot_PVCA.ProBatchFeatures]).}
+stacked plot (matching \code{sort_stacked} in \link{plot_PVCA.ProBatchFeatures}).}
 
 \item{colors_for_bars}{Character vector of four colors (residual, biological,
 biol:techn, technical) passed to the stacked bar helper.}
@@ -34,25 +34,23 @@ biol:techn, technical) passed to the stacked bar helper.}
 \item{stacked_plot_title}{Optional character vector used to annotate the stacked
 plot title; elements are joined with newline characters.}
 
-\item{theme}{Plot theme; only `"classic"` is currently implemented.}
+\item{theme}{Plot theme; only \code{"classic"} is currently implemented.}
 
-\item{base_size}{Base font size passed to `theme_classic()`.}
+\item{base_size}{Base font size passed to \code{theme_classic()}.}
 
 \item{filename}{Optional path to save the stacked plot.}
 
-\item{width}{Plot width forwarded to [save_ggplot()].}
+\item{width}{Plot width forwarded to \code{\link[=save_ggplot]{save_ggplot()}}.}
 
-\item{height}{Plot height forwarded to [save_ggplot()].}
+\item{height}{Plot height forwarded to \code{\link[=save_ggplot]{save_ggplot()}}.}
 
-\item{units}{Plot units forwarded to [save_ggplot()].}
+\item{units}{Plot units forwarded to \code{\link[=save_ggplot]{save_ggplot()}}.}
 
 \item{category_order}{Optional character vector specifying the order of categories in the stacked plot.}
 }
 \value{
-A `ggplot` object showing the stacked PVCA weights.
+A \code{ggplot} object showing the stacked PVCA weights.
 }
 \description{
-When PVCA analysis has been run previously and the aggregated weights were
-written to disk (one `PVCA_results_aggregated.csv` per assay), this helper
-rebuilds the stacked bar summary without rerunning the analysis.
+Plot stacked PVCA results from saved CSV files
 }

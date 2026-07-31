@@ -21,7 +21,7 @@ center_feature_batch(
 }
 \arguments{
 \item{x}{Either a long data.frame or a numeric matrix (features in rows,
-samples in columns), depending on `format`.}
+samples in columns), depending on \code{format}.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -29,11 +29,11 @@ samples in columns), depending on `format`.}
   \item technical covariates (batches etc) }.
   See \code{help("example_sample_annotation")}}
 
-\item{format}{One of `"long"` or `"wide"`. `"long"` expects a data.frame
-with columns `sample_id_col`, `feature_id_col`, `measure_col`. `"wide"`
-expects a numeric matrix and uses `matrix_to_long()` / `long_to_matrix()`.}
+\item{format}{One of \code{"long"} or \code{"wide"}. \code{"long"} expects a data.frame
+with columns \code{sample_id_col}, \code{feature_id_col}, \code{measure_col}. \code{"wide"}
+expects a numeric matrix and uses \code{matrix_to_long()} / \code{long_to_matrix()}.}
 
-\item{stat}{One of `"medians"` or `"means"`. Aliases `"median"`/`"mean"`
+\item{stat}{One of \code{"medians"} or \code{"means"}. Aliases \code{"median"}/\code{"mean"}
 are accepted.}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
@@ -51,27 +51,29 @@ names.}
 column with expression/abundance/intensity; otherwise, it is used
 internally for consistency.}
 
-\item{keep_all}{Passed to `subset_keep_cols()` for long format, ignored for wide.}
+\item{keep_all}{Passed to \code{subset_keep_cols()} for long format, ignored for wide.}
 
-\item{no_fit_imputed}{If `TRUE` and `qual_col` is provided, imputed values
+\item{no_fit_imputed}{If \code{TRUE} and \code{qual_col} is provided, imputed values
 are masked during location estimation (original values remain unchanged).}
 
 \item{qual_col, qual_value}{Column and value that flag imputed entries.}
 }
 \value{
-If `format = "long"`, a data.frame; if `format = "wide"`, a matrix.
+If \code{format = "long"}, a data.frame; if \code{format = "wide"}, a matrix.
 }
 \description{
-Centers each feature *within each batch* to the global
+Centers each feature \emph{within each batch} to the global
 location (median/mean) of that feature. Works for long-data frames and
 wide matrices.
 }
 \details{
-For `"wide"`, conversion uses `matrix_to_long()` / `long_to_matrix()`.
-For `"long"`, the function adds `"preBatchCorr_[measure_col]"` and the
+For \code{"wide"}, conversion uses \code{matrix_to_long()} / \code{long_to_matrix()}.
+For \code{"long"}, the function adds \code{"preBatchCorr_[measure_col]"} and the
 diagnostic columns:
-- for medians: `median_batch`, `median_global`, `diff_medians`
-- for means:   `mean_batch`,   `mean_global`,   `diff_means`
+\itemize{
+\item for medians: \code{median_batch}, \code{median_global}, \code{diff_medians}
+\item for means:   \code{mean_batch},   \code{mean_global},   \code{diff_means}
+}
 }
 \examples{
 # LONG
@@ -84,7 +86,8 @@ out_long <- center_feature_batch(
     x = example_proteome, sample_annotation = example_sample_annotation,
     format = "long", stat = "medians",
     sample_id_col = "FullRunName", batch_col = "MS_batch",
-    feature_id_col = "peptide_group_label", measure_col = "Intensity"
+    feature_id_col = "peptide_group_label", measure_col = "Intensity",
+    no_fit_imputed = FALSE
 )
 
 # WIDE
@@ -93,7 +96,8 @@ out_wide <- center_feature_batch(
     x = example_proteome_matrix, sample_annotation = example_sample_annotation,
     format = "wide", stat = "means",
     sample_id_col = "FullRunName", batch_col = "MS_batch",
-    feature_id_col = "peptide_group_label", measure_col = "Intensity"
+    feature_id_col = "peptide_group_label", measure_col = "Intensity",
+    no_fit_imputed = FALSE
 )
 
 }

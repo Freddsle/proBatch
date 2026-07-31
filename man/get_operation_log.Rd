@@ -7,7 +7,7 @@
 get_operation_log(object)
 }
 \arguments{
-\item{object}{A `ProBatchFeatures` object.}
+\item{object}{A \code{ProBatchFeatures} object.}
 }
 \value{
 S4Vectors::DataFrame

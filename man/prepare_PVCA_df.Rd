@@ -67,11 +67,11 @@ variabilities that the selected principal components need to explain}
 covariates needs to explain (the rest will be lumped together)}
 
 \item{path_to_save_results}{optional directory where aggregated PVCA results
-are written as `PVCA_results_aggregated.csv`.}
+are written as \code{PVCA_results_aggregated.csv}.}
 
 \item{...}{Additional arguments forwarded between methods.}
 
-\item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
+\item{pbf_name}{Assay name(s) used when \code{data_matrix} is a \code{ProBatchFeatures}.}
 }
 \value{
 data frame with weights and factors, combined in a way ready for plotting

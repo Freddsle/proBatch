@@ -97,8 +97,7 @@ included in \code{mod} for ComBat (biological or nuisance covariates).}
 
 \item{min_measurements}{Minimum number of samples per batch required for fitting.}
 
-\item{...}{Additional parameters passed to \code{adjust_batch_trend_df()} and
-the chosen \code{fit_func}.}
+\item{...}{Further arguments forwarded to \code{\link[=correct_batch_effects]{correct_batch_effects()}}.}
 
 \item{fill_value}{Finite numeric scalar used only with
 \code{fill_the_missing = "fill"}.}
@@ -107,5 +106,5 @@ the chosen \code{fit_func}.}
 A data.frame in long format with batch-corrected values in \code{measure_col}.
 }
 \description{
-Use [correct_batch_effects()] with `format="long"`.
+Use \code{\link[=correct_batch_effects]{correct_batch_effects()}} with \code{format="long"}.
 }

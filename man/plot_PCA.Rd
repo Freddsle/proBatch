@@ -42,10 +42,8 @@
 )
 }
 \arguments{
-\item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+\item{data_matrix}{Numeric feature-by-sample matrix or a
+\code{ProBatchFeatures} object.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -64,14 +62,15 @@ where the filenames (colnames of the \code{data_matrix} are found).}
 \item{color_by}{Column name in \code{sample_annotation} to color by.
 Factor-like and numeric columns are supported.}
 
-\item{shape_by}{Optional column used for point shapes in the PCA plot.}
+\item{shape_by}{Optional factor-like annotation column used for point
+shapes.}
 
 \item{PC_to_plot}{Integer vector of length 2 giving the PC indices for x and y axes.}
 
-\item{fill_the_missing}{numeric value determining how  missing values
-should be substituted. If \code{NULL}, features with missing values are
-excluded.
-If \code{NULL}, features with missing values are excluded.}
+\item{fill_the_missing}{Missing-value handling shared by PCA, t-SNE, and
+UMAP. A finite numeric scalar replaces missing values and defaults to
+\code{-1}; \code{NULL} or \code{FALSE} removes incomplete features. The
+function warns before applying either non-error handling path.}
 
 \item{color_scheme}{a named vector of colors to map to \code{batch_col},
 names corresponding to the levels of the factor. For continuous variables,
@@ -91,37 +90,46 @@ pdf and png format is supported}
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
+\item{theme_name}{Plot theme name. Only \code{"classic"} is currently
+implemented; use \code{NULL} for the default ggplot theme.}
+
 \item{base_size}{base size of the text in the plot}
 
-\item{point_size}{Point size supplied to `ggplot2::geom_point()`.}
+\item{point_size}{Point size supplied to \code{ggplot2::geom_point()}.}
 
 \item{point_alpha}{Alpha transparency for plotted points.}
 
-\item{marginal_density}{Logical or a single column name. If `TRUE`, add
-marginal density plots grouped by `color_by`. If a column name is
+\item{marginal_density}{Logical or a single column name. If \code{TRUE}, add
+marginal density plots grouped by \code{color_by}. If a column name is
 provided, densities are grouped by that column. Numeric-like grouping
 columns fall back to pooled marginals.}
 
-\item{x_nPC}{Optional integer PC index for the x axis. Use together with `y_nPC`
-to override `PC_to_plot`.}
+\item{x_nPC}{Optional integer PC index for the x axis. Use together with \code{y_nPC}
+to override \code{PC_to_plot}.}
 
-\item{y_nPC}{Optional integer PC index for the y axis. Use together with `x_nPC`
-to override `PC_to_plot`.}
+\item{y_nPC}{Optional integer PC index for the y axis. Use together with \code{x_nPC}
+to override \code{PC_to_plot}.}
 
-\item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
+\item{pbf_name}{Assay name(s) used when \code{data_matrix} is a
+\code{ProBatchFeatures}.}
 
-\item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
+\item{return_gridExtra}{Logical; for multiple assays, return an invisible
+list containing the arranged \code{grob} and named ordered \code{plots}.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 
 \item{...}{Additional arguments forwarded to lower-level plotting helpers.}
 }
 \value{
-A `ggplot` PCA scatterplot colored by the column specified in
-  `color_by`. Factor-like values, including numeric values matched by a named
-  palette, use a discrete scale; other numeric values use a continuous
-  gradient. When `marginal_density = TRUE`, returns a `ggplot` object if
-  `ggplotify` or `cowplot` is available; otherwise returns a grid grob.
+A \code{ggplot} PCA scatterplot colored by the column specified in
+\code{color_by}. Factor-like values, including numeric values matched by a named
+palette, use a discrete scale; other numeric values use a continuous
+gradient. When \code{marginal_density = TRUE}, returns a \code{ggplot} object if
+\code{ggplotify} or \code{cowplot} is available; otherwise returns a grid grob. For
+one selected \code{ProBatchFeatures} assay, returns that plot. For multiple
+assays, returns an invisible arranged plot; with
+\code{return_gridExtra = TRUE}, returns an invisible list containing the
+arranged \code{grob} and named ordered \code{plots}.
 }
 \description{
 plot PCA plot

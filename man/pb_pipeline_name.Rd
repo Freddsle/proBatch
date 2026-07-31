@@ -17,6 +17,9 @@ character(1) pipeline string like "combat_on_medianNorm_on_log2" or "raw"
 \description{
 Pretty pipeline name derived from the assay
 }
+\details{
+The operation-log lineage must be unambiguous and acyclic.
+}
 \examples{
 # Shared setup for ProBatchFeatures documentation examples -----------------
 data("example_ecoli_data", package = "proBatch")

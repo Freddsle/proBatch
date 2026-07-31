@@ -43,7 +43,7 @@
 )
 }
 \arguments{
-\item{data_matrix}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
+\item{data_matrix}{Input object: matrix-like data or a \code{ProBatchFeatures} instance.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -110,7 +110,7 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{...}{other parameters of \code{link[pheatmap]{pheatmap}}}
 
-\item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
+\item{pbf_name}{Assay name(s) used when \code{data_matrix} is a \code{ProBatchFeatures}.}
 
 \item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
 

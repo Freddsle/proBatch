@@ -61,8 +61,8 @@ value for imputed values (requant values).}
 }
 \value{
 A data.frame in long format with batch-corrected values in \code{measure_col}
-  and original values preserved in \code{preBatchCorr_[measure_col]}.
+and original values preserved in \code{preBatchCorr_[measure_col]}.
 }
 \description{
-Use [center_feature_batch()] with `format="long", stat="means"`.
+Use \code{\link[=center_feature_batch]{center_feature_batch()}} with \verb{format="long", stat="means"}.
 }

@@ -44,5 +44,5 @@ internally for consistency.}
 A numeric matrix of batch-corrected values (features \eqn{\times} samples).
 }
 \description{
-Use [center_feature_batch()] with `format="wide", stat="means"`.
+Use \code{\link[=center_feature_batch]{center_feature_batch()}} with \verb{format="wide", stat="means"}.
 }

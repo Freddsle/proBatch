@@ -85,8 +85,8 @@ included in \code{mod} for ComBat (biological or nuisance covariates).}
 }
 \value{
 A data.frame in long format with ComBat-corrected values in \code{measure_col}
-  and original values preserved in \code{preBatchCorr_[measure_col]}.
+and original values preserved in \code{preBatchCorr_[measure_col]}.
 }
 \description{
-Use [correct_with_ComBat()] with `format="long"`.
+Use \code{\link[=correct_with_ComBat]{correct_with_ComBat()}} with \code{format="long"}.
 }
