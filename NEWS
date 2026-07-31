@@ -8,6 +8,8 @@ proBatch  v2.1.0
 - Extended the transformation registry with provider metadata, aliases,
   availability reporting, collision-safe idempotent registration, and
   provider-scoped cleanup through `pb_unregister_steps()`.
+- Added `pb_apply_matrix_method()` for identifier-safe matrix/long adaptation
+  and `pb_step_result()` for transformed data with provider-neutral artifacts.
 
 ## Deprecations
 - Added `center_feature_batch()`: unified API for per-batch centering by `stat` (`"medians"` or `"means"`) and `format` (`"long"` or `"wide"`).
