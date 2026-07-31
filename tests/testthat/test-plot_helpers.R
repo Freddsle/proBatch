@@ -132,3 +132,31 @@ test_that(".pb_handle_missing_wrapper preserves diagnostic legacy policies", {
     )
     expect_identical(unname(filled), matrix(c(1, 0), nrow = 1))
 })
+
+test_that(".pb_align_matrix_and_annotation merges check arguments", {
+    data_matrix <- matrix(
+        c(1, 2, 3, 4),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s2", "s1"))
+    )
+    annotation <- data.frame(
+        FullRunName = c("s1", "s2"),
+        Batch = c("A", "B"),
+        stringsAsFactors = FALSE
+    )
+
+    aligned <- proBatch:::.pb_align_matrix_and_annotation(
+        data_matrix,
+        annotation,
+        sample_id_col = "FullRunName",
+        check_args = list(batch_col = "Batch"),
+        allow_partial_annotation = FALSE
+    )
+
+    expect_equal(aligned$data_matrix, data_matrix)
+    expect_identical(aligned$sample_ids, c("s2", "s1"))
+    expect_identical(
+        as.character(aligned$sample_annotation$FullRunName),
+        aligned$sample_ids
+    )
+})

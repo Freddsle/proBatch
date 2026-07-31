@@ -96,7 +96,8 @@ test_that("metadata diagnostics accept data.table inputs", {
         min_non_na = 2
     )
     expect_s3_class(filtered_dt, "data.table")
-    expect_false("b" %in% names(filtered_dt))
+    expect_identical(names(filtered_dt), c("a", "c"))
+    expect_setequal(attr(filtered_dt, "dropped_duplicates"), c("b", "d"))
 })
 
 test_that("metadata_column_summary handles data frames", {

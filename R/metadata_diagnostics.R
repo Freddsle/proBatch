@@ -363,7 +363,7 @@ filter_metadata_columns.default <- function(
     }
 
     filtered <- if (inherits(x, "data.table")) {
-        x[, ..keep_cols]
+        x[, keep_cols, with = FALSE]
     } else {
         x[, keep_cols, drop = FALSE]
     }

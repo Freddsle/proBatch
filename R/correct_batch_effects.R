@@ -543,7 +543,7 @@ adjust_batch_trend_df <- function(df_long, sample_annotation = NULL,
         ) %>%
         rename(!!sym(old_measure_col) := !!sym(measure_col)) %>%
         # Conditional shift: use diff.na so NA in fit doesn't propagate the shift
-        mutate(!!sym(measure_col) := diff.na + .data[[old_measure_col]]) %>%
+        mutate(!!sym(measure_col) := .data[["diff.na"]] + .data[[old_measure_col]]) %>%
         select(-any_of("diff.na"))
 
 

@@ -668,7 +668,7 @@
         feature_id_col = internal_feature_id_col,
         sample_id_col = sample_id_col
     )
-    check_call <- modifyList(list(
+    check_call <- utils::modifyList(list(
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
         df_long = df_long,
