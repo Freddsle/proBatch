@@ -166,10 +166,19 @@ setValidity("ProBatchFeatures", function(object) {
             return(identical(as.numeric(a), as.numeric(b))) # ignore tz/attr differences
         }
         .factor_numeric_equal <- function(factor_value, numeric_value) {
-            factor_numeric <- suppressWarnings(
-                as.numeric(as.character(factor_value))
-            )
             factor_missing <- is.na(factor_value)
+            if (all(factor_missing)) {
+                factor_numeric <- rep(NA_real_, length(factor_value))
+            } else {
+                factor_numeric <- utils::type.convert(
+                    as.character(factor_value),
+                    as.is = TRUE
+                )
+                if (!is.numeric(factor_numeric)) {
+                    return(FALSE)
+                }
+                factor_numeric <- as.numeric(factor_numeric)
+            }
 
             if (!identical(is.na(factor_numeric), factor_missing) ||
                 !identical(factor_missing, is.na(numeric_value))) {

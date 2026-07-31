@@ -1469,6 +1469,16 @@ test_that(".pb_harmonize_colData accepts matching integer-like factors", {
 
     expect_identical(colData(harmonized)$run_number, factor_cd$run_number)
     expect_identical(colData(reverse_harmonized)$run_number, integer_cd$run_number)
+
+    colData(factor_se)$run_number <- factor(rep(NA_character_, 3L))
+    colData(integer_se)$run_number <- rep(NA_integer_, 3L)
+    missing_harmonized <- proBatch:::.pb_harmonize_colData(
+        factor_se,
+        integer_se,
+        from_assay = "factor"
+    )
+    expect_true(is.factor(colData(missing_harmonized)$run_number))
+    expect_true(all(is.na(colData(missing_harmonized)$run_number)))
 })
 
 test_that(".pb_harmonize_colData rejects different factor and numeric values", {
@@ -1496,6 +1506,17 @@ test_that(".pb_harmonize_colData rejects different factor and numeric values", {
         )
     )
 
+    expect_error(
+        proBatch:::.pb_harmonize_colData(
+            object,
+            incoming,
+            from_assay = "factor"
+        ),
+        "Conflicting colData values in columns: run_number",
+        fixed = TRUE
+    )
+
+    colData(object)$run_number <- factor(c("1", "not numeric", "3"))
     expect_error(
         proBatch:::.pb_harmonize_colData(
             object,
