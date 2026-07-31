@@ -18,7 +18,8 @@ pb_aggregate_level(
 
 \item{from}{assay name (e.g., "peptide::raw")}
 
-\item{feature_var}{name of a column in rowData(from) holding group labels (e.g. protein IDs)}
+\item{feature_var}{name of a column in rowData(from) holding group
+labels (e.g. protein IDs)}
 
 \item{fun}{summarization function (e.g., matrixStats::colMedians), or name}
 

@@ -18,9 +18,9 @@ detect_outlier_samples(
 }
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+feature IDs in rownames and file/sample names as colnames. See
+"example_proteome_matrix" for more details (to call the description, use
+\code{help("example_proteome_matrix")})}
 
 \item{sample_annotation}{optional sample annotation data frame.}
 
@@ -44,8 +44,8 @@ object. If `NULL`, [pb_current_assay()] is used.}
 \value{
 A data frame with \code{sample_id}, \code{batch} (if provided),
   \code{mdist}, and \code{is_outlier}. Attributes include \code{cutoff},
-  \code{df}, \code{mdist_cutoff}, and \code{outlier_mode}. The object has class
-  \code{"pb_outliers"}.
+  \code{df}, \code{mdist_cutoff}, and \code{outlier_mode}. The object has
+  class \code{"pb_outliers"}.
 }
 \description{
 Detect outlier samples in PCA space

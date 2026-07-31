@@ -25,9 +25,9 @@ correct_batch_effects_dm(
 }
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+feature IDs in rownames and file/sample names as colnames. See
+"example_proteome_matrix" for more details (to call the description, use
+\code{help("example_proteome_matrix")})}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -44,8 +44,8 @@ batch comparison (or other, non-batch factor to be mapped to color in plots).}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
@@ -59,13 +59,14 @@ order. It is used for in initial assessment plots
 (\link{plot_sample_mean_or_boxplot}) and  feature-level diagnostics
 (\link{feature_level_diagnostics}). Can be `NULL`
    if sample order is irrelevant (e.g. in genomic experiments). For more
-   details,
-   order definition/inference, see \link{define_sample_order} and
+   details, order definition/inference, see \link{define_sample_order} and
    \link{date_to_sample_order}}
 
-\item{min_measurements}{Minimum number of samples per batch required for fitting.}
+\item{min_measurements}{Minimum number of samples per
+batch required for fitting.}
 
-\item{no_fit_imputed}{(logical) whether to use imputed (requant) values, as flagged in
+\item{no_fit_imputed}{(logical) whether to use imputed
+  (requant) values, as flagged in
 \code{qual_col} by \code{qual_value} for data transformation}
 
 \item{fill_the_missing}{Missing-value policy applied \emph{before} discrete
@@ -73,14 +74,15 @@ correction: \code{"error"} (default), \code{"keep"},
 \code{"drop_features"}, or \code{"fill"}. With \code{"keep"}, missing
 values are passed through; ComBat still requires an NA-free matrix, while
 removeBatchEffect can model expression values containing NA. For one
-release, \code{FALSE}, a numeric scalar, and \code{"remove"},
-\code{"rm"}, or \code{"REMOVE"} are translated with a deprecation
-warning. Explicit \code{NULL} is an error.}
+release, \code{FALSE}, a numeric scalar, and \code{"remove"}, \code{"rm"},
+or \code{"REMOVE"} are translated with a deprecation warning. Explicit
+\code{NULL} is an error.}
 
 \item{par.prior}{Logical; use parametric prior (ComBat) or non-parametric.}
 
-\item{covariates_cols}{Optional character vector of \code{sample_annotation} columns
-included in \code{mod} for ComBat (biological or nuisance covariates).}
+\item{covariates_cols}{Optional character vector of
+\code{sample_annotation} columns included in \code{mod} for ComBat
+(biological or nuisance covariates).}
 
 \item{...}{Further arguments forwarded to \code{\link[=correct_batch_effects]{correct_batch_effects()}}.}
 
@@ -88,8 +90,13 @@ included in \code{mod} for ComBat (biological or nuisance covariates).}
 \code{fill_the_missing = "fill"}.}
 }
 \value{
-A numeric matrix of batch-corrected values (features \eqn{\times} samples).
+A numeric matrix of batch-corrected values
+(features \eqn{\times} samples).
 }
 \description{
 Use \code{\link[=correct_batch_effects]{correct_batch_effects()}} with \code{format="wide"}.
+}
+\examples{
+# Use the unified replacement with `format = "wide"`.
+args(correct_batch_effects)
 }

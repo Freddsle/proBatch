@@ -16,3 +16,25 @@ The removed canonical names, invisibly.
 Removes every canonical registration and alias owned by \code{package}. Calling
 the function when the provider owns no registrations is a no-op.
 }
+\examples{
+local({
+    provider <- "proBatchExampleProvider"
+    on.exit(pb_unregister_steps(provider), add = TRUE)
+    pb_register_step(
+        "example_unregister_identity",
+        function(x) x,
+        package = provider,
+        aliases = "example_unregister_no_change"
+    )
+    alias_registered <- pb_has_step("example_unregister_no_change")
+    removed <- pb_unregister_steps(provider)
+    c(
+        alias_registered = alias_registered,
+        alias_removed = !pb_has_step("example_unregister_no_change"),
+        canonical_removed = identical(
+            removed,
+            "example_unregister_identity"
+        )
+    )
+})
+}

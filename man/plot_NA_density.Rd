@@ -39,8 +39,8 @@ plot_NA_density(x, ...)
 }
 \arguments{
 \item{x}{A data container. For the `ProBatchFeatures` method this must be a
-`ProBatchFeatures` object. The default method accepts any matrix-like input
-(including `SummarizedExperiment`).}
+`ProBatchFeatures` object. The default method accepts any matrix-like
+input (including `SummarizedExperiment`).}
 
 \item{...}{Additional arguments forwarded to [ggplot2::geom_density()].}
 
@@ -56,13 +56,13 @@ names of the intensity matrix. When `x` is a `SummarizedExperiment`,
 `colData(x)` is used by default.}
 
 \item{sample_id_col}{Optional column in `sample_annotation` providing unique
-sample identifiers. Use this when the data frame lacks row names matching
-the assay column names.}
+sample identifiers. Use this when the data frame lacks row names
+matching the assay column names.}
 
 \item{color_by}{Optional column name or character vector of column names in
 `sample_annotation` used to split grouped densities. When supplied,
-colours encode groups and linetypes encode `missing_label` and
-`valid_label`.}
+colours encode groups and linetypes encode
+`missing_label` and `valid_label`.}
 
 \item{col_vector}{Optional vector of colours recycled across grouped density
 lines defined by `color_by`. When supplied, this compatibility argument
@@ -78,8 +78,8 @@ colours, or a named list such as returned by
 Only used by the `ProBatchFeatures` method.}
 
 \item{nrow, ncol}{Integers controlling the layout when multiple assays are
-plotted. If both are `NULL`, a roughly square layout is chosen
-automatically.}
+plotted. If both are `NULL`, a roughly square layout
+is chosen automatically.}
 
 \item{facet_scales}{Scaling behaviour passed to [ggplot2::facet_wrap()] when
 multiple assays are plotted.}
@@ -92,4 +92,16 @@ Compare the distribution of average intensities between features with and
 without missing observations. When `color_by` is supplied, densities are
 computed within each sample group, colours distinguish groups, and linetypes
 distinguish `missing_label` from `valid_label`.
+}
+\examples{
+density_matrix <- matrix(
+    seq_len(32),
+    nrow = 8,
+    dimnames = list(
+        paste0("feature_", seq_len(8)),
+        paste0("sample_", seq_len(4))
+    )
+)
+density_matrix[cbind(seq_len(4), seq_len(4))] <- NA
+density_plot <- plot_NA_density(density_matrix)
 }

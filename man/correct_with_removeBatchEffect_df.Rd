@@ -32,8 +32,8 @@ output result file). See \code{help("example_proteome")} for more details.}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{measure_col}{if \code{df_long} is among the parameters, it is the
 column with expression/abundance/intensity; otherwise, it is used
@@ -45,17 +45,18 @@ where the filenames (colnames of the \code{data_matrix} are found).}
 \item{batch_col}{column in \code{sample_annotation} that should be used for
 batch comparison (or other, non-batch factor to be mapped to color in plots).}
 
-\item{covariates_cols}{Optional character vector of \code{sample_annotation} columns
-included in \code{mod} for ComBat (biological or nuisance covariates).}
+\item{covariates_cols}{Optional character vector of
+\code{sample_annotation} columns included in \code{mod} for ComBat
+(biological or nuisance covariates).}
 
 \item{fill_the_missing}{Missing-value policy applied \emph{before} discrete
 correction: \code{"error"} (default), \code{"keep"},
 \code{"drop_features"}, or \code{"fill"}. With \code{"keep"}, missing
 values are passed through; ComBat still requires an NA-free matrix, while
 removeBatchEffect can model expression values containing NA. For one
-release, \code{FALSE}, a numeric scalar, and \code{"remove"},
-\code{"rm"}, or \code{"REMOVE"} are translated with a deprecation
-warning. Explicit \code{NULL} is an error.}
+release, \code{FALSE}, a numeric scalar, and \code{"remove"}, \code{"rm"},
+or \code{"REMOVE"} are translated with a deprecation warning. Explicit
+\code{NULL} is an error.}
 
 \item{keep_all}{when transforming the data (normalize, correct) - acceptable
 values: all/default/minimal (which set of columns be kept).}
@@ -67,8 +68,13 @@ values: all/default/minimal (which set of columns be kept).}
 \code{fill_the_missing = "fill"}.}
 }
 \value{
-A data.frame in long format with batch effects removed in \code{measure_col}.
+A data.frame in long format with batch effects
+removed in \code{measure_col}.
 }
 \description{
 Use \code{\link[=correct_with_removeBatchEffect]{correct_with_removeBatchEffect()}} with \code{format="long"}.
+}
+\examples{
+# Use the unified replacement with `format = "long"`.
+args(correct_with_removeBatchEffect)
 }

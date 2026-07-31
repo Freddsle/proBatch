@@ -15,17 +15,18 @@ plot_CV_distr.df(
 )
 }
 \arguments{
-\item{CV_df}{data frame with Total CV for each feature & (optionally) per-batch CV}
+\item{CV_df}{data frame with Total CV for each feature &
+(optionally) per-batch CV}
 
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{filename}{path where the results are saved.
-If null the object is returned to the active window;
-otherwise, the object is save into the file. Currently only
-pdf and png format is supported}
+If null the object is returned to the active window; otherwise, the object
+is save into the file. Currently only pdf and png format is supported}
 
-\item{theme}{ggplot theme, by default \code{classic}. Can be easily overridden}
+\item{theme}{ggplot theme, by default \code{classic}.
+Can be easily overridden}
 
 \item{log_y_scale}{(logical) whether to display the CV on log-scale}
 

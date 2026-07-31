@@ -44,14 +44,15 @@ batch comparison (or other, non-batch factor to be mapped to color in plots).}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{measure_col}{if \code{df_long} is among the parameters, it is the
 column with expression/abundance/intensity; otherwise, it is used
 internally for consistency.}
 
-\item{keep_all}{Passed to \code{subset_keep_cols()} for long format, ignored for wide.}
+\item{keep_all}{Passed to \code{subset_keep_cols()} for long
+format, ignored for wide.}
 
 \item{no_fit_imputed}{If \code{TRUE} and \code{qual_col} is provided, imputed values
 are masked during location estimation (original values remain unchanged).}
@@ -63,13 +64,13 @@ If \code{format = "long"}, a data.frame; if \code{format = "wide"}, a matrix.
 }
 \description{
 Centers each feature \emph{within each batch} to the global
-location (median/mean) of that feature. Works for long-data frames and
-wide matrices.
+location (median/mean) of that feature. Works for long-data
+frames and wide matrices.
 }
 \details{
-For \code{"wide"}, conversion uses \code{matrix_to_long()} / \code{long_to_matrix()}.
-For \code{"long"}, the function adds \code{"preBatchCorr_[measure_col]"} and the
-diagnostic columns:
+For \code{"wide"}, conversion uses \code{matrix_to_long()} / \code{long_to_matrix()}. For
+\code{"long"}, the function adds \code{"preBatchCorr_[measure_col]"}
+and the diagnostic columns:
 \itemize{
 \item for medians: \code{median_batch}, \code{median_global}, \code{diff_medians}
 \item for means:   \code{mean_batch},   \code{mean_global},   \code{diff_means}
@@ -93,7 +94,8 @@ out_long <- center_feature_batch(
 # WIDE
 data(example_proteome_matrix, package = "proBatch")
 out_wide <- center_feature_batch(
-    x = example_proteome_matrix, sample_annotation = example_sample_annotation,
+    x = example_proteome_matrix,
+    sample_annotation = example_sample_annotation,
     format = "wide", stat = "means",
     sample_id_col = "FullRunName", batch_col = "MS_batch",
     feature_id_col = "peptide_group_label", measure_col = "Intensity",

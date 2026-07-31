@@ -23,8 +23,8 @@ plot_NA_frequency(x, ...)
 }
 \arguments{
 \item{x}{A data container. For the `ProBatchFeatures` method this must be a
-`ProBatchFeatures` object. The default method accepts any matrix-like input
-(including `SummarizedExperiment`).}
+`ProBatchFeatures` object. The default method accepts any matrix-like
+input (including `SummarizedExperiment`).}
 
 \item{...}{Additional parameters forwarded to [pheatmap::pheatmap()].}
 
@@ -37,8 +37,8 @@ plot_NA_frequency(x, ...)
 Only used by the `ProBatchFeatures` method.}
 
 \item{nrow, ncol}{Integers controlling the layout when multiple assays are
-plotted. If both are `NULL`, a roughly square layout is chosen
-automatically.}
+plotted. If both are `NULL`, a roughly square layout
+is chosen automatically.}
 
 \item{facet_scales}{Scaling behaviour for facets when plotting multiple
 assays.}
@@ -48,4 +48,19 @@ A `ggplot` object showing the frequency distribution.
 }
 \description{
 Display how many features are observed in a given number of samples.
+}
+\examples{
+missing_matrix <- matrix(
+    seq_len(24),
+    nrow = 6,
+    dimnames = list(
+        paste0("feature_", seq_len(6)),
+        paste0("sample_", seq_len(4))
+    )
+)
+missing_matrix[cbind(seq_len(4), seq_len(4))] <- NA
+frequency_plot <- plot_NA_frequency(
+    missing_matrix,
+    show_percent = TRUE
+)
 }

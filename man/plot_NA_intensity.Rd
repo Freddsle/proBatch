@@ -40,23 +40,22 @@ plot_NA_intensity(x, ...)
 \arguments{
 \item{x}{A data container.
 For the `ProBatchFeatures` method this must be a `ProBatchFeatures`
-object.
-The default method accepts any matrix-like input (including
+object. The default method accepts any matrix-like input (including
 `SummarizedExperiment`).}
 
 \item{...}{Currently unused.}
 
 \item{sample_annotation}{Optional data frame with sample-level metadata.
 Row names (or the column specified via `sample_id_col`) must match the
-column names of the intensity matrix.
-When `x` is a `SummarizedExperiment`, `colData(x)` is used by default.}
+column names of the intensity matrix. When `x` is a
+`SummarizedExperiment`, `colData(x)` is used by default.}
 
 \item{sample_id_col}{Optional column in `sample_annotation` providing
 unique sample identifiers.}
 
 \item{color_by}{Column name in `sample_annotation` used to stratify
-features into sample groups.
-When `NULL`, all samples are treated as a single group.}
+features into sample groups. When `NULL`, all samples are
+treated as a single group.}
 
 \item{color_scheme}{Colour mapping for groups.
 Accepts `"brewer"` (default), a named vector of colours, or a named list
@@ -66,15 +65,14 @@ such as returned by [sample_annotation_to_colors()].}
 by `color_by`.}
 
 \item{spline_df}{Degrees of freedom for the natural spline fitted via
-[stats::glm()] with a quasi-binomial family.
-Set to `0` to suppress the trend line.}
+[stats::glm()] with a quasi-binomial family. Set to `0` to
+suppress the trend line.}
 
 \item{point_alpha, point_size}{Transparency and size of individual points.}
 
 \item{pbf_name}{Character scalar or vector with assay names to plot.
 When `NULL`, the most recent assay returned by [pb_current_assay()] is
-used.
-Only used by the `ProBatchFeatures` method.}
+used. Only used by the `ProBatchFeatures` method.}
 
 \item{nrow, ncol}{Integers controlling the layout when multiple assays are
 plotted.}
@@ -88,25 +86,23 @@ A `ggplot` object.
 \description{
 For each feature (row), compute the mean observed intensity and the
 proportion of missing values, optionally stratified by a sample-level
-grouping variable.
-A scatter plot with a spline-smoothed trend and per-group Spearman
-correlations is returned.
+grouping variable. A scatter plot with a spline-smoothed trend and per-group
+Spearman correlations is returned.
 }
 \examples{
 data(example_proteome_matrix, package = "proBatch")
 data(example_sample_annotation, package = "proBatch")
-plot_NA_intensity(
-    example_proteome_matrix[1:100, ],
+example_matrix <- example_proteome_matrix[1:100, ]
+intensity_plot <- plot_NA_intensity(
+    example_matrix,
     sample_annotation = example_sample_annotation,
     sample_id_col = "FullRunName",
     color_by = "Diet"
 )
-\donttest{
 pbf <- ProBatchFeatures(
-    data_matrix = example_proteome_matrix,
+    data_matrix = example_matrix,
     sample_annotation = example_sample_annotation,
     sample_id_col = "FullRunName"
 )
-plot_NA_intensity(pbf, color_by = "Diet")
-}
+pbf_intensity_plot <- plot_NA_intensity(pbf, color_by = "Diet")
 }

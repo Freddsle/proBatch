@@ -25,41 +25,42 @@ plot_protein_corrplot(
 }
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+feature IDs in rownames and file/sample names as colnames. See
+"example_proteome_matrix" for more details (to call the description, use
+\code{help("example_proteome_matrix")})}
 
 \item{protein_name}{the name of the protein}
 
 \item{peptide_annotation}{long format data frame with peptide ID and their
-corresponding protein and/or gene annotations.
-See \code{help("example_peptide_annotation")}.}
+corresponding protein and/or gene annotations. See
+\code{help("example_peptide_annotation")}.}
 
 \item{protein_col}{column where protein names are specified}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{factors_to_plot}{vector of technical and biological covariates to be
 plotted in this diagnostic plot (assumed to be present in
 \code{sample_annotation})}
 
-\item{cluster_rows}{boolean values determining if rows should be clustered or \code{hclust} object}
+\item{cluster_rows}{boolean values determining if rows should be
+clustered or \code{hclust} object}
 
-\item{cluster_cols}{boolean values determining if columns should be clustered or \code{hclust} object}
+\item{cluster_cols}{boolean values determining if columns should be
+clustered or \code{hclust} object}
 
 \item{heatmap_color}{vector of colors used in heatmap.}
 
 \item{color_list}{list, as returned by \code{sample_annotation_to_colors},
-where each item contains a color vector for each factor to be mapped to the
-color.}
+where each item contains a color vector for each factor
+to be mapped to the color.}
 
 \item{filename}{path where the results are saved.
-If null the object is returned to the active window;
-otherwise, the object is save into the file. Currently only
-pdf and png format is supported}
+If null the object is returned to the active window; otherwise, the object
+is save into the file. Currently only pdf and png format is supported}
 
 \item{width}{option  determining the output image width}
 
@@ -79,7 +80,9 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 Plots correlation plot of peptides from a single protein
 }
 \examples{
-data(list = c("example_peptide_annotation", "example_proteome_matrix"), package = "proBatch")
+data(
+    list = c("example_peptide_annotation", "example_proteome_matrix"),
+    package = "proBatch")
 protein_corrplot_plot <- plot_protein_corrplot(example_proteome_matrix,
     protein_name = "Haao", peptide_annotation = example_peptide_annotation,
     protein_col = "Gene"

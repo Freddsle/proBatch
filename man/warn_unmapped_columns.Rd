@@ -23,3 +23,14 @@ No return value, called for side effects (warning).
 \description{
 Emit a warning if some columns will not be mapped to colors.
 }
+\examples{
+annotation <- data.frame(
+    sample = c("s1", "s2"),
+    batch = c("A", "B"),
+    injection_order = 1:2
+)
+tryCatch(
+    warn_unmapped_columns(annotation, "batch", "sample"),
+    warning = function(w) conditionMessage(w)
+)
+}

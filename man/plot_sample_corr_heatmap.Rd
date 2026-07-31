@@ -32,18 +32,16 @@ plot_sample_corr_heatmap(
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
 feature IDs in rownames and file/sample names as colnames, or a
-`ProBatchFeatures` object. When `data_matrix` is a
-`ProBatchFeatures` object, `pbf_name` is used (or all assays when
-`pbf_name = NULL`).}
+`ProBatchFeatures` object. When `data_matrix` is a `ProBatchFeatures`
+object, `pbf_name` is used (or all assays when `pbf_name = NULL`).}
 
 \item{samples_to_plot}{string vector of samples in
 \code{data_matrix} to be used in the plot}
 
 \item{sample_annotation}{data frame with sample-level metadata. When
-`data_matrix` is a matrix, this argument is required. When
-`data_matrix` is a `ProBatchFeatures` object and
-`sample_annotation` is not provided, `as.data.frame(colData(data_matrix))`
-is used.}
+`data_matrix` is a matrix, this argument is required. When `data_matrix`
+is a `ProBatchFeatures` object and `sample_annotation` is not provided,
+`as.data.frame(colData(data_matrix))` is used.}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
@@ -52,9 +50,11 @@ where the filenames (colnames of the \code{data_matrix} are found).}
 plotted in this diagnostic plot (assumed to be present in
 \code{sample_annotation})}
 
-\item{cluster_rows}{boolean values determining if rows should be clustered or \code{hclust} object}
+\item{cluster_rows}{boolean values determining if rows should be
+clustered or \code{hclust} object}
 
-\item{cluster_cols}{boolean values determining if columns should be clustered or \code{hclust} object}
+\item{cluster_cols}{boolean values determining if columns should be
+clustered or \code{hclust} object}
 
 \item{show_row_dend, show_column_dend}{Logical, whether row/column dendrograms
 should be shown when clustering is enabled.}
@@ -65,13 +65,12 @@ x-axis (column) and y-axis (row) labels in the heatmap.}
 \item{heatmap_color}{vector of colors used in heatmap.}
 
 \item{color_list}{list, as returned by \code{sample_annotation_to_colors},
-where each item contains a color vector for each factor to be mapped to the
-color.}
+where each item contains a color vector for each factor
+to be mapped to the color.}
 
 \item{filename}{path where the results are saved.
-If null the object is returned to the active window;
-otherwise, the object is save into the file. Currently only
-pdf and png format is supported}
+If null the object is returned to the active window; otherwise, the object
+is save into the file. Currently only pdf and png format is supported}
 
 \item{width}{option  determining the output image width}
 
@@ -87,8 +86,8 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 
-\item{...}{parameters for the \code{\link[pheatmap]{pheatmap}} visualisation, for details see
-examples and help to corresponding functions}
+\item{...}{parameters for the \code{\link[pheatmap]{pheatmap}}
+visualisation, for details see examples and help to corresponding functions}
 }
 \value{
 \code{pheatmap} object for a single assay, or an arranged plot object
@@ -98,7 +97,9 @@ examples and help to corresponding functions}
 Plot correlation of selected samples
 }
 \examples{
-data(list = c("example_sample_annotation", "example_proteome_matrix"), package = "proBatch")
+data(
+    list = c("example_sample_annotation", "example_proteome_matrix"),
+    package = "proBatch")
 specified_samples <- example_sample_annotation$FullRunName[
     which(example_sample_annotation$order \%in\% 110:115)
 ]

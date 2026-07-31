@@ -33,9 +33,8 @@ plot_peptide_corr_distribution.corrDF(
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
 feature IDs in rownames and file/sample names as colnames, or a
-`ProBatchFeatures` object. When `data_matrix` is a
-`ProBatchFeatures` object, `pbf_name` is used (or the current assay when
-`pbf_name = NULL`).}
+`ProBatchFeatures` object. When `data_matrix` is a `ProBatchFeatures`
+object, `pbf_name` is used (or the current assay when `pbf_name = NULL`).}
 
 \item{peptide_annotation}{long format data frame with peptide ID and their
 corresponding protein and/or gene annotations. When `data_matrix` is a
@@ -47,13 +46,12 @@ rowData from the selected assay is used.}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{filename}{path where the results are saved.
-If null the object is returned to the active window;
-otherwise, the object is save into the file. Currently only
-pdf and png format is supported}
+If null the object is returned to the active window; otherwise, the object
+is save into the file. Currently only pdf and png format is supported}
 
 \item{width}{option  determining the output image width}
 
@@ -64,7 +62,8 @@ pdf and png format is supported}
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
-\item{theme}{ggplot theme, by default \code{classic}. Can be easily overridden}
+\item{theme}{ggplot theme, by default \code{classic}.
+Can be easily overridden}
 
 \item{pbf_name}{Assay name used when `data_matrix` is a `ProBatchFeatures`
 object. If `NULL`, [pb_current_assay()] is used.}
@@ -81,22 +80,28 @@ Plot distribution of peptide correlations within one
 protein and between proteins
 }
 \examples{
-data(list = c("example_peptide_annotation", "example_proteome_matrix"), package = "proBatch")
+data(
+    list = c("example_peptide_annotation", "example_proteome_matrix"),
+    package = "proBatch")
 peptide_corr_distribution <- plot_peptide_corr_distribution(
     example_proteome_matrix,
     example_peptide_annotation,
     protein_col = "Gene"
 )
 
-data(list = c("example_peptide_annotation", "example_proteome_matrix"), package = "proBatch")
+data(
+    list = c("example_peptide_annotation", "example_proteome_matrix"),
+    package = "proBatch")
 corr_distribution <- calculate_peptide_corr_distr(
     example_proteome_matrix,
     example_peptide_annotation,
     protein_col = "Gene"
 )
-peptide_corr_distribution <- plot_peptide_corr_distribution.corrDF(corr_distribution)
+peptide_corr_distribution <-
+    plot_peptide_corr_distribution.corrDF(corr_distribution)
 
 }
 \seealso{
-\code{\link{calculate_peptide_corr_distr}}, \code{\link[ggplot2]{ggplot}}
+\code{\link{calculate_peptide_corr_distr}},
+  \code{\link[ggplot2]{ggplot}}
 }

@@ -49,19 +49,20 @@ output result file). See \code{help("example_proteome")} for more details.}
 column with expression/abundance/intensity; otherwise, it is used
 internally for consistency.}
 
-\item{x}{Input object supplied to the generics (long data frame, matrix, or `ProBatchFeatures`).}
+\item{x}{Input object supplied to the generics (long data frame,
+matrix, or `ProBatchFeatures`).}
 
 \item{...}{Additional arguments forwarded between method implementations.}
 
 \item{pbf_name}{Assay name to transform when `x` is a `ProBatchFeatures`.}
 
-\item{final_name}{Optional name for the stored assay produced by the S3 methods.}
+\item{final_name}{Optional name for the stored assay
+produced by the S3 methods.}
 }
 \value{
 `log_transform_df()` returns \code{df_long}-size data frame, with
-\code{measure_col} log transformed; with old value in another column
-called "beforeLog_intensity" if "intensity" was the value of
-\code{measure_col};
+\code{measure_col} log transformed; with old value in another column called
+"beforeLog_intensity" if "intensity" was the value of \code{measure_col};
 `log_transform_dm()` returns \code{data_matrix} format matrix
 }
 \description{
@@ -69,12 +70,15 @@ Functions to log transform raw data before normalization and batch correction
 
 Log transformation of the data long format.
 
-"Unlog" transformation of the data to pre-log form (for quantification, forcing log-transform)
+"Unlog" transformation of the data to pre-log form (for
+quantification, forcing log-transform)
 
 Log transformation of the data matrix format.
 }
 \examples{
-data(list = c("example_proteome", "example_proteome_matrix"), package = "proBatch")
+data(
+    list = c("example_proteome", "example_proteome_matrix"),
+    package = "proBatch")
 
 log_transformed_df <- log_transform_df(example_proteome)
 

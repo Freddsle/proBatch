@@ -40,8 +40,8 @@ A list of character vectors (each of length two) naming duplicated
 \description{
 Compare columns cell-by-cell and report the pairs that contain identical
 values, including matching `NA` placements. The method works on plain data
-frames as well as on [`ProBatchFeatures`] objects by extracting the relevant
-annotation tables.
+frames as well as on [`ProBatchFeatures`] objects by extracting the
+relevant annotation tables.
 }
 \examples{
 metadata <- data.frame(

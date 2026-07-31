@@ -27,7 +27,8 @@
 \item{data_matrix}{Data frame of PVCA weights, typically the result of
 \code{prepare_PVCA_df()}, or a \code{ProBatchFeatures} object.}
 
-\item{pbf_name}{Assay name(s) used when \code{data_matrix} is a \code{ProBatchFeatures}.}
+\item{pbf_name}{Assay name(s) used when \code{data_matrix}
+is a \code{ProBatchFeatures}.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -37,20 +38,19 @@ See \code{help("example_sample_annotation")}}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix}) are found.}
 
 \item{colors_for_bars}{four-item color vector, specifying colors for the
-following categories: c('residual', 'biological', 'biol:techn',
-'technical')}
+following categories: c('residual', 'biological',
+'biol:techn', 'technical')}
 
 \item{filename}{path where the results are saved.
-If null the object is returned to the active window;
-otherwise, the object is save into the file. Currently only
-pdf and png format is supported}
+If null the object is returned to the active window; otherwise, the object
+is save into the file. Currently only pdf and png format is supported}
 
 \item{width}{option  determining the output image width}
 
@@ -61,11 +61,13 @@ pdf and png format is supported}
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
-\item{theme}{ggplot theme, by default \code{classic}. Can be easily overridden}
+\item{theme}{ggplot theme, by default \code{classic}.
+Can be easily overridden}
 
 \item{base_size}{base size of the text in the plot}
 
-\item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
+\item{return_gridExtra}{Logical; return arranged
+grobs instead of a plot list.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 
@@ -76,7 +78,8 @@ including \code{path_to_save_results}, are forwarded to \code{prepare_PVCA_df()}
 For all inputs, \code{add_values = TRUE} annotates bars with rounded weights.}
 }
 \value{
-\code{ggplot} object with bars as weights, colored by bio/tech factors
+\code{ggplot} object with bars as weights,
+colored by bio/tech factors
 }
 \description{
 plot PVCA, when the analysis is completed
@@ -87,7 +90,9 @@ helper and registered for the historical \code{"df"} S3 class. Prepared PVCA
 data frames can continue to call the helper directly.
 }
 \examples{
-data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+data(
+    list = c("example_proteome_matrix", "example_sample_annotation"),
+    package = "proBatch")
 matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
 pvca_df_res <- prepare_PVCA_df(matrix_test, example_sample_annotation,
     technical_factors = c("MS_batch", "digestion_batch"),
@@ -95,7 +100,8 @@ pvca_df_res <- prepare_PVCA_df(matrix_test, example_sample_annotation,
     pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1
 )
 colors_for_bars <- c("grey", "green", "blue", "red")
-names(colors_for_bars) <- c("residual", "biological", "biol:techn", "technical")
+names(colors_for_bars) <- c(
+    "residual", "biological", "biol:techn", "technical")
 
 pvca_plot <- plot_PVCA.df(pvca_df_res, colors_for_bars)
 }

@@ -22,15 +22,16 @@
 sample_annotation_to_colors(sample_annotation, ...)
 }
 \arguments{
-\item{sample_annotation}{Input object supplied to the generic (data frame or `ProBatchFeatures`).}
+\item{sample_annotation}{Input object supplied to the generic (data
+frame or `ProBatchFeatures`).}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
 
 \item{factor_columns}{columns of \code{sample_annotation} to be
 treated as factors. Sometimes categorical variables are depicted as integers
-(e.g. in column "Batch", values are 1, 2 and 3), specification here allows to
-map them correctly to qualitative palettes.}
+(e.g. in column "Batch", values are 1, 2 and 3), specification here allows
+to map them correctly to qualitative palettes.}
 
 \item{numeric_columns}{columns of \code{sample_annotation} to be
 treated as continuous numeric values.}
@@ -48,12 +49,11 @@ numeric values coloring (can be \code{'brewer' and 'viridis'})}
 }
 \value{
 list of colors for the selected annotation columns. Use
-\code{\link{color_list_to_df}} if a data frame representation is
-needed.
+\code{\link{color_list_to_df}} if a data frame representation is needed.
 }
 \description{
-Convert the sample annotation data frame to list of colors
-the list is named as columns included to use in plotting functions
+Convert the sample annotation data frame to list of colors the list is named
+as columns included to use in plotting functions
 }
 \examples{
 data("example_sample_annotation", package = "proBatch")

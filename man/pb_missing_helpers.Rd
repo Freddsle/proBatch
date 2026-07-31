@@ -59,45 +59,71 @@ specifying sample-annotation column(s) that define the groups within which
 missingness must be evaluated.}
 
 \item{min_valid}{Integer scalar (used by \code{pb_groupfilterNA()} only),
-minimum number of non-missing values required within each group to retain a
-feature. Default: \code{2L}.}
+minimum number of non-missing values required within each group to retain
+a feature. Default: \code{2L}.}
 
 \item{pNA}{Numeric scalar (used by \code{pb_groupfilterNA()} only), maximum
-proportion of missing values allowed within each group to retain a feature.
-Must be in the range \verb{[0, 1]}. If both \code{min_valid} and \code{pNA} are provided,
-the stricter requirement is applied per group by enforcing the larger
-minimum number of observed values implied by either threshold.}
+proportion of missing values allowed within each group to retain a
+feature. Must be in the range \verb{[0, 1]}. If both \code{min_valid} and \code{pNA} are
+provided, the stricter requirement is applied per group by enforcing the
+larger minimum number of observed values implied by either threshold.}
 
 \item{mask_failing}{Logical scalar (used by \code{pb_groupfilterNA()} only).
 When \code{TRUE} (default), values in groups that did not pass the missingness
 threshold are set to \code{NA}. When \code{FALSE}, the original values in failing
-groups are kept as-is (the feature is still retained if it passes in at
-least one group).}
+groups are kept as-is (the feature is still retained if it
+passes in at least one group).}
 }
 \value{
 \code{pb_zeroIsNA()}, \code{pb_infIsNA()}, \code{pb_filterNA()} and
-\code{pb_groupfilterNA()} return the updated \code{ProBatchFeatures} object.
-For one assay, \code{pb_nNA()} returns the corresponding \code{QFeatures::nNA()}
-result (a list of \code{DataFrame}s). For multiple assays it returns a named
-outer list with one such result per assay and a combined \code{nNA}
-\code{DataFrame}.
+\code{pb_groupfilterNA()} return the updated \code{ProBatchFeatures} object. For one
+assay, \code{pb_nNA()} returns the corresponding \code{QFeatures::nNA()} result (a
+list of \code{DataFrame}s). For multiple assays it returns a named outer list
+with one such result per assay and a combined \code{nNA} \code{DataFrame}.
 }
 \description{
 These wrappers delegate to the corresponding \code{QFeatures} generics while
 ensuring that the requested assays remain part of the \code{ProBatchFeatures}
-object. Only assays that are already materialised can be modified.
-If a transformation step was applied as a "fast" step (log, log2, etc.),
-consider re-running it with \code{store_fast_steps = TRUE}.
+object. Only assays that are already materialised can be modified. If a
+transformation step was applied as a "fast" step (log, log2, etc.), consider
+re-running it with \code{store_fast_steps = TRUE}.
 }
 \details{
 For grouped filtering, features are retained if they meet the
-missingness criteria in at least one group defined by \code{group_cols}.
-When \code{mask_failing = TRUE} (the default), the values in groups where
-the feature did not pass the threshold are replaced with \code{NA}.
+missingness criteria in at least one group defined by \code{group_cols}. When
+\code{mask_failing = TRUE} (the default), the values in groups where the
+feature did not pass the threshold are replaced with \code{NA}.
 
 With in-place \code{pb_filterNA()}, QFeatures preserves valid assay links and
-prunes their hits to the retained features. In-place
-\code{pb_groupfilterNA()} replaces the assay directly and may remove affected
-links when feature rows change; QFeatures warns when this occurs. Use
-\code{inplace = FALSE} to keep existing links unchanged.
+prunes their hits to the retained features. In-place \code{pb_groupfilterNA()}
+replaces the assay directly and may remove affected links when feature
+rows change; QFeatures warns when this occurs. Use \code{inplace = FALSE} to
+keep existing links unchanged.
+}
+\examples{
+values <- matrix(
+    c(0, 1, 2, Inf, 4, 5, 6, 7, 8),
+    nrow = 3,
+    byrow = TRUE,
+    dimnames = list(
+        paste0("feature", 1:3),
+        paste0("sample", 1:3)
+    )
+)
+annotation <- data.frame(sample = colnames(values))
+pbf <- ProBatchFeatures(
+    values,
+    sample_annotation = annotation,
+    sample_id_col = "sample"
+)
+pbf <- pb_zeroIsNA(pbf, "feature::raw")
+pbf <- pb_infIsNA(pbf, "feature::raw")
+pb_nNA(pbf, "feature::raw")$nNA
+
+filtered <- pb_filterNA(
+    pbf,
+    pbf_name = "feature::raw",
+    pNA = 0
+)
+rownames(filtered[["feature::raw_filteredNA"]])
 }

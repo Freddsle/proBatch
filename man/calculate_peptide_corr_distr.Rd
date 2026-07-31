@@ -15,9 +15,8 @@ calculate_peptide_corr_distr(
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
 feature IDs in rownames and file/sample names as colnames, or a
-`ProBatchFeatures` object. When `data_matrix` is a
-`ProBatchFeatures` object, `pbf_name` is used (or the current assay when
-`pbf_name = NULL`).}
+`ProBatchFeatures` object. When `data_matrix` is a `ProBatchFeatures`
+object, `pbf_name` is used (or the current assay when `pbf_name = NULL`).}
 
 \item{peptide_annotation}{long format data frame with peptide ID and their
 corresponding protein and/or gene annotations. When `data_matrix` is a
@@ -29,8 +28,8 @@ rowData from the selected assay is used.}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{pbf_name}{Assay name used when `data_matrix` is a `ProBatchFeatures`
 object. If `NULL`, [pb_current_assay()] is used.}
@@ -44,7 +43,9 @@ that are suggested to use for plotting in
 Calculate peptide correlation between and within peptides of one protein
 }
 \examples{
-data(list = c("example_peptide_annotation", "example_proteome_matrix"), package = "proBatch")
+data(
+    list = c("example_peptide_annotation", "example_proteome_matrix"),
+    package = "proBatch")
 selected_genes <- c("BOVINE_A1ag", "BOVINE_FetuinB", "Cyfip1")
 gene_filter <- example_peptide_annotation$Gene \%in\% selected_genes
 peptides_ann <- example_peptide_annotation$peptide_group_label

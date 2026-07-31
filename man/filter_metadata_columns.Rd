@@ -35,16 +35,16 @@ filter_metadata_columns(x, ...)
 \item{...}{Additional arguments passed to specific methods.}
 
 \item{duplicate_keep}{Strategy for selecting which column to retain within
-each duplicated set. Choose between keeping the `"first"`, `"last"`, or the
-first column whose name matches `duplicate_pattern` (`"pattern"`).}
+each duplicated set. Choose between keeping the `"first"`, `"last"`, or
+the first column whose name matches `duplicate_pattern` (`"pattern"`).}
 
 \item{duplicate_pattern}{Character pattern used when
-`duplicate_keep = "pattern"`. A regular expression is expected unless
-`pattern_fixed = TRUE`.}
+`duplicate_keep = "pattern"`. A regular expression is expected
+unless `pattern_fixed = TRUE`.}
 
 \item{pattern_ignore_case}{Logical flag passed to [base::grepl()] when
-matching `duplicate_pattern`. Defaults to `TRUE` as metadata column names are
-often case-insensitive.}
+matching `duplicate_pattern`. Defaults to `TRUE` as metadata column names
+are often case-insensitive.}
 
 \item{pattern_fixed}{Forwarded to the `fixed` argument of [base::grepl()].
 Defaults to `FALSE` to allow regular expressions.}

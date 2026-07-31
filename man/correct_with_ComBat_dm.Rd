@@ -20,9 +20,9 @@ correct_with_ComBat_dm(
 }
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+feature IDs in rownames and file/sample names as colnames. See
+"example_proteome_matrix" for more details (to call the description, use
+\code{help("example_proteome_matrix")})}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -32,8 +32,8 @@ use \code{help("example_proteome_matrix")})}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{measure_col}{if \code{df_long} is among the parameters, it is the
 column with expression/abundance/intensity; otherwise, it is used
@@ -52,12 +52,13 @@ correction: \code{"error"} (default), \code{"keep"},
 \code{"drop_features"}, or \code{"fill"}. With \code{"keep"}, missing
 values are passed through; ComBat still requires an NA-free matrix, while
 removeBatchEffect can model expression values containing NA. For one
-release, \code{FALSE}, a numeric scalar, and \code{"remove"},
-\code{"rm"}, or \code{"REMOVE"} are translated with a deprecation
-warning. Explicit \code{NULL} is an error.}
+release, \code{FALSE}, a numeric scalar, and \code{"remove"}, \code{"rm"},
+or \code{"REMOVE"} are translated with a deprecation warning. Explicit
+\code{NULL} is an error.}
 
-\item{covariates_cols}{Optional character vector of \code{sample_annotation} columns
-included in \code{mod} for ComBat (biological or nuisance covariates).}
+\item{covariates_cols}{Optional character vector of
+\code{sample_annotation} columns included in \code{mod} for ComBat
+(biological or nuisance covariates).}
 
 \item{...}{Further arguments passed to \code{sva::ComBat()}.}
 
@@ -65,8 +66,13 @@ included in \code{mod} for ComBat (biological or nuisance covariates).}
 \code{fill_the_missing = "fill"}.}
 }
 \value{
-A numeric matrix of ComBat-corrected values (features \eqn{\times} samples).
+A numeric matrix of ComBat-corrected values
+(features \eqn{\times} samples).
 }
 \description{
 Use \code{\link[=correct_with_ComBat]{correct_with_ComBat()}} with \code{format="wide"}.
+}
+\examples{
+# Use the unified replacement with `format = "wide"`.
+args(correct_with_ComBat)
 }

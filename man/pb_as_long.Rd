@@ -15,9 +15,11 @@ pb_as_long(
 \arguments{
 \item{object}{A \code{ProBatchFeatures} object.}
 
-\item{feature_id_col}{Column name used for feature identifiers in the long table.}
+\item{feature_id_col}{Column name used for feature
+identifiers in the long table.}
 
-\item{sample_id_col}{Column name used for sample identifiers in the long table.}
+\item{sample_id_col}{Column name used for sample
+identifiers in the long table.}
 
 \item{measure_col}{Column name containing measured values in the long table.}
 

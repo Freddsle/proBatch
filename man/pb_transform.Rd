@@ -43,7 +43,8 @@ materialized regardless.}
 \item{fast_steps}{Steps treated as fast (default:
 \code{c("log", "log2", "medianNorm")}).}
 
-\item{store_intermediate}{logical; if TRUE store every step (overrides fast behavior)}
+\item{store_intermediate}{logical; if TRUE store every step
+(overrides fast behavior)}
 
 \item{final_name}{Optional final assay name override in
 \verb{<level>::<pipeline>} form. It must differ from \code{from}. Stored assays and
@@ -57,7 +58,8 @@ even for an otherwise ephemeral log step.}
 \item{hdf5_path}{Optional file path used when \code{backend = "hdf5"}.}
 }
 \value{
-ProBatchFeatures with the requested pipeline added (as log and/or assay)
+ProBatchFeatures with the requested pipeline
+added (as log and/or assay)
 }
 \description{
 Compute a pipeline and optionally store only the final result

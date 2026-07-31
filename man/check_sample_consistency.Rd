@@ -37,16 +37,15 @@ order. It is used for in initial assessment plots
 (\link{plot_sample_mean_or_boxplot}) and  feature-level diagnostics
 (\link{feature_level_diagnostics}). Can be `NULL`
    if sample order is irrelevant (e.g. in genomic experiments). For more
-   details,
-   order definition/inference, see \link{define_sample_order} and
+   details, order definition/inference, see \link{define_sample_order} and
    \link{date_to_sample_order}}
 
 \item{facet_col}{column  in \code{sample_annotation} with a batch factor to
 separate plots into facets; usually 2nd to \code{batch_col}. Most meaningful
 for multi-instrument MS experiments (where each instrument has its own
 order-associated effects (see \code{order_col}) or simultaneous examination
-of two batch factors (e.g. preparation day and measurement day).
-For single-instrument case should be set to `NULL`}
+of two batch factors (e.g. preparation day and measurement day). For
+single-instrument case should be set to `NULL`}
 
 \item{merge}{(logical) whether to merge \code{df_long} with
 \code{sample_annotation} or not}
@@ -60,7 +59,9 @@ Check if sample annotation is consistent with data matrix and join the two
 }
 \examples{
 # Load necessary datasets
-data(list = c("example_proteome", "example_sample_annotation"), package = "proBatch")
+data(
+    list = c("example_proteome", "example_sample_annotation"),
+    package = "proBatch")
 
 df_test <- check_sample_consistency(
     sample_annotation = example_sample_annotation,

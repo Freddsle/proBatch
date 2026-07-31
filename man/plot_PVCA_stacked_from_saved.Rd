@@ -31,8 +31,9 @@ biol:techn, technical) passed to the stacked bar helper.}
 
 \item{plot_title}{Optional plot title.}
 
-\item{stacked_plot_title}{Optional character vector used to annotate the stacked
-plot title; elements are joined with newline characters.}
+\item{stacked_plot_title}{Optional character vector
+used to annotate the stacked plot title; elements are joined
+with newline characters.}
 
 \item{theme}{Plot theme; only \code{"classic"} is currently implemented.}
 
@@ -46,7 +47,8 @@ plot title; elements are joined with newline characters.}
 
 \item{units}{Plot units forwarded to \code{\link[ggplot2:ggsave]{ggplot2::ggsave()}}.}
 
-\item{category_order}{Optional character vector specifying the order of categories in the stacked plot.}
+\item{category_order}{Optional character vector specifying the order of
+categories in the stacked plot.}
 }
 \value{
 A \code{ggplot} object showing the stacked PVCA weights.
@@ -55,4 +57,24 @@ A \code{ggplot} object showing the stacked PVCA weights.
 When PVCA analysis has been run previously and the aggregated weights were
 written to disk (one \code{PVCA_results_aggregated.csv} per assay), this helper
 rebuilds the stacked bar summary without rerunning the analysis.
+}
+\examples{
+pvca_dir <- tempfile("saved_pvca_")
+pvca_plot <- tryCatch({
+    assay_dir <- file.path(pvca_dir, "assay_1")
+    dir.create(assay_dir, recursive = TRUE)
+    saved_pvca <- data.frame(
+        label = c("Diet", "resid"),
+        weights = c(0.7, 0.3),
+        category = c("biological", "residual")
+    )
+    utils::write.csv(
+        saved_pvca,
+        file.path(assay_dir, "PVCA_results_aggregated.csv"),
+        row.names = FALSE
+    )
+    plot_PVCA_stacked_from_saved(pvca_dir)
+}, finally = {
+    unlink(pvca_dir, recursive = TRUE)
+})
 }

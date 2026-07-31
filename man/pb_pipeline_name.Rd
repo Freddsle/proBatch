@@ -12,7 +12,8 @@ pb_pipeline_name(object, assay = pb_current_assay(object))
 \item{assay}{character(1) assay name; defaults to current assay}
 }
 \value{
-character(1) pipeline string like "combat_on_medianNorm_on_log2" or "raw"
+character(1) pipeline string like
+"combat_on_medianNorm_on_log2" or "raw"
 }
 \description{
 Pretty pipeline name derived from the assay

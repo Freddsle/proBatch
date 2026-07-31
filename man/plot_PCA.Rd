@@ -54,8 +54,8 @@
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
@@ -66,7 +66,8 @@ Factor-like and numeric columns are supported.}
 \item{shape_by}{Optional factor-like annotation column used for point
 shapes.}
 
-\item{PC_to_plot}{Integer vector of length 2 giving the PC indices for x and y axes.}
+\item{PC_to_plot}{Integer vector of length 2 giving the PC
+indices for x and y axes.}
 
 \item{fill_the_missing}{Missing-value handling shared by PCA, t-SNE, and
 UMAP. A finite numeric scalar replaces missing values and defaults to
@@ -78,9 +79,8 @@ names corresponding to the levels of the factor. For continuous variables,
 vector doesn't need to be named.}
 
 \item{filename}{path where the results are saved.
-If null the object is returned to the active window;
-otherwise, the object is save into the file. Currently only
-pdf and png format is supported}
+If null the object is returned to the active window; otherwise, the object
+is save into the file. Currently only pdf and png format is supported}
 
 \item{width}{option  determining the output image width}
 
@@ -105,11 +105,11 @@ marginal density plots grouped by \code{color_by}. If a column name is
 provided, densities are grouped by that column. Numeric-like grouping
 columns fall back to pooled marginals.}
 
-\item{x_nPC}{Optional integer PC index for the x axis. Use together with \code{y_nPC}
-to override \code{PC_to_plot}.}
+\item{x_nPC}{Optional integer PC index for the x axis.
+Use together with \code{y_nPC} to override \code{PC_to_plot}.}
 
-\item{y_nPC}{Optional integer PC index for the y axis. Use together with \code{x_nPC}
-to override \code{PC_to_plot}.}
+\item{y_nPC}{Optional integer PC index for the y axis.
+Use together with \code{x_nPC} to override \code{PC_to_plot}.}
 
 \item{...}{For \code{ProBatchFeatures} input, additional arguments forwarded to
 \code{plot_PCA.default()}. The default method rejects unused arguments.}
@@ -124,8 +124,8 @@ list containing the arranged \code{grob} and named ordered \code{plots}.}
 }
 \value{
 A \code{ggplot} PCA scatterplot colored by the column specified in
-\code{color_by}. Factor-like values, including numeric values matched by a named
-palette, use a discrete scale; other numeric values use a continuous
+\code{color_by}. Factor-like values, including numeric values matched by a
+named palette, use a discrete scale; other numeric values use a continuous
 gradient. When \code{marginal_density = TRUE}, returns a \code{ggplot} object if
 \code{ggplotify} or \code{cowplot} is available; otherwise returns a grid grob. For
 one selected \code{ProBatchFeatures} assay, returns that plot. For multiple
@@ -137,7 +137,9 @@ arranged \code{grob} and named ordered \code{plots}.
 plot PCA plot
 }
 \examples{
-data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+data(
+    list = c("example_proteome_matrix", "example_sample_annotation"),
+    package = "proBatch")
 matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
 pca_plot <- plot_PCA(matrix_test, example_sample_annotation,
     color_by = "MS_batch", plot_title = "PCA colored by MS batch"

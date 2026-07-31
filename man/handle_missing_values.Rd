@@ -18,10 +18,9 @@ handle_missing_values(
 under the default \code{"error"} policy.}
 
 \item{fill_the_missing}{One of \code{"error"}, \code{"keep"},
-\code{"drop_features"}, or \code{"fill"}. For one release,
-\code{FALSE}, a numeric scalar, and \code{"remove"}, \code{"rm"}, or
-\code{"REMOVE"} are translated with a deprecation warning. Explicit
-\code{NULL} is an error.}
+\code{"drop_features"}, or \code{"fill"}. For one release, \code{FALSE}, a
+numeric scalar, and \code{"remove"}, \code{"rm"}, or \code{"REMOVE"} are
+translated with a deprecation warning. Explicit \code{NULL} is an error.}
 
 \item{fill_value}{Finite numeric scalar used only with
 \code{fill_the_missing = "fill"}.}

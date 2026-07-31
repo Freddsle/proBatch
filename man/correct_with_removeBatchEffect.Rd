@@ -20,7 +20,8 @@ correct_with_removeBatchEffect(
 )
 }
 \arguments{
-\item{x}{Data in long (\code{data.frame}) or wide (\code{matrix}) form, controlled by \code{format}.}
+\item{x}{Data in long (\code{data.frame}) or wide (\code{matrix}) form,
+controlled by \code{format}.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -30,8 +31,8 @@ correct_with_removeBatchEffect(
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{measure_col}{if \code{df_long} is among the parameters, it is the
 column with expression/abundance/intensity; otherwise, it is used
@@ -45,7 +46,8 @@ batch comparison (or other, non-batch factor to be mapped to color in plots).}
 
 \item{format}{One of \code{"long"} or \code{"wide"}.}
 
-\item{covariates_cols}{Optional \code{sample_annotation} columns for the design matrix (biological or nuisance covariates).}
+\item{covariates_cols}{Optional \code{sample_annotation} columns for the
+design matrix (biological or nuisance covariates).}
 
 \item{fill_the_missing}{Missing-value policy applied before modeling:
 \code{"error"} (default), \code{"keep"}, \code{"drop_features"}, or
@@ -53,7 +55,8 @@ batch comparison (or other, non-batch factor to be mapped to color in plots).}
 \code{limma::removeBatchEffect()}. The design matrix (\code{batch_col} and
 \code{covariates_cols}) must be NA-free for every policy.}
 
-\item{keep_all}{For long format, columns to retain (see \code{subset_keep_cols()}).}
+\item{keep_all}{For long format, columns to retain (see
+\code{subset_keep_cols()}).}
 
 \item{...}{Further arguments passed to
 \code{limma::removeBatchEffect()}.}
@@ -62,12 +65,14 @@ batch comparison (or other, non-batch factor to be mapped to color in plots).}
 \code{fill_the_missing = "fill"}.}
 }
 \value{
-Matrix if \code{format="wide"}, data.frame if \code{format="long"} with batch effects removed
+Matrix if \code{format="wide"}, data.frame if \code{format="long"}
+  with batch effects removed
 }
 \description{
-Removes batch-associated linear effects with removeBatchEffect from limma.
-Works for long or wide via \code{format}. Use \code{covariates_cols}
-to keep biological effects in the design (not removed).
+Removes batch-associated linear effects with
+  removeBatchEffect from limma.
+Works for long or wide via \code{format}. Use \code{covariates_cols} to keep
+biological effects in the design (not removed).
 }
 \examples{
 data(

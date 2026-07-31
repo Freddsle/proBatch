@@ -62,8 +62,8 @@ plot_UMAP(data_matrix, ...)
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
@@ -167,7 +167,6 @@ embedding_annotation <- data.frame(
     FullRunName = sample_ids,
     MS_batch = rep(c("batch_1", "batch_2"), each = 4)
 )
-\donttest{
 if (requireNamespace("umap", quietly = TRUE)) {
     umap_plot <- plot_UMAP(
         embedding_matrix,
@@ -175,6 +174,5 @@ if (requireNamespace("umap", quietly = TRUE)) {
         n_neighbors = 3,
         random_state = 7
     )
-}
 }
 }

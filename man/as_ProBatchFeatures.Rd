@@ -14,18 +14,23 @@ as_ProBatchFeatures(
 \arguments{
 \item{object}{A \code{QFeatures} object to wrap.}
 
-\item{level}{Character scalar used as the default level when renaming a single assay.}
+\item{level}{Character scalar used as the default level when
+renaming a single assay.}
 
-\item{pipeline}{Character scalar used as the default pipeline when renaming a single assay.}
+\item{pipeline}{Character scalar used as the default pipeline when
+renaming a single assay.}
 
-\item{sample_id_name}{Optional character scalar indicating the sample ID column name in colData.}
+\item{sample_id_name}{Optional character scalar indicating the sample
+ID column name in colData.}
 }
 \value{
-A \code{ProBatchFeatures} object containing the same assays as \code{object}.
+A \code{ProBatchFeatures} object containing the same
+  assays as \code{object}.
 }
 \description{
-Wraps an existing \code{QFeatures} instance into the \code{ProBatchFeatures} subclass,
-initializing the operation log and optional assay renaming when a single assay is present.
+Wraps an existing \code{QFeatures} instance into the \code{ProBatchFeatures}
+subclass, initializing the operation log and optional assay renaming when a
+single assay is present.
 }
 \examples{
 if (requireNamespace("QFeatures", quietly = TRUE)) {

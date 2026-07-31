@@ -47,8 +47,8 @@ batch comparison (or other, non-batch factor to be mapped to color in plots).}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
@@ -62,20 +62,19 @@ order. It is used for in initial assessment plots
 (\link{plot_sample_mean_or_boxplot}) and  feature-level diagnostics
 (\link{feature_level_diagnostics}). Can be `NULL`
    if sample order is irrelevant (e.g. in genomic experiments). For more
-   details,
-   order definition/inference, see \link{define_sample_order} and
+   details, order definition/inference, see \link{define_sample_order} and
    \link{date_to_sample_order}}
 
 \item{keep_all}{when transforming the data (normalize, correct) - acceptable
 values: all/default/minimal (which set of columns be kept).}
 
-\item{no_fit_imputed}{(logical) whether to use imputed (requant) values, as flagged in
+\item{no_fit_imputed}{(logical) whether to use imputed
+  (requant) values, as flagged in
 \code{qual_col} by \code{qual_value} for data transformation}
 
 \item{qual_col}{column to color point by certain value denoted
-by \code{qual_value}. Design with inferred/requant values in
-OpenSWATH output data,
-which means argument value has to be set to \code{m_score}.}
+by \code{qual_value}. Design with inferred/requant values in OpenSWATH
+output data, which means argument value has to be set to \code{m_score}.}
 
 \item{qual_value}{value in \code{qual_col} to color. For OpenSWATH data,
 this argument value has to be set to \code{2} (this is an \code{m_score}
@@ -86,16 +85,18 @@ correction: \code{"error"} (default), \code{"keep"},
 \code{"drop_features"}, or \code{"fill"}. With \code{"keep"}, missing
 values are passed through; ComBat still requires an NA-free matrix, while
 removeBatchEffect can model expression values containing NA. For one
-release, \code{FALSE}, a numeric scalar, and \code{"remove"},
-\code{"rm"}, or \code{"REMOVE"} are translated with a deprecation
-warning. Explicit \code{NULL} is an error.}
+release, \code{FALSE}, a numeric scalar, and \code{"remove"}, \code{"rm"},
+or \code{"REMOVE"} are translated with a deprecation warning. Explicit
+\code{NULL} is an error.}
 
 \item{par.prior}{Logical; use parametric prior (ComBat) or non-parametric.}
 
-\item{covariates_cols}{Optional character vector of \code{sample_annotation} columns
-included in \code{mod} for ComBat (biological or nuisance covariates).}
+\item{covariates_cols}{Optional character vector of
+\code{sample_annotation} columns included in \code{mod} for ComBat
+(biological or nuisance covariates).}
 
-\item{min_measurements}{Minimum number of samples per batch required for fitting.}
+\item{min_measurements}{Minimum number of samples per
+batch required for fitting.}
 
 \item{...}{Further arguments forwarded to \code{\link[=correct_batch_effects]{correct_batch_effects()}}.}
 
@@ -103,8 +104,13 @@ included in \code{mod} for ComBat (biological or nuisance covariates).}
 \code{fill_the_missing = "fill"}.}
 }
 \value{
-A data.frame in long format with batch-corrected values in \code{measure_col}.
+A data.frame in long format with batch-corrected
+values in \code{measure_col}.
 }
 \description{
 Use \code{\link[=correct_batch_effects]{correct_batch_effects()}} with \code{format="long"}.
+}
+\examples{
+# Use the unified replacement with `format = "long"`.
+args(correct_batch_effects)
 }

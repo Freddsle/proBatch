@@ -52,8 +52,8 @@ plot_grouped_NA_heatmap(x, ...)
 }
 \arguments{
 \item{x}{A data container. For the `ProBatchFeatures` method this must be a
-`ProBatchFeatures` object. The default method accepts any matrix-like input
-(including `SummarizedExperiment`).}
+`ProBatchFeatures` object. The default method accepts any matrix-like
+input (including `SummarizedExperiment`).}
 
 \item{...}{Additional parameters forwarded to [pheatmap::pheatmap()].}
 
@@ -63,18 +63,18 @@ names of the intensity matrix. When `x` is a `ProBatchFeatures` object the
 sample annotation defaults to `as.data.frame(colData(x))`.}
 
 \item{sample_id_col}{Optional column in `sample_annotation` providing unique
-sample identifiers. Use this when the data frame lacks row names matching
-the assay column names.}
+sample identifiers. Use this when the data frame lacks row names
+matching the assay column names.}
 
 \item{color_by}{One or more column names in `sample_annotation` used both to
 define the sample groups and to annotate the grouped heatmap columns.
-`.group_key`, `.group_size`, and `.group_label` are reserved for generated
-group metadata.}
+`.group_key`, `.group_size`, and `.group_label` are reserved for
+generated group metadata.}
 
 \item{label_by}{Optional grouping column used for the grouped column labels.
 The default, `NULL`, displays generated labels containing all grouping
-values and the group size. The generated label column is named
-`.group_label`.}
+values and the group size. The generated label column
+is named `.group_label`.}
 
 \item{cluster_samples, cluster_features}{Logical flags controlling whether the
 heatmap columns/rows are clustered.}
@@ -91,11 +91,12 @@ the unique values of `color_by`.}
 \item{drop_complete}{Logical, drop features without any missing values before
 plotting. Defaults to `TRUE` to focus on missingness patterns.}
 
-\item{draw}{Logical, draw the heatmap(s). Set to `FALSE` to obtain the grob(s)
-without plotting. For multiple assays, the arranged grob is returned
-invisibly when `draw = TRUE`.}
+\item{draw}{Logical, draw the heatmap(s). Set to
+`FALSE` to obtain the grob(s) without plotting. For multiple assays, the
+arranged grob is returned invisibly when `draw = TRUE`.}
 
-\item{main}{Optional title passed to [pheatmap::pheatmap()] for single assays.}
+\item{main}{Optional title passed to
+[pheatmap::pheatmap()] for single assays.}
 
 \item{force_binarization}{Optional threshold used to binarize grouped
 observed fractions. Use `FALSE` (default) to retain fractions, `TRUE` to
@@ -108,24 +109,47 @@ lower values as missing.}
 Only used by the `ProBatchFeatures` method.}
 
 \item{nrow, ncol}{Integers controlling the layout when multiple assays are
-plotted. If both are `NULL`, a roughly square layout is chosen
-automatically.}
+plotted. If both are `NULL`, a roughly square layout
+is chosen automatically.}
 
 \item{use_subset}{Logical; for `ProBatchFeatures` inputs, randomly subset
-assays over 5000 rows. All sample columns are retained so grouped fractions
-and group sizes remain exact.}
+assays over 5000 rows. All sample columns are retained so grouped
+fractions and group sizes remain exact.}
 }
 \value{
 For a single assay the returned value is the `pheatmap` object. When
   multiple assays are requested a list is returned invisibly with elements
   `grob` (the arranged heatmaps) and `heatmaps` (individual `pheatmap`
-  objects). Assays without incomplete group-level patterns are skipped with a
-  warning.
+  objects). Assays without incomplete group-level patterns
+  are skipped with a warning.
 }
 \description{
 Visualise assay missingness after collapsing samples into groups defined by
 one or more metadata columns. Each heatmap cell stores the fraction of
 samples in the group with an observed value. The annotation bar mirrors the
-grouping variables, so multiple `color_by` columns appear as multiple
-annotation tracks.
+grouping variables, so multiple `color_by` columns appear as
+multiple annotation tracks.
+}
+\examples{
+missing_matrix <- matrix(
+    seq_len(24),
+    nrow = 6,
+    dimnames = list(
+        paste0("feature_", seq_len(6)),
+        paste0("sample_", seq_len(4))
+    )
+)
+missing_matrix[cbind(seq_len(4), seq_len(4))] <- NA
+sample_annotation <- data.frame(
+    condition = rep(c("control", "treated"), each = 2),
+    row.names = colnames(missing_matrix)
+)
+grouped_heatmap <- plot_grouped_NA_heatmap(
+    missing_matrix,
+    sample_annotation = sample_annotation,
+    color_by = "condition",
+    cluster_samples = FALSE,
+    cluster_features = FALSE,
+    draw = FALSE
+)
 }

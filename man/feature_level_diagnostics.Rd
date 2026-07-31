@@ -161,8 +161,7 @@ sample, or a `ProBatchFeatures` object.}
 
 \item{pbf_name}{Assay name used when `df_long` is a `ProBatchFeatures`
 object (used by `plot_single_feature()` and
-`plot_peptides_of_one_protein()`). If `NULL`, [pb_current_assay()] is
-used.}
+`plot_peptides_of_one_protein()`). If `NULL`, [pb_current_assay()] is used.}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
@@ -173,17 +172,16 @@ internally for consistency.}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{geom}{whether to show the feature as points and/or connect by lines
 (accepted values are: 1. \code{point}, \code{line} and
 \code{c('point', 'line')})}
 
 \item{qual_col}{column to color point by certain value denoted
-by \code{qual_value}. Design with inferred/requant values in
-OpenSWATH output data,
-which means argument value has to be set to \code{m_score}.}
+by \code{qual_value}. Design with inferred/requant values in OpenSWATH
+output data, which means argument value has to be set to \code{m_score}.}
 
 \item{qual_value}{value in \code{qual_col} to color. For OpenSWATH data,
 this argument value has to be set to \code{2} (this is an \code{m_score}
@@ -204,25 +202,23 @@ order. It is used for in initial assessment plots
 (\link{plot_sample_mean_or_boxplot}) and  feature-level diagnostics
 (\link{feature_level_diagnostics}). Can be `NULL`
    if sample order is irrelevant (e.g. in genomic experiments). For more
-   details,
-   order definition/inference, see \link{define_sample_order} and
+   details, order definition/inference, see \link{define_sample_order} and
    \link{date_to_sample_order}}
 
 \item{vline_color}{color of vertical lines, typically separating
-different MS batches in ordered runs;
-should be `NULL` for experiments without intrinsic order}
+different MS batches in ordered runs; should be `NULL` for
+experiments without intrinsic order}
 
 \item{facet_col}{column  in \code{sample_annotation} with a batch factor to
 separate plots into facets; usually 2nd to \code{batch_col}. Most meaningful
 for multi-instrument MS experiments (where each instrument has its own
 order-associated effects (see \code{order_col}) or simultaneous examination
-of two batch factors (e.g. preparation day and measurement day).
-For single-instrument case should be set to `NULL`}
+of two batch factors (e.g. preparation day and measurement day). For
+single-instrument case should be set to `NULL`}
 
 \item{filename}{path where the results are saved.
-If null the object is returned to the active window;
-otherwise, the object is save into the file. Currently only
-pdf and png format is supported}
+If null the object is returned to the active window; otherwise, the object
+is save into the file. Currently only pdf and png format is supported}
 
 \item{width}{option  determining the output image width}
 
@@ -233,7 +229,8 @@ pdf and png format is supported}
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
-\item{theme}{ggplot theme, by default \code{classic}. Can be easily overridden}
+\item{theme}{ggplot theme, by default \code{classic}.
+Can be easily overridden}
 
 \item{ylimits}{range of y-axis to plot feature-level trends}
 
@@ -242,8 +239,8 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 \item{protein_name}{name of the protein as defined in \code{ProteinName}}
 
 \item{peptide_annotation}{long format data frame with peptide ID and their
-corresponding protein and/or gene annotations.
-See \code{help("example_peptide_annotation")}.}
+corresponding protein and/or gene annotations. See
+\code{help("example_peptide_annotation")}.}
 
 \item{protein_col}{column where protein names are specified}
 
@@ -265,11 +262,10 @@ ggplot2 type plot of \code{measure_col} vs \code{order_col},
 }
 \description{
 Creates a peptide faceted ggplot2 plot of the value in
-\code{measure_col}
-vs \code{order_col} (if `NULL`, x-axis is simply a sample name order).
-Additionally, the resulting plot can also be colored either by batch factor,
-by quality factor (e.g. imputed/non-imputed) and, if needed, faceted by
-another batch factor, e.g. an instrument.
+\code{measure_col} vs \code{order_col} (if `NULL`, x-axis is simply a sample
+name order). Additionally, the resulting plot can also be colored either by
+batch factor, by quality factor (e.g. imputed/non-imputed) and, if needed,
+faceted by another batch factor, e.g. an instrument.
  If the non-linear curve was fit, this can also be added to the plot, see
  functions specific to each case below
 }

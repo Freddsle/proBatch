@@ -36,8 +36,8 @@ output result file). See \code{help("example_proteome")} for more details.}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{measure_col}{if \code{df_long} is among the parameters, it is the
 column with expression/abundance/intensity; otherwise, it is used
@@ -56,17 +56,17 @@ correction: \code{"error"} (default), \code{"keep"},
 \code{"drop_features"}, or \code{"fill"}. With \code{"keep"}, missing
 values are passed through; ComBat still requires an NA-free matrix, while
 removeBatchEffect can model expression values containing NA. For one
-release, \code{FALSE}, a numeric scalar, and \code{"remove"},
-\code{"rm"}, or \code{"REMOVE"} are translated with a deprecation
-warning. Explicit \code{NULL} is an error.}
+release, \code{FALSE}, a numeric scalar, and \code{"remove"}, \code{"rm"},
+or \code{"REMOVE"} are translated with a deprecation warning. Explicit
+\code{NULL} is an error.}
 
-\item{no_fit_imputed}{(logical) whether to use imputed (requant) values, as flagged in
+\item{no_fit_imputed}{(logical) whether to use imputed
+  (requant) values, as flagged in
 \code{qual_col} by \code{qual_value} for data transformation}
 
 \item{qual_col}{column to color point by certain value denoted
-by \code{qual_value}. Design with inferred/requant values in
-OpenSWATH output data,
-which means argument value has to be set to \code{m_score}.}
+by \code{qual_value}. Design with inferred/requant values in OpenSWATH
+output data, which means argument value has to be set to \code{m_score}.}
 
 \item{qual_value}{value in \code{qual_col} to color. For OpenSWATH data,
 this argument value has to be set to \code{2} (this is an \code{m_score}
@@ -75,8 +75,9 @@ value for imputed values (requant values).}
 \item{keep_all}{when transforming the data (normalize, correct) - acceptable
 values: all/default/minimal (which set of columns be kept).}
 
-\item{covariates_cols}{Optional character vector of \code{sample_annotation} columns
-included in \code{mod} for ComBat (biological or nuisance covariates).}
+\item{covariates_cols}{Optional character vector of
+\code{sample_annotation} columns included in \code{mod} for ComBat
+(biological or nuisance covariates).}
 
 \item{...}{Further arguments passed to \code{sva::ComBat()}.}
 
@@ -84,9 +85,14 @@ included in \code{mod} for ComBat (biological or nuisance covariates).}
 \code{fill_the_missing = "fill"}.}
 }
 \value{
-A data.frame in long format with ComBat-corrected values in \code{measure_col}
-and original values preserved in \code{preBatchCorr_[measure_col]}.
+A data.frame in long format with ComBat-corrected
+values in \code{measure_col} and original values preserved in
+\code{preBatchCorr_[measure_col]}.
 }
 \description{
 Use \code{\link[=correct_with_ComBat]{correct_with_ComBat()}} with \code{format="long"}.
+}
+\examples{
+# Use the unified replacement with `format = "long"`.
+args(correct_with_ComBat)
 }

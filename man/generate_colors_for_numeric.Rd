@@ -10,8 +10,8 @@ generate_colors_for_numeric(palette_type = "brewer", i = 1)
 \item{palette_type}{'brewer' or 'viridis'}
 
 \item{i}{if \code{palette_type} is 'brewer' the palette argument to
-\code{brewer_pal}. If \code{palette_type} is 'viridis' the option argument
-to \code{viridis_pal}}
+\code{brewer_pal}. If \code{palette_type} is 'viridis' the option
+argument to \code{viridis_pal}}
 }
 \value{
 vector of colors

@@ -99,25 +99,23 @@ order. It is used for in initial assessment plots
 (\link{plot_sample_mean_or_boxplot}) and  feature-level diagnostics
 (\link{feature_level_diagnostics}). Can be `NULL`
    if sample order is irrelevant (e.g. in genomic experiments). For more
-   details,
-   order definition/inference, see \link{define_sample_order} and
+   details, order definition/inference, see \link{define_sample_order} and
    \link{date_to_sample_order}}
 
 \item{vline_color}{Color of vertical lines that typically denote different
-MS batches in ordered runs. Use `NULL` for experiments without an
-intrinsic order.}
+MS batches in ordered runs. Use `NULL` for experiments
+without an intrinsic order.}
 
 \item{facet_col}{column  in \code{sample_annotation} with a batch factor to
 separate plots into facets; usually 2nd to \code{batch_col}. Most meaningful
 for multi-instrument MS experiments (where each instrument has its own
 order-associated effects (see \code{order_col}) or simultaneous examination
-of two batch factors (e.g. preparation day and measurement day).
-For single-instrument case should be set to `NULL`}
+of two batch factors (e.g. preparation day and measurement day). For
+single-instrument case should be set to `NULL`}
 
 \item{filename}{path where the results are saved.
-If null the object is returned to the active window;
-otherwise, the object is save into the file. Currently only
-pdf and png format is supported}
+If null the object is returned to the active window; otherwise, the object
+is save into the file. Currently only pdf and png format is supported}
 
 \item{width}{option  determining the output image width}
 
@@ -160,7 +158,9 @@ samples, such as consecutive mass-spectrometry runs, the plots show
 order-associated effects.
 }
 \examples{
-data(list = c("example_proteome", "example_sample_annotation"), package = "proBatch")
+data(
+    list = c("example_proteome", "example_sample_annotation"),
+    package = "proBatch")
 plot_boxplot(
     example_proteome,
     sample_annotation = example_sample_annotation,

@@ -12,10 +12,9 @@ A data frame with 124655 rows and 7 variables:
   \item{Intensity}{peptide group intensity in given sample.
   Used in function as \code{measure_col}}
   \item{Protein}{Protein group ID, specified as
-  N/UniProtID1|UniProtID2|...,
-  where N is number of protein peptide group maps to. If
-  1/UniProtID, then this is proteotypic peptide, in functions used as
-  \code{protein_col}}
+  N/UniProtID1|UniProtID2|..., where N is number of protein peptide group
+  maps to. If 1/UniProtID, then this is proteotypic peptide, in functions
+  used as \code{protein_col}}
   \item{FullRunName}{name of the file, in most functions used for
   \code{sample_id_col}}
   \item{m_score}{column marking the quality of peptide IDs, used as
@@ -31,9 +30,10 @@ PRIDE ID will be added upon the publication of the dataset
 A data frame with 124655 rows and 7 variables.
 }
 \description{
-This is OpenSWATH-output data from Aging study with all iRT, spike-in peptides,
-few representative peptides and proteins for signal improvement demonstration.
-Using \code{matrix_to_long} can be converted to \code{example_proteome_matrix}
+This is OpenSWATH-output data from Aging study with all iRT, spike-in
+peptides, few representative peptides and proteins for signal improvement
+demonstration. Using \code{matrix_to_long} can be converted to
+\code{example_proteome_matrix}
 }
 \examples{
 data("example_proteome", package = "proBatch")

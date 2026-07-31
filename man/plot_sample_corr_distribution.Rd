@@ -37,15 +37,13 @@ plot_sample_corr_distribution.corrDF(
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
 feature IDs in rownames and file/sample names as colnames, or a
-`ProBatchFeatures` object. When `data_matrix` is a
-`ProBatchFeatures` object, `pbf_name` is used (or the current assay when
-`pbf_name = NULL`).}
+`ProBatchFeatures` object. When `data_matrix` is a `ProBatchFeatures`
+object, `pbf_name` is used (or the current assay when `pbf_name = NULL`).}
 
 \item{sample_annotation}{data frame with sample-level metadata. When
-`data_matrix` is a matrix, this argument is required. When
-`data_matrix` is a `ProBatchFeatures` object and
-`sample_annotation` is not provided, `as.data.frame(colData(data_matrix))`
-is used.}
+`data_matrix` is a matrix, this argument is required. When `data_matrix`
+is a `ProBatchFeatures` object and `sample_annotation` is not provided,
+`as.data.frame(colData(data_matrix))` is used.}
 
 \item{repeated_samples}{if \code{NULL}, correlation of all samples is plotted}
 
@@ -56,15 +54,13 @@ where the filenames (colnames of the \code{data_matrix} are found).}
 batch comparison (or other, non-batch factor to be mapped to color in plots).}
 
 \item{biospecimen_id_col}{column in \code{sample_annotation}
-that captures the biological sample,
-that (possibly) was profiled several times as technical replicates.
-Tip: if such ID is absent, but can be defined from several columns,
-create new \code{biospecimen_id} column}
+that captures the biological sample, that (possibly) was profiled several
+times as technical replicates. Tip: if such ID is absent, but can be defined
+from several columns, create new \code{biospecimen_id} column}
 
 \item{filename}{path where the results are saved.
-If null the object is returned to the active window;
-otherwise, the object is save into the file. Currently only
-pdf and png format is supported}
+If null the object is returned to the active window; otherwise, the object
+is save into the file. Currently only pdf and png format is supported}
 
 \item{width}{option  determining the output image width}
 
@@ -83,7 +79,8 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 \item \code{batches}
 }}
 
-\item{theme}{ggplot theme, by default \code{classic}. Can be easily overridden}
+\item{theme}{ggplot theme, by default \code{classic}.
+Can be easily overridden}
 
 \item{pbf_name}{Assay name used when `data_matrix` is a `ProBatchFeatures`
 object. If `NULL`, [pb_current_assay()] is used.}
@@ -102,7 +99,9 @@ Useful to visualize within batch vs within replicate
 vs non-related sample correlation
 }
 \examples{
-data(list = c("example_sample_annotation", "example_proteome_matrix"), package = "proBatch")
+data(
+    list = c("example_sample_annotation", "example_proteome_matrix"),
+    package = "proBatch")
 sample_corr_distribution_plot <- plot_sample_corr_distribution(
     example_proteome_matrix,
     example_sample_annotation,
@@ -111,13 +110,16 @@ sample_corr_distribution_plot <- plot_sample_corr_distribution(
     plot_param = "batch_replicate"
 )
 
-data(list = c("example_sample_annotation", "example_proteome_matrix"), package = "proBatch")
+data(
+    list = c("example_sample_annotation", "example_proteome_matrix"),
+    package = "proBatch")
 corr_distribution <- calculate_sample_corr_distr(
     data_matrix = example_proteome_matrix,
     sample_annotation = example_sample_annotation,
     batch_col = "MS_batch", biospecimen_id_col = "EarTag"
 )
-sample_corr_distribution_plot <- plot_sample_corr_distribution.corrDF(corr_distribution,
+sample_corr_distribution_plot <- plot_sample_corr_distribution.corrDF(
+    corr_distribution,
     plot_param = "batch_replicate"
 )
 

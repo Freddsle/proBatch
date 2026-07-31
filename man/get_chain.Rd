@@ -2,7 +2,8 @@
 % Please edit documentation in R/ProBatchFeatures.R
 \name{get_chain}
 \alias{get_chain}
-\title{Retrieve operation chain as vector or single string "combat_on_mediannorm_on_log"}
+\title{Retrieve operation chain as vector or single string
+"combat_on_mediannorm_on_log"}
 \usage{
 get_chain(object, as_string = FALSE, assay = NULL)
 }
@@ -13,14 +14,15 @@ get_chain(object, as_string = FALSE, assay = NULL)
 of the form \code{"combat_on_mediannorm_on_log"}.}
 
 \item{assay}{Optional assay identifier. When supplied, derive that assay's
-lineage from operation-log edges. When \code{NULL}, return the legacy global
-\code{chain} slot.}
+lineage from operation-log edges. When \code{NULL}, return the
+legacy global \code{chain} slot.}
 }
 \value{
 Character vector or string describing the processing chain.
 }
 \description{
-Retrieve operation chain as vector or single string "combat_on_mediannorm_on_log"
+Retrieve operation chain as vector or single string
+"combat_on_mediannorm_on_log"
 }
 \details{
 Logged lineage is validated before a chain is returned. Ambiguous

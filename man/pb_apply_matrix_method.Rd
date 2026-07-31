@@ -24,8 +24,7 @@ pb_apply_matrix_method(
 
 \item{fun}{Function or registered step identifier. The method receives the
 numeric matrix as its first argument. Aligned \code{sample_annotation} is
-also supplied when the method declares that argument or accepts
-\code{...}.}
+also supplied when the method declares that argument or accepts \code{...}.}
 
 \item{sample_annotation}{Optional data frame aligned by
 \code{sample_id_col}, or by unique row names when that column is absent.}
@@ -37,17 +36,17 @@ also supplied when the method declares that argument or accepts
 \item{measure_col}{Numeric measurement column for long input.}
 
 \item{missing}{Missing-value policy. \code{"error"} (the default) rejects
-missing values, \code{"keep"} passes them through,
-\code{"drop_features"} removes incomplete feature rows, and \code{"fill"}
-replaces missing values with \code{fill_value}.}
+missing values, \code{"keep"} passes them through, \code{"drop_features"}
+removes incomplete feature rows, and \code{"fill"} replaces missing
+values with \code{fill_value}.}
 
 \item{fill_value}{Finite numeric scalar used only with
 \code{missing = "fill"}.}
 
 \item{keep_all}{Long-output column policy. \code{"default"} preserves the
 input columns, \code{"all"} also appends non-conflicting annotation
-columns, and \code{"minimal"} retains only the feature, sample, and
-measurement columns.}
+columns, and \code{"minimal"} retains only the feature, sample,
+and measurement columns.}
 
 \item{...}{Additional arguments forwarded to \code{fun}. The adapter-owned
 \code{data_matrix} and \code{sample_annotation} arguments must not be
@@ -57,14 +56,14 @@ supplied through \code{...}.}
 A validated numeric matrix for matrix input, or a long data frame
   whose retained rows remain in their original relative order. If the method
   returns a \code{pb_step_result}, the adapter returns a
-  \code{pb_step_result} with the validated or restored data and unchanged
-  artifacts.
+  \code{pb_step_result} with the validated or restored data
+  and unchanged artifacts.
 }
 \description{
 Converts supported inputs to a numeric feature-by-sample matrix, aligns
 sample annotation by identifiers, invokes a function or registered step,
-validates its result, and reconstructs long data without joins or Cartesian
-expansion.
+validates its result, and reconstructs long data without
+joins or Cartesian expansion.
 }
 \examples{
 matrix_input <- matrix(

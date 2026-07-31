@@ -34,8 +34,8 @@ pb_add_level(
 \item{name}{Optional final assay name override in
 \verb{<level>::<pipeline>} form. Stored assays and virtual operation-log
 targets share one result namespace. A collision is accepted only for an
-exact idempotent retry with identical data, parent, mapping, and stable
-lineage origin.}
+exact idempotent retry with identical data, parent, mapping,
+and stable lineage origin.}
 
 \item{mapping_df}{Data frame mapping \code{from} IDs to \code{to} IDs. Required only
 when source and target row identifiers are not identical one-to-one.}
@@ -49,8 +49,8 @@ when source and target row identifiers are not identical one-to-one.}
 \item{map_strategy}{how to resolve multiple to-ids per from-id:
 \code{"as_is"} (error if not one-to-one), \code{"first"} (take the first exact
 target), or \code{"longest"} (prefer the exact target with the most
-semicolon-separated identifiers, then the longest string, then its first
-occurrence).}
+semicolon-separated identifiers, then the longest string,
+then its first occurrence).}
 
 \item{link_var}{rowData variable name to use for linking (e.g., "ProteinID")}
 

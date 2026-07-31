@@ -22,8 +22,8 @@ canonical names or aliases (default: \code{steps}).}
 Numeric matrix (features x samples). If a step returns a
 \code{\link[=pb_step_result]{pb_step_result()}}, only its validated \code{data} component is returned;
 artifacts are not persisted by this non-storing API. Every step must
-retain all samples in input order and may return an input-ordered feature
-subset.
+retain all samples in input order and may return an
+input-ordered feature subset.
 }
 \description{
 Evaluate a pipeline and return the matrix, without storing

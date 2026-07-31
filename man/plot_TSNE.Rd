@@ -60,8 +60,8 @@ plot_TSNE(data_matrix, ...)
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
@@ -100,7 +100,8 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 \item{point_alpha}{Alpha transparency for plotted points.}
 
 \item{random_seed}{Optional integer seed for reproducible t-SNE coordinates.
-When \code{NULL}, the caller controls the R random-number state.}
+A supplied seed is scoped to the backend call and leaves the caller's
+random-number state unchanged. When \code{NULL}, the caller controls that state.}
 
 \item{use_plotlyrender}{Logical; return a \code{plotly} object instead of a
 \code{ggplot}.}
@@ -139,9 +140,9 @@ values for the x and y axes.}
 }
 \value{
 For matrix input, a \code{ggplot} or, when requested, a \code{plotly} object.
-Plot data follow the sample order in the input matrix columns.
-For one selected \code{ProBatchFeatures} assay, the corresponding single plot.
-For multiple assays, an arranged static result, a named ordered list of
+Plot data follow the sample order in the input matrix columns. For one
+selected \code{ProBatchFeatures} assay, the corresponding single plot. For
+multiple assays, an arranged static result, a named ordered list of
 interactive plots, or an explicitly requested Plotly subplot.
 }
 \description{
@@ -163,7 +164,6 @@ embedding_annotation <- data.frame(
     FullRunName = sample_ids,
     MS_batch = rep(c("batch_1", "batch_2"), each = 4)
 )
-\donttest{
 if (requireNamespace("Rtsne", quietly = TRUE)) {
     tsne_plot <- plot_TSNE(
         embedding_matrix,
@@ -172,6 +172,5 @@ if (requireNamespace("Rtsne", quietly = TRUE)) {
         max_iter = 250,
         random_seed = 7
     )
-}
 }
 }

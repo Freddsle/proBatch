@@ -50,8 +50,8 @@ plot_NA_heatmap(x, ...)
 }
 \arguments{
 \item{x}{A data container. For the `ProBatchFeatures` method this must be a
-`ProBatchFeatures` object. The default method accepts any matrix-like input
-(including `SummarizedExperiment`).}
+`ProBatchFeatures` object. The default method accepts any matrix-like
+input (including `SummarizedExperiment`).}
 
 \item{...}{Additional parameters forwarded to [pheatmap::pheatmap()].}
 
@@ -61,8 +61,8 @@ names of the intensity matrix. When `x` is a `ProBatchFeatures` object the
 sample annotation defaults to `as.data.frame(colData(x))`.}
 
 \item{sample_id_col}{Optional column in `sample_annotation` providing unique
-sample identifiers. Use this when the data frame lacks row names matching
-the assay column names.}
+sample identifiers. Use this when the data frame lacks row names
+matching the assay column names.}
 
 \item{color_by}{Optional column name or character vector of column names in
 `sample_annotation` used to annotate heatmap columns. Use `NULL` (default)
@@ -87,19 +87,20 @@ the unique values of `color_by`.}
 \item{drop_complete}{Logical, drop features without any missing values before
 plotting. Defaults to `TRUE` to focus on missingness patterns.}
 
-\item{draw}{Logical, draw the heatmap(s). Set to `FALSE` to obtain the grob(s)
-without plotting. For multiple assays, the arranged grob is returned
-invisibly when `draw = TRUE`.}
+\item{draw}{Logical, draw the heatmap(s). Set to
+`FALSE` to obtain the grob(s) without plotting. For multiple assays, the
+arranged grob is returned invisibly when `draw = TRUE`.}
 
-\item{main}{Optional title passed to [pheatmap::pheatmap()] for single assays.}
+\item{main}{Optional title passed to
+[pheatmap::pheatmap()] for single assays.}
 
 \item{pbf_name}{Character scalar or vector with assay names to plot. When
 `NULL`, the most recent assay returned by [pb_current_assay()] is used.
 Only used by the `ProBatchFeatures` method.}
 
 \item{nrow, ncol}{Integers controlling the layout when multiple assays are
-plotted. If both are `NULL`, a roughly square layout is chosen
-automatically.}
+plotted. If both are `NULL`, a roughly square layout
+is chosen automatically.}
 
 \item{use_subset}{Logical; randomly subset to 5000 rows/columns when assays
 exceed that size (only used for `ProBatchFeatures` inputs).}
@@ -113,10 +114,27 @@ For a single assay the returned value is the `pheatmap` object. When
 \description{
 Functions for visualising the missingness pattern of assay intensities as a
 binary heatmap. The `ProBatchFeatures` method supports drawing multiple
-assays at once by arranging the resulting heatmaps into a user-controlled
-grid layout.
+assays at once by arranging the resulting heatmaps into a
+user-controlled grid layout.
 }
 \details{
 For a grouped view that collapses samples by metadata and shows within-group
 observed fractions, see [plot_grouped_NA_heatmap()].
+}
+\examples{
+missing_matrix <- matrix(
+    seq_len(24),
+    nrow = 6,
+    dimnames = list(
+        paste0("feature_", seq_len(6)),
+        paste0("sample_", seq_len(4))
+    )
+)
+missing_matrix[cbind(seq_len(4), seq_len(4))] <- NA
+na_heatmap <- plot_NA_heatmap(
+    missing_matrix,
+    cluster_samples = FALSE,
+    cluster_features = FALSE,
+    draw = FALSE
+)
 }

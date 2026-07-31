@@ -43,8 +43,8 @@ Registers one canonical step and optional aliases for use by
 records metadata only: it does not install, load, or probe a provider or any
 optional engine. Repeating an identical registration is a no-op. A different
 registration that collides with an existing canonical name or alias is
-rejected; refresh a provider with \code{\link[=pb_unregister_steps]{pb_unregister_steps()}} followed by
-registration.
+rejected; refresh a provider with \code{\link[=pb_unregister_steps]{pb_unregister_steps()}}
+followed by registration.
 }
 \examples{
 # Shared setup for ProBatchFeatures documentation examples -----------------

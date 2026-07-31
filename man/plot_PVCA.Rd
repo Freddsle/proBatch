@@ -46,7 +46,8 @@
 )
 }
 \arguments{
-\item{data_matrix}{Input object: matrix-like data or a \code{ProBatchFeatures} instance.}
+\item{data_matrix}{Input object: matrix-like data or a
+\code{ProBatchFeatures} instance.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -56,8 +57,8 @@
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
@@ -70,8 +71,7 @@ are biologically meaningful covariates}
 
 \item{fill_the_missing}{numeric value determining how  missing values
 should be substituted. If \code{NULL}, features with missing values are
-excluded.
-If \code{NULL}, features with missing values are excluded.}
+excluded. If \code{NULL}, features with missing values are excluded.}
 
 \item{pca_threshold}{the percentile value of the minimum amount of the
 variabilities that the selected principal components need to explain}
@@ -80,13 +80,12 @@ variabilities that the selected principal components need to explain}
 covariates needs to explain (the rest will be lumped together)}
 
 \item{colors_for_bars}{four-item color vector, specifying colors for the
-following categories: c('residual', 'biological', 'biol:techn',
-'technical')}
+following categories: c('residual', 'biological',
+'biol:techn', 'technical')}
 
 \item{filename}{path where the results are saved.
-If null the object is returned to the active window;
-otherwise, the object is save into the file. Currently only
-pdf and png format is supported}
+If null the object is returned to the active window; otherwise, the object
+is save into the file. Currently only pdf and png format is supported}
 
 \item{width}{option  determining the output image width}
 
@@ -97,7 +96,8 @@ pdf and png format is supported}
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
-\item{theme}{ggplot theme, by default \code{classic}. Can be easily overridden}
+\item{theme}{ggplot theme, by default \code{classic}.
+Can be easily overridden}
 
 \item{base_size}{base size of the text in the plot}
 
@@ -107,9 +107,11 @@ are written as CSV.}
 \item{...}{Additional arguments passed to lower-level methods. The default
 method accepts \code{add_values = TRUE} to annotate bars with rounded weights.}
 
-\item{pbf_name}{Assay name(s) used when \code{data_matrix} is a \code{ProBatchFeatures}.}
+\item{pbf_name}{Assay name(s) used when \code{data_matrix}
+is a \code{ProBatchFeatures}.}
 
-\item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
+\item{return_gridExtra}{Logical; return arranged
+grobs instead of a plot list.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 
@@ -117,8 +119,9 @@ method accepts \code{add_values = TRUE} to annotate bars with rounded weights.}
 provided, combines all assays in a single stacked bar chart (supported for
 \code{ProBatchFeatures} inputs only).}
 
-\item{stacked_plot_title}{optional character vector that annotates the stacked
-PVCA plot when \code{stacked_bar = TRUE}; elements are joined with newlines.}
+\item{stacked_plot_title}{optional character vector
+that annotates the stacked PVCA plot when \code{stacked_bar = TRUE}; elements
+are joined with newlines.}
 
 \item{sort_stacked}{optional factor name used to order stacked bars when
 \code{stacked_bar = TRUE}; assays are ordered by the explained variance of this
@@ -134,7 +137,9 @@ in a stacked PVCA plot.}
 Plot variance distribution by variable
 }
 \examples{
-data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+data(
+    list = c("example_proteome_matrix", "example_sample_annotation"),
+    package = "proBatch")
 matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
 
 pvca_file <- tempfile("pvca", fileext = ".png")

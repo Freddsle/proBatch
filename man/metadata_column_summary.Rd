@@ -40,8 +40,8 @@ ignored and the provided data frame is analysed instead.}
 }
 \value{
 A data frame with columns `colname`, `n_unique`, `n_NA`, and
-  `pct_NA`. Percentages are expressed on a 0–100 scale. When `sort = TRUE` the
-  rows are ordered by decreasing missingness.
+  `pct_NA`. Percentages are expressed on a 0–100 scale. When `sort = TRUE`
+  the rows are ordered by decreasing missingness.
 }
 \description{
 Produce a per-column overview reporting how many distinct non-missing values

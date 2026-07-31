@@ -24,7 +24,8 @@ correct_with_ComBat(
 )
 }
 \arguments{
-\item{x}{Data in long (\code{data.frame}) or wide (\code{matrix}) form, controlled by \code{format}.}
+\item{x}{Data in long (\code{data.frame}) or wide (\code{matrix}) form,
+controlled by \code{format}.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -34,8 +35,8 @@ correct_with_ComBat(
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{measure_col}{if \code{df_long} is among the parameters, it is the
 column with expression/abundance/intensity; otherwise, it is used
@@ -51,22 +52,24 @@ batch comparison (or other, non-batch factor to be mapped to color in plots).}
 
 \item{par.prior}{Logical; ComBat parametric prior (vs non-parametric).}
 
-\item{covariates_cols}{Optional character vector of \code{sample_annotation} columns
-included in \code{mod} for ComBat (biological or nuisance covariates).}
+\item{covariates_cols}{Optional character vector of
+\code{sample_annotation} columns included in \code{mod} for ComBat
+(biological or nuisance covariates).}
 
 \item{fill_the_missing}{Missing-value policy prior to ComBat:
 \code{"error"} (default), \code{"keep"}, \code{"drop_features"}, or
 \code{"fill"}. ComBat still requires the resulting matrix to be NA-free.}
 
-\item{keep_all}{For long format, columns to retain (see \code{subset_keep_cols()}).}
+\item{keep_all}{For long format, columns to retain (see
+\code{subset_keep_cols()}).}
 
-\item{no_fit_imputed}{If \code{TRUE} and \code{qual_col} provided, masked values are
-excluded when building the matrix (original values still corrected).}
+\item{no_fit_imputed}{If \code{TRUE} and \code{qual_col}
+provided, masked values are excluded when building the matrix (original
+values still corrected).}
 
 \item{qual_col}{column to color point by certain value denoted
-by \code{qual_value}. Design with inferred/requant values in
-OpenSWATH output data,
-which means argument value has to be set to \code{m_score}.}
+by \code{qual_value}. Design with inferred/requant values in OpenSWATH
+output data, which means argument value has to be set to \code{m_score}.}
 
 \item{qual_value}{value in \code{qual_col} to color. For OpenSWATH data,
 this argument value has to be set to \code{2} (this is an \code{m_score}
@@ -83,8 +86,29 @@ Matrix if \code{format="wide"}, data.frame if \code{format="long"}.
 \description{
 Adjusts for discrete batch effects using \code{ComBat}.
 Works for long-format data frames and wide matrices via \code{format}.
-Optionally accepts covariates through \code{covariates_cols} (passed as \code{mod}).
+Optionally accepts covariates through
+\code{covariates_cols} (passed as \code{mod}).
+}
+\examples{
+data(
+    list = c("example_sample_annotation", "example_proteome"),
+    package = "proBatch"
+)
+feature_ids <- c(
+    "10062_NVGVSFYADKPEVTQEQK_3",
+    "10063_NVGVSFYADKPEVTQEQKK_3"
+)
+example_subset <- example_proteome[
+    example_proteome$peptide_group_label \%in\% feature_ids,
+]
+combat_corrected <- correct_with_ComBat(
+    x = example_subset,
+    sample_annotation = example_sample_annotation,
+    format = "long",
+    fill_the_missing = "error"
+)
 }
 \references{
-Johnson WE et al. (2007) \emph{Biostatistics} 8(1):118–127; \emph{sva} vignette.
+Johnson WE et al. (2007) \emph{Biostatistics}
+  8(1):118–127; \emph{sva} vignette.
 }

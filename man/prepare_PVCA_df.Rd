@@ -31,9 +31,9 @@
 }
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+feature IDs in rownames and file/sample names as colnames. See
+"example_proteome_matrix" for more details (to call the description, use
+\code{help("example_proteome_matrix")})}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -43,8 +43,8 @@ use \code{help("example_proteome_matrix")})}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
@@ -57,8 +57,7 @@ are biologically meaningful covariates}
 
 \item{fill_the_missing}{numeric value determining how  missing values
 should be substituted. If \code{NULL}, features with missing values are
-excluded.
-If \code{NULL}, features with missing values are excluded.}
+excluded. If \code{NULL}, features with missing values are excluded.}
 
 \item{pca_threshold}{the percentile value of the minimum amount of the
 variabilities that the selected principal components need to explain}
@@ -71,16 +70,20 @@ are written as \code{PVCA_results_aggregated.csv}.}
 
 \item{...}{Additional arguments forwarded between methods.}
 
-\item{pbf_name}{Assay name(s) used when \code{data_matrix} is a \code{ProBatchFeatures}.}
+\item{pbf_name}{Assay name(s) used when \code{data_matrix}
+is a \code{ProBatchFeatures}.}
 }
 \value{
-data frame with weights and factors, combined in a way ready for plotting
+data frame with weights and factors, combined in
+a way ready for plotting
 }
 \description{
 prepare the weights of Principal Variance Components
 }
 \examples{
-data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+data(
+    list = c("example_proteome_matrix", "example_sample_annotation"),
+    package = "proBatch")
 matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
 
 pvca_df_res <- prepare_PVCA_df(matrix_test, example_sample_annotation,

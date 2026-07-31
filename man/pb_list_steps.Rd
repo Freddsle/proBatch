@@ -11,8 +11,8 @@ pb_list_steps(pattern = NULL, details = FALSE, available = NULL)
 aliases, and labels.}
 
 \item{details}{Logical scalar. If \code{FALSE}, return canonical names. If \code{TRUE},
-return an \code{S4Vectors::DataFrame} with provider metadata and legacy
-inspection columns.}
+return an \code{S4Vectors::DataFrame} with provider metadata and
+legacy inspection columns.}
 
 \item{available}{Optional logical scalar. Use \code{TRUE} for currently available
 registrations, \code{FALSE} for unavailable registrations, or \code{NULL} for both.}

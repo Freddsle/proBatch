@@ -37,8 +37,8 @@ batch comparison (or other, non-batch factor to be mapped to color in plots).}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{measure_col}{if \code{df_long} is among the parameters, it is the
 column with expression/abundance/intensity; otherwise, it is used
@@ -47,22 +47,27 @@ internally for consistency.}
 \item{keep_all}{when transforming the data (normalize, correct) - acceptable
 values: all/default/minimal (which set of columns be kept).}
 
-\item{no_fit_imputed}{(logical) whether to use imputed (requant) values, as flagged in
+\item{no_fit_imputed}{(logical) whether to use imputed
+  (requant) values, as flagged in
 \code{qual_col} by \code{qual_value} for data transformation}
 
 \item{qual_col}{column to color point by certain value denoted
-by \code{qual_value}. Design with inferred/requant values in
-OpenSWATH output data,
-which means argument value has to be set to \code{m_score}.}
+by \code{qual_value}. Design with inferred/requant values in OpenSWATH
+output data, which means argument value has to be set to \code{m_score}.}
 
 \item{qual_value}{value in \code{qual_col} to color. For OpenSWATH data,
 this argument value has to be set to \code{2} (this is an \code{m_score}
 value for imputed values (requant values).}
 }
 \value{
-A data.frame in long format with batch-corrected values in \code{measure_col}
-and original values preserved in \code{preBatchCorr_[measure_col]}.
+A data.frame in long format with batch-corrected
+values in \code{measure_col} and original values preserved in
+\code{preBatchCorr_[measure_col]}.
 }
 \description{
 Use \code{\link[=center_feature_batch]{center_feature_batch()}} with \verb{format="long", stat="means"}.
+}
+\examples{
+# Use the unified replacement with `format = "long"` and `stat = "means"`.
+args(center_feature_batch)
 }
