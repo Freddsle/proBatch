@@ -36,6 +36,20 @@ test_that(".pb_split_arg_by_assay honours named vectors", {
     expect_equal(res[[3]], "z")
 })
 
+test_that(".pb_prepare_embedding_assay_args supplies empty defaults", {
+    assays <- c("assay1", "assay2")
+
+    empty <- proBatch:::`.pb_prepare_embedding_assay_args`(NULL, assays)
+    expect_identical(empty, setNames(list(list(), list()), assays))
+
+    partial <- proBatch:::`.pb_prepare_embedding_assay_args`(
+        list(assay1 = list(random_state = 7L)),
+        assays
+    )
+    expect_identical(partial[["assay1"]], list(random_state = 7L))
+    expect_identical(partial[["assay2"]], list())
+})
+
 test_that(".pb_resolve_assay_for_input validates NA assay names", {
     object <- structure(list(), class = "ProBatchFeatures")
 

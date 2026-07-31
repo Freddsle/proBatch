@@ -257,7 +257,7 @@
 }
 
 .pb_prepare_embedding_assay_args <- function(assay_args, assays) {
-    out <- setNames(vector("list", length(assays)), assays)
+    out <- setNames(rep(list(list()), length(assays)), assays)
     if (is.null(assay_args)) {
         return(out)
     }

@@ -863,6 +863,44 @@ test_that("ProBatchFeatures t-SNE preserves assay order and per-assay arguments"
     expect_s3_class(single, "ggplot")
 })
 
+test_that("ProBatchFeatures UMAP works without per-assay overrides", {
+    skip_if_not_installed("umap")
+
+    pbf <- pb_test_make_pbf(
+        n_rows = 12L,
+        n_cols = 8L,
+        complete = TRUE
+    )
+    assay <- names(pbf)[[1L]]
+    color_annotation <- as.data.frame(
+        SummarizedExperiment::colData(pbf)
+    )[, c("FullRunName", "MS_batch"), drop = FALSE]
+    batch_colors <- sample_annotation_to_colors(
+        color_annotation,
+        sample_id_col = "FullRunName",
+        factor_columns = "MS_batch"
+    )[["MS_batch"]]
+    testthat::local_mocked_bindings(
+        umap = function(d, config, ...) {
+            list(layout = pb_test_fake_embedding(d, config$n_components))
+        },
+        .package = "umap"
+    )
+
+    expect_no_warning(
+        umap_plot <- plot_UMAP(
+            pbf,
+            pbf_name = assay,
+            sample_id_col = "FullRunName",
+            color_by = "MS_batch",
+            color_scheme = batch_colors,
+            n_neighbors = 3,
+            random_state = 2026
+        )
+    )
+    expect_s3_class(umap_plot, "ggplot")
+})
+
 test_that("ProBatchFeatures interactive embeddings return lists or subplots", {
     skip_if_not_installed("Rtsne")
     skip_if_not_installed("umap")
