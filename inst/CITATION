@@ -1,20 +1,39 @@
 citHeader("To cite proBatch in publications use:")
 
-citEntry(entry = "article",
+bibentry(bibtype = "Article",
   title        = "Diagnostics and correction of batch effects in large-scale proteomic studies: a tutorial",
-  author       = as.person(c("Jelena Cuklina <chuklina.jelena@gmail.com> [aut, cre]",
-                  "Chloe H. Lee [aut]", 
-                  "Evan G. Willams [dtc, ctb]",
-                  "Tatjana Sajic [dtc]",
-                  "Ben Collins [dtc]",
-                  "Maria Rodriguez-Martinez [ths]",
-                  "Patrick Pedrioli [aut]",
-                  "Ruedi Aebersold [ths, fnd]")),
+  author       = as.person(c(
+                  "Jelena Cuklina",
+                  "Chloe H. Lee",
+                  "Evan G. Williams",
+                  "Tatjana Sajic",
+                  "Ben C. Collins",
+                  "María Rodriguez-Martinez",
+                  "Varun S. Sharma",
+                  "Fabian Wendt",
+                  "Sandra Goetze",
+                  "Gregory R. Keele",
+                  "Bernd Wollscheid",
+                  "Ruedi Aebersold",
+                  "Patrick G. A. Pedrioli")),
   journal      = "Molecular Systems Biology",
   year         = 2021,
-  url          = "https://doi.org/10.15252/msb.202110240",
+  volume       = "17",
+  number       = "8",
+  pages        = "e10240",
   doi          = "10.15252/msb.202110240",
-  textVersion = paste("Cuklina J., Lee C.H., Williams E.G., Sajic T., Collins B., Rodriguez-Martinez M., Aebersold R., Pedrioli P.", 
-  "Diagnostics and correction of batch effects in large-scale proteomic studies: a tutorial", "Molecular Systems Biology 17, e10240 (2021)", "https://doi.org/10.15252/msb.202110240")
+  url          = "https://doi.org/10.15252/msb.202110240",
+  textVersion = paste(
+    paste(
+      "Čuklina J, Lee CH, Williams EG, Sajic T, Collins BC,",
+      "Rodríguez Martínez M, Sharma VS, Wendt F, Goetze S,",
+      "Keele GR, Wollscheid B, Aebersold R, Pedrioli PGA."
+    ),
+    paste(
+      "Diagnostics and correction of batch effects in",
+      "large-scale proteomic studies: a tutorial."
+    ),
+    "Molecular Systems Biology 17(8), e10240 (2021).",
+    "https://doi.org/10.15252/msb.202110240"
   )
-  
+)
