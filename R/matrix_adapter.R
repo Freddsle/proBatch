@@ -2,31 +2,30 @@
 #'
 #' Converts supported inputs to a numeric feature-by-sample matrix, aligns
 #' sample annotation by identifiers, invokes a function or registered step,
-#' validates its result, and reconstructs long data without joins or Cartesian
-#' expansion.
+#' validates its result, and reconstructs long data without
+#' joins or Cartesian expansion.
 #'
 #' @param x Numeric feature-by-sample matrix or long data frame.
 #'   \code{ProBatchFeatures} objects must be transformed with
 #'   \code{pb_transform()} so storage and lineage are preserved.
 #' @param fun Function or registered step identifier. The method receives the
 #'   numeric matrix as its first argument. Aligned \code{sample_annotation} is
-#'   also supplied when the method declares that argument or accepts
-#'   \code{...}.
+#'   also supplied when the method declares that argument or accepts \code{...}.
 #' @param sample_annotation Optional data frame aligned by
 #'   \code{sample_id_col}, or by unique row names when that column is absent.
 #' @param feature_id_col Feature identifier column for long input.
 #' @param sample_id_col Sample identifier column for long input and annotation.
 #' @param measure_col Numeric measurement column for long input.
 #' @param missing Missing-value policy. \code{"error"} (the default) rejects
-#'   missing values, \code{"keep"} passes them through,
-#'   \code{"drop_features"} removes incomplete feature rows, and \code{"fill"}
-#'   replaces missing values with \code{fill_value}.
+#'   missing values, \code{"keep"} passes them through, \code{"drop_features"}
+#'   removes incomplete feature rows, and \code{"fill"} replaces missing
+#'   values with \code{fill_value}.
 #' @param fill_value Finite numeric scalar used only with
 #'   \code{missing = "fill"}.
 #' @param keep_all Long-output column policy. \code{"default"} preserves the
 #'   input columns, \code{"all"} also appends non-conflicting annotation
-#'   columns, and \code{"minimal"} retains only the feature, sample, and
-#'   measurement columns.
+#'   columns, and \code{"minimal"} retains only the feature, sample,
+#'   and measurement columns.
 #' @param ... Additional arguments forwarded to \code{fun}. The adapter-owned
 #'   \code{data_matrix} and \code{sample_annotation} arguments must not be
 #'   supplied through \code{...}.
@@ -34,8 +33,8 @@
 #' @return A validated numeric matrix for matrix input, or a long data frame
 #'   whose retained rows remain in their original relative order. If the method
 #'   returns a \code{pb_step_result}, the adapter returns a
-#'   \code{pb_step_result} with the validated or restored data and unchanged
-#'   artifacts.
+#'   \code{pb_step_result} with the validated or restored data
+#'   and unchanged artifacts.
 #' @export
 #' @examples
 #' matrix_input <- matrix(
@@ -56,16 +55,16 @@
 #'     sample_id_col = "sample"
 #' )
 pb_apply_matrix_method <- function(
-  x,
-  fun,
-  sample_annotation = NULL,
-  feature_id_col = "peptide_group_label",
-  sample_id_col = "FullRunName",
-  measure_col = "Intensity",
-  missing = "error",
-  fill_value = NULL,
-  keep_all = "default",
-  ...
+    x,
+    fun,
+    sample_annotation = NULL,
+    feature_id_col = "peptide_group_label",
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    missing = "error",
+    fill_value = NULL,
+    keep_all = "default",
+    ...
 ) {
     if (inherits(x, "ProBatchFeatures")) {
         stop(
@@ -243,10 +242,10 @@ pb_apply_matrix_method <- function(
 }
 
 .pb_adapter_long_to_matrix <- function(
-  value,
-  feature_id_col,
-  sample_id_col,
-  measure_col
+    value,
+    feature_id_col,
+    sample_id_col,
+    measure_col
 ) {
     if (anyDuplicated(names(value))) {
         stop("Long input must have unique column names.", call. = FALSE)
@@ -311,9 +310,9 @@ pb_apply_matrix_method <- function(
 }
 
 .pb_adapter_align_annotation <- function(
-  sample_annotation,
-  sample_ids,
-  sample_id_col
+    sample_annotation,
+    sample_ids,
+    sample_id_col
 ) {
     if (is.null(sample_annotation)) {
         annotation <- data.frame(
@@ -392,10 +391,10 @@ pb_apply_matrix_method <- function(
 }
 
 .pb_adapter_validate_output <- function(
-  result,
-  input_matrix,
-  missing,
-  allow_unnamed_features = FALSE
+    result,
+    input_matrix,
+    missing,
+    allow_unnamed_features = FALSE
 ) {
     restore_unnamed_features <- isTRUE(allow_unnamed_features) &&
         is.null(rownames(input_matrix)) &&
@@ -462,13 +461,13 @@ pb_apply_matrix_method <- function(
 }
 
 .pb_adapter_restore_long <- function(
-  original,
-  result,
-  annotation,
-  feature_id_col,
-  sample_id_col,
-  measure_col,
-  keep_all
+    original,
+    result,
+    annotation,
+    feature_id_col,
+    sample_id_col,
+    measure_col,
+    keep_all
 ) {
     feature_index <- match(
         as.character(original[[feature_id_col]]),

@@ -15,11 +15,11 @@
 #' @export
 #'
 long_to_matrix <- function(df_long,
-                           feature_id_col = "peptide_group_label",
-                           measure_col = "Intensity",
-                           sample_id_col = "FullRunName",
-                           qual_col = NULL,
-                           qual_value = 2) {
+    feature_id_col = "peptide_group_label",
+    measure_col = "Intensity",
+    sample_id_col = "FullRunName",
+    qual_col = NULL,
+    qual_value = 2) {
     .pb_validate_long_keys(
         df_long,
         feature_id_col = feature_id_col,
@@ -77,10 +77,10 @@ long_to_matrix <- function(df_long,
 #' @export
 #'
 matrix_to_long <- function(data_matrix, sample_annotation = NULL,
-                           feature_id_col = "peptide_group_label",
-                           measure_col = "Intensity",
-                           sample_id_col = "FullRunName",
-                           step = NULL) {
+    feature_id_col = "peptide_group_label",
+    measure_col = "Intensity",
+    sample_id_col = "FullRunName",
+    step = NULL) {
     if (!is.null(rownames(data_matrix))) {
         rownames(data_matrix) <- .pb_validate_identifiers(
             rownames(data_matrix),
@@ -108,7 +108,8 @@ matrix_to_long <- function(data_matrix, sample_annotation = NULL,
     }
 
     if (!is.null(sample_annotation)) {
-        message("Checking sample consistency and merging with sample annotation")
+        message(
+            "Checking sample consistency and merging with sample annotation")
         df_long <- check_sample_consistency(
             sample_annotation = sample_annotation,
             sample_id_col = sample_id_col,
@@ -124,8 +125,8 @@ matrix_to_long <- function(data_matrix, sample_annotation = NULL,
 
 #' Prepare peptide annotation from long format data frame
 #'
-#' Create light-weight peptide annotation data frame
-#' for selection of illustrative proteins
+#' Create light-weight peptide annotation data frame for selection
+#' of illustrative proteins
 #'
 #' @inheritParams proBatch
 #'
@@ -142,8 +143,8 @@ matrix_to_long <- function(data_matrix, sample_annotation = NULL,
 #' @seealso \code{\link{plot_peptides_of_one_protein}},
 #' \code{\link{plot_protein_corrplot}}
 create_peptide_annotation <- function(df_long,
-                                      feature_id_col = "peptide_group_label",
-                                      protein_col = c("ProteinName", "Gene")) {
+    feature_id_col = "peptide_group_label",
+    protein_col = c("ProteinName", "Gene")) {
     if (!all(protein_col %in% names(df_long))) {
         stop(
             sprintf(

@@ -1,7 +1,7 @@
 .pb_normalize_missing_policy <- function(
-  missing,
-  fill_value = NULL,
-  argument = "missing"
+    missing,
+    fill_value = NULL,
+    argument = "missing"
 ) {
     choices <- c("error", "keep", "drop_features", "fill")
     legacy <- NULL
@@ -95,10 +95,9 @@
 #' @param warning_message Error message used when missing values are present
 #'   under the default \code{"error"} policy.
 #' @param fill_the_missing One of \code{"error"}, \code{"keep"},
-#'   \code{"drop_features"}, or \code{"fill"}. For one release,
-#'   \code{FALSE}, a numeric scalar, and \code{"remove"}, \code{"rm"}, or
-#'   \code{"REMOVE"} are translated with a deprecation warning. Explicit
-#'   \code{NULL} is an error.
+#'   \code{"drop_features"}, or \code{"fill"}. For one release, \code{FALSE}, a
+#'   numeric scalar, and \code{"remove"}, \code{"rm"}, or \code{"REMOVE"} are
+#'   translated with a deprecation warning. Explicit \code{NULL} is an error.
 #' @param fill_value Finite numeric scalar used only with
 #'   \code{fill_the_missing = "fill"}.
 #'
@@ -113,10 +112,10 @@
 #'     fill_value = 0
 #' )
 handle_missing_values <- function(
-  data_matrix,
-  warning_message,
-  fill_the_missing = "error",
-  fill_value = NULL
+    data_matrix,
+    warning_message,
+    fill_the_missing = "error",
+    fill_value = NULL
 ) {
     if (!is.matrix(data_matrix) || !is.numeric(data_matrix)) {
         stop("`data_matrix` must be a numeric matrix.", call. = FALSE)

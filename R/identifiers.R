@@ -1,7 +1,7 @@
 .pb_validate_identifiers <- function(
-  identifiers,
-  context,
-  require_unique = TRUE
+    identifiers,
+    context,
+    require_unique = TRUE
 ) {
     if (is.null(identifiers)) {
         stop(context, " must be named.", call. = FALSE)
@@ -28,10 +28,10 @@
 }
 
 .pb_validate_long_keys <- function(
-  value,
-  feature_id_col,
-  sample_id_col,
-  context = "Long input"
+    value,
+    feature_id_col,
+    sample_id_col,
+    context = "Long input"
 ) {
     if (!is.data.frame(value)) {
         stop(context, " must be a data frame.", call. = FALSE)

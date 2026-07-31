@@ -1,16 +1,16 @@
 #' Data normalization methods
 #'
 #' @description Normalization of raw (usually log-transformed) data.
-#' Normalization brings the samples to the same scale.
-#' Currently the following normalization functions are implemented:
+#' Normalization brings the samples to the same scale. Currently the following
+#' normalization functions are implemented:
 #' #' \enumerate{
 #'   \item Quantile normalization: `quantile_normalize_dm()`.
 #'   Quantile normalization of the data.
 #'   \item Median normalization: `normalize_sample_medians_dm()`.
 #'   Normalization by centering sample medians to global median of the data
 #' }
-#' Alternatively, one can call normalization function with `normalize_data_dm()`
-#' wrapper.
+#' Alternatively, one can call normalization function with
+#' `normalize_data_dm()` wrapper.
 #'
 #'
 #' @inheritParams proBatch
@@ -28,14 +28,14 @@
 #'   within the corresponding subset.
 #'
 #' @return the data in the same format as input (\code{data_matrix} or
-#' \code{df_long}).
-#' For \code{df_long} the data frame stores the original values of
-#' \code{measure_col}
-#' in another column called "preNorm_intensity" if "intensity", and the
-#' normalized values in \code{measure_col} column.
+#' \code{df_long}). For \code{df_long} the data frame stores the original
+#' values of \code{measure_col} in another column called "preNorm_intensity" if
+#' "intensity", and the normalized values in \code{measure_col} column.
 #'
 #' @examples
-#' data(list = c("example_proteome", "example_proteome_matrix"), package = "proBatch")
+#' data(
+#'     list = c("example_proteome", "example_proteome_matrix"),
+#'     package = "proBatch")
 #'
 #' # Quantile normalization:
 #' quantile_normalized_matrix <- quantile_normalize_dm(example_proteome_matrix)
@@ -63,14 +63,15 @@ quantile_normalize_dm <- function(data_matrix) {
 }
 
 .pb_subset_normalized_output <- function(df,
-                                         keep_all,
-                                         sample_id_col,
-                                         feature_id_col,
-                                         measure_col,
-                                         old_measure_col,
-                                         qual_col = NULL) {
+    keep_all,
+    sample_id_col,
+    feature_id_col,
+    measure_col,
+    old_measure_col,
+    qual_col = NULL) {
     default_cols <- names(df)
-    minimal_cols <- c(sample_id_col, feature_id_col, measure_col, old_measure_col)
+    minimal_cols <- c(
+        sample_id_col, feature_id_col, measure_col, old_measure_col)
 
     if (!is.null(qual_col) && qual_col %in% names(df)) {
         minimal_cols <- c(minimal_cols, qual_col)
@@ -89,21 +90,24 @@ quantile_normalize_dm <- function(data_matrix) {
 #' @rdname normalize
 #'
 quantile_normalize_df <- function(df_long,
-                                  feature_id_col = "peptide_group_label",
-                                  sample_id_col = "FullRunName",
-                                  measure_col = "Intensity",
-                                  no_fit_imputed = TRUE,
-                                  qual_col = NULL,
-                                  qual_value = 2,
-                                  keep_all = "default") {
+    feature_id_col = "peptide_group_label",
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    no_fit_imputed = TRUE,
+    qual_col = NULL,
+    qual_value = 2,
+    keep_all = "default") {
     if (is.null(qual_col) & no_fit_imputed) {
-        warning("imputed value flag column is NULL, changing no_fit_imputed to FALSE")
+        warning(
+            "imputed value flag column is NULL, changing no_fit_imputed to FALSE")
         no_fit_imputed <- FALSE
     }
 
     if (no_fit_imputed) {
         if (!(qual_col %in% names(df_long))) {
-            stop("imputed value flag column (qual_col) is not in the data frame!")
+            stop(
+                "imputed value flag column (qual_col) is not in the data frame!"
+            )
         }
         message("removing imputed values (requants) from the matrix")
         data_matrix <- long_to_matrix(
@@ -180,10 +184,10 @@ normalize_sample_medians_dm <- function(data_matrix,
 }
 
 .pb_median_center_matrix <- function(data_matrix,
-                                     sample_annotation = NULL,
-                                     sample_id_col = "FullRunName",
-                                     group_col = NULL,
-                                     inside_batch = FALSE) {
+    sample_annotation = NULL,
+    sample_id_col = "FullRunName",
+    group_col = NULL,
+    inside_batch = FALSE) {
     if (!is.matrix(data_matrix)) {
         data_matrix <- as.matrix(data_matrix)
     }
@@ -225,17 +229,24 @@ normalize_sample_medians_dm <- function(data_matrix,
         select(dplyr::all_of(c(sample_id_col, group_col))) %>%
         distinct()
     if (anyDuplicated(sa_unique[[sample_id_col]])) {
-        dup_ids <- unique(sa_unique[[sample_id_col]][duplicated(sa_unique[[sample_id_col]])])
-        stop("Duplicate entries for samples in `sample_annotation`: ", paste(dup_ids, collapse = ", "))
+        dup_ids <- unique(
+            sa_unique[[sample_id_col]][duplicated(sa_unique[[sample_id_col]])])
+        stop(
+            "Duplicate entries for samples in `sample_annotation`: ",
+            paste(dup_ids, collapse = ", "))
     }
     id_match <- match(colnames(data_matrix), sa_unique[[sample_id_col]])
     if (any(is.na(id_match))) {
         missing_ids <- colnames(data_matrix)[is.na(id_match)]
-        stop("Missing annotations for samples: ", paste(missing_ids, collapse = ", "))
+        stop(
+            "Missing annotations for samples: ",
+            paste(missing_ids, collapse = ", "))
     }
     groups <- sa_unique[[group_col]][id_match]
     if (any(is.na(groups))) {
-        stop("`group_col` must not contain NA values when `inside_batch = TRUE`.")
+        stop(
+            "`group_col` must not contain NA values when `inside_batch = TRUE`."
+        )
     }
 
     centered <- data_matrix
@@ -252,8 +263,10 @@ normalize_sample_medians_dm <- function(data_matrix,
         if (!any(valid_rows)) {
             next
         }
-        medians <- apply(sub_matrix[valid_rows, , drop = FALSE], 2, median, na.rm = TRUE)
-        global_median <- median(sub_matrix[valid_rows, , drop = FALSE], na.rm = TRUE)
+        medians <- apply(
+            sub_matrix[valid_rows, , drop = FALSE], 2, median, na.rm = TRUE)
+        global_median <- median(
+            sub_matrix[valid_rows, , drop = FALSE], na.rm = TRUE)
         if (is.na(global_median)) {
             next
         }
@@ -288,7 +301,9 @@ normalize_sample_medians_df <- function(df_long,
     df_processed <- df_long
     if (no_fit_imputed) {
         if (!(qual_col %in% names(df_processed))) {
-            stop("imputed value flag column (qual_col) is not in the data frame!")
+            stop(
+                "imputed value flag column (qual_col) is not in the data frame!"
+            )
         }
         message("removing imputed values (requants) from the matrix")
         df_processed <- df_processed %>%
@@ -339,7 +354,8 @@ normalize_sample_medians_df <- function(df_long,
             distinct()
     } else {
         if (!(group_col %in% names(df_processed))) {
-            stop("Provide `sample_annotation` or include `group_col` in `df_long` when `inside_batch = TRUE`.")
+            stop(
+                "Provide `sample_annotation` or include `group_col` in `df_long` when `inside_batch = TRUE`.")
         }
         grouping_annotation <- df_processed %>%
             select(dplyr::all_of(c(sample_id_col, group_col))) %>%
@@ -409,11 +425,12 @@ normalize_sample_medians_df <- function(df_long,
 #' @export
 #' @rdname normalize
 normalize_data_dm <- function(data_matrix,
-                              normalize_func = c("quantile", "medianCentering"),
-                              log_base = NULL, offset = 1) {
+    normalize_func = c("quantile", "medianCentering"),
+    log_base = NULL, offset = 1) {
     normalize_func <- match.arg(normalize_func)
     if (!is.null(log_base)) {
-        data_matrix <- log_transform_dm(data_matrix, log_base = log_base, offset = offset)
+        data_matrix <- log_transform_dm(
+            data_matrix, log_base = log_base, offset = offset)
     }
 
     if (normalize_func == "quantile") {
@@ -421,7 +438,8 @@ normalize_data_dm <- function(data_matrix,
     } else if (normalize_func == "medianCentering") {
         normalized_matrix <- normalize_sample_medians_dm(data_matrix)
     } else {
-        stop("Only quantile and median centering normalization methods implemented")
+        stop(
+            "Only quantile and median centering normalization methods implemented")
     }
 
     return(normalized_matrix)
@@ -430,20 +448,21 @@ normalize_data_dm <- function(data_matrix,
 #' @export
 #' @rdname normalize
 normalize_data_df <- function(df_long,
-                              normalize_func = c("quantile", "medianCentering"),
-                              log_base = NULL, offset = 1,
-                              feature_id_col = "peptide_group_label",
-                              sample_id_col = "FullRunName",
-                              measure_col = "Intensity",
-                              no_fit_imputed = TRUE,
-                              qual_col = NULL,
-                              qual_value = 2,
-                              keep_all = "default") {
+    normalize_func = c("quantile", "medianCentering"),
+    log_base = NULL, offset = 1,
+    feature_id_col = "peptide_group_label",
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    no_fit_imputed = TRUE,
+    qual_col = NULL,
+    qual_value = 2,
+    keep_all = "default") {
     normalize_func <- match.arg(normalize_func)
 
 
     if (!is.null(log_base)) {
-        df_long <- log_transform_df(df_long, log_base = log_base, offset = offset)
+        df_long <- log_transform_df(
+            df_long, log_base = log_base, offset = offset)
     }
 
     if (normalize_func == "quantile") {
@@ -468,7 +487,8 @@ normalize_data_df <- function(df_long,
             qual_value = qual_value
         )
     } else {
-        stop("Only quantile and median centering normalization methods implemented")
+        stop(
+            "Only quantile and median centering normalization methods implemented")
     }
 
     return(normalized_df)

@@ -28,15 +28,16 @@
 #' @export
 #'
 dates_to_posix <- function(sample_annotation,
-                           time_column = c("RunDate", "RunTime"),
-                           new_time_column = "DateTime",
-                           dateTimeFormat = c("%b_%d", "%H:%M:%S"),
-                           tz = "GMT", locale = "en_US.UTF-8") {
+    time_column = c("RunDate", "RunTime"),
+    new_time_column = "DateTime",
+    dateTimeFormat = c("%b_%d", "%H:%M:%S"),
+    tz = "GMT", locale = "en_US.UTF-8") {
     old_locale <- Sys.getlocale("LC_TIME")
     on.exit(Sys.setlocale("LC_TIME", old_locale), add = TRUE)
     Sys.setlocale("LC_TIME", locale)
 
-    if (length(time_column) > 1 && length(dateTimeFormat) != length(time_column)) {
+    if (length(time_column) > 1 && length(dateTimeFormat) !=
+        length(time_column)) {
         stop("`dateTimeFormat` must match length of `time_column`")
     }
 
@@ -74,9 +75,8 @@ dates_to_posix <- function(sample_annotation,
 #' @param instrument_col name of the column denoting the instrument used for
 #'  measurements
 #' @return sample annotation file with a new column \code{new_time_column} with
-#'   POSIX-formatted date & \code{new_order_col} used
-#'   in some diagnostic plots (e.g.
-#'   \code{\link{plot_iRT}}, \code{\link{plot_sample_mean}})
+#'   POSIX-formatted date & \code{new_order_col} used in some diagnostic plots
+#'   (e.g. \code{\link{plot_iRT}}, \code{\link{plot_sample_mean}})
 #' @examples
 #' data("example_sample_annotation", package = "proBatch")
 #' sample_annotation_wOrder <- date_to_sample_order(
@@ -92,11 +92,11 @@ dates_to_posix <- function(sample_annotation,
 #'
 #' @name date_to_sample_order
 date_to_sample_order <- function(sample_annotation,
-                                 time_column = c("RunDate", "RunTime"),
-                                 new_time_column = "DateTime",
-                                 dateTimeFormat = c("%b_%d", "%H:%M:%S"),
-                                 new_order_col = "order",
-                                 instrument_col = "instrument") {
+    time_column = c("RunDate", "RunTime"),
+    new_time_column = "DateTime",
+    dateTimeFormat = c("%b_%d", "%H:%M:%S"),
+    new_order_col = "order",
+    instrument_col = "instrument") {
     sample_annotation <- dates_to_posix(
         sample_annotation = sample_annotation,
         time_column = time_column,

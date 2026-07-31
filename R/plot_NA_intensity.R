@@ -2,37 +2,34 @@
 #'
 #' For each feature (row), compute the mean observed intensity and the
 #' proportion of missing values, optionally stratified by a sample-level
-#' grouping variable.
-#' A scatter plot with a spline-smoothed trend and per-group Spearman
-#' correlations is returned.
+#' grouping variable. A scatter plot with a spline-smoothed trend and per-group
+#' Spearman correlations is returned.
 #'
 #' @param x A data container.
 #'   For the `ProBatchFeatures` method this must be a `ProBatchFeatures`
-#'   object.
-#'   The default method accepts any matrix-like input (including
+#'   object. The default method accepts any matrix-like input (including
 #'   `SummarizedExperiment`).
 #' @param sample_annotation Optional data frame with sample-level metadata.
 #'   Row names (or the column specified via `sample_id_col`) must match the
-#'   column names of the intensity matrix.
-#'   When `x` is a `SummarizedExperiment`, `colData(x)` is used by default.
+#'   column names of the intensity matrix. When `x` is a
+#'   `SummarizedExperiment`, `colData(x)` is used by default.
 #' @param sample_id_col Optional column in `sample_annotation` providing
 #'   unique sample identifiers.
 #' @param color_by Column name in `sample_annotation` used to stratify
-#'   features into sample groups.
-#'   When `NULL`, all samples are treated as a single group.
+#'   features into sample groups. When `NULL`, all samples are
+#'   treated as a single group.
 #' @param color_scheme Colour mapping for groups.
 #'   Accepts `"brewer"` (default), a named vector of colours, or a named list
 #'   such as returned by [sample_annotation_to_colors()].
 #' @param col_vector Optional vector of colours recycled across groups defined
 #'   by `color_by`.
 #' @param spline_df Degrees of freedom for the natural spline fitted via
-#'   [stats::glm()] with a quasi-binomial family.
-#'   Set to `0` to suppress the trend line.
+#'   [stats::glm()] with a quasi-binomial family. Set to `0` to
+#'   suppress the trend line.
 #' @param point_alpha,point_size Transparency and size of individual points.
 #' @param pbf_name Character scalar or vector with assay names to plot.
 #'   When `NULL`, the most recent assay returned by [pb_current_assay()] is
-#'   used.
-#'   Only used by the `ProBatchFeatures` method.
+#'   used. Only used by the `ProBatchFeatures` method.
 #' @param nrow,ncol Integers controlling the layout when multiple assays are
 #'   plotted.
 #' @param facet_scales Scaling behaviour passed to [ggplot2::facet_wrap()]
@@ -64,16 +61,16 @@ plot_NA_intensity <- function(x, ...) UseMethod("plot_NA_intensity")
 #' @method plot_NA_intensity default
 #' @export
 plot_NA_intensity.default <- function(
-  x,
-  sample_annotation = NULL,
-  sample_id_col = NULL,
-  color_by = NULL,
-  color_scheme = "brewer",
-  col_vector = NULL,
-  spline_df = 3L,
-  point_alpha = 0.15,
-  point_size = 0.6,
-  ...
+    x,
+    sample_annotation = NULL,
+    sample_id_col = NULL,
+    color_by = NULL,
+    color_scheme = "brewer",
+    col_vector = NULL,
+    spline_df = 3L,
+    point_alpha = 0.15,
+    point_size = 0.6,
+    ...
 ) {
     data_matrix <- x
 
@@ -119,19 +116,19 @@ plot_NA_intensity.default <- function(
 #' @method plot_NA_intensity ProBatchFeatures
 #' @export
 plot_NA_intensity.ProBatchFeatures <- function(
-  x,
-  pbf_name = NULL,
-  color_by = NULL,
-  sample_id_col = NULL,
-  color_scheme = "brewer",
-  col_vector = NULL,
-  spline_df = 3L,
-  point_alpha = 0.15,
-  point_size = 0.6,
-  nrow = NULL,
-  ncol = NULL,
-  facet_scales = "free_y",
-  ...
+    x,
+    pbf_name = NULL,
+    color_by = NULL,
+    sample_id_col = NULL,
+    color_scheme = "brewer",
+    col_vector = NULL,
+    spline_df = 3L,
+    point_alpha = 0.15,
+    point_size = 0.6,
+    nrow = NULL,
+    ncol = NULL,
+    facet_scales = "free_y",
+    ...
 ) {
     object <- x
     assays <- .pb_missing_requested_assays(object, pbf_name)
@@ -184,16 +181,16 @@ plot_NA_intensity.ProBatchFeatures <- function(
     )
 }
 
-#' Compute per-feature mean intensity and proportion missing, optionally per
-#' sample group.
+#' Compute per-feature mean intensity and proportion missing,
+#' optionally per sample group.
 #'
 #' @return A data frame with columns `mean_intensity`, `prop_missing`,
 #'   `n_samples`, and optionally `.group`.
 #' @noRd
 .pb_NA_intensity_stats <- function(data_matrix,
-                                   sample_annotation = NULL,
-                                   sample_id_col = NULL,
-                                   color_by = NULL) {
+    sample_annotation = NULL,
+    sample_id_col = NULL,
+    color_by = NULL) {
     if (!is.matrix(data_matrix)) {
         data_matrix <- as.matrix(data_matrix)
     }
@@ -261,14 +258,14 @@ plot_NA_intensity.ProBatchFeatures <- function(
 #' Build the ggplot for missingness versus intensity.
 #' @noRd
 .pb_plot_NA_intensity <- function(stats_df,
-                                  color_by,
-                                  color_scheme,
-                                  spline_df = 3L,
-                                  point_alpha = 0.15,
-                                  point_size = 0.6,
-                                  nrow = NULL,
-                                  ncol = NULL,
-                                  facet_scales = "free_y") {
+    color_by,
+    color_scheme,
+    spline_df = 3L,
+    point_alpha = 0.15,
+    point_size = 0.6,
+    nrow = NULL,
+    ncol = NULL,
+    facet_scales = "free_y") {
     has_group <- ".group" %in% names(stats_df)
 
     if (has_group) {

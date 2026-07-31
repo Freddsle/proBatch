@@ -3,19 +3,22 @@
 #' @inheritParams proBatch
 #' @param log_base base of the logarithm for transformation
 #' @param offset small positive number to prevent 0 conversion to \code{-Inf}
-#' @param x Input object supplied to the generics (long data frame, matrix, or `ProBatchFeatures`).
+#' @param x Input object supplied to the generics (long data frame,
+#'   matrix, or `ProBatchFeatures`).
 #' @param pbf_name Assay name to transform when `x` is a `ProBatchFeatures`.
-#' @param final_name Optional name for the stored assay produced by the S3 methods.
+#' @param final_name Optional name for the stored assay
+#'   produced by the S3 methods.
 #' @param ... Additional arguments forwarded between method implementations.
 #'
 #' @return `log_transform_df()` returns \code{df_long}-size data frame, with
-#' \code{measure_col} log transformed; with old value in another column
-#' called "beforeLog_intensity" if "intensity" was the value of
-#' \code{measure_col};
+#' \code{measure_col} log transformed; with old value in another column called
+#' "beforeLog_intensity" if "intensity" was the value of \code{measure_col};
 #' `log_transform_dm()` returns \code{data_matrix} format matrix
 #'
 #' @examples
-#' data(list = c("example_proteome", "example_proteome_matrix"), package = "proBatch")
+#' data(
+#'     list = c("example_proteome", "example_proteome_matrix"),
+#'     package = "proBatch")
 #'
 #' log_transformed_df <- log_transform_df(example_proteome)
 #'
@@ -29,7 +32,7 @@ NULL
 #' @rdname transform_raw_data
 #' @export
 log_transform_df <- function(df_long, log_base = 2, offset = 1,
-                             measure_col = "Intensity") {
+    measure_col = "Intensity") {
     if (!is.null(log_base)) {
         df_long <- df_long %>%
             mutate(!!(paste("beforeLog", measure_col, sep = "_")) :=
@@ -43,13 +46,14 @@ log_transform_df <- function(df_long, log_base = 2, offset = 1,
 }
 
 
-#' "Unlog" transformation of the data to pre-log form (for quantification, forcing log-transform)
+#' "Unlog" transformation of the data to pre-log form (for
+#' quantification, forcing log-transform)
 #'
 #' @export
 #' @rdname transform_raw_data
 #'
 unlog_df <- function(df_long, log_base = 2, offset = 1,
-                     measure_col = "Intensity") {
+    measure_col = "Intensity") {
     if (!is.null(log_base)) {
         df_long <- df_long %>%
             mutate(!!(paste("beforeUnLog", measure_col, sep = "_")) :=
@@ -87,7 +91,7 @@ log_transform_dm.default <- function(x, log_base = 2, offset = 1, ...) {
 }
 
 .pb_run_single_step_transform <- function(object, pbf_name, step, fun, params,
-                                          final_name = NULL, dots = list()) {
+    final_name = NULL, dots = list()) {
     assay_name <- .pb_resolve_assay_for_input(
         object = object,
         pbf_name = pbf_name,
@@ -110,8 +114,9 @@ log_transform_dm.default <- function(x, log_base = 2, offset = 1, ...) {
 #' @method log_transform_dm ProBatchFeatures
 #' @export
 log_transform_dm.ProBatchFeatures <- function(x, log_base = 2, offset = 1,
-                                              pbf_name = NULL, final_name = NULL, ...) {
-    step <- if (!is.null(log_base) && log_base == 2 && offset == 1) "log2" else "log"
+    pbf_name = NULL, final_name = NULL, ...) {
+    step <- if (
+        !is.null(log_base) && log_base == 2 && offset == 1) "log2" else "log"
     .pb_run_single_step_transform(
         object = x,
         pbf_name = pbf_name,
@@ -146,7 +151,7 @@ unlog_dm.default <- function(x, log_base = 2, offset = 1, ...) {
 #' @method unlog_dm ProBatchFeatures
 #' @export
 unlog_dm.ProBatchFeatures <- function(x, log_base = 2, offset = 1,
-                                      pbf_name = NULL, final_name = NULL, ...) {
+    pbf_name = NULL, final_name = NULL, ...) {
     .pb_run_single_step_transform(
         object = x,
         pbf_name = pbf_name,

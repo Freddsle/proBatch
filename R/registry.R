@@ -7,7 +7,8 @@
     if (!is.character(value) || length(value) != 1L ||
         is.na(value) || !nzchar(value)) {
         stop(
-            "`", argument, "` must be one non-missing, non-empty character value.",
+            "`", argument,
+            "` must be one non-missing, non-empty character value.",
             call. = FALSE
         )
     }
@@ -138,7 +139,8 @@
             reasons,
             paste0(
                 "requires unavailable package",
-                if (length(availability$missing_requirements) == 1L) "" else "s",
+                if (length(availability$missing_requirements) ==
+                    1L) "" else "s",
                 ": ",
                 paste(
                     shQuote(availability$missing_requirements),
@@ -164,8 +166,8 @@
 #' records metadata only: it does not install, load, or probe a provider or any
 #' optional engine. Repeating an identical registration is a no-op. A different
 #' registration that collides with an existing canonical name or alias is
-#' rejected; refresh a provider with [pb_unregister_steps()] followed by
-#' registration.
+#' rejected; refresh a provider with [pb_unregister_steps()]
+#' followed by registration.
 #'
 #' @param name One non-missing, non-empty canonical step name.
 #' @param fun Function implementing the step. It receives a numeric matrix as
@@ -185,13 +187,13 @@
 #' @export
 #' @md
 pb_register_step <- function(
-  name,
-  fun,
-  package = NULL,
-  kind = "transform",
-  requires = character(),
-  aliases = character(),
-  label = name
+    name,
+    fun,
+    package = NULL,
+    kind = "transform",
+    requires = character(),
+    aliases = character(),
+    label = name
 ) {
     name <- .pb_registry_character_scalar(name, "name")
     if (!is.function(fun)) {
@@ -337,8 +339,8 @@ pb_unregister_steps <- function(package) {
 #' @param pattern Optional regular expression used to filter canonical names,
 #'   aliases, and labels.
 #' @param details Logical scalar. If `FALSE`, return canonical names. If `TRUE`,
-#'   return an `S4Vectors::DataFrame` with provider metadata and legacy
-#'   inspection columns.
+#'   return an `S4Vectors::DataFrame` with provider metadata and
+#'   legacy inspection columns.
 #' @param available Optional logical scalar. Use `TRUE` for currently available
 #'   registrations, `FALSE` for unavailable registrations, or `NULL` for both.
 #'
@@ -473,9 +475,9 @@ pb_has_step <- function(name, available = FALSE) {
 }
 
 .pb_resolve_step <- function(
-  name,
-  package = NULL,
-  require_available = TRUE
+    name,
+    package = NULL,
+    require_available = TRUE
 ) {
     package <- .pb_expected_step_package(package)
     if (!is.logical(require_available) || length(require_available) != 1L ||
@@ -588,10 +590,10 @@ pb_has_step <- function(name, available = FALSE) {
 }
 
 .pb_builtin_log2_step <- function(
-  m,
-  pseudo = NULL,
-  log_base = 2,
-  offset = NULL
+    m,
+    pseudo = NULL,
+    log_base = 2,
+    offset = NULL
 ) {
     log_transform_dm.default(
         m,
@@ -601,11 +603,11 @@ pb_has_step <- function(name, available = FALSE) {
 }
 
 .pb_builtin_log_step <- function(
-  m,
-  base = exp(1),
-  pseudo = NULL,
-  log_base = NULL,
-  offset = NULL
+    m,
+    base = exp(1),
+    pseudo = NULL,
+    log_base = NULL,
+    offset = NULL
 ) {
     log_transform_dm.default(
         m,
@@ -615,13 +617,13 @@ pb_has_step <- function(name, available = FALSE) {
 }
 
 .pb_builtin_median_norm_step <- function(
-  m,
-  sample_annotation = NULL,
-  sample_id_col = "FullRunName",
-  group_col = NULL,
-  inside_batch = FALSE,
-  fill_the_missing = "keep",
-  fill_value = NULL
+    m,
+    sample_annotation = NULL,
+    sample_id_col = "FullRunName",
+    group_col = NULL,
+    inside_batch = FALSE,
+    fill_the_missing = "keep",
+    fill_value = NULL
 ) {
     missing_policy <- .pb_normalize_missing_policy(
         fill_the_missing,

@@ -1,6 +1,6 @@
 .onLoad <- function(libname, pkgname) {
     register_core_step <- function(name, fun, aliases = character(),
-                                   label = name) {
+        label = name) {
         pb_register_step(
             name = name,
             fun = fun,

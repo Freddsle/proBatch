@@ -7,12 +7,16 @@
 #'
 #' @inheritParams proBatch
 #' @param corr_matrix square correlation matrix
-#' @param cluster_rows boolean values determining if rows should be clustered or \code{hclust} object
-#' @param cluster_cols boolean values determining if columns should be clustered or \code{hclust} object
+#' @param cluster_rows boolean values determining if rows should be
+#'   clustered or \code{hclust} object
+#' @param cluster_cols boolean values determining if columns should be
+#'   clustered or \code{hclust} object
 #' @param heatmap_color vector of colors used in heatmap.
 #' @param annotation data frame with \code{peptide_annotation} for protein
-#' correlation heatmap or \code{sample_annotation} for sample correlation heatmap
-#' @param annotation_id_col \code{feature_id_col} for protein correlation heatmap
+#' correlation heatmap or \code{sample_annotation} for
+#' sample correlation heatmap
+#' @param annotation_id_col \code{feature_id_col} for
+#'   protein correlation heatmap
 #' or \code{sample_id_col} for sample correlation heatmap
 #' @param ... parameters for the \code{\link[pheatmap]{pheatmap}} visualisation,
 #'  for details see examples and help to corresponding functions
@@ -33,17 +37,17 @@
 #' corr_matrix_plot <- plot_corr_matrix(corr_matrix)
 #'
 plot_corr_matrix <- function(corr_matrix,
-                             annotation = NULL,
-                             annotation_id_col = "FullRunName",
-                             factors_to_plot = NULL,
-                             cluster_rows = FALSE, cluster_cols = FALSE,
-                             heatmap_color = colorRampPalette(
-                                 rev(brewer.pal(n = 7, name = "RdYlBu"))
-                             )(100),
-                             color_list = NULL,
-                             filename = NULL, width = 7, height = 7,
-                             units = c("cm", "in", "mm"),
-                             plot_title = NULL, ...) {
+    annotation = NULL,
+    annotation_id_col = "FullRunName",
+    factors_to_plot = NULL,
+    cluster_rows = FALSE, cluster_cols = FALSE,
+    heatmap_color = colorRampPalette(
+        rev(brewer.pal(n = 7, name = "RdYlBu"))
+    )(100),
+    color_list = NULL,
+    filename = NULL, width = 7, height = 7,
+    units = c("cm", "in", "mm"),
+    plot_title = NULL, ...) {
     # infer the color scheme for annotation (cols & rows)
     color_list <- .pb_resolve_color_list(
         color_list = color_list,
@@ -80,11 +84,11 @@ plot_corr_matrix <- function(corr_matrix,
 }
 
 .pb_corr_resolve_sample_input <- function(data_matrix,
-                                          sample_annotation,
-                                          sample_id_col,
-                                          pbf_name = NULL,
-                                          sample_annotation_missing = FALSE,
-                                          require_annotation = FALSE) {
+    sample_annotation,
+    sample_id_col,
+    pbf_name = NULL,
+    sample_annotation_missing = FALSE,
+    require_annotation = FALSE) {
     if (is(data_matrix, "ProBatchFeatures")) {
         object <- data_matrix
         assay_name <- .pb_resolve_assay_for_input(
@@ -105,11 +109,11 @@ plot_corr_matrix <- function(corr_matrix,
 }
 
 .pb_corr_resolve_feature_input <- function(data_matrix,
-                                           peptide_annotation,
-                                           feature_id_col,
-                                           pbf_name = NULL,
-                                           peptide_annotation_missing = FALSE,
-                                           require_annotation = FALSE) {
+    peptide_annotation,
+    feature_id_col,
+    pbf_name = NULL,
+    peptide_annotation_missing = FALSE,
+    require_annotation = FALSE) {
     if (is(data_matrix, "ProBatchFeatures")) {
         object <- data_matrix
         assay_name <- .pb_resolve_assay_for_input(
@@ -152,7 +156,8 @@ plot_corr_matrix <- function(corr_matrix,
     if (!is.null(theme) && theme == "classic") {
         gg <- gg + theme_classic(base_size = base_size)
     } else {
-        message("plotting with default ggplot theme, only theme = 'classic' implemented")
+        message(
+            "plotting with default ggplot theme, only theme = 'classic' implemented")
     }
     gg <- gg + theme(plot.title = element_text(hjust = .5, face = "bold"))
     save_ggplot(filename, units, width, height, gg)
@@ -160,8 +165,8 @@ plot_corr_matrix <- function(corr_matrix,
 }
 
 .pb_corr_distribution_from_input <- function(data_matrix,
-                                             builder,
-                                             step_as_factor = FALSE) {
+    builder,
+    step_as_factor = FALSE) {
     if (!is.list(data_matrix)) {
         return(builder(data_matrix))
     }
@@ -184,8 +189,10 @@ plot_corr_matrix <- function(corr_matrix,
 #'
 #' @inheritParams proBatch
 #' @param protein_name the name of the protein
-#' @param cluster_rows boolean values determining if rows should be clustered or \code{hclust} object
-#' @param cluster_cols boolean values determining if columns should be clustered or \code{hclust} object
+#' @param cluster_rows boolean values determining if rows should be
+#'   clustered or \code{hclust} object
+#' @param cluster_cols boolean values determining if columns should be
+#'   clustered or \code{hclust} object
 #' @param heatmap_color vector of colors used in heatmap.
 #' @param ... parameters for the corrplot visualisation
 #'
@@ -193,27 +200,29 @@ plot_corr_matrix <- function(corr_matrix,
 #'
 #' @export
 #' @examples
-#' data(list = c("example_peptide_annotation", "example_proteome_matrix"), package = "proBatch")
+#' data(
+#'     list = c("example_peptide_annotation", "example_proteome_matrix"),
+#'     package = "proBatch")
 #' protein_corrplot_plot <- plot_protein_corrplot(example_proteome_matrix,
 #'     protein_name = "Haao", peptide_annotation = example_peptide_annotation,
 #'     protein_col = "Gene"
 #' )
 #'
 plot_protein_corrplot <- function(data_matrix,
-                                  protein_name,
-                                  peptide_annotation = NULL,
-                                  protein_col = "ProteinName",
-                                  feature_id_col = "peptide_group_label",
-                                  factors_to_plot = c("ProteinName"),
-                                  cluster_rows = FALSE, cluster_cols = FALSE,
-                                  heatmap_color = colorRampPalette(
-                                      rev(brewer.pal(n = 7, name = "RdYlBu"))
-                                  )(100),
-                                  color_list = NULL,
-                                  filename = NULL,
-                                  width = NA, height = NA,
-                                  units = c("cm", "in", "mm"),
-                                  plot_title = NULL, ...) {
+    protein_name,
+    peptide_annotation = NULL,
+    protein_col = "ProteinName",
+    feature_id_col = "peptide_group_label",
+    factors_to_plot = c("ProteinName"),
+    cluster_rows = FALSE, cluster_cols = FALSE,
+    heatmap_color = colorRampPalette(
+        rev(brewer.pal(n = 7, name = "RdYlBu"))
+    )(100),
+    color_list = NULL,
+    filename = NULL,
+    width = NA, height = NA,
+    units = c("cm", "in", "mm"),
+    plot_title = NULL, ...) {
     resolved <- .pb_corr_resolve_feature_input(
         data_matrix = data_matrix,
         peptide_annotation = peptide_annotation,
@@ -223,13 +232,20 @@ plot_protein_corrplot <- function(data_matrix,
     peptide_annotation <- resolved$peptide_annotation
 
     if (is.null(peptide_annotation)) {
-        stop("`peptide_annotation` must be provided for protein correlation plots.")
+        stop(
+            "`peptide_annotation` must be provided for protein correlation plots.")
     }
     if (!feature_id_col %in% names(peptide_annotation)) {
-        stop(sprintf("Feature ID column '%s' was not found in `peptide_annotation`.", feature_id_col))
+        stop(
+            sprintf(
+                "Feature ID column '%s' was not found in `peptide_annotation`.",
+                feature_id_col))
     }
     if (!protein_col %in% names(peptide_annotation)) {
-        stop(sprintf("Protein column '%s' was not found in `peptide_annotation`.", protein_col))
+        stop(
+            sprintf(
+                "Protein column '%s' was not found in `peptide_annotation`.",
+                protein_col))
     }
 
     peptides <- peptide_annotation %>%
@@ -278,16 +294,20 @@ plot_protein_corrplot <- function(data_matrix,
 
     if (nrow(corr_matrix) < 2L || ncol(corr_matrix) < 2L) {
         if (isTRUE(cluster_rows) || isTRUE(cluster_cols)) {
-            message("Only one peptide available; disabling clustering for correlation heatmap.")
+            message(
+                "Only one peptide available; disabling clustering for correlation heatmap.")
         }
         cluster_rows <- FALSE
         cluster_cols <- FALSE
     }
 
     if (is.null(plot_title) && length(protein_name) == 1) {
-        plot_title <- sprintf("Correlation matrix of peptides from %s", protein_name)
+        plot_title <- sprintf(
+            "Correlation matrix of peptides from %s", protein_name)
     } else if (is.null(plot_title) && length(protein_name) > 1) {
-        plot_title <- sprintf("Peptide correlation matrix of %s proteins", paste(protein_name, collapse = ", "))
+        plot_title <- sprintf(
+            "Peptide correlation matrix of %s proteins",
+            paste(protein_name, collapse = ", "))
     }
 
     plot_corr_matrix(corr_matrix,
@@ -310,28 +330,28 @@ plot_protein_corrplot <- function(data_matrix,
 #' @inheritParams proBatch
 #' @param data_matrix features (in rows) vs samples (in columns) matrix, with
 #'   feature IDs in rownames and file/sample names as colnames, or a
-#'   `ProBatchFeatures` object. When `data_matrix` is a
-#'   `ProBatchFeatures` object, `pbf_name` is used (or all assays when
-#'   `pbf_name = NULL`).
+#'   `ProBatchFeatures` object. When `data_matrix` is a `ProBatchFeatures`
+#'   object, `pbf_name` is used (or all assays when `pbf_name = NULL`).
 #' @param sample_annotation data frame with sample-level metadata. When
-#'   `data_matrix` is a matrix, this argument is required. When
-#'   `data_matrix` is a `ProBatchFeatures` object and
-#'   `sample_annotation` is not provided, `as.data.frame(colData(data_matrix))`
-#'   is used.
+#'   `data_matrix` is a matrix, this argument is required. When `data_matrix`
+#'   is a `ProBatchFeatures` object and `sample_annotation` is not provided,
+#'   `as.data.frame(colData(data_matrix))` is used.
 #' @param pbf_name Assay name(s) used when `data_matrix` is a
 #'   `ProBatchFeatures` object. If `NULL`, all assays are plotted.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
 #' @param samples_to_plot string vector of samples in
 #' \code{data_matrix} to be used in the plot
-#' @param cluster_rows boolean values determining if rows should be clustered or \code{hclust} object
-#' @param cluster_cols boolean values determining if columns should be clustered or \code{hclust} object
+#' @param cluster_rows boolean values determining if rows should be
+#'   clustered or \code{hclust} object
+#' @param cluster_cols boolean values determining if columns should be
+#'   clustered or \code{hclust} object
 #' @param show_row_dend,show_column_dend Logical, whether row/column dendrograms
 #'   should be shown when clustering is enabled.
 #' @param x_axis_label_size,y_axis_label_size Optional numeric font sizes for
 #'   x-axis (column) and y-axis (row) labels in the heatmap.
 #' @param heatmap_color vector of colors used in heatmap.
-#' @param ... parameters for the \code{\link[pheatmap]{pheatmap}} visualisation, for details see
-#'   examples and help to corresponding functions
+#' @param ... parameters for the \code{\link[pheatmap]{pheatmap}}
+#'   visualisation, for details see examples and help to corresponding functions
 #'
 #' @return \code{pheatmap} object for a single assay, or an arranged plot object
 #'   when multiple assays are plotted.
@@ -339,7 +359,9 @@ plot_protein_corrplot <- function(data_matrix,
 #' @export
 #'
 #' @examples
-#' data(list = c("example_sample_annotation", "example_proteome_matrix"), package = "proBatch")
+#' data(
+#'     list = c("example_sample_annotation", "example_proteome_matrix"),
+#'     package = "proBatch")
 #' specified_samples <- example_sample_annotation$FullRunName[
 #'     which(example_sample_annotation$order %in% 110:115)
 #' ]
@@ -356,27 +378,27 @@ plot_protein_corrplot <- function(data_matrix,
 #'
 
 plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
-                                     sample_annotation = NULL,
-                                     sample_id_col = "FullRunName",
-                                     factors_to_plot = NULL,
-                                     cluster_rows = FALSE, cluster_cols = FALSE,
-                                     show_row_dend = TRUE,
-                                     show_column_dend = TRUE,
-                                     x_axis_label_size = NULL,
-                                     y_axis_label_size = NULL,
-                                     heatmap_color = colorRampPalette(
-                                         rev(brewer.pal(n = 7, name = "RdYlBu"))
-                                     )(100),
-                                     color_list = NULL,
-                                     filename = NULL,
-                                     width = NA, height = NA,
-                                     units = c("cm", "in", "mm"),
-                                     plot_title = sprintf(
-                                         "Correlation matrix of%s samples",
-                                         ifelse(is.null(samples_to_plot), "", " selected")
-                                     ),
-                                     pbf_name = NULL,
-                                     plot_ncol = NULL, ...) {
+    sample_annotation = NULL,
+    sample_id_col = "FullRunName",
+    factors_to_plot = NULL,
+    cluster_rows = FALSE, cluster_cols = FALSE,
+    show_row_dend = TRUE,
+    show_column_dend = TRUE,
+    x_axis_label_size = NULL,
+    y_axis_label_size = NULL,
+    heatmap_color = colorRampPalette(
+        rev(brewer.pal(n = 7, name = "RdYlBu"))
+    )(100),
+    color_list = NULL,
+    filename = NULL,
+    width = NA, height = NA,
+    units = c("cm", "in", "mm"),
+    plot_title = sprintf(
+        "Correlation matrix of%s samples",
+        ifelse(is.null(samples_to_plot), "", " selected")
+    ),
+    pbf_name = NULL,
+    plot_ncol = NULL, ...) {
     plot_title_missing <- missing(plot_title)
 
     if (is(data_matrix, "ProBatchFeatures")) {
@@ -434,7 +456,8 @@ plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
                 plot_title = titles[i]
             ), call_args)
 
-            plot_list[[i]] <- do.call(.pb_plot_sample_corr_heatmap_single, call_args)
+            plot_list[[i]] <- do.call(
+                .pb_plot_sample_corr_heatmap_single, call_args)
         }
 
         plot_list <- .pb_attach_shared_title(plot_list, shared_title)
@@ -526,23 +549,29 @@ plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
         } else {
             rownames(sample_annotation)
         }
-        if (is.null(annotation_ids) || !all(samples_to_plot %in% annotation_ids)) {
-            warning("some of the samples are not in annotation, this may lead to problems in color annotation")
+        if (is.null(annotation_ids) ||
+            !all(samples_to_plot %in% annotation_ids)) {
+            warning(
+                "some of the samples are not in annotation, this may lead to problems in color annotation")
         }
     }
     plot_params <- list(...)
     row_clustered <- isTRUE(cluster_rows) || inherits(cluster_rows, "hclust")
     col_clustered <- isTRUE(cluster_cols) || inherits(cluster_cols, "hclust")
     if (!"treeheight_row" %in% names(plot_params)) {
-        plot_params$treeheight_row <- if (row_clustered && isTRUE(show_row_dend)) 50 else 0
+        plot_params$treeheight_row <-
+            if (row_clustered && isTRUE(show_row_dend)) 50 else 0
     }
     if (!"treeheight_col" %in% names(plot_params)) {
-        plot_params$treeheight_col <- if (col_clustered && isTRUE(show_column_dend)) 50 else 0
+        plot_params$treeheight_col <- if (
+            col_clustered && isTRUE(show_column_dend)) 50 else 0
     }
-    if (!is.null(x_axis_label_size) && !"fontsize_col" %in% names(plot_params)) {
+    if (!is.null(x_axis_label_size) && !"fontsize_col" %in%
+            names(plot_params)) {
         plot_params$fontsize_col <- x_axis_label_size
     }
-    if (!is.null(y_axis_label_size) && !"fontsize_row" %in% names(plot_params)) {
+    if (!is.null(y_axis_label_size) && !"fontsize_row" %in%
+            names(plot_params)) {
         plot_params$fontsize_row <- y_axis_label_size
     }
 
@@ -564,9 +593,9 @@ plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
 }
 
 get_sample_corr_df <- function(cor_proteome, sample_annotation,
-                               sample_id_col = "FullRunName",
-                               biospecimen_id_col = "EarTag",
-                               batch_col = "MS_batch") {
+    sample_id_col = "FullRunName",
+    biospecimen_id_col = "EarTag",
+    batch_col = "MS_batch") {
     comb_to_keep <- data.frame(t(combn(colnames(cor_proteome), 2)))
     names(comb_to_keep) <- paste(sample_id_col, seq_len(2), sep = "_")
 
@@ -639,23 +668,21 @@ get_sample_corr_df <- function(cor_proteome, sample_annotation,
 #' @inheritParams proBatch
 #' @param data_matrix features (in rows) vs samples (in columns) matrix, with
 #'   feature IDs in rownames and file/sample names as colnames, or a
-#'   `ProBatchFeatures` object. When `data_matrix` is a
-#'   `ProBatchFeatures` object, `pbf_name` is used (or the current assay when
-#'   `pbf_name = NULL`).
+#'   `ProBatchFeatures` object. When `data_matrix` is a `ProBatchFeatures`
+#'   object, `pbf_name` is used (or the current assay when `pbf_name = NULL`).
 #' @param sample_annotation data frame with sample-level metadata. When
-#'   `data_matrix` is a matrix, this argument is required. When
-#'   `data_matrix` is a `ProBatchFeatures` object and
-#'   `sample_annotation` is not provided, `as.data.frame(colData(data_matrix))`
-#'   is used.
+#'   `data_matrix` is a matrix, this argument is required. When `data_matrix`
+#'   is a `ProBatchFeatures` object and `sample_annotation` is not provided,
+#'   `as.data.frame(colData(data_matrix))` is used.
 #' @param pbf_name Assay name used when `data_matrix` is a `ProBatchFeatures`
 #'   object. If `NULL`, [pb_current_assay()] is used.
 #' @param repeated_samples vector of sample IDs to evaluate, if \code{NULL},
 #' all samples are taken into account for plotting
 #' @param biospecimen_id_col column in \code{sample_annotation}
-#' that defines a unique bio ID, which is usually a
-#' combination of conditions or groups.
-#'  Tip: if such ID is absent, but can be defined from several columns,
-#'  create new \code{biospecimen_id} column
+#' that defines a unique bio ID, which is usually a combination
+#' of conditions or groups.
+#'  Tip: if such ID is absent, but can be defined from several columns, create
+#'  new \code{biospecimen_id} column
 #'
 #' @return dataframe with the following columns, that
 #' are suggested to use for plotting in
@@ -675,7 +702,9 @@ get_sample_corr_df <- function(cor_proteome, sample_annotation,
 #' }
 #'
 #' @examples
-#' data(list = c("example_sample_annotation", "example_proteome_matrix"), package = "proBatch")
+#' data(
+#'     list = c("example_sample_annotation", "example_proteome_matrix"),
+#'     package = "proBatch")
 #' corr_distribution <- calculate_sample_corr_distr(
 #'     data_matrix = example_proteome_matrix,
 #'     sample_annotation = example_sample_annotation,
@@ -743,22 +772,19 @@ calculate_sample_corr_distr <- function(data_matrix, sample_annotation,
 #' @inheritParams proBatch
 #' @param data_matrix features (in rows) vs samples (in columns) matrix, with
 #'   feature IDs in rownames and file/sample names as colnames, or a
-#'   `ProBatchFeatures` object. When `data_matrix` is a
-#'   `ProBatchFeatures` object, `pbf_name` is used (or the current assay when
-#'   `pbf_name = NULL`).
+#'   `ProBatchFeatures` object. When `data_matrix` is a `ProBatchFeatures`
+#'   object, `pbf_name` is used (or the current assay when `pbf_name = NULL`).
 #' @param sample_annotation data frame with sample-level metadata. When
-#'   `data_matrix` is a matrix, this argument is required. When
-#'   `data_matrix` is a `ProBatchFeatures` object and
-#'   `sample_annotation` is not provided, `as.data.frame(colData(data_matrix))`
-#'   is used.
+#'   `data_matrix` is a matrix, this argument is required. When `data_matrix`
+#'   is a `ProBatchFeatures` object and `sample_annotation` is not provided,
+#'   `as.data.frame(colData(data_matrix))` is used.
 #' @param pbf_name Assay name used when `data_matrix` is a `ProBatchFeatures`
 #'   object. If `NULL`, [pb_current_assay()] is used.
 #' @param repeated_samples if \code{NULL}, correlation of all samples is plotted
 #' @param biospecimen_id_col column in \code{sample_annotation}
-#' that captures the biological sample,
-#' that (possibly) was profiled several times as technical replicates.
-#' Tip: if such ID is absent, but can be defined from several columns,
-#' create new \code{biospecimen_id} column
+#' that captures the biological sample, that (possibly) was profiled several
+#' times as technical replicates. Tip: if such ID is absent, but can be defined
+#' from several columns, create new \code{biospecimen_id} column
 #' @param plot_param columns, defined in correlation_df, which is output of
 #' \code{calculate_sample_corr_distr}, specifically,  \enumerate{
 #' \item \code{replicate}
@@ -782,7 +808,9 @@ NULL
 #' @rdname plot_sample_corr_distribution
 #'
 #' @examples
-#' data(list = c("example_sample_annotation", "example_proteome_matrix"), package = "proBatch")
+#' data(
+#'     list = c("example_sample_annotation", "example_proteome_matrix"),
+#'     package = "proBatch")
 #' sample_corr_distribution_plot <- plot_sample_corr_distribution(
 #'     example_proteome_matrix,
 #'     example_sample_annotation,
@@ -794,16 +822,16 @@ NULL
 #' @export
 #'
 plot_sample_corr_distribution <- function(data_matrix, sample_annotation,
-                                          repeated_samples = NULL,
-                                          sample_id_col = "FullRunName",
-                                          batch_col = "MS_batch",
-                                          biospecimen_id_col = "EarTag",
-                                          filename = NULL, width = NA, height = NA,
-                                          units = c("cm", "in", "mm"),
-                                          plot_title = "Sample correlation distribution",
-                                          plot_param = "batch_replicate",
-                                          theme = "classic",
-                                          pbf_name = NULL) {
+    repeated_samples = NULL,
+    sample_id_col = "FullRunName",
+    batch_col = "MS_batch",
+    biospecimen_id_col = "EarTag",
+    filename = NULL, width = NA, height = NA,
+    units = c("cm", "in", "mm"),
+    plot_title = "Sample correlation distribution",
+    plot_param = "batch_replicate",
+    theme = "classic",
+    pbf_name = NULL) {
     sample_annotation_missing <- missing(sample_annotation)
 
     resolved <- .pb_corr_resolve_sample_input(
@@ -845,25 +873,29 @@ plot_sample_corr_distribution <- function(data_matrix, sample_annotation,
 #' @rdname plot_sample_corr_distribution
 #'
 #' @examples
-#' data(list = c("example_sample_annotation", "example_proteome_matrix"), package = "proBatch")
+#' data(
+#'     list = c("example_sample_annotation", "example_proteome_matrix"),
+#'     package = "proBatch")
 #' corr_distribution <- calculate_sample_corr_distr(
 #'     data_matrix = example_proteome_matrix,
 #'     sample_annotation = example_sample_annotation,
 #'     batch_col = "MS_batch", biospecimen_id_col = "EarTag"
 #' )
-#' sample_corr_distribution_plot <- plot_sample_corr_distribution.corrDF(corr_distribution,
+#' sample_corr_distribution_plot <- plot_sample_corr_distribution.corrDF(
+#'     corr_distribution,
 #'     plot_param = "batch_replicate"
 #' )
 #'
 #' @export
 #'
 plot_sample_corr_distribution.corrDF <- function(corr_distribution,
-                                                 filename = NULL, width = NA, height = NA,
-                                                 units = c("cm", "in", "mm"),
-                                                 plot_title = "Sample correlation distribution",
-                                                 plot_param = "batch_replicate",
-                                                 theme = "classic", base_size = 20) {
-    gg <- ggplot(corr_distribution, aes(x = !!sym(plot_param), y = correlation)) +
+    filename = NULL, width = NA, height = NA,
+    units = c("cm", "in", "mm"),
+    plot_title = "Sample correlation distribution",
+    plot_param = "batch_replicate",
+    theme = "classic", base_size = 20) {
+    gg <- ggplot(
+        corr_distribution, aes(x = !!sym(plot_param), y = correlation)) +
         geom_violin(scale = "width") +
         geom_boxplot(width = .1) +
         theme(axis.title.x = element_blank())
@@ -943,9 +975,8 @@ get_peptide_corr_df <- function(peptide_cor, peptide_annotation,
 #' @inheritParams proBatch
 #' @param data_matrix features (in rows) vs samples (in columns) matrix, with
 #'   feature IDs in rownames and file/sample names as colnames, or a
-#'   `ProBatchFeatures` object. When `data_matrix` is a
-#'   `ProBatchFeatures` object, `pbf_name` is used (or the current assay when
-#'   `pbf_name = NULL`).
+#'   `ProBatchFeatures` object. When `data_matrix` is a `ProBatchFeatures`
+#'   object, `pbf_name` is used (or the current assay when `pbf_name = NULL`).
 #' @param peptide_annotation long format data frame with peptide ID and their
 #'   corresponding protein and/or gene annotations. When `data_matrix` is a
 #'   matrix, this argument is required. When `data_matrix` is a
@@ -959,7 +990,9 @@ get_peptide_corr_df <- function(peptide_cor, peptide_annotation,
 #' \code{\link{plot_peptide_corr_distribution}} as \code{plot_param}:
 #'
 #' @examples
-#' data(list = c("example_peptide_annotation", "example_proteome_matrix"), package = "proBatch")
+#' data(
+#'     list = c("example_peptide_annotation", "example_proteome_matrix"),
+#'     package = "proBatch")
 #' selected_genes <- c("BOVINE_A1ag", "BOVINE_FetuinB", "Cyfip1")
 #' gene_filter <- example_peptide_annotation$Gene %in% selected_genes
 #' peptides_ann <- example_peptide_annotation$peptide_group_label
@@ -974,9 +1007,9 @@ get_peptide_corr_df <- function(peptide_cor, peptide_annotation,
 #' @export
 #'
 calculate_peptide_corr_distr <- function(data_matrix, peptide_annotation,
-                                         protein_col = "ProteinName",
-                                         feature_id_col = "peptide_group_label",
-                                         pbf_name = NULL) {
+    protein_col = "ProteinName",
+    feature_id_col = "peptide_group_label",
+    pbf_name = NULL) {
     peptide_annotation_missing <- missing(peptide_annotation)
 
     resolved <- .pb_corr_resolve_feature_input(
@@ -994,10 +1027,16 @@ calculate_peptide_corr_distr <- function(data_matrix, peptide_annotation,
         stop("`peptide_annotation` must be provided.")
     }
     if (!feature_id_col %in% names(peptide_annotation)) {
-        stop(sprintf("Feature ID column '%s' was not found in `peptide_annotation`.", feature_id_col))
+        stop(
+            sprintf(
+                "Feature ID column '%s' was not found in `peptide_annotation`.",
+                feature_id_col))
     }
     if (!protein_col %in% names(peptide_annotation)) {
-        stop(sprintf("Protein column '%s' was not found in `peptide_annotation`.", protein_col))
+        stop(
+            sprintf(
+                "Protein column '%s' was not found in `peptide_annotation`.",
+                protein_col))
     }
 
     corr_matrix <- cor(t(data_matrix), use = "pairwise.complete.obs")
@@ -1020,9 +1059,8 @@ calculate_peptide_corr_distr <- function(data_matrix, peptide_annotation,
 #' @inheritParams proBatch
 #' @param data_matrix features (in rows) vs samples (in columns) matrix, with
 #'   feature IDs in rownames and file/sample names as colnames, or a
-#'   `ProBatchFeatures` object. When `data_matrix` is a
-#'   `ProBatchFeatures` object, `pbf_name` is used (or the current assay when
-#'   `pbf_name = NULL`).
+#'   `ProBatchFeatures` object. When `data_matrix` is a `ProBatchFeatures`
+#'   object, `pbf_name` is used (or the current assay when `pbf_name = NULL`).
 #' @param peptide_annotation long format data frame with peptide ID and their
 #'   corresponding protein and/or gene annotations. When `data_matrix` is a
 #'   matrix, this argument is required. When `data_matrix` is a
@@ -1034,13 +1072,16 @@ calculate_peptide_corr_distr <- function(data_matrix, peptide_annotation,
 #'
 #' @return \code{ggplot} object (violin plot of peptide correlation)
 #'
-#' @seealso \code{\link{calculate_peptide_corr_distr}}, \code{\link[ggplot2]{ggplot}}
+#' @seealso \code{\link{calculate_peptide_corr_distr}},
+#'   \code{\link[ggplot2]{ggplot}}
 NULL
 
 #' @rdname plot_peptide_corr_distribution
 #'
 #' @examples
-#' data(list = c("example_peptide_annotation", "example_proteome_matrix"), package = "proBatch")
+#' data(
+#'     list = c("example_peptide_annotation", "example_proteome_matrix"),
+#'     package = "proBatch")
 #' peptide_corr_distribution <- plot_peptide_corr_distribution(
 #'     example_proteome_matrix,
 #'     example_peptide_annotation,
@@ -1050,13 +1091,13 @@ NULL
 #' @export
 #'
 plot_peptide_corr_distribution <- function(data_matrix, peptide_annotation,
-                                           protein_col = "ProteinName",
-                                           feature_id_col = "peptide_group_label",
-                                           filename = NULL, width = NA, height = NA,
-                                           units = c("cm", "in", "mm"),
-                                           plot_title = "Distribution of peptide correlation",
-                                           theme = "classic",
-                                           pbf_name = NULL) {
+    protein_col = "ProteinName",
+    feature_id_col = "peptide_group_label",
+    filename = NULL, width = NA, height = NA,
+    units = c("cm", "in", "mm"),
+    plot_title = "Distribution of peptide correlation",
+    theme = "classic",
+    pbf_name = NULL) {
     peptide_annotation_missing <- missing(peptide_annotation)
 
     resolved <- .pb_corr_resolve_feature_input(
@@ -1097,22 +1138,25 @@ plot_peptide_corr_distribution <- function(data_matrix, peptide_annotation,
 #' @rdname plot_peptide_corr_distribution
 #'
 #' @examples
-#' data(list = c("example_peptide_annotation", "example_proteome_matrix"), package = "proBatch")
+#' data(
+#'     list = c("example_peptide_annotation", "example_proteome_matrix"),
+#'     package = "proBatch")
 #' corr_distribution <- calculate_peptide_corr_distr(
 #'     example_proteome_matrix,
 #'     example_peptide_annotation,
 #'     protein_col = "Gene"
 #' )
-#' peptide_corr_distribution <- plot_peptide_corr_distribution.corrDF(corr_distribution)
+#' peptide_corr_distribution <-
+#'     plot_peptide_corr_distribution.corrDF(corr_distribution)
 #'
 #' @export
 #'
 plot_peptide_corr_distribution.corrDF <- function(corr_distribution,
-                                                  filename = NULL, width = NA, height = NA,
-                                                  units = c("cm", "in", "mm"),
-                                                  plot_title = "Correlation of peptides",
-                                                  theme = "classic",
-                                                  base_size = 20) {
+    filename = NULL, width = NA, height = NA,
+    units = c("cm", "in", "mm"),
+    plot_title = "Correlation of peptides",
+    theme = "classic",
+    base_size = 20) {
     median_same_prot <- corr_distribution %>%
         filter(same_protein == "same protein") %>%
         summarize(median = median(correlation, na.rm = TRUE)) %>%

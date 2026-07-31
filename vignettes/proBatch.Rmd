@@ -293,7 +293,8 @@ package with the function `data()`.
 ```{r load_data, fig.show='hold'}
 library(proBatch)
 data(
-    "example_proteome", "example_sample_annotation", "example_peptide_annotation",
+    "example_proteome", "example_sample_annotation",
+    "example_peptide_annotation",
     package = "proBatch"
 )
 ```
@@ -329,7 +330,9 @@ generated_sample_annotation <- date_to_sample_order(
 )
 library(knitr)
 kable(generated_sample_annotation[1:5, ] %>%
-    select(c("RunDate", "RunTime", "order", "generated_DateTime", "generated_order")))
+    select(
+        c("RunDate", "RunTime", "order", "generated_DateTime",
+            "generated_order")))
 ```
 
 The new time and order columns have been generated. Note that the
@@ -640,7 +643,8 @@ pca1 <- plot_PCA(
 pca2 <- plot_PCA(
     normalized_matrix, example_sample_annotation,
     color_by = "digestion_batch",
-    plot_title = "Digestion batch", color_scheme = color_list[["digestion_batch"]]
+    plot_title = "Digestion batch",
+    color_scheme = color_list[["digestion_batch"]]
 )
 pca3 <- plot_PCA(
     normalized_matrix, example_sample_annotation,
@@ -862,7 +866,8 @@ batches are discrete and thus can be corrected using discrete methods
 such as median-centering or ComBat.
 
 ```{r loess_fit, fig.show='hold', fig.width=5, fig.height=2.4}
-loess_fit_df <- adjust_batch_trend_df(normalized_long, example_sample_annotation)
+loess_fit_df <- adjust_batch_trend_df(
+    normalized_long, example_sample_annotation)
 ```
 
 One important parameter in LOESS fitting is span, which determines the

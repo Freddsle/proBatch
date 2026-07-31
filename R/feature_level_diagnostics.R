@@ -1,11 +1,10 @@
 #' @title Plotting peptide measurements
 #'
 #' @description Creates a peptide faceted ggplot2 plot of the value in
-#' \code{measure_col}
-#' vs \code{order_col} (if `NULL`, x-axis is simply a sample name order).
-#' Additionally, the resulting plot can also be colored either by batch factor,
-#' by quality factor (e.g. imputed/non-imputed) and, if needed, faceted by
-#' another batch factor, e.g. an instrument.
+#' \code{measure_col} vs \code{order_col} (if `NULL`, x-axis is simply a sample
+#' name order). Additionally, the resulting plot can also be colored either by
+#' batch factor, by quality factor (e.g. imputed/non-imputed) and, if needed,
+#' faceted by another batch factor, e.g. an instrument.
 #'  If the non-linear curve was fit, this can also be added to the plot, see
 #'  functions specific to each case below
 #'
@@ -14,8 +13,7 @@
 #'   sample, or a `ProBatchFeatures` object.
 #' @param pbf_name Assay name used when `df_long` is a `ProBatchFeatures`
 #'   object (used by `plot_single_feature()` and
-#'   `plot_peptides_of_one_protein()`). If `NULL`, [pb_current_assay()] is
-#'   used.
+#'   `plot_peptides_of_one_protein()`). If `NULL`, [pb_current_assay()] is used.
 #' @param feature_name name of the selected feature (e.g. peptide) for
 #' diagnostic profiling
 #' @param geom whether to show the feature as points and/or connect by lines
@@ -27,8 +25,8 @@
 #' @param spike_ins name of feature(s), typically proteins that were spiked in
 #' for control
 #' @param vline_color color of vertical lines, typically separating
-#'  different MS batches in ordered runs;
-#'  should be `NULL` for experiments without intrinsic order
+#'  different MS batches in ordered runs; should be `NULL` for
+#'  experiments without intrinsic order
 #' @param ylimits range of y-axis to plot feature-level trends
 #' @param fit_df data frame output of \code{adjust_batch_trend_df} to be plotted
 #' with the line
@@ -99,11 +97,11 @@ NULL
 
 # Convert ProBatchFeatures inputs to long data and default sample metadata.
 .pb_feature_diag_prepare <- function(df_long,
-                                     sample_annotation,
-                                     sample_id_col,
-                                     feature_id_col,
-                                     measure_col,
-                                     pbf_name = NULL) {
+    sample_annotation,
+    sample_id_col,
+    feature_id_col,
+    measure_col,
+    pbf_name = NULL) {
     .pb_prepare_long_inputs(
         df_long = df_long,
         sample_annotation = sample_annotation,
@@ -115,10 +113,11 @@ NULL
 }
 
 .pb_feature_diag_annotation_from_pbf <- function(prep,
-                                                 peptide_annotation,
-                                                 feature_id_col) {
+    peptide_annotation,
+    feature_id_col) {
     if (!is.null(peptide_annotation)) {
-        annotation <- as.data.frame(peptide_annotation, stringsAsFactors = FALSE)
+        annotation <- as.data.frame(
+            peptide_annotation, stringsAsFactors = FALSE)
         if (!feature_id_col %in% names(annotation)) {
             rn <- rownames(annotation)
             if (!is.null(rn) && !anyNA(rn) && length(rn) == nrow(annotation)) {
@@ -183,7 +182,8 @@ plot_single_feature <- function(feature_name, df_long,
     rm(df_long)
     gc()
 
-    # Check the consistency of sample annot. sample IDs and measur.table sample IDs
+    # Check the consistency of sample annot. sample IDs
+    # and measur.table sample IDs
     plot_df <- check_sample_consistency(
         sample_annotation, sample_id_col, plot_df,
         batch_col, order_col, facet_col
@@ -252,7 +252,8 @@ plot_single_feature <- function(feature_name, df_long,
         }
     }
 
-    # Add coloring for "inferred" measurements / imputed (requant) values, marked
+    # Add coloring for "inferred" measurements / imputed
+    # (requant) values, marked
     # in `color_by_col` with `color_by_value` (e.g. `m_score` and `2`)
     if (!is.null(qual_col)) {
         col_data <- plot_df %>%
@@ -332,7 +333,8 @@ plot_single_feature <- function(feature_name, df_long,
             ylim(ylimits)
     }
 
-    # Rotate x axis tick labels if the filenames, not numeric order, is displayed
+    # Rotate x axis tick labels if the filenames, not
+    # numeric order, is displayed
     if (!is.numeric(plot_df[[order_col]])) {
         if (is.character(plot_df[[order_col]])) {
             plot_df[[order_col]] <- factor(plot_df[[order_col]],
@@ -344,7 +346,8 @@ plot_single_feature <- function(feature_name, df_long,
     }
 
     # Move the legend to the upper part of the plot to save the horizontal space
-    if (length(unique(plot_df[[order_col]])) > 30 && color_by_batch && is_factor) {
+    if (length(unique(plot_df[[order_col]])) > 30 && color_by_batch &&
+        is_factor) {
         gg <- gg + theme(legend.position = "top")
     }
 
@@ -359,30 +362,30 @@ plot_single_feature <- function(feature_name, df_long,
 #' @rdname feature_level_diagnostics
 #'
 plot_peptides_of_one_protein <- function(protein_name,
-                                         peptide_annotation = NULL,
-                                         protein_col = "ProteinName",
-                                         df_long, sample_annotation = NULL,
-                                         pbf_name = NULL,
-                                         sample_id_col = "FullRunName",
-                                         measure_col = "Intensity",
-                                         feature_id_col = "peptide_group_label",
-                                         geom = c("point", "line"),
-                                         qual_col = NULL, qual_value = NULL,
-                                         batch_col = "MS_batch",
-                                         color_by_batch = FALSE,
-                                         color_scheme = "brewer",
-                                         order_col = "order",
-                                         vline_color = "red",
-                                         facet_col = NULL,
-                                         filename = NULL,
-                                         width = NA, height = NA,
-                                         units = c("cm", "in", "mm"),
-                                         plot_title = sprintf(
-                                             "Peptides of %s protein",
-                                             protein_name
-                                         ),
-                                         theme = "classic",
-                                         base_size = 20) {
+    peptide_annotation = NULL,
+    protein_col = "ProteinName",
+    df_long, sample_annotation = NULL,
+    pbf_name = NULL,
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    feature_id_col = "peptide_group_label",
+    geom = c("point", "line"),
+    qual_col = NULL, qual_value = NULL,
+    batch_col = "MS_batch",
+    color_by_batch = FALSE,
+    color_scheme = "brewer",
+    order_col = "order",
+    vline_color = "red",
+    facet_col = NULL,
+    filename = NULL,
+    width = NA, height = NA,
+    units = c("cm", "in", "mm"),
+    plot_title = sprintf(
+        "Peptides of %s protein",
+        protein_name
+    ),
+    theme = "classic",
+    base_size = 20) {
     prep <- .pb_feature_diag_prepare(
         df_long = df_long,
         sample_annotation = sample_annotation,
@@ -442,23 +445,23 @@ plot_peptides_of_one_protein <- function(protein_name,
 #' @rdname feature_level_diagnostics
 #'
 plot_spike_in <- function(spike_ins = "BOVIN", peptide_annotation = NULL,
-                          protein_col = "ProteinName",
-                          df_long, sample_annotation = NULL,
-                          sample_id_col = "FullRunName",
-                          measure_col = "Intensity",
-                          feature_id_col = "peptide_group_label",
-                          geom = c("point", "line"),
-                          qual_col = NULL, qual_value = NULL,
-                          batch_col = "MS_batch",
-                          color_by_batch = FALSE, color_scheme = "brewer",
-                          order_col = "order",
-                          vline_color = "red",
-                          facet_col = NULL,
-                          filename = NULL, width = NA, height = NA,
-                          units = c("cm", "in", "mm"),
-                          plot_title = sprintf("Spike-in %s plots", spike_ins),
-                          theme = "classic",
-                          base_size = 20) {
+    protein_col = "ProteinName",
+    df_long, sample_annotation = NULL,
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    feature_id_col = "peptide_group_label",
+    geom = c("point", "line"),
+    qual_col = NULL, qual_value = NULL,
+    batch_col = "MS_batch",
+    color_by_batch = FALSE, color_scheme = "brewer",
+    order_col = "order",
+    vline_color = "red",
+    facet_col = NULL,
+    filename = NULL, width = NA, height = NA,
+    units = c("cm", "in", "mm"),
+    plot_title = sprintf("Spike-in %s plots", spike_ins),
+    theme = "classic",
+    base_size = 20) {
     prep <- .pb_feature_diag_prepare(
         df_long = df_long,
         sample_annotation = sample_annotation,
@@ -536,24 +539,24 @@ plot_spike_in <- function(spike_ins = "BOVIN", peptide_annotation = NULL,
 #' @rdname feature_level_diagnostics
 #'
 plot_iRT <- function(irt_pattern = "iRT",
-                     peptide_annotation = NULL,
-                     protein_col = "ProteinName",
-                     df_long, sample_annotation = NULL,
-                     sample_id_col = "FullRunName",
-                     measure_col = "Intensity",
-                     feature_id_col = "peptide_group_label",
-                     geom = c("point", "line"),
-                     qual_col = NULL, qual_value = NULL,
-                     batch_col = "MS_batch",
-                     color_by_batch = FALSE, color_scheme = "brewer",
-                     order_col = "order",
-                     vline_color = "red",
-                     facet_col = NULL,
-                     filename = NULL, width = NA, height = NA,
-                     units = c("cm", "in", "mm"),
-                     plot_title = "iRT peptide profile",
-                     theme = "classic",
-                     base_size = 20) {
+    peptide_annotation = NULL,
+    protein_col = "ProteinName",
+    df_long, sample_annotation = NULL,
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    feature_id_col = "peptide_group_label",
+    geom = c("point", "line"),
+    qual_col = NULL, qual_value = NULL,
+    batch_col = "MS_batch",
+    color_by_batch = FALSE, color_scheme = "brewer",
+    order_col = "order",
+    vline_color = "red",
+    facet_col = NULL,
+    filename = NULL, width = NA, height = NA,
+    units = c("cm", "in", "mm"),
+    plot_title = "iRT peptide profile",
+    theme = "classic",
+    base_size = 20) {
     prep <- .pb_feature_diag_prepare(
         df_long = df_long,
         sample_annotation = sample_annotation,
@@ -644,7 +647,8 @@ plot_with_fitting_curve <- function(feature_name,
         warning("Visualisation of individual features can be suboptimal,
             consider exploring no more than 5 features at a time")
     }
-    # Plotting single features as usually (only batch coloring, if specified, is on
+    # Plotting single features as usually (only batch
+    # coloring, if specified, is on
     # fitting-curve layer)
     gg <- plot_single_feature(
         feature_name = feature_name, df_long = df_long,

@@ -5,9 +5,9 @@
 #'
 #' These wrappers delegate to the corresponding `QFeatures` generics while
 #' ensuring that the requested assays remain part of the `ProBatchFeatures`
-#' object. Only assays that are already materialised can be modified.
-#' If a transformation step was applied as a "fast" step (log, log2, etc.),
-#' consider re-running it with `store_fast_steps = TRUE`.
+#' object. Only assays that are already materialised can be modified. If a
+#' transformation step was applied as a "fast" step (log, log2, etc.), consider
+#' re-running it with `store_fast_steps = TRUE`.
 #'
 #' @param object A `ProBatchFeatures` object.
 #' @param pbf_name Character vector of assay names. Defaults to
@@ -30,36 +30,35 @@
 #'   specifying sample-annotation column(s) that define the groups within which
 #'   missingness must be evaluated.
 #' @param min_valid Integer scalar (used by `pb_groupfilterNA()` only),
-#'   minimum number of non-missing values required within each group to retain a
-#'   feature. Default: `2L`.
+#'   minimum number of non-missing values required within each group to retain
+#'   a feature. Default: `2L`.
 #' @param pNA Numeric scalar (used by `pb_groupfilterNA()` only), maximum
-#'   proportion of missing values allowed within each group to retain a feature.
-#'   Must be in the range `[0, 1]`. If both `min_valid` and `pNA` are provided,
-#'   the stricter requirement is applied per group by enforcing the larger
-#'   minimum number of observed values implied by either threshold.
+#'   proportion of missing values allowed within each group to retain a
+#'   feature. Must be in the range `[0, 1]`. If both `min_valid` and `pNA` are
+#'   provided, the stricter requirement is applied per group by enforcing the
+#'   larger minimum number of observed values implied by either threshold.
 #' @param mask_failing Logical scalar (used by `pb_groupfilterNA()` only).
 #'   When `TRUE` (default), values in groups that did not pass the missingness
 #'   threshold are set to `NA`. When `FALSE`, the original values in failing
-#'   groups are kept as-is (the feature is still retained if it passes in at
-#'   least one group).
+#'   groups are kept as-is (the feature is still retained if it
+#'   passes in at least one group).
 #' @param ... Additional parameters forwarded to the underlying
 #'   `QFeatures` method where applicable.
 #' @return `pb_zeroIsNA()`, `pb_infIsNA()`, `pb_filterNA()` and
-#'   `pb_groupfilterNA()` return the updated `ProBatchFeatures` object.
-#'   For one assay, `pb_nNA()` returns the corresponding `QFeatures::nNA()`
-#'   result (a list of `DataFrame`s). For multiple assays it returns a named
-#'   outer list with one such result per assay and a combined `nNA`
-#'   `DataFrame`.
+#'   `pb_groupfilterNA()` return the updated `ProBatchFeatures` object. For one
+#'   assay, `pb_nNA()` returns the corresponding `QFeatures::nNA()` result (a
+#'   list of `DataFrame`s). For multiple assays it returns a named outer list
+#'   with one such result per assay and a combined `nNA` `DataFrame`.
 #' @details For grouped filtering, features are retained if they meet the
-#'   missingness criteria in at least one group defined by `group_cols`.
-#'   When `mask_failing = TRUE` (the default), the values in groups where
-#'   the feature did not pass the threshold are replaced with `NA`.
+#'   missingness criteria in at least one group defined by `group_cols`. When
+#'   `mask_failing = TRUE` (the default), the values in groups where the
+#'   feature did not pass the threshold are replaced with `NA`.
 #'
 #'   With in-place `pb_filterNA()`, QFeatures preserves valid assay links and
-#'   prunes their hits to the retained features. In-place
-#'   `pb_groupfilterNA()` replaces the assay directly and may remove affected
-#'   links when feature rows change; QFeatures warns when this occurs. Use
-#'   `inplace = FALSE` to keep existing links unchanged.
+#'   prunes their hits to the retained features. In-place `pb_groupfilterNA()`
+#'   replaces the assay directly and may remove affected links when feature
+#'   rows change; QFeatures warns when this occurs. Use `inplace = FALSE` to
+#'   keep existing links unchanged.
 #' @examples
 #' values <- matrix(
 #'     c(0, 1, 2, Inf, 4, 5, 6, 7, 8),
@@ -90,7 +89,8 @@
 #' @md
 NULL
 
-.pb_apply_missing_qf_step <- function(object, assays, fun, step, params, fun_name = step) {
+.pb_apply_missing_qf_step <- function(
+    object, assays, fun, step, params, fun_name = step) {
     for (nm in assays) {
         prior <- object
         object <- do.call(fun, c(list(object, i = nm), params))
@@ -152,7 +152,8 @@ pb_nNA <- function(object, pbf_name = names(object), ...) {
         return(res[[1L]])
     }
     res <- setNames(res, assays)
-    # join "nNA" from each assay into a single DataFrame and add it to the result
+    # join "nNA" from each assay into a single DataFrame
+    # and add it to the result
     # only for "nNA" and add it as a last result entry
     res$nNA <- do.call(rbind, lapply(res, `[[`, "nNA"))
     res
@@ -170,13 +171,13 @@ pb_nNA <- function(object, pbf_name = names(object), ...) {
 }
 
 .pb_groupfilterNA_matrix <- function(
-  data_matrix,
-  sample_annotation,
-  group_cols,
-  min_valid = 2L,
-  pNA = NULL,
-  mask_failing = TRUE,
-  ...
+    data_matrix,
+    sample_annotation,
+    group_cols,
+    min_valid = 2L,
+    pNA = NULL,
+    mask_failing = TRUE,
+    ...
 ) {
     sample_annotation <- as.data.frame(sample_annotation)
     temporary <- suppressMessages(ProBatchFeatures(
@@ -204,11 +205,11 @@ pb_nNA <- function(object, pbf_name = names(object), ...) {
 #' @rdname pb_missing_helpers
 #' @export
 pb_filterNA <- function(
-  object,
-  pbf_name = NULL,
-  inplace = FALSE,
-  final_name = NULL,
-  ...
+    object,
+    pbf_name = NULL,
+    inplace = FALSE,
+    final_name = NULL,
+    ...
 ) {
     stopifnot(is(object, "ProBatchFeatures"))
     stopifnot(is.logical(inplace), length(inplace) == 1L)
@@ -290,15 +291,15 @@ pb_filterNA <- function(
 #' @rdname pb_missing_helpers
 #' @export
 pb_groupfilterNA <- function(
-  object,
-  pbf_name = NULL,
-  group_cols,
-  min_valid = 2L,
-  pNA = NULL,
-  inplace = FALSE,
-  final_name = NULL,
-  mask_failing = TRUE,
-  ...
+    object,
+    pbf_name = NULL,
+    group_cols,
+    min_valid = 2L,
+    pNA = NULL,
+    inplace = FALSE,
+    final_name = NULL,
+    mask_failing = TRUE,
+    ...
 ) {
     stopifnot(is(object, "ProBatchFeatures"))
     stopifnot(
@@ -311,25 +312,35 @@ pb_groupfilterNA <- function(
     }
     group_cols <- as.character(group_cols)
     if (anyNA(group_cols) || !all(nzchar(group_cols))) {
-        stop("`group_cols` must contain non-missing, non-empty column names.", call. = FALSE)
+        stop(
+            "`group_cols` must contain non-missing, non-empty column names.",
+            call. = FALSE)
     }
 
     if (!is.null(min_valid)) {
         min_valid <- as.integer(min_valid)
         if (length(min_valid) != 1L || is.na(min_valid) || min_valid < 0L) {
-            stop("`min_valid` must be a single non-negative integer.", call. = FALSE)
+            stop(
+                "`min_valid` must be a single non-negative integer.",
+                call. = FALSE)
         }
     }
 
     if (!is.null(pNA)) {
-        if (!is.numeric(pNA) || length(pNA) != 1L || is.na(pNA) || pNA < 0 || pNA > 1) {
-            stop("`pNA` must be a single numeric value between 0 and 1.", call. = FALSE)
+        if (!is.numeric(pNA) || length(pNA) != 1L || is.na(pNA) || pNA < 0 ||
+            pNA >
+            1) {
+            stop(
+                "`pNA` must be a single numeric value between 0 and 1.",
+                call. = FALSE)
         }
         pNA <- as.numeric(pNA)
     }
 
     if (is.null(min_valid) && is.null(pNA)) {
-        stop("Provide at least one of `min_valid` or `pNA` to perform filtering.", call. = FALSE)
+        stop(
+            "Provide at least one of `min_valid` or `pNA` to perform filtering.",
+            call. = FALSE)
     }
 
     assays <- .pb_require_materialised_assays(
@@ -343,7 +354,8 @@ pb_groupfilterNA <- function(
             empty_message = "No assay names available. Provide `pbf_name` or ensure the object stores assays."
         )
     )
-    params <- .pb_collect_missing_params(list(...), forbidden = c("i", "name", "min", "pNA"))
+    params <- .pb_collect_missing_params(
+        list(...), forbidden = c("i", "name", "min", "pNA"))
 
     if (!inplace) {
         final_name <- .pb_prepare_final_names(
@@ -376,7 +388,8 @@ pb_groupfilterNA <- function(
         }
 
         group_df <- cd_df[, group_cols, drop = FALSE]
-        has_na_group <- vapply(group_df, function(col) any(is.na(col)), logical(1L))
+        has_na_group <- vapply(
+            group_df, function(col) any(is.na(col)), logical(1L))
         if (any(has_na_group)) {
             bad_cols <- paste(group_cols[has_na_group], collapse = ", ")
             stop(
@@ -387,12 +400,14 @@ pb_groupfilterNA <- function(
         }
 
         group_factor <- interaction(group_df, drop = TRUE, lex.order = TRUE)
-        split_indices <- split(seq_along(group_factor), group_factor, drop = TRUE)
+        split_indices <- split(
+            seq_along(group_factor), group_factor, drop = TRUE)
 
         feature_ids <- rownames(current)
         if (is.null(feature_ids)) {
             stop(
-                "Assay '", nm, "' has no rownames; cannot perform grouped filtering.",
+                "Assay '", nm,
+                "' has no rownames; cannot perform grouped filtering.",
                 call. = FALSE
             )
         }
@@ -414,15 +429,19 @@ pb_groupfilterNA <- function(
                 sub_se <- current[, idx_cols, drop = FALSE]
                 tmp_name <- "tmp_group"
                 tmp_obj <- QFeatures(setNames(list(sub_se), tmp_name))
-                # Derive the per-group minimum number of observed values implied by
-                # `min_valid` and `pNA`, then convert to an allowed missingness proportion.
+                # Derive the per-group minimum number of
+                # observed values implied by
+                # `min_valid` and `pNA`, then convert to an
+                # allowed missingness proportion.
                 inferred_min_valid <- 0L
                 if (!is.null(min_valid)) {
                     inferred_min_valid <- max(inferred_min_valid, min_valid)
                 }
                 if (!is.null(pNA)) {
-                    required_from_pna <- as.integer(ceiling((1 - pNA) * group_size))
-                    inferred_min_valid <- max(inferred_min_valid, required_from_pna)
+                    required_from_pna <-
+                        as.integer(ceiling((1 - pNA) * group_size))
+                    inferred_min_valid <-
+                        max(inferred_min_valid, required_from_pna)
                 }
                 inferred_min_valid <- as.integer(inferred_min_valid)
                 if (inferred_min_valid == 0L) {

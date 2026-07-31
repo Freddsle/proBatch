@@ -2,8 +2,8 @@
 #'
 #' @inheritParams proBatch
 #' @param df_feature_batch data frame containing response variable e.g.
-#' samples in order and explanatory variable e.g. measurement for a
-#' specific feature (peptide) in a specific batch
+#' samples in order and explanatory variable e.g. measurement for a specific
+#' feature (peptide) in a specific batch
 #' @param feature_id the name of the feature, required for warnings
 #' @param batch_id  the name of the batch, required for warnings
 #' @param fit_func function to use for the fit, e.g. \code{loess_regression}
@@ -18,7 +18,9 @@
 #'
 #' @examples
 #' # Load necessary datasets
-#' data(list = c("example_proteome", "example_sample_annotation"), package = "proBatch")
+#' data(
+#'     list = c("example_proteome", "example_sample_annotation"),
+#'     package = "proBatch")
 #'
 #' test_peptide <- example_proteome$peptide_group_label[1]
 #' selected_peptide <- example_proteome$peptide_group_label == test_peptide
@@ -34,18 +36,19 @@
 #' df_for_test <- merge(df_selected, batch_selected_df, by = "FullRunName")
 #' fit_values <- fit_nonlinear(df_for_test)
 #' missing_values <- df_for_test[["m_score"]] == 2
-#' all(fit_values[!is.na(fit_values)] == df_for_test[["Intensity"]][!missing_values])
+#' all(fit_values[!is.na(fit_values)] ==
+#'     df_for_test[["Intensity"]][!missing_values])
 #'
 #' @export
 #'
 fit_nonlinear <- function(df_feature_batch,
-                          measure_col = "Intensity", order_col = "order",
-                          feature_id = NULL, batch_id = NULL,
-                          fit_func = "loess_regression",
-                          optimize_span = FALSE,
-                          no_fit_imputed = TRUE, qual_col = "m_score",
-                          qual_value = 2,
-                          min_measurements = 8, ...) {
+    measure_col = "Intensity", order_col = "order",
+    feature_id = NULL, batch_id = NULL,
+    fit_func = "loess_regression",
+    optimize_span = FALSE,
+    no_fit_imputed = TRUE, qual_col = "m_score",
+    qual_value = 2,
+    min_measurements = 8, ...) {
     df_feature_batch <- as.data.frame(df_feature_batch)
 
     x_all <- df_feature_batch[[order_col]]
@@ -55,15 +58,18 @@ fit_nonlinear <- function(df_feature_batch,
 
     if (no_fit_imputed) {
         if (!is.null(qual_col) && (qual_col %in% names(df_feature_batch))) {
-            warning("Imputed-value column present; fitting only to measured (non-imputed) values.")
+            warning(
+                "Imputed-value column present; fitting only to measured (non-imputed) values.")
             imputed_values <- df_feature_batch[[qual_col]] == qual_value
             df_feature_batch[[measure_col]][imputed_values] <- NA
         } else {
-            stop("Imputed values should not be used, but no flag column specified.")
+            stop(
+                "Imputed values should not be used, but no flag column specified.")
         }
     } else {
         if (!is.null(qual_col) && (qual_col %in% names(df_feature_batch))) {
-            warning("Imputed-value column present; fitting non-linear curve to imputed values as well. Are you sure?")
+            warning(
+                "Imputed-value column present; fitting non-linear curve to imputed values as well. Are you sure?")
         }
     }
 
@@ -80,7 +86,8 @@ fit_nonlinear <- function(df_feature_batch,
     )
     if (max_consec_meas >= min_measurements) {
         # fitting the curve
-        # TODO: re-write in the functional programming paradigm (e.g. arguments -
+        # TODO: re-write in the functional programming
+        # paradigm (e.g. arguments -
         #       function, x_all, y, x_to_fit)
         if (fit_func == "loess_regression") {
             if (!optimize_span) {
@@ -89,13 +96,16 @@ fit_nonlinear <- function(df_feature_batch,
                     batch_id = batch_id, ...
                 )
             } else {
-                fit_res <- loess_regression_opt(x_to_fit, y_to_fit, x_all, y_all,
+                fit_res <- loess_regression_opt(
+                    x_to_fit, y_to_fit, x_all, y_all,
                     feature_id = feature_id,
                     batch_id = batch_id, ...
                 )
             }
         } else {
-            stop("Only loess regression fitting is available for current version")
+            stop(
+                "Only loess regression fitting is available for current version"
+            )
         }
     } else {
         warning(sprintf(
@@ -110,7 +120,7 @@ fit_nonlinear <- function(df_feature_batch,
 
 #' @importFrom stats predict loess
 loess_regression <- function(x_to_fit, y, x_all, y_all,
-                             feature_id = NULL, batch_id = NULL, ...) {
+    feature_id = NULL, batch_id = NULL, ...) {
     loess_warning <- new.env(parent = emptyenv())
     fallback_fit <- rep(NA_real_, length(y_all))
     fit_range <- if (length(x_to_fit)) {
@@ -156,10 +166,10 @@ loess_regression <- function(x_to_fit, y, x_all, y_all,
 }
 
 loess_regression_opt <- function(x_to_fit, y, x_all, y_all,
-                                 feature_id = NULL, batch_id = NULL,
-                                 kernel = "normal",
-                                 bws = c(0.01, 0.5, 1, 1.5, 2, 5, 10),
-                                 ...) {
+    feature_id = NULL, batch_id = NULL,
+    kernel = "normal",
+    bws = c(0.01, 0.5, 1, 1.5, 2, 5, 10),
+    ...) {
     loess_warning <- new.env(parent = emptyenv())
     fallback_fit <- rep(NA_real_, length(y_all))
     fit_range <- if (length(x_to_fit)) {
@@ -172,7 +182,9 @@ loess_regression_opt <- function(x_to_fit, y, x_all, y_all,
             {
                 bw <- optimise_bw(x_to_fit, y, kernel = kernel, bws = bws)
                 degr_freedom <- optimise_df(x_to_fit, bw)
-                fit <- loess(y ~ x_to_fit, enp.target = degr_freedom, surface = "direct", ...)
+                fit <- loess(
+                    y ~ x_to_fit, enp.target = degr_freedom, surface = "direct",
+                    ...)
                 pred <- predict(fit, newdata = data.frame(x_to_fit = x_all))
                 if (all(is.finite(fit_range))) {
                     out_of_range <- !is.na(x_all) &

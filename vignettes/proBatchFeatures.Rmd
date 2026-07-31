@@ -43,17 +43,26 @@ options(tinytex.verbose = TRUE)
 
 # Overview
 
-`ProBatchFeatures` is an extension of `proBatch` based on `QFeatures` [@QFeatures], which extends its functionality by storing each processing stage (for example, raw data → log-transformation → normalization → batch effect correction → …) as a new `SummarizedExperiment` assay, and logging every step. It maintains full compatibility with `QFeatures` functions, and facilitates quick benchmarking of data preprocessing pipelines.
+`ProBatchFeatures` is an extension of `proBatch` based on `QFeatures`
+[@QFeatures], which extends its functionality by storing each processing stage
+(for example, raw data → log-transformation → normalization → batch effect
+correction → …) as a new `SummarizedExperiment` assay, and logging every step.
+It maintains full compatibility with `QFeatures` functions, and facilitates
+quick benchmarking of data preprocessing pipelines.
 
 This vignette demonstrates how to:
 
-1. Construct a `ProBatchFeatures` object from matrix-formatted quantification data.
+1. Construct a `ProBatchFeatures` object from
+    matrix-formatted quantification data.
 
-2. Apply and record standard preprocessing steps (filtering features with too many missing values, log-transformation, normalization, and batch-effect correction) in a chained workflow.
+2. Apply and record standard preprocessing steps (filtering features with too
+    many missing values, log-transformation, normalization, and batch-effect
+    correction) in a chained workflow.
 
 3. Perform diagnostic checks, including PCA, t-SNE, and UMAP.
 
-4. Retrieve processed assay data and the corresponding preprocessing pipeline for benchmarking or reuse.
+4. Retrieve processed assay data and the corresponding preprocessing pipeline
+    for benchmarking or reuse.
 
 
 # Setup
@@ -72,7 +81,8 @@ BiocManager::install("proBatch")
 
 ## Loading required packages
 
-This vignette uses `dplyr`, `tibble`, and `ggplot2` (alongside `proBatch`) for data manipulation and visualization.
+This vignette uses `dplyr`, `tibble`, and `ggplot2` (alongside `proBatch`) for
+data manipulation and visualization.
 
 ```{r load_packages, message=FALSE}
 library(proBatch)
@@ -86,14 +96,18 @@ library(QFeatures)
 
 ## Loading and preparing the example dataset
 
-As an example, we will use the *E. coli* dataset described in the FedProt paper [@burankova2025privacy]:
+As an example, we will use the *E. coli* dataset described in the FedProt paper
+[@burankova2025privacy]:
 
 ```{r load_data}
 data("example_ecoli_data", package = "proBatch")
 ```
 
-The dataset consists of data from five centers that were  measured and analyzed independently.
-For simplicity, data from all centers have been merged into a single dataset, and a subset containing 400 protein groups and their corresponding peptides is used in this example.
+The dataset consists of data from five centers that were  measured
+and analyzed independently.
+For simplicity, data from all centers have been merged into a single dataset,
+and a subset containing 400 protein groups and their corresponding peptides
+is used in this example.
 
 ```{r extract-data}
 # Extracting data
@@ -108,9 +122,12 @@ rm(example_ecoli_data)
 
 # Constructing a `ProBatchFeatures` object
 
-The dataset contains two hierarchical levels. While additional levels can be added in a manner similar to `QFeatures`, this example focuses on the peptide and protein group levels.
+The dataset contains two hierarchical levels. While additional levels can be
+added in a manner similar to `QFeatures`, this example focuses on the peptide
+and protein group levels.
 The `all_precursor_pg_match` dataframe stores the mapping between these levels.
-We begin by using the  `ProBatchFeatures()` constructor to create an object representing the peptide-level data:
+We begin by using the  `ProBatchFeatures()` constructor to create an object
+representing the peptide-level data:
 
 ```{r build-pbf-from-matrix}
 # Building from a (features x samples) matrix
@@ -124,13 +141,17 @@ pbf <- ProBatchFeatures(
 pbf # show basic info about the ProBatchFeatures object
 ```
 
-Assay names follow the convention "<level>::<pipeline>", for example, "peptide::raw", or
+Assay names follow the convention "<level>::<pipeline>", for
+example, "peptide::raw", or
 "protein::median_on_log".
 
-Next, we add the protein-level data as a second assay in the same `ProBatchFeatures` instance. 
-Internally, this is achieved by creating a `SummarizedExperiment` for the protein-level data and
- adding it to the existing object using `QFeatures` functionality.
-The same sample annotation should be used for the new assay to ensure correct column alignment:
+Next, we add the protein-level data as a second assay in the same
+`ProBatchFeatures` instance.
+Internally, this is achieved by creating a `SummarizedExperiment` for
+the protein-level data and
+adding it to the existing object using `QFeatures` functionality.
+The same sample annotation should be used for the new assay to ensure
+correct column alignment:
 
 ```{r add-new-pbf-level}
 # Adding proteins as a new level and mapping them to precursors
@@ -170,12 +191,17 @@ rm(all_metadata, all_precursor_pg_match, all_precursors, all_protein_groups)
 
 # Processing pipeline with diagnostics
 
-With the data now loaded into a `ProBatchFeatures` object with peptide- and protein-level assays, we can demonstrate an example of typical preprocessing workflow. This pipeline includes filtering low-quality features, applying a log2-transformation,  median normalization, and batch effect correction.
+With the data now loaded into a `ProBatchFeatures` object with peptide- and
+protein-level assays, we can demonstrate an example of typical preprocessing
+workflow. This pipeline includes filtering low-quality features, applying a
+log2-transformation,  median normalization, and batch effect correction.
 
 
 ## Step 1 - filtering features with too many missing values
 
-Features detected in only a small subset of samples are unreliable and may obscure systematic effects in subsequent analyses. To examine the proportion of missing values across datasets, `pb_nNA()` function is used:
+Features detected in only a small subset of samples are unreliable and may
+obscure systematic effects in subsequent analyses. To examine the proportion of
+missing values across datasets, `pb_nNA()` function is used:
 
 Function `pb_nNA()` summarizes missingness per assay:
 
@@ -200,7 +226,8 @@ For each assay the following tables are available:
 print(names(na_counts[["peptide::raw"]]))
 ```
 
-Visualisations help explore batch-specific patterns of missingness. Firstly, we define a color scheme which will be used in all diagnostic plots:
+Visualisations help explore batch-specific patterns of missingness. Firstly, we
+define a color scheme which will be used in all diagnostic plots:
 
 ```{r define_colors}
 # color scheme for lab and condition labels
@@ -227,7 +254,8 @@ features or samples exceeds 5000, a random subset of 5000 rows or columns
 is used for visualization by default. To display the entire dataset, set
 `use_subset = FALSE`.
 
-To display multiple assays in one plot,  specify them using `pbf_name` parameter:
+To display multiple assays in one plot,  specify them
+using `pbf_name` parameter:
 
 ```{r plot_na_heatmap_multi, fig.show='hold', fig.width=10, fig.height=4}
 plot_NA_heatmap(
@@ -238,7 +266,8 @@ plot_NA_heatmap(
 )
 ```
 
-The overlap between peptide and protein identifications across samples can be visualized as follows:
+The overlap between peptide and protein identifications across samples can
+be visualized as follows:
 
 ```{r plot_na_frequency_panel, fig.show='hold', fig.width=7, fig.height=4}
 plot_NA_frequency(
@@ -248,9 +277,11 @@ plot_NA_frequency(
 )
 ```
 
-In the resulting plot, particularly for peptides, batch-specific patterns are evident, reflecting the 19-20 samples contributed by each laboratory.
+In the resulting plot, particularly for peptides, batch-specific patterns are
+evident, reflecting the 19-20 samples contributed by each laboratory.
 
-Here, we apply a simple filter that retains only features quantified in at least 40% of the samples.
+Here, we apply a simple filter that retains only features quantified in at
+least 40% of the samples.
 This threshold can be adjusted if necessary.
 
 ```{r apply_missing_filter}
@@ -276,7 +307,8 @@ plot_NA_heatmap(
 ```
 
 However, as the plots indicate, the remaining patterns of missingness are still associated with the lab.  
-To remove the residual systematic effects from the data, we further perform normalization and batch-effect correction.
+To remove the residual systematic effects from the data, we further perform
+normalization and batch-effect correction.
 
 ## Step 2 - log2-transformation
 
@@ -307,12 +339,14 @@ stored as assays by default. Set `store_fast_steps = TRUE` or supply an
 explicit `final_name` to materialize them.
 
 
-The intensity distributions of each sample after log-transformation can be visualized as boxplots to identify potential batch-specific shifts:
+The intensity distributions of each sample after log-transformation can be
+visualized as boxplots to identify potential batch-specific shifts:
 
 ```{r plot_logmean, fig.height=6, fig.width=8, warning=FALSE}
 plot_boxplot(
     pbf,
-    pbf_name = c("peptide::log2_on_raw", "protein::log2_on_raw"), # plot multiple on one
+    pbf_name = c(
+        "peptide::log2_on_raw", "protein::log2_on_raw"), # plot multiple on one
     sample_id_col = "Run",
     order_col = "Run",
     batch_col = "Lab",
@@ -327,7 +361,8 @@ plot_boxplot(
 )
 ```
 
-Additionally, the intensity distribution of peptides and proteins with and without NAs
+Additionally, the intensity distribution of peptides and
+proteins with and without NAs
 can be plotted:
 
 ```{r plot_na_density_panels, fig.show='hold', fig.width=10, fig.height=4}
@@ -339,7 +374,7 @@ plot_NA_density(
 The comparison confirms that log2 stabilises the variance for both
 peptides and proteins, yet the cross-lab shifts in median intensity
 persist and will need to be addressed downstream.
- 
+
 
 Next, we will perform a Principal Component Analysis (PCA) to get a
 high-level overview of the sample clustering. We expect to see a strong
@@ -380,7 +415,8 @@ variance in the raw data is the lab.
 
 ## Step 3 - median normalization
 
-To make the samples more comparable by removing the effect of sample load on intensities, we apply median
+To make the samples more comparable by removing the effect of sample load on
+intensities, we apply median
 normalization:
 
 ```{r apply_median_normalization}
@@ -400,7 +436,8 @@ pbf
 ```
 
 `pb_transform()` appends `peptide::medianNorm_on_log2_on_raw` and
-`protein::medianNorm_on_log2_on_raw`. We can now plot and compare these assays before and after normalization:
+`protein::medianNorm_on_log2_on_raw`. We can now plot and compare these assays
+before and after normalization:
 
 ```{r compare_median_norm_diagnostics, fig.show='hold', fig.width=8, fig.height=4}
 # boxplot
@@ -437,7 +474,9 @@ plot_PCA(
 )
 ```
 
-Although median normalization made intensity distributions more similar, the residual lab-specific batch effects remain evident on the PCA plots and need to be corrected.
+Although median normalization made intensity distributions more similar, the
+residual lab-specific batch effects remain evident on the PCA plots
+and need to be corrected.
 
 ## Step 4 - batch-effect correction
 
@@ -596,11 +635,16 @@ complete across samples under the requested policy.
 
 ## Step 5 - assess processed assays
 
-The four new assays (`protein::limmaRBE_on_…` and `protein::combat_on_…`) are now stored alongside the previous processing steps. We can explore these assays using PCA to verify that the batch effect has been successfully removed and compare them to the data before batch effect correction.
+The four new assays (`protein::limmaRBE_on_…` and `protein::combat_on_…`) are
+now stored alongside the previous processing steps. We can explore these assays
+using PCA to verify that the batch effect has been successfully removed and
+compare them to the data before batch effect correction.
 
 ### Principal component analysis
 
-The progression from log$_2$-transformed to batch-corrected assays demonstrates the expected reduction in lab-specific variance and a clearer separation by biological condition in the final panel.
+The progression from log$_2$-transformed to batch-corrected assays demonstrates
+the expected reduction in lab-specific variance and a clearer separation by
+biological condition in the final panel.
 
 ```{r plot_pca_limma_series, fig.height=7, fig.show='hold', fig.width=8, message=FALSE, warning=FALSE}
 plot_PCA(
@@ -781,7 +825,8 @@ umap_subplot
 ### Hierarchical clustering
 
 Hierarchical clustering provides another way to explore sample similarities.
-Here we display clustering results for `protein::combat_on_medianNorm_on_log2_on_raw` and
+Here we display clustering results for
+`protein::combat_on_medianNorm_on_log2_on_raw` and
 `protein::limmaRBE_on_medianNorm_on_log2_on_raw` assays and colour
 samples by lab and condition:
 
@@ -809,7 +854,8 @@ plot_hierarchical_clustering(
 ### Principal Variance Component Analysis (PVCA)
 
 PVCA quantifies the contribution of known factors to the observed
-variance [@bushel2025pvca] which can be compared across raw, normalised, and ComBat-corrected assays:
+variance [@bushel2025pvca] which can be compared across raw, normalised, and
+ComBat-corrected assays:
 
 ```{r plot_pvca_panels, fig.height=6, fig.show='hold', fig.width=5, message=FALSE, warning=FALSE}
 plot_PVCA(
@@ -833,7 +879,10 @@ plot_PVCA(
 
 # Inspecting operation log
 
-Each call to `pb_transform()` or `pb_filterNA()` creates a log entry that records the source assay, the applied operation, and the resulting assay name. Reviewing this log ensures that complex processing pipelines remain transparent and reproducible.
+Each call to `pb_transform()` or `pb_filterNA()` creates a log entry that
+records the source assay, the applied operation, and the resulting assay name.
+Reviewing this log ensures that complex processing pipelines remain
+transparent and reproducible.
 
 ```{r show_operation_log}
 get_operation_log(pbf) %>%
@@ -863,7 +912,9 @@ extracted_matrix[1:5, 1:5]
 rm(extracted_matrix)
 ```
 
-For consistency with the main **ProBatch** vignette, assay can also be extracted in the long format. In this case, the `sample_id_col` needs to be specified:
+For consistency with the main **ProBatch** vignette, assay can also be
+extracted in the long format. In this case, the
+`sample_id_col` needs to be specified:
 
 ```{r extract_to_long}
 extracted_long <- pb_as_long(

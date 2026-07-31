@@ -2,8 +2,8 @@
 #'
 #' Compare columns cell-by-cell and report the pairs that contain identical
 #' values, including matching `NA` placements. The method works on plain data
-#' frames as well as on [`ProBatchFeatures`] objects by extracting the relevant
-#' annotation tables.
+#' frames as well as on [`ProBatchFeatures`] objects by extracting the
+#' relevant annotation tables.
 #'
 #' @param x A data frame-like or `ProBatchFeatures` object to inspect.
 #' @param ... Additional arguments passed to specific methods.
@@ -37,13 +37,14 @@ find_duplicated_columns <- function(x, ...) {
 }
 
 .pb_metadata_component_df <- function(object,
-                                      component = c("colData", "rowData"),
-                                      assay = NULL) {
+    component = c("colData", "rowData"),
+    assay = NULL) {
     component <- match.arg(component)
     if (component == "colData") {
         target <- SummarizedExperiment::colData(object)
     } else {
-        chosen_assay <- .pb_resolve_metadata_rowdata_assay(object, assay = assay)
+        chosen_assay <-
+            .pb_resolve_metadata_rowdata_assay(object, assay = assay)
         target <- SummarizedExperiment::rowData(object[[chosen_assay]])
     }
     .pb_to_base_df(target)
@@ -86,11 +87,11 @@ find_duplicated_columns.default <- function(x, ...) {
 #' @method find_duplicated_columns ProBatchFeatures
 #' @export
 find_duplicated_columns.ProBatchFeatures <- function(
-  x,
-  component = c("colData", "rowData"),
-  assay = NULL,
-  df = NULL,
-  ...
+    x,
+    component = c("colData", "rowData"),
+    assay = NULL,
+    df = NULL,
+    ...
 ) {
     object <- x
 
@@ -123,8 +124,8 @@ find_duplicated_columns.ProBatchFeatures <- function(
 #' @param ... Additional arguments passed to specific methods.
 #'
 #' @return A data frame with columns `colname`, `n_unique`, `n_NA`, and
-#'   `pct_NA`. Percentages are expressed on a 0–100 scale. When `sort = TRUE` the
-#'   rows are ordered by decreasing missingness.
+#'   `pct_NA`. Percentages are expressed on a 0–100 scale. When `sort = TRUE`
+#'   the rows are ordered by decreasing missingness.
 #'
 #' @examples
 #' metadata <- data.frame(
@@ -157,7 +158,8 @@ metadata_column_summary.default <- function(x, sort = TRUE, ...) {
         ))
     }
 
-    n_unique <- vapply(x, function(col) length(unique(col[!is.na(col)])), integer(1))
+    n_unique <- vapply(
+        x, function(col) length(unique(col[!is.na(col)])), integer(1))
     n_na <- vapply(x, function(col) sum(is.na(col)), integer(1))
     pct_na <- if (nrow(x)) (n_na / nrow(x)) * 100 else rep(NaN, length(n_na))
 
@@ -170,7 +172,8 @@ metadata_column_summary.default <- function(x, sort = TRUE, ...) {
     )
 
     if (sort) {
-        ord <- order(-summary_df$pct_NA, summary_df$n_unique, summary_df$colname)
+        ord <- order(
+            -summary_df$pct_NA, summary_df$n_unique, summary_df$colname)
         summary_df <- summary_df[ord, , drop = FALSE]
         rownames(summary_df) <- NULL
     }
@@ -189,12 +192,12 @@ metadata_column_summary.default <- function(x, sort = TRUE, ...) {
 #' @method metadata_column_summary ProBatchFeatures
 #' @export
 metadata_column_summary.ProBatchFeatures <- function(
-  x,
-  component = c("colData", "rowData"),
-  assay = NULL,
-  df = NULL,
-  sort = TRUE,
-  ...
+    x,
+    component = c("colData", "rowData"),
+    assay = NULL,
+    df = NULL,
+    sort = TRUE,
+    ...
 ) {
     object <- x
 
@@ -222,14 +225,14 @@ metadata_column_summary.ProBatchFeatures <- function(
 #'
 #' @param x A data frame or `ProBatchFeatures` object.
 #' @param duplicate_keep Strategy for selecting which column to retain within
-#'   each duplicated set. Choose between keeping the `"first"`, `"last"`, or the
-#'   first column whose name matches `duplicate_pattern` (`"pattern"`).
+#'   each duplicated set. Choose between keeping the `"first"`, `"last"`, or
+#'   the first column whose name matches `duplicate_pattern` (`"pattern"`).
 #' @param duplicate_pattern Character pattern used when
-#'   `duplicate_keep = "pattern"`. A regular expression is expected unless
-#'   `pattern_fixed = TRUE`.
+#'   `duplicate_keep = "pattern"`. A regular expression is expected
+#'   unless `pattern_fixed = TRUE`.
 #' @param pattern_ignore_case Logical flag passed to [base::grepl()] when
-#'   matching `duplicate_pattern`. Defaults to `TRUE` as metadata column names are
-#'   often case-insensitive.
+#'   matching `duplicate_pattern`. Defaults to `TRUE` as metadata column names
+#'   are often case-insensitive.
 #' @param pattern_fixed Forwarded to the `fixed` argument of [base::grepl()].
 #'   Defaults to `FALSE` to allow regular expressions.
 #' @param min_non_na Optional minimum number of non-missing values a column must
@@ -270,26 +273,28 @@ filter_metadata_columns <- function(x, ...) {
 #' @method filter_metadata_columns default
 #' @export
 filter_metadata_columns.default <- function(
-  x,
-  duplicate_keep = c("first", "last", "pattern"),
-  duplicate_pattern = NULL,
-  pattern_ignore_case = TRUE,
-  pattern_fixed = FALSE,
-  min_non_na = NULL,
-  max_pct_na = NULL,
-  sort = FALSE,
-  ...
+    x,
+    duplicate_keep = c("first", "last", "pattern"),
+    duplicate_pattern = NULL,
+    pattern_ignore_case = TRUE,
+    pattern_fixed = FALSE,
+    min_non_na = NULL,
+    max_pct_na = NULL,
+    sort = FALSE,
+    ...
 ) {
     info <- .pb_metadata_df(x)
     x <- info$df
 
     duplicate_keep <- match.arg(duplicate_keep)
-    if (duplicate_keep == "pattern" && (is.null(duplicate_pattern) || !nzchar(duplicate_pattern))) {
+    if (duplicate_keep == "pattern" && (
+        is.null(duplicate_pattern) || !nzchar(duplicate_pattern))) {
         stop("Provide `duplicate_pattern` when `duplicate_keep = 'pattern'`.")
     }
 
     if (!is.null(min_non_na)) {
-        if (!is.numeric(min_non_na) || length(min_non_na) != 1L || is.na(min_non_na)) {
+        if (!is.numeric(min_non_na) || length(min_non_na) != 1L ||
+            is.na(min_non_na)) {
             stop("`min_non_na` must be a single non-missing numeric value.")
         }
         if (min_non_na < 0) {
@@ -298,7 +303,8 @@ filter_metadata_columns.default <- function(
     }
 
     if (!is.null(max_pct_na)) {
-        if (!is.numeric(max_pct_na) || length(max_pct_na) != 1L || is.na(max_pct_na)) {
+        if (!is.numeric(max_pct_na) || length(max_pct_na) != 1L ||
+            is.na(max_pct_na)) {
             stop("`max_pct_na` must be a single non-missing numeric value.")
         }
         if (max_pct_na < 0 || max_pct_na > 100) {
@@ -306,7 +312,8 @@ filter_metadata_columns.default <- function(
         }
     }
 
-    groups <- if (ncol(x) >= 2L) .pb_duplicate_groups(x, info$col_names) else list()
+    groups <-
+        if (ncol(x) >= 2L) .pb_duplicate_groups(x, info$col_names) else list()
     dropped_duplicates <- character(0)
 
     if (length(groups)) {
@@ -315,7 +322,11 @@ filter_metadata_columns.default <- function(
                 first = cols[[1]],
                 last = cols[[length(cols)]],
                 pattern = {
-                    hits <- cols[grepl(duplicate_pattern, cols, ignore.case = pattern_ignore_case, fixed = pattern_fixed)]
+                    hits <-
+                        cols[grepl(
+                            duplicate_pattern, cols,
+                            ignore.case = pattern_ignore_case,
+                            fixed = pattern_fixed)]
                     if (length(hits)) {
                         hits[[1]]
                     } else {
@@ -333,18 +344,32 @@ filter_metadata_columns.default <- function(
         missing_summary <- metadata_column_summary.default(x, sort = sort)
         missing_summary$n_non_na <- nrow(x) - missing_summary$n_NA
         if (!is.null(min_non_na)) {
-            dropped_missing <- union(dropped_missing, missing_summary$colname[missing_summary$n_non_na < min_non_na])
+            dropped_missing <- union(
+                dropped_missing,
+                missing_summary$colname[missing_summary$n_non_na < min_non_na])
         }
         if (!is.null(max_pct_na)) {
-            dropped_missing <- union(dropped_missing, missing_summary$colname[missing_summary$pct_NA >= max_pct_na])
+            dropped_missing <- union(
+                dropped_missing,
+                missing_summary$colname[missing_summary$pct_NA >= max_pct_na])
         }
     }
 
     if (length(dropped_duplicates)) {
-        message(sprintf("Dropping %s duplicated columns:\n    ", length(dropped_duplicates)), paste(head(dropped_duplicates, 5), collapse = ", "), ", ...")
+        message(
+            sprintf(
+                "Dropping %s duplicated columns:\n    ",
+                length(dropped_duplicates)),
+            paste(head(dropped_duplicates, 5), collapse = ", "),
+            ", ...")
     }
     if (length(dropped_missing)) {
-        message(sprintf("Dropping %s columns based on missingness thresholds:\n    ", length(dropped_missing)), paste(head(dropped_missing, 5), collapse = ", "), ", ...")
+        message(
+            sprintf(
+                "Dropping %s columns based on missingness thresholds:\n    ",
+                length(dropped_missing)),
+            paste(head(dropped_missing, 5), collapse = ", "),
+            ", ...")
     }
 
     drop_candidates <- union(dropped_duplicates, dropped_missing)
@@ -359,7 +384,8 @@ filter_metadata_columns.default <- function(
     keep_mask <- !(info$col_names %in% drop_candidates)
     keep_cols <- info$col_names[keep_mask]
     if (!length(keep_cols)) {
-        stop("All columns would be removed; adjust filtering thresholds or duplicate strategy.")
+        stop(
+            "All columns would be removed; adjust filtering thresholds or duplicate strategy.")
     }
 
     filtered <- if (inherits(x, "data.table")) {
@@ -389,12 +415,12 @@ filter_metadata_columns.default <- function(
 #' @method filter_metadata_columns ProBatchFeatures
 #' @export
 filter_metadata_columns.ProBatchFeatures <- function(
-  x,
-  component = c("colData", "rowData"),
-  assay = NULL,
-  df = NULL,
-  inplace = FALSE,
-  ...
+    x,
+    component = c("colData", "rowData"),
+    assay = NULL,
+    df = NULL,
+    inplace = FALSE,
+    ...
 ) {
     object <- x
 
@@ -414,7 +440,8 @@ filter_metadata_columns.ProBatchFeatures <- function(
             obj
         }
     } else {
-        chosen_assay <- .pb_resolve_metadata_rowdata_assay(object, assay = assay)
+        chosen_assay <-
+            .pb_resolve_metadata_rowdata_assay(object, assay = assay)
         target <- SummarizedExperiment::rowData(object[[chosen_assay]])
         set_target <- function(obj, value) {
             SummarizedExperiment::rowData(obj[[chosen_assay]]) <- value
@@ -467,7 +494,8 @@ filter_metadata_columns.ProBatchFeatures <- function(
     }
     normalised <- lapply(x, .pb_normalise_column)
     names(normalised) <- col_names
-    signatures <- vapply(normalised, .pb_column_signature, character(1), USE.NAMES = FALSE)
+    signatures <- vapply(
+        normalised, .pb_column_signature, character(1), USE.NAMES = FALSE)
     groups <- split(col_names, signatures)
     Filter(function(cols) length(cols) > 1L, groups)
 }
@@ -478,7 +506,8 @@ filter_metadata_columns.ProBatchFeatures <- function(
         chosen_assay <- .pb_resolve_assay_for_input(object)
     }
     if (!length(chosen_assay)) {
-        stop("Provide an assay name via `assay` or ensure the object stores assays.")
+        stop(
+            "Provide an assay name via `assay` or ensure the object stores assays.")
     }
     if (length(chosen_assay) != 1L) {
         stop("`assay` must be a single assay name.")
