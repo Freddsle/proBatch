@@ -10,6 +10,10 @@ proBatch  v2.1.0
   provider-scoped cleanup through `pb_unregister_steps()`.
 - Added `pb_apply_matrix_method()` for identifier-safe matrix/long adaptation
   and `pb_step_result()` for transformed data with provider-neutral artifacts.
+  Materialized structured results retain artifacts in assay metadata.
+- Registry aliases invoked through `pb_transform()` and `pb_eval()` now resolve
+  canonical step and provider identities. `pb_transform()` records those
+  identities for virtual replay, which verifies the provider before invocation.
 
 ## Deprecations
 - Added `center_feature_batch()`: unified API for per-batch centering by `stat` (`"medians"` or `"means"`) and `format` (`"long"` or `"wide"`).

@@ -937,6 +937,26 @@ test_that("internal add-assay-with-link skips missing feature axes", {
     expect_true(validObject(result))
     expect_true("feature::raw_copy" %in% names(result))
     expect_false(isTRUE(S4Vectors::metadata(result)$linked_last))
+
+    transformed <- pb_transform(
+        pbf,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    )
+    transformed_matrix <- suppressMessages(
+        pb_assay_matrix(transformed, "feature::log2_on_raw")
+    )
+    expect_null(rownames(transformed_matrix))
+    expect_equal(transformed_matrix, log2(source_matrix + 1))
+
+    evaluated_matrix <- pb_eval(
+        pbf,
+        from = "feature::raw",
+        steps = "log2"
+    )
+    expect_null(rownames(evaluated_matrix))
+    expect_equal(evaluated_matrix, log2(source_matrix + 1))
 })
 
 test_that("show() prints chain and step count", {
@@ -1782,6 +1802,383 @@ test_that("pb_transform validates explicit final assay names", {
         ),
         "`final_name` conflicts with the source assay",
         fixed = TRUE
+    )
+})
+
+test_that("provider aliases log canonical identity and replay strictly", {
+    provider <- "testthat"
+    alternate_provider <- "stats"
+    canonical <- "pbf_fake_provider_step"
+    alias <- "PBF-fake-provider"
+    pb_unregister_steps(provider)
+    pb_unregister_steps(alternate_provider)
+    on.exit({
+        pb_unregister_steps(provider)
+        pb_unregister_steps(alternate_provider)
+    }, add = TRUE)
+
+    provider_step <- function(
+      data_matrix, sample_annotation, increment = 1
+    ) {
+        expect_identical(
+            rownames(sample_annotation),
+            colnames(data_matrix)
+        )
+        data_matrix + increment
+    }
+    register_fake_provider <- function(package = provider) {
+        pb_register_step(
+            name = canonical,
+            fun = provider_step,
+            package = package,
+            kind = "transform",
+            requires = "utils",
+            aliases = alias,
+            label = "In-package fake provider"
+        )
+    }
+    register_fake_provider()
+
+    input <- matrix(
+        seq_len(6),
+        nrow = 3,
+        dimnames = list(paste0("f", 1:3), c("s1", "s2"))
+    )
+    annotation <- data.frame(
+        FullRunName = rev(colnames(input)),
+        batch = c("B", "A"),
+        row.names = rev(colnames(input)),
+        stringsAsFactors = FALSE
+    )
+    object <- ProBatchFeatures(
+        input,
+        annotation,
+        sample_id_col = "FullRunName",
+        name = "raw"
+    )
+
+    transformed <- pb_transform(
+        object,
+        from = "feature::raw",
+        steps = c(alias, "log2"),
+        fast_steps = c(alias, "log2"),
+        store_fast_steps = FALSE
+    )
+    operation_log <- get_operation_log(transformed)
+    provider_entry <- operation_log[1L, , drop = FALSE]
+    provider_target <- as.character(provider_entry$to[[1L]])
+
+    expect_false(provider_target %in% names(transformed))
+    expect_identical(as.character(provider_entry$step[[1L]]), alias)
+    expect_identical(as.character(provider_entry$fun[[1L]]), canonical)
+    expect_identical(as.character(provider_entry$pkg[[1L]]), provider)
+    expect_false(
+        "sample_annotation" %in% names(provider_entry$params[[1L]])
+    )
+    expect_identical(
+        suppressMessages(pb_assay_matrix(transformed, provider_target)),
+        input + 1
+    )
+    expect_identical(
+        pb_eval(object, from = "feature::raw", steps = alias),
+        input + 1
+    )
+
+    pb_unregister_steps(provider)
+    expect_error(
+        suppressMessages(pb_assay_matrix(transformed, provider_target)),
+        "recorded from provider 'testthat'.*not registered"
+    )
+
+    register_fake_provider(alternate_provider)
+    expect_error(
+        suppressMessages(pb_assay_matrix(transformed, provider_target)),
+        "not recorded provider 'testthat'"
+    )
+    pb_unregister_steps(alternate_provider)
+
+    register_fake_provider()
+    expect_identical(
+        suppressMessages(pb_assay_matrix(transformed, provider_target)),
+        input + 1
+    )
+
+    explicit_annotation <- as.data.frame(colData(object[["feature::raw"]]))
+    explicit_annotation <- explicit_annotation[
+        rev(seq_len(nrow(explicit_annotation))),
+        ,
+        drop = FALSE
+    ]
+    explicit <- pb_transform(
+        object,
+        from = "feature::raw",
+        steps = alias,
+        params_list = list(list(
+            sample_annotation = explicit_annotation
+        )),
+        final_name = "feature::explicit_annotation"
+    )
+    explicit_log <- get_operation_log(explicit)
+    expect_true(
+        "sample_annotation" %in%
+            names(explicit_log$params[[nrow(explicit_log)]])
+    )
+    expect_identical(
+        rownames(explicit_log$params[[nrow(explicit_log)]]$sample_annotation),
+        rev(colnames(input))
+    )
+})
+
+test_that("structured provider results store artifacts only when materialized", {
+    provider <- "testthat"
+    canonical <- "pbf_structured_provider_step"
+    alias <- "PBF-structured-provider"
+    pb_unregister_steps(provider)
+    on.exit(pb_unregister_steps(provider), add = TRUE)
+
+    artifacts <- list(
+        model = list(converged = TRUE),
+        scores = c(0.25, 0.75)
+    )
+    structured_step <- function(
+      data_matrix, sample_annotation = NULL
+    ) {
+        pb_step_result(data_matrix * 2, artifacts = artifacts)
+    }
+    pb_register_step(
+        name = canonical,
+        fun = structured_step,
+        package = provider,
+        aliases = alias,
+        label = "Structured fake provider"
+    )
+
+    input <- matrix(
+        seq_len(6),
+        nrow = 3,
+        dimnames = list(paste0("f", 1:3), c("s1", "s2"))
+    )
+    annotation <- data.frame(
+        FullRunName = colnames(input),
+        row.names = colnames(input),
+        stringsAsFactors = FALSE
+    )
+    object <- ProBatchFeatures(
+        input,
+        annotation,
+        sample_id_col = "FullRunName",
+        name = "raw"
+    )
+
+    transformed <- pb_transform(
+        object,
+        from = "feature::raw",
+        steps = alias
+    )
+    target <- paste0("feature::", alias, "_on_raw")
+    expect_true(target %in% names(transformed))
+    expect_identical(pb_assay_matrix(transformed, target), input * 2)
+    expect_identical(
+        S4Vectors::metadata(transformed[[target]])$pb_step_artifacts,
+        artifacts
+    )
+    operation_log <- get_operation_log(transformed)
+    expect_identical(tail(as.character(operation_log$fun), 1L), canonical)
+    expect_identical(tail(as.character(operation_log$pkg), 1L), provider)
+    expect_false(
+        "sample_annotation" %in%
+            names(operation_log$params[[nrow(operation_log)]])
+    )
+
+    retried <- pb_transform(
+        transformed,
+        from = "feature::raw",
+        steps = alias
+    )
+    expect_identical(names(retried), names(transformed))
+    expect_identical(
+        nrow(get_operation_log(retried)),
+        nrow(operation_log)
+    )
+    expect_identical(
+        S4Vectors::metadata(retried[[target]])$pb_step_artifacts,
+        artifacts
+    )
+    expect_identical(
+        pb_eval(object, from = "feature::raw", steps = alias),
+        input * 2
+    )
+
+    virtual <- pb_transform(
+        object,
+        from = "feature::raw",
+        steps = c(alias, "log2"),
+        fast_steps = c(alias, "log2"),
+        store_fast_steps = FALSE
+    )
+    virtual_target <- as.character(get_operation_log(virtual)$to[[1L]])
+    expect_false(virtual_target %in% names(virtual))
+    expect_identical(
+        suppressMessages(pb_assay_matrix(virtual, virtual_target)),
+        input * 2
+    )
+})
+
+test_that("pipeline steps reject reordered or incomplete sample axes", {
+    input <- matrix(
+        seq_len(6),
+        nrow = 3,
+        dimnames = list(paste0("f", 1:3), c("s1", "s2"))
+    )
+    annotation <- data.frame(
+        FullRunName = colnames(input),
+        row.names = colnames(input)
+    )
+    object <- ProBatchFeatures(
+        input,
+        annotation,
+        sample_id_col = "FullRunName",
+        name = "raw"
+    )
+    reorder_samples <- function(data_matrix) {
+        data_matrix[, rev(seq_len(ncol(data_matrix))), drop = FALSE]
+    }
+    drop_sample <- function(data_matrix) {
+        data_matrix[, 1L, drop = FALSE]
+    }
+
+    expect_error(
+        pb_eval(
+            object,
+            from = "feature::raw",
+            steps = "reorder",
+            funs = list(reorder_samples)
+        ),
+        "preserve input feature and sample order"
+    )
+    expect_error(
+        pb_transform(
+            object,
+            from = "feature::raw",
+            steps = "drop",
+            funs = list(drop_sample)
+        ),
+        "preserve every input sample"
+    )
+})
+
+test_that("legacy Core replay ignores unrelated registry ownership", {
+    provider <- "stats"
+    pb_unregister_steps(provider)
+    on.exit(pb_unregister_steps(provider), add = TRUE)
+    pb_register_step(
+        "identity",
+        function(data_matrix) data_matrix + 100,
+        package = provider
+    )
+
+    input <- matrix(
+        seq_len(4),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2"))
+    )
+    annotation <- data.frame(
+        FullRunName = colnames(input),
+        row.names = colnames(input)
+    )
+    object <- ProBatchFeatures(
+        input,
+        annotation,
+        sample_id_col = "FullRunName",
+        name = "raw"
+    )
+    target <- "feature::legacy_identity"
+    object <- proBatch:::.pb_add_log_entry(
+        object,
+        step = "copy",
+        fun = "identity",
+        from = "feature::raw",
+        to = target,
+        params = list(),
+        pkg = "proBatch"
+    )
+
+    expect_identical(
+        suppressMessages(pb_assay_matrix(object, target)),
+        input
+    )
+})
+
+test_that("ordinary registrations retain NA provider identity in replay", {
+    canonical <- "pbf_ordinary_provider_step"
+    alias <- "PBF-ordinary-provider"
+    records <- proBatch:::.pb_step_records
+    aliases <- proBatch:::.pb_step_aliases
+    cleanup <- function() {
+        if (exists(alias, envir = aliases, inherits = FALSE)) {
+            rm(list = alias, envir = aliases)
+        }
+        if (exists(canonical, envir = records, inherits = FALSE)) {
+            rm(list = canonical, envir = records)
+        }
+    }
+    cleanup()
+    on.exit(cleanup(), add = TRUE)
+
+    ordinary_environment <- new.env(parent = baseenv())
+    ordinary_step <- eval(
+        quote(function(data_matrix, sample_annotation) {
+            if (!identical(
+                rownames(sample_annotation),
+                colnames(data_matrix)
+            )) {
+                stop("sample annotation was not aligned")
+            }
+            data_matrix + 3
+        }),
+        envir = ordinary_environment
+    )
+    pb_register_step(
+        canonical,
+        ordinary_step,
+        aliases = alias,
+        label = "Ordinary fake provider"
+    )
+
+    input <- matrix(
+        seq_len(4),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2"))
+    )
+    annotation <- data.frame(
+        FullRunName = rev(colnames(input)),
+        row.names = rev(colnames(input))
+    )
+    object <- ProBatchFeatures(
+        input,
+        annotation,
+        sample_id_col = "FullRunName",
+        name = "raw"
+    )
+    virtual <- pb_transform(
+        object,
+        from = "feature::raw",
+        steps = c(alias, "log2"),
+        fast_steps = c(alias, "log2"),
+        store_fast_steps = FALSE
+    )
+    operation_log <- get_operation_log(virtual)
+    target <- as.character(operation_log$to[[1L]])
+
+    expect_identical(as.character(operation_log$step[[1L]]), alias)
+    expect_identical(as.character(operation_log$fun[[1L]]), canonical)
+    expect_true(is.na(operation_log$pkg[[1L]]))
+    expect_false(
+        "sample_annotation" %in% names(operation_log$params[[1L]])
+    )
+    expect_identical(
+        suppressMessages(pb_assay_matrix(virtual, target)),
+        input + 3
     )
 })
 

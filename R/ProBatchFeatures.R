@@ -794,48 +794,116 @@ pb_current_assay <- function(object) {
     tail(names(object), 1)
 }
 
-.pb_apply_logged_step <- function(base_matrix, step, fun_name, params) {
+.pb_apply_logged_step <- function(
+  base_matrix, step, fun_name, params, pkg = "proBatch",
+  sample_annotation = NULL
+) {
     step <- as.character(step)
     fun_name <- as.character(fun_name)
+    pkg <- as.character(pkg)
     params <- params %||% list()
 
-    if (step %in% c("log", "log2")) {
-        log_base <- if (identical(step, "log2")) {
-            params$log_base %||% 2
-        } else {
-            params$log_base %||% params$base %||% exp(1)
+    registered_token <- NULL
+    if (length(fun_name) == 1L && !is.na(fun_name) && nzchar(fun_name) &&
+        pb_has_step(fun_name)) {
+        record <- .pb_lookup_step_record(fun_name)
+        if (identical(record$package, pkg)) {
+            registered_token <- fun_name
         }
-        offset <- params$offset %||% params$pseudo %||% 1
-        return(log_transform_dm.default(
-            x = base_matrix,
-            log_base = log_base,
-            offset = offset
-        ))
-    }
-    if (identical(step, "unlog")) {
-        log_base <- params$log_base %||% params$base %||% 2
-        offset <- params$offset %||% 1
-        return(unlog_dm.default(
-            x = base_matrix,
-            log_base = log_base,
-            offset = offset
-        ))
     }
 
-    fun_candidate <- NULL
-    if (length(fun_name) && !is.na(fun_name) && nzchar(fun_name)) {
-        fun_candidate <- tryCatch(.pb_get_step_fun(fun_name), error = function(e) NULL)
-    }
-    if (is.null(fun_candidate) && length(step) && !is.na(step) && nzchar(step)) {
-        fun_candidate <- tryCatch(.pb_get_step_fun(step), error = function(e) NULL)
-    }
-    if (is.null(fun_candidate)) {
-        stop(
-            "Unable to reconstruct fast step '", step,
-            "' (function '", fun_name, "' not found)."
+    if (!is.null(registered_token)) {
+        resolution <- .pb_resolve_step(
+            registered_token,
+            package = pkg,
+            require_available = TRUE
         )
+        fun_candidate <- resolution$fun
+    } else if (!identical(pkg, "proBatch")) {
+        .pb_resolve_step(
+            fun_name,
+            package = pkg,
+            require_available = TRUE
+        )
+    } else {
+        fun_candidate <- NULL
+        if (length(step) == 1L && !is.na(step) && nzchar(step) &&
+            pb_has_step(step)) {
+            step_record <- .pb_lookup_step_record(step)
+            if (identical(step_record$package, pkg)) {
+                resolution <- .pb_resolve_step(
+                    step,
+                    package = pkg,
+                    require_available = TRUE
+                )
+                fun_candidate <- resolution$fun
+            }
+        }
+
+        if (is.null(fun_candidate) && step %in% c("log", "log2")) {
+            log_base <- if (identical(step, "log2")) {
+                params$log_base %||% 2
+            } else {
+                params$log_base %||% params$base %||% exp(1)
+            }
+            offset <- params$offset %||% params$pseudo %||% 1
+            raw_result <- log_transform_dm.default(
+                x = base_matrix,
+                log_base = log_base,
+                offset = offset
+            )
+            return(.pb_step_result_matrix_parts(
+                raw_result,
+                paste0("Replayed step '", step, "'")
+            )$data)
+        }
+        if (is.null(fun_candidate) && identical(step, "unlog")) {
+            log_base <- params$log_base %||% params$base %||% 2
+            offset <- params$offset %||% 1
+            raw_result <- unlog_dm.default(
+                x = base_matrix,
+                log_base = log_base,
+                offset = offset
+            )
+            return(.pb_step_result_matrix_parts(
+                raw_result,
+                paste0("Replayed step '", step, "'")
+            )$data)
+        }
+
+        if (is.null(fun_candidate) &&
+            length(fun_name) == 1L && !is.na(fun_name) && nzchar(fun_name)) {
+            fun_candidate <- tryCatch(
+                .pb_get_step_fun(fun_name, use_registry = FALSE),
+                error = function(error) NULL
+            )
+        }
+        if (is.null(fun_candidate) &&
+            length(step) == 1L && !is.na(step) && nzchar(step)) {
+            fun_candidate <- tryCatch(
+                .pb_get_step_fun(step, use_registry = FALSE),
+                error = function(error) NULL
+            )
+        }
+        if (is.null(fun_candidate)) {
+            stop(
+                "Unable to reconstruct fast step '", step,
+                "' (function '", fun_name, "' not found)."
+            )
+        }
     }
-    do.call(fun_candidate, c(list(base_matrix), params))
+
+    call_params <- .pb_enrich_step_params(
+        fun = fun_candidate,
+        params = params,
+        sample_annotation = sample_annotation,
+        sample_ids = colnames(base_matrix)
+    )
+    raw_result <- do.call(fun_candidate, c(list(base_matrix), call_params))
+    .pb_step_result_matrix_parts(
+        raw_result,
+        paste0("Replayed step '", step, "'")
+    )$data
 }
 
 .pb_resolve_assay_from_log <- function(object, assay, name = "intensity", visited = character()) {
@@ -878,13 +946,21 @@ pb_current_assay <- function(object) {
     params <- entry$params[[1]] %||% list()
     step <- entry$step[[1]]
     fun_name <- entry$fun[[1]]
+    pkg <- entry$pkg[[1]]
 
     base <- .pb_resolve_assay_from_log(object, from_assay, name, c(visited, assay))
     if (is.null(base)) {
         stop("Unable to resolve base assay '", from_assay, "' for '", assay, "'.")
     }
 
-    matrix <- .pb_apply_logged_step(base$matrix, step, fun_name, params)
+    matrix <- .pb_apply_logged_step(
+        base$matrix,
+        step,
+        fun_name,
+        params,
+        pkg = pkg,
+        sample_annotation = base$colData
+    )
     self_matches <- matches[as.character(log$from[matches]) == assay]
     self_matches <- .pb_unique_log_edges(log, self_matches)
     for (self_index in self_matches) {
@@ -893,7 +969,9 @@ pb_current_assay <- function(object) {
             matrix,
             self_entry$step[[1]],
             self_entry$fun[[1]],
-            self_entry$params[[1]] %||% list()
+            self_entry$params[[1]] %||% list(),
+            pkg = self_entry$pkg[[1]],
+            sample_annotation = base$colData
         )
     }
     list(matrix = matrix, colData = base$colData)
@@ -934,7 +1012,10 @@ pb_current_assay <- function(object) {
     payload$colData
 }
 
-.pb_enrich_step_params <- function(object, assay, fun, params) {
+.pb_enrich_step_params <- function(
+  object = NULL, assay = NULL, fun, params, sample_annotation = NULL,
+  sample_ids = NULL
+) {
     if (is.null(params)) {
         params <- list()
     } else if (!is.list(params)) {
@@ -946,20 +1027,85 @@ pb_current_assay <- function(object) {
         "sample_annotation" %in% names(params) &&
         !is.null(params[["sample_annotation"]])
 
-    if (needs_sa && !has_sa) {
-        cd <- .pb_coldata_for_assay(object, assay)
-        params$sample_annotation <- as.data.frame(cd)
+    if (needs_sa || has_sa) {
+        cd <- if (has_sa) params[["sample_annotation"]] else sample_annotation
+        if (is.null(cd) && needs_sa) {
+            if (!is.null(object) && !is.null(assay)) {
+                cd <- .pb_coldata_for_assay(object, assay)
+            } else {
+                stop(
+                    "Sample annotation is required to invoke this step.",
+                    call. = FALSE
+                )
+            }
+        }
+
+        if (!is.null(cd) && !is.null(sample_ids)) {
+            cd <- as.data.frame(cd)
+            sample_id_col <- params[["sample_id_col"]]
+            if (is.null(sample_id_col)) {
+                formal_id_col <- tryCatch(
+                    formals(fun)[["sample_id_col"]],
+                    error = function(...) NULL
+                )
+                if (is.character(formal_id_col) &&
+                    length(formal_id_col) == 1L &&
+                    !is.na(formal_id_col) && nzchar(formal_id_col)) {
+                    sample_id_col <- formal_id_col
+                }
+            }
+            cd <- .align_sample_annotation(
+                cd,
+                sample_ids = sample_ids,
+                sample_id_col = sample_id_col
+            )
+            rownames(cd) <- sample_ids
+        }
+        if (!is.null(cd)) {
+            params$sample_annotation <- as.data.frame(cd)
+        }
     }
 
     params
 }
 
+.pb_step_invocation <- function(fun_or_name, step) {
+    if (is.character(fun_or_name) && length(fun_or_name) == 1L &&
+        !is.na(fun_or_name) && nzchar(fun_or_name) &&
+        pb_has_step(fun_or_name)) {
+        return(.pb_resolve_step(fun_or_name, require_available = TRUE))
+    }
 
-#' Convenience accessor for assay matrix by name/index (returns the 'intensity' assay)
+    fun <- .pb_get_step_fun(fun_or_name)
+    logged_name <- if (is.character(fun_or_name) &&
+        length(fun_or_name) == 1L && !is.na(fun_or_name) &&
+        nzchar(fun_or_name)) {
+        fun_or_name
+    } else {
+        as.character(step)
+    }
+    list(
+        input_name = logged_name,
+        name = logged_name,
+        fun = fun,
+        package = "proBatch",
+        available = TRUE,
+        registered = FALSE
+    )
+}
+
+
+#' Convenience accessor for stored or virtual assay matrices
+#'
+#' Stored assays are read directly. A virtual target recorded in the operation
+#' log is replayed through its recorded canonical step and provider; replay
+#' fails with guidance if that provider is no longer registered or available.
+#' Ambiguous or cyclic operation-log lineage also causes an error.
+#' @md
 #' @param object A `ProBatchFeatures` object.
 #' @param assay Assay identifier to extract; defaults to the current assay.
 #' @param name Assay entry to read from the underlying `SummarizedExperiment`.
-#' @return assay data matrix with features in rows and samples in columns
+#' @return Assay data matrix with features in rows and samples in columns.
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_assay_matrix <- function(object, assay = NULL, name = "intensity") {
@@ -1240,14 +1386,9 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
     new_pipeline <- .pb_make_pipeline_name(c(prev_tokens, step))
     to <- to_override %||% .pb_assay_name(new_level, new_pipeline)
 
-    logged_params <- if (is.null(params)) {
-        list()
-    } else if (is.list(params)) {
-        params
-    } else {
-        list(params)
-    }
-    fun_name <- if (is.character(fun)) fun else step
+    invocation <- .pb_step_invocation(fun, step = step)
+    fun_name <- invocation$name
+    fun_package <- invocation$package
     base_m <- if (!is.null(.base_m)) {
         .base_m
     } else {
@@ -1256,14 +1397,39 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
         )
     }
 
-    f <- .pb_get_step_fun(fun)
+    logged_params <- if (is.null(params)) {
+        list()
+    } else if (is.list(params)) {
+        params
+    } else {
+        list(params)
+    }
     call_params <- .pb_enrich_step_params(
-        object,
-        from_data,
-        f,
-        logged_params
+        object = object,
+        assay = from_data,
+        fun = invocation$fun,
+        params = logged_params,
+        sample_ids = colnames(base_m)
     )
-    res_m <- do.call(f, c(list(base_m), call_params))
+    raw_result <- do.call(invocation$fun, c(list(base_m), call_params))
+    result_parts <- .pb_step_result_matrix_parts(
+        raw_result,
+        paste0("Step '", step, "' result")
+    )
+    res_m <- .pb_adapter_validate_output(
+        result_parts$data,
+        input_matrix = base_m,
+        missing = "keep",
+        allow_unnamed_features = TRUE
+    )
+    if (!identical(colnames(res_m), colnames(base_m))) {
+        stop(
+            "Step '", step,
+            "' result must preserve every input sample in order. ",
+            "Use `pb_subset_samples()` to change the sample set.",
+            call. = FALSE
+        )
+    }
     retry_status <- .pb_target_retry_status(
         object = object,
         to = to,
@@ -1272,24 +1438,26 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
         step = step,
         fun = fun_name,
         params = logged_params,
-        pkg = "proBatch"
+        pkg = fun_package
     )
 
     saved_assay <- NULL
     if (store) {
-        mat <- .pb_materialize_matrix(
-            res_m,
-            backend = backend,
-            hdf5_path = hdf5_path
-        )
+        mat <- .pb_materialize_matrix(res_m, backend = backend, hdf5_path = hdf5_path)
         if (identical(retry_status, "stored_idempotent")) {
             saved_assay <- to
         } else {
             cd_from <- .pb_coldata_for_assay(object, from_data)
             se <- SummarizedExperiment(
-                assays = list(intensity = mat),
+                assays  = list(intensity = mat),
                 colData = cd_from
             )
+            if (isTRUE(result_parts$structured)) {
+                se <- .pb_attach_step_artifacts(
+                    se,
+                    result_parts$artifacts
+                )
+            }
             object <- .pb_add_assay_with_link(
                 object,
                 se,
@@ -1298,7 +1466,7 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
                 step = step,
                 fun = fun_name,
                 params = logged_params,
-                pkg = "proBatch",
+                pkg = fun_package,
                 lineage_from = from
             )
             saved_assay <- to
@@ -1312,7 +1480,7 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
         from = from,
         to = to,
         params = logged_params,
-        pkg = "proBatch"
+        pkg = fun_package
     )
 
     list(object = object, assay = saved_assay, matrix = res_m, to = to)
@@ -1323,10 +1491,13 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 # ---------------------------
 
 #' Compute a pipeline and optionally store only the final result
+#' @md
 #' @param object A `ProBatchFeatures` object.
 #' @param from Assay name to start the pipeline from.
 #' @param steps character vector, e.g. c("log2","medianNorm","combat")
-#' @param funs optional same-length vector/list of functions/names (default: steps)
+#' @param funs Optional same-length vector or list of functions or registered
+#'   canonical names or aliases (default: `steps`). Registered aliases are
+#'   resolved to their canonical names for operation logging.
 #' @param params_list list of parameter lists (same length as steps)
 #' @param level Optional level label to assign to the generated assay(s).
 #' @param store_fast_steps logical; if FALSE, fast steps are computed but not stored
@@ -1341,6 +1512,12 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 #' @param backend "memory","hdf5","auto"
 #' @param hdf5_path Optional file path used when `backend = "hdf5"`.
 #' @return ProBatchFeatures with the requested pipeline added (as log and/or assay)
+#'
+#' @details Registered steps record their canonical name and provider package.
+#'   When a step returns [pb_step_result()] and its assay is materialized, the
+#'   result's artifacts are stored in that assay's metadata under
+#'   `pb_step_artifacts`. Step results must retain all samples in input order;
+#'   an input-ordered feature subset is allowed.
 #'
 #' @example inst/examples/ProBatchFeatures-basic.R
 #'
@@ -1421,13 +1598,18 @@ pb_transform <- function(
 }
 
 #' Evaluate a pipeline and return the matrix, without storing
+#' @md
 #' @param object ProBatchFeatures
 #' @param from assay name (e.g., "peptide::raw")
 #' @param steps character vector, e.g. c("log2","medianNorm","combat")
-#' @param funs optional same-length vector/list of functions/names (default: steps
-#' for registry lookup)
+#' @param funs Optional same-length vector or list of functions or registered
+#'   canonical names or aliases (default: `steps`).
 #' @param params_list list of parameter lists (same length as steps)
-#' @return numeric matrix (features x samples)
+#' @return Numeric matrix (features x samples). If a step returns a
+#'   [pb_step_result()], only its validated `data` component is returned;
+#'   artifacts are not persisted by this non-storing API. Every step must
+#'   retain all samples in input order and may return an input-ordered feature
+#'   subset.
 #' @example inst/examples/ProBatchFeatures-basic.R
 #'
 #' @export
@@ -1444,9 +1626,41 @@ pb_eval <- function(
 
     m <- pb_assay_matrix(object, from)
     for (k in seq_along(steps)) {
-        f <- .pb_get_step_fun(funs[[k]])
-        params <- .pb_enrich_step_params(object, from, f, params_list[[k]])
-        m <- do.call(f, c(list(m), params))
+        invocation <- .pb_step_invocation(funs[[k]], step = steps[[k]])
+        logged_params <- if (is.null(params_list[[k]])) {
+            list()
+        } else if (is.list(params_list[[k]])) {
+            params_list[[k]]
+        } else {
+            list(params_list[[k]])
+        }
+        call_params <- .pb_enrich_step_params(
+            object = object,
+            assay = from,
+            fun = invocation$fun,
+            params = logged_params,
+            sample_ids = colnames(m)
+        )
+        raw_result <- do.call(invocation$fun, c(list(m), call_params))
+        result_parts <- .pb_step_result_matrix_parts(
+            raw_result,
+            paste0("Step '", steps[[k]], "' result")
+        )
+        next_m <- .pb_adapter_validate_output(
+            result_parts$data,
+            input_matrix = m,
+            missing = "keep",
+            allow_unnamed_features = TRUE
+        )
+        if (!identical(colnames(next_m), colnames(m))) {
+            stop(
+                "Step '", steps[[k]],
+                "' result must preserve every input sample in order. ",
+                "Use `pb_subset_samples()` to change the sample set.",
+                call. = FALSE
+            )
+        }
+        m <- next_m
     }
     m
 }
