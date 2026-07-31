@@ -1608,7 +1608,7 @@ pb_transform <- function(
         out <- .pb_apply_step(
             object = object, from = cur_from,
             step = step_label, fun = fun, params = par,
-            store = store_this, new_level = if (k == length(steps)) level else level,
+            store = store_this, new_level = level,
             to_override = if (use_final_name) final_name else NULL,
             backend = backend, hdf5_path = hdf5_path,
             .base_m = base_m,
