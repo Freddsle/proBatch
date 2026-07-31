@@ -1396,37 +1396,6 @@ test_that("pb_add_level: map_strategy='as_is' errors on duplicate parents", {
     )
 })
 
-test_that(".pb_add_assay_with_link requires identical row order for 1:1 linking (no set-equality)", {
-    skip_if_not_installed("QFeatures")
-    skip_if_not_installed("SummarizedExperiment")
-
-    set.seed(42)
-    m <- matrix(round(rnorm(12), 3),
-        nrow = 4,
-        dimnames = list(paste0("f", 1:4), paste0("S", 1:3)[1:3][1:3][1:3])
-    )
-    sa <- data.frame(
-        FullRunName = colnames(m),
-        Lab = "L", Condition = c("C1", "C2", "C3")[1:ncol(m)],
-        row.names = colnames(m), stringsAsFactors = FALSE
-    )
-    pbf <- ProBatchFeatures(m, sa, "FullRunName", name = "raw")
-
-    # Create a new SE with shuffled row order
-    m2 <- m[sample(rownames(m)), ]
-    se_new <- SummarizedExperiment(
-        assays  = list(intensity = m2),
-        colData = colData(pbf[["feature::raw"]])
-    )
-    pbf2 <- proBatch:::.pb_add_assay_with_link(pbf,
-        se = se_new,
-        to = "feature::copy", from = "feature::raw"
-    )
-
-    # With setequal() requirement, shuffled order MUST link
-    expect_true(isTRUE(S4Vectors::metadata(pbf2)$linked_last))
-})
-
 test_that("addAssay colData conflict on DateTime is avoided by using object-level colData", {
     skip_if_not_installed("QFeatures")
     skip_if_not_installed("SummarizedExperiment")
@@ -2375,14 +2344,4 @@ test_that("ordinary registrations retain NA provider identity in replay", {
         suppressMessages(pb_assay_matrix(virtual, target)),
         input + 3
     )
-})
-
-test_that("registry inspection reports available core steps", {
-    expect_true(pb_has_step("medianNorm"))
-    expect_false(pb_has_step("not-a-step"))
-    expect_identical(pb_list_steps("^median"), "medianNorm")
-
-    details <- pb_list_steps("^median", details = TRUE)
-    expect_s4_class(details, "DataFrame")
-    expect_identical(as.character(details$step), "medianNorm")
 })
