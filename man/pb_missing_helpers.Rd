@@ -83,7 +83,11 @@ outer list with one such result per assay and a combined \code{nNA}
 \code{DataFrame}.
 }
 \description{
-Apply \code{QFeatures} missing-data helpers to stored assays
+These wrappers delegate to the corresponding \code{QFeatures} generics while
+ensuring that the requested assays remain part of the \code{ProBatchFeatures}
+object. Only assays that are already materialised can be modified.
+If a transformation step was applied as a "fast" step (log, log2, etc.),
+consider re-running it with \code{store_fast_steps = TRUE}.
 }
 \details{
 For grouped filtering, features are retained if they meet the

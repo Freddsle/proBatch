@@ -24,5 +24,6 @@
 A \code{ProBatchFeatures} object containing the requested subset.
 }
 \description{
-Subset \code{ProBatchFeatures} objects without dropping metadata.
+Ensures the \code{[} method returns a \code{ProBatchFeatures} instance so the
+subclass-specific slots remain available after subsetting.
 }

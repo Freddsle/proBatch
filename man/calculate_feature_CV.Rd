@@ -75,6 +75,7 @@ data(list = c("example_sample_annotation", "example_proteome"), package = "proBa
 CV_df <- calculate_feature_CV(example_proteome,
     sample_annotation = example_sample_annotation,
     measure_col = "Intensity",
-    batch_col = "MS_batch"
+    batch_col = "MS_batch",
+    biospecimen_id_col = "EarTag"
 )
 }

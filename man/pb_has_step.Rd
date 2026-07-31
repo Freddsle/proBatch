@@ -17,7 +17,7 @@ requirements to be available.}
 A logical scalar.
 }
 \description{
-Test whether a transformation step is registered or available
+Canonical names and aliases resolve to the same registration.
 }
 \examples{
 pb_has_step("medianNorm")

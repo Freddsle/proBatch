@@ -149,7 +149,8 @@ For matrix input, a \code{ggplot} or, when requested, a \code{plotly} object.
 Multi-assay return behavior matches \code{\link[=plot_TSNE]{plot_TSNE()}}.
 }
 \description{
-Plot a UMAP embedding of samples
+Compute UMAP with samples as observations (matrix columns) and return a
+static \code{ggplot} by default. Interactive Plotly rendering is optional.
 }
 \details{
 Each input assay must contain at least two samples.

@@ -24,7 +24,9 @@ A character vector of canonical names, or an
 \code{package}, \code{kind}, \code{label}, \code{requires}, \code{aliases}, and \code{available}.
 }
 \description{
-List registered transformation steps
+Returns canonical step names. Pattern matching considers canonical names,
+aliases, and display labels. Availability filtering reports current state
+without changing registrations.
 }
 \examples{
 pb_list_steps()

@@ -38,7 +38,13 @@ invoked.}
 \code{TRUE}, invisibly.
 }
 \description{
-Register a provider-neutral transformation step
+Registers one canonical step and optional aliases for use by
+\code{\link[=pb_transform]{pb_transform()}}, \code{\link[=pb_eval]{pb_eval()}}, and \code{\link[=pb_apply_matrix_method]{pb_apply_matrix_method()}}. Registration
+records metadata only: it does not install, load, or probe a provider or any
+optional engine. Repeating an identical registration is a no-op. A different
+registration that collides with an existing canonical name or alias is
+rejected; refresh a provider with \code{\link[=pb_unregister_steps]{pb_unregister_steps()}} followed by
+registration.
 }
 \examples{
 # Shared setup for ProBatchFeatures documentation examples -----------------
@@ -62,8 +68,11 @@ pbf <- ProBatchFeatures(
 )
 
 # Register a custom step and evaluate it -----------------------------------
-pb_register_step("add_one", function(x) x + 1)
-head(pb_eval(pbf, from = "peptide::raw", steps = "add_one"))
+example_step <- "example_add_one"
+if (!pb_has_step(example_step)) {
+    pb_register_step(example_step, function(x) x + 1)
+}
+head(pb_eval(pbf, from = "peptide::raw", steps = example_step))
 
 # Derived objects for downstream helpers -----------------------------------
 pbf_logged <- pb_transform(

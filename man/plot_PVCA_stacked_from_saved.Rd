@@ -40,11 +40,11 @@ plot title; elements are joined with newline characters.}
 
 \item{filename}{Optional path to save the stacked plot.}
 
-\item{width}{Plot width forwarded to \code{\link[=save_ggplot]{save_ggplot()}}.}
+\item{width}{Plot width forwarded to \code{\link[ggplot2:ggsave]{ggplot2::ggsave()}}.}
 
-\item{height}{Plot height forwarded to \code{\link[=save_ggplot]{save_ggplot()}}.}
+\item{height}{Plot height forwarded to \code{\link[ggplot2:ggsave]{ggplot2::ggsave()}}.}
 
-\item{units}{Plot units forwarded to \code{\link[=save_ggplot]{save_ggplot()}}.}
+\item{units}{Plot units forwarded to \code{\link[ggplot2:ggsave]{ggplot2::ggsave()}}.}
 
 \item{category_order}{Optional character vector specifying the order of categories in the stacked plot.}
 }
@@ -52,5 +52,7 @@ plot title; elements are joined with newline characters.}
 A \code{ggplot} object showing the stacked PVCA weights.
 }
 \description{
-Plot stacked PVCA results from saved CSV files
+When PVCA analysis has been run previously and the aggregated weights were
+written to disk (one \code{PVCA_results_aggregated.csv} per assay), this helper
+rebuilds the stacked bar summary without rerunning the analysis.
 }

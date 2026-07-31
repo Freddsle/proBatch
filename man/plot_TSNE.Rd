@@ -145,7 +145,8 @@ For multiple assays, an arranged static result, a named ordered list of
 interactive plots, or an explicitly requested Plotly subplot.
 }
 \description{
-Plot a t-SNE embedding of samples
+Compute t-SNE with samples as observations (matrix columns) and return a
+static \code{ggplot} by default. Interactive Plotly rendering is optional.
 }
 \details{
 Each input assay must contain at least two samples.

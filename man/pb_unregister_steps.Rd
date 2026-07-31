@@ -13,5 +13,6 @@ pb_unregister_steps(package)
 The removed canonical names, invisibly.
 }
 \description{
-Unregister all transformation steps from one provider
+Removes every canonical registration and alias owned by \code{package}. Calling
+the function when the provider owns no registrations is a no-op.
 }

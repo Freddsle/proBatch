@@ -26,7 +26,9 @@ filtering. Defaults to \code{sample_id_col}.}
 A \code{ProBatchFeatures} object restricted to the selected samples.
 }
 \description{
-Subset samples using \code{ProBatchFeatures} metadata.
+Resolve sample metadata from \code{colData(object)}, build a column mask, and
+delegate to the subclass-preserving \code{[} method so every assay is subset
+consistently.
 }
 \examples{
 data(example_proteome_matrix, package = "proBatch")
