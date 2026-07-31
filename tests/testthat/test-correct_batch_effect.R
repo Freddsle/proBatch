@@ -763,20 +763,33 @@ test_that("adjust_batch_trend_df keeps order column", {
 })
 
 test_that("adjust_batch_trend_dm forwards arguments", {
-    pb_test_load_example_data()
-
-    feature_subset <- rownames(example_proteome_matrix) %in%
-        c("10062_NVGVSFYADKPEVTQEQK_3", "101233_QGFNVVVESGAGEASK_2")
-    sub_matrix <- example_proteome_matrix[feature_subset, , drop = FALSE]
-
-    res <- adjust_batch_trend_dm(sub_matrix, example_sample_annotation,
-        order_col = "order", fit_func = "loess_regression",
-        min_measurements = 8, no_fit_imputed = FALSE
+    observed <- new.env(parent = emptyenv())
+    testthat::local_mocked_bindings(
+        adjust_batch_trend_df = function(df_long, sample_annotation, span, ...) {
+            observed$span <- span
+            df_long
+        },
+        .package = "proBatch"
+    )
+    input <- matrix(
+        1:4,
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2"))
+    )
+    annotation <- data.frame(
+        FullRunName = c("s1", "s2"),
+        stringsAsFactors = FALSE
     )
 
-    expect_true(is.list(res))
-    expect_true(is.matrix(res$corrected_dm))
-    expect_equal(nrow(res$corrected_dm), sum(feature_subset))
+    result <- adjust_batch_trend_dm(
+        input,
+        annotation,
+        return_fit_df = FALSE,
+        span = 0.37
+    )
+
+    expect_identical(observed$span, 0.37)
+    expect_equal(result, input)
 })
 
 test_that("correct_batch_effects reports sample mismatches and orders survivors", {

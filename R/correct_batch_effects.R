@@ -61,8 +61,10 @@
 #'   warning. Explicit \code{NULL} is an error.
 #' @param fill_value Finite numeric scalar used only with
 #'   \code{fill_the_missing = "fill"}.
-#' @param ... Additional parameters passed to \code{adjust_batch_trend_df()} and
-#'   the chosen \code{fit_func}.
+#' @param ... Additional parameters. The trend-adjustment functions forward
+#'   them to the chosen \code{fit_func}. \code{correct_batch_effects()} forwards
+#'   them to that fitter when continuous correction is enabled and to
+#'   \code{limma::removeBatchEffect()} when that discrete method is selected.
 #'
 #' @return
 #' Returns data in the same format as input (\code{data_matrix} or \code{df_long}).
@@ -406,7 +408,8 @@ adjust_batch_trend_dm <- function(data_matrix, sample_annotation,
         no_fit_imputed = no_fit_imputed,
         qual_col = qual_col,
         qual_value = qual_value,
-        min_measurements = min_measurements
+        min_measurements = min_measurements,
+        ...
     )
 
     corrected_df <- corrected_data
