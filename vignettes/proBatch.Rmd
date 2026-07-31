@@ -692,8 +692,7 @@ embedding_sample_annotation <- example_sample_annotation[
     match(
         colnames(embedding_matrix),
         example_sample_annotation[[sample_id_col]]
-    ),
-    ,
+    ), ,
     drop = FALSE
 ]
 stopifnot(

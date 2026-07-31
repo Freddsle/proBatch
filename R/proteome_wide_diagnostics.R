@@ -2380,25 +2380,32 @@ plot_TSNE.default <- function(data_matrix,
     color_by <- .pb_validate_embedding_column(color_by, "color_by", "Coloring")
     fill_the_missing <- .pb_validate_embedding_missing(fill_the_missing)
     tsne_dims <- .pb_validate_embedding_number(
-        tsne_dims, "tsne_dims", lower = 2, integer = TRUE
+        tsne_dims, "tsne_dims",
+        lower = 2, integer = TRUE
     )
     perplexity <- .pb_validate_embedding_number(
-        perplexity, "perplexity", lower = 0, inclusive = FALSE
+        perplexity, "perplexity",
+        lower = 0, inclusive = FALSE
     )
     initial_dims <- .pb_validate_embedding_number(
-        initial_dims, "initial_dims", lower = 1, integer = TRUE
+        initial_dims, "initial_dims",
+        lower = 1, integer = TRUE
     )
     max_iter <- .pb_validate_embedding_number(
-        max_iter, "max_iter", lower = 1, integer = TRUE
+        max_iter, "max_iter",
+        lower = 1, integer = TRUE
     )
     point_size <- .pb_validate_embedding_number(
-        point_size, "point_size", lower = 0, inclusive = FALSE
+        point_size, "point_size",
+        lower = 0, inclusive = FALSE
     )
     point_alpha <- .pb_validate_embedding_number(
-        point_alpha, "point_alpha", lower = 0, upper = 1
+        point_alpha, "point_alpha",
+        lower = 0, upper = 1
     )
     base_size <- .pb_validate_embedding_number(
-        base_size, "base_size", lower = 0, inclusive = FALSE
+        base_size, "base_size",
+        lower = 0, inclusive = FALSE
     )
     random_seed <- .pb_validate_embedding_seed(random_seed, "random_seed")
     use_plotlyrender <- .pb_validate_embedding_flag(
@@ -2620,13 +2627,16 @@ plot_UMAP.default <- function(data_matrix,
     color_by <- .pb_validate_embedding_column(color_by, "color_by", "Coloring")
     fill_the_missing <- .pb_validate_embedding_missing(fill_the_missing)
     n_neighbors <- .pb_validate_embedding_number(
-        n_neighbors, "n_neighbors", lower = 2, integer = TRUE
+        n_neighbors, "n_neighbors",
+        lower = 2, integer = TRUE
     )
     min_dist <- .pb_validate_embedding_number(
-        min_dist, "min_dist", lower = 0
+        min_dist, "min_dist",
+        lower = 0
     )
     n_components <- .pb_validate_embedding_number(
-        n_components, "n_components", lower = 2, integer = TRUE
+        n_components, "n_components",
+        lower = 2, integer = TRUE
     )
     if (!is.character(metric) ||
         length(metric) != 1L ||
@@ -2636,22 +2646,27 @@ plot_UMAP.default <- function(data_matrix,
     }
     if (!is.null(spread)) {
         spread <- .pb_validate_embedding_number(
-            spread, "spread", lower = 0, inclusive = FALSE
+            spread, "spread",
+            lower = 0, inclusive = FALSE
         )
     }
     if (!is.null(learning_rate)) {
         learning_rate <- .pb_validate_embedding_number(
-            learning_rate, "learning_rate", lower = 0, inclusive = FALSE
+            learning_rate, "learning_rate",
+            lower = 0, inclusive = FALSE
         )
     }
     point_size <- .pb_validate_embedding_number(
-        point_size, "point_size", lower = 0, inclusive = FALSE
+        point_size, "point_size",
+        lower = 0, inclusive = FALSE
     )
     point_alpha <- .pb_validate_embedding_number(
-        point_alpha, "point_alpha", lower = 0, upper = 1
+        point_alpha, "point_alpha",
+        lower = 0, upper = 1
     )
     base_size <- .pb_validate_embedding_number(
-        base_size, "base_size", lower = 0, inclusive = FALSE
+        base_size, "base_size",
+        lower = 0, inclusive = FALSE
     )
     random_state <- .pb_validate_embedding_seed(random_state, "random_state")
     use_plotlyrender <- .pb_validate_embedding_flag(
@@ -3062,8 +3077,10 @@ plot_UMAP <- function(data_matrix, ...) UseMethod("plot_UMAP")
     }
     forbidden <- intersect(
         names(plotly_param),
-        c("data", "x", "y", "type", "mode", "text", "hoverinfo",
-          "color", "colors", "symbol", "symbols", "marker")
+        c(
+            "data", "x", "y", "type", "mode", "text", "hoverinfo",
+            "color", "colors", "symbol", "symbols", "marker"
+        )
     )
     if (length(forbidden)) {
         stop(

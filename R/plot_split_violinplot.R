@@ -11,8 +11,7 @@ GeomSplitViolin <- ggplot2::ggproto("GeomSplitViolin", ggplot2::GeomViolin,
         })
         sort_value <- if (grp %% 2 == 1) newdata$y else -newdata$y
         newdata <- newdata[
-            order(sort_value, seq_len(nrow(newdata)), na.last = TRUE),
-            ,
+            order(sort_value, seq_len(nrow(newdata)), na.last = TRUE), ,
             drop = FALSE
         ]
         newdata <- rbind(newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])

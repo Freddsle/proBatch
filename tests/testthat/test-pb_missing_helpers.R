@@ -567,8 +567,8 @@ test_that("missing filters require unique explicit names for multiple assays", {
     )
 
     for (duplicated_names in list(
-      c("filtered", "filtered"),
-      c("group_filtered", "group_filtered")
+        c("filtered", "filtered"),
+        c("group_filtered", "group_filtered")
     )) {
         expect_error(
             suppressMessages(pb_filterNA(

@@ -175,8 +175,7 @@ test_that("plot_PCA supports marginal density plots", {
         match(
             colnames(matrix_test),
             example_sample_annotation$FullRunName
-        ),
-        ,
+        ), ,
         drop = FALSE
     ]
     annotation_test$Dim1 <- factor(
@@ -232,8 +231,7 @@ pb_test_embedding_fixture <- function(n_features = 12L, n_samples = 8L,
         matrix = values,
         annotation = annotation,
         aligned_annotation = annotation[
-            match(sample_ids, annotation$FullRunName),
-            ,
+            match(sample_ids, annotation$FullRunName), ,
             drop = FALSE
         ]
     )
@@ -386,8 +384,7 @@ test_that("matrix embeddings align annotations and forward backend arguments", {
         match(
             colnames(fixture$matrix),
             reserved_annotation$FullRunName
-        ),
-        ,
+        ), ,
         drop = FALSE
     ]
     reserved_plot <- expect_no_warning(plot_TSNE(

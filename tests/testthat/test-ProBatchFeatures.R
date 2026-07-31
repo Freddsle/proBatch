@@ -955,8 +955,7 @@ test_that("lineage traversal rejects ambiguous and cyclic logs", {
     )
     reversed_ambiguous <- ambiguous
     reversed_ambiguous@oplog <- get_operation_log(ambiguous)[
-        rev(seq_len(nrow(get_operation_log(ambiguous)))),
-        ,
+        rev(seq_len(nrow(get_operation_log(ambiguous)))), ,
         drop = FALSE
     ]
     expect_error(
@@ -1976,14 +1975,15 @@ test_that("provider aliases log canonical identity and replay strictly", {
     alias <- "PBF-fake-provider"
     pb_unregister_steps(provider)
     pb_unregister_steps(alternate_provider)
-    on.exit({
-        pb_unregister_steps(provider)
-        pb_unregister_steps(alternate_provider)
-    }, add = TRUE)
+    on.exit(
+        {
+            pb_unregister_steps(provider)
+            pb_unregister_steps(alternate_provider)
+        },
+        add = TRUE
+    )
 
-    provider_step <- function(
-      data_matrix, sample_annotation, increment = 1
-    ) {
+    provider_step <- function(data_matrix, sample_annotation, increment = 1) {
         expect_identical(
             rownames(sample_annotation),
             colnames(data_matrix)
@@ -2069,8 +2069,7 @@ test_that("provider aliases log canonical identity and replay strictly", {
 
     explicit_annotation <- as.data.frame(colData(object[["feature::raw"]]))
     explicit_annotation <- explicit_annotation[
-        rev(seq_len(nrow(explicit_annotation))),
-        ,
+        rev(seq_len(nrow(explicit_annotation))), ,
         drop = FALSE
     ]
     explicit <- pb_transform(
@@ -2104,9 +2103,7 @@ test_that("structured provider results store artifacts only when materialized", 
         model = list(converged = TRUE),
         scores = c(0.25, 0.75)
     )
-    structured_step <- function(
-      data_matrix, sample_annotation = NULL
-    ) {
+    structured_step <- function(data_matrix, sample_annotation = NULL) {
         pb_step_result(data_matrix * 2, artifacts = artifacts)
     }
     pb_register_step(

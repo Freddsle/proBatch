@@ -565,11 +565,13 @@ get_operation_log <- function(object) {
         duplicate <- length(keep) &&
             any(vapply(
                 keep,
-                function(previous) .pb_log_edge_equal(
-                    log,
-                    previous,
-                    index
-                ),
+                function(previous) {
+                    .pb_log_edge_equal(
+                        log,
+                        previous,
+                        index
+                    )
+                },
                 logical(1)
             ))
         if (!duplicate) {
@@ -624,16 +626,18 @@ get_operation_log <- function(object) {
     .pb_lineage_parent_edge(log, to)
     exact_rows <- target_rows[vapply(
         target_rows,
-        function(index) .pb_log_edge_matches(
-            log = log,
-            index = index,
-            from = from,
-            to = to,
-            step = step,
-            fun = fun,
-            pkg = pkg,
-            params = params
-        ),
+        function(index) {
+            .pb_log_edge_matches(
+                log = log,
+                index = index,
+                from = from,
+                to = to,
+                step = step,
+                fun = fun,
+                pkg = pkg,
+                params = params
+            )
+        },
         logical(1)
     )]
     if (!length(exact_rows)) {
@@ -1232,16 +1236,18 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
         target_rows <- which(as.character(object@oplog$to) == to)
         exact_rows <- target_rows[vapply(
             target_rows,
-            function(index) .pb_log_edge_matches(
-                log = object@oplog,
-                index = index,
-                from = from,
-                to = to,
-                step = step,
-                fun = fun_name,
-                pkg = pkg,
-                params = params
-            ),
+            function(index) {
+                .pb_log_edge_matches(
+                    log = object@oplog,
+                    index = index,
+                    from = from,
+                    to = to,
+                    step = step,
+                    fun = fun_name,
+                    pkg = pkg,
+                    params = params
+                )
+            },
             logical(1)
         )]
 
@@ -1252,16 +1258,18 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
             if (length(parent_rows)) {
                 all_same <- all(vapply(
                     parent_rows,
-                    function(index) .pb_log_edge_matches(
-                        log = object@oplog,
-                        index = index,
-                        from = from,
-                        to = to,
-                        step = step,
-                        fun = fun_name,
-                        pkg = pkg,
-                        params = params
-                    ),
+                    function(index) {
+                        .pb_log_edge_matches(
+                            log = object@oplog,
+                            index = index,
+                            from = from,
+                            to = to,
+                            step = step,
+                            fun = fun_name,
+                            pkg = pkg,
+                            params = params
+                        )
+                    },
                     logical(1)
                 ))
                 if (all_same) {
