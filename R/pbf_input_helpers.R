@@ -3,7 +3,7 @@
                                         inform_if_default = FALSE) {
     stopifnot(is(object, "ProBatchFeatures"))
 
-    if (is.null(pbf_name) || !length(pbf_name)) {
+    if (is.null(pbf_name)) {
         assay_name <- pb_current_assay(object)
         if (isTRUE(inform_if_default)) {
             message("`pbf_name` not provided, using the most recent assay: ", assay_name)
@@ -31,15 +31,21 @@
                                          empty_message = "Provide at least one `pbf_name` to plot.") {
     stopifnot(is(object, "ProBatchFeatures"))
     default <- match.arg(default)
-    using_default <- is.null(pbf_name) || !length(pbf_name)
+    using_default <- is.null(pbf_name)
 
     if (using_default) {
         assays <- if (identical(default, "all")) names(object) else pb_current_assay(object)
     } else {
-        assays <- as.character(pbf_name)
+        if (!is.character(pbf_name) || !length(pbf_name) ||
+            anyNA(pbf_name) || any(!nzchar(pbf_name))) {
+            stop(
+                "`pbf_name` must contain non-missing, non-empty assay names.",
+                call. = FALSE
+            )
+        }
+        assays <- pbf_name
     }
 
-    assays <- assays[!is.na(assays) & nzchar(assays)]
     if (isTRUE(deduplicate)) {
         assays <- unique(assays)
     }

@@ -45,16 +45,30 @@ test_that(".pb_resolve_assay_for_input validates NA assay names", {
     )
 })
 
-test_that(".pb_resolve_assays_for_input supports filtering and deduplication", {
+test_that(".pb_resolve_assays_for_input validates and deduplicates selections", {
     object <- structure(list(assay1 = 1, assay2 = 2), class = "ProBatchFeatures")
 
     expect_equal(
         proBatch:::`.pb_resolve_assays_for_input`(
             object = object,
-            pbf_name = c("assay1", "", NA, "assay1", "assay2"),
+            pbf_name = c("assay1", "assay1", "assay2"),
             deduplicate = TRUE
         ),
         c("assay1", "assay2")
+    )
+    expect_error(
+        proBatch:::`.pb_resolve_assays_for_input`(
+            object = object,
+            pbf_name = c("assay1", "", NA_character_)
+        ),
+        "non-missing, non-empty assay names"
+    )
+    expect_error(
+        proBatch:::`.pb_resolve_assays_for_input`(
+            object = object,
+            pbf_name = character()
+        ),
+        "non-missing, non-empty assay names"
     )
 
     expect_equal(
