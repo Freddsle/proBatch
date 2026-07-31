@@ -252,10 +252,11 @@ test_that("plot_NA_intensity respects a custom color scheme", {
         sample_annotation = toy_sa_nai,
         sample_id_col = "FullRunName",
         color_by = "Condition",
-        color_scheme = c(A = "#111111", B = "#222222")
+        color_scheme = c(A = "#111111", B = "#222222"),
+        spline_df = 0
     )
 
-    built <- ggplot_build(p)
+    expect_no_warning(built <- ggplot_build(p))
     expect_setequal(unique(built$data[[1]]$colour), c("#111111", "#222222"))
 })
 
