@@ -4,16 +4,17 @@ GeomSplitViolin <- ggplot2::ggproto("GeomSplitViolin", ggplot2::GeomViolin,
             (x - xmin), xmaxv = x + violinwidth *
             (xmax - x))
         grp <- data[1, "group"]
-        newdata <- plyr::arrange(transform(data, x = if (grp %% 2 ==
-            1) {
+        newdata <- transform(data, x = if (grp %% 2 == 1) {
             xminv
         } else {
             xmaxv
-        }), if (grp %% 2 == 1) {
-            y
-        } else {
-            -y
         })
+        sort_value <- if (grp %% 2 == 1) newdata$y else -newdata$y
+        newdata <- newdata[
+            order(sort_value, seq_len(nrow(newdata)), na.last = TRUE),
+            ,
+            drop = FALSE
+        ]
         newdata <- rbind(newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])
         newdata[
             c(1, nrow(newdata) - 1, nrow(newdata)),

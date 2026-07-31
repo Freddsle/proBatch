@@ -135,10 +135,31 @@ test_that("correct_with_ComBat_df", {
     )
 
     # Example: using ComBat directly
-    example_matrix <- reshape2::dcast(short_df, peptide_group_label ~ FullRunName, value.var = "Intensity")
-    rownames(example_matrix) <- example_matrix$peptide_group_label
-    example_matrix$peptide_group_label <- NULL
-    combat_example <- ComBat(dat = as.matrix(example_matrix), batch = as.factor(example_sample_annotation$MS_batch))
+    feature_ids <- sort(unique(short_df$peptide_group_label))
+    sample_ids <- sort(unique(short_df$FullRunName))
+    example_matrix <- matrix(
+        NA_real_,
+        nrow = length(feature_ids),
+        ncol = length(sample_ids),
+        dimnames = list(feature_ids, sample_ids)
+    )
+    matrix_indices <- cbind(
+        match(short_df$peptide_group_label, feature_ids),
+        match(short_df$FullRunName, sample_ids)
+    )
+    expect_false(anyDuplicated(data.frame(matrix_indices)) > 0L)
+    example_matrix[matrix_indices] <- short_df$Intensity
+    annotation_indices <- match(
+        colnames(example_matrix),
+        example_sample_annotation$FullRunName
+    )
+    expect_false(anyNA(annotation_indices))
+    combat_example <- ComBat(
+        dat = example_matrix,
+        batch = as.factor(
+            example_sample_annotation$MS_batch[annotation_indices]
+        )
+    )
 
     expect_equal(combat_df[["peptide_group_label"]][1], "10062_NVGVSFYADKPEVTQEQK_3")
     expect_equal(combat_df[1, ][["Intensity"]], combat_example[combat_df[1, ][["peptide_group_label"]], combat_df[1, ][["FullRunName"]]], tolerance = 1)
