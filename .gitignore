@@ -32,3 +32,6 @@ proBatch_*.tar.gz
 # pixi environments
 .pixi/*
 !.pixi/config.toml
+
+# R package build artifacts
+.r-lib/
