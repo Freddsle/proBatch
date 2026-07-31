@@ -74,6 +74,16 @@ PCA, t-SNE, and UMAP MUST share the plotting-family `fill_the_missing` behavior.
 
 ## Provider-neutral extension surface
 
+### Pinned consumer evidence and exclusions
+
+At pinned Bench commit `60ace4572cacac1e5160ff4f147632427d7678c8`, executable namespace-qualified Core calls use `check_sample_consistency()`, `get_operation_log()`, `handle_missing_values()`, `long_to_matrix()`, `matrix_to_long()`, `pb_apply_matrix_method()`, `pb_assay_matrix()`, `pb_current_assay()`, `pb_has_step()`, `pb_list_steps()`, `pb_register_step()`, `pb_step_result()`, `pb_transform()`, and `pb_unregister_steps()`. Bench tests additionally exercise `ProBatchFeatures()` and `pb_eval()`. Bench has no private `proBatch:::` call and no unqualified imported Core symbol.
+
+The existing `ProBatchFeatures()`, sample-consistency, missing-value, conversion, operation-log, current-assay, PCA, and direct exact-name transform, evaluation, and assay-access contracts are sufficient without a new parallel API. Documentation-only references to `correct_batch_effects_df()`, `correct_batch_effects_dm()`, and `correct_with_ComBat_df()` MAY be replaced downstream by the corresponding unified functions with explicit `format`; their retained compatibility wrappers are not a missing extension contract.
+
+The missing surface is limited to provider metadata, aliases, availability and unregister lifecycle on the existing registry; canonical provider resolution, transformation logging, and replay through the existing pipeline APIs; one matrix/long adapter; and one structured-result carrier. Core MUST NOT add Bench adapter definitions, provider gates, provider installation guidance, benchmark configuration or execution, provider-specific result schemas, or provider-engine dependencies as part of this surface.
+
+This baseline MUST NOT add a collision-overwrite escape hatch, broaden identifier policy, change the package or supported R version, or perform unrelated dependency removal. A different registration MUST collide rather than replace an existing canonical name or alias; intentional provider refresh MUST use provider-scoped unregister followed by registration.
+
 ### Step registration lifecycle
 
 `pb_register_step()` MUST accept a canonical name and function and MAY record a provider package, step kind, required packages, aliases, and display label. Omitting provider metadata MUST remain compatible with existing two-argument registrations by inferring a provider without loading another package.
@@ -82,25 +92,25 @@ A registration MUST NOT install, load, or probe a provider's optional engines. E
 
 `pb_unregister_steps(package)` MUST remove all canonical registrations and aliases owned by that provider and MUST be idempotent when none exist. Provider `.onLoad` and `.onUnload` hooks MUST therefore be able to register and clean up one provider without changing Core or another provider's registrations.
 
-`pb_list_steps()` MUST return canonical names by default. With `details = TRUE`, it MUST return, at minimum, canonical `name`, provider `package`, `kind`, `label`, `requires`, `aliases`, and current `available` state. Pattern filtering MUST match canonical names, aliases, and labels. Availability filtering MUST NOT mutate the registry.
+`pb_list_steps()` MUST return canonical names by default. With `details = TRUE`, it MUST return an `S4Vectors::DataFrame` containing, at minimum, canonical `name`, provider `package`, `kind`, `label`, `requires`, `aliases`, and current `available` state. It MUST also retain the legacy `step`, `pkg`, `env`, and `n_formals` detail fields during this baseline. Pattern filtering MUST match canonical names, aliases, and labels. Availability filtering MUST NOT mutate the registry.
 
 `pb_has_step()` MUST resolve canonical names and aliases and MUST optionally distinguish registration from current availability.
 
 A provider registration is available only when its provider is loaded and every declared requirement is available; Core and ordinary user registrations MAY be available without a separate provider namespace. Invocation MUST report an unavailable provider or requirement before running the function.
 
-Invoking an alias through `pb_transform()` or `pb_eval()` MUST record the canonical function name and provider package. Replay MUST resolve that recorded provider and MUST fail with actionable guidance when the provider is no longer registered or available.
+Invoking an alias through `pb_transform()` or `pb_eval()` MUST resolve the canonical function name and provider package before invocation. `pb_transform()` MUST record those canonical identities in its operation log; `pb_eval()` MUST remain non-storing and return only the evaluated data. Replay MUST resolve the provider recorded by `pb_transform()` and MUST fail with actionable guidance when that provider is no longer registered or available.
 
 ### Matrix-method adaptation
 
-`pb_apply_matrix_method()` MUST accept a numeric feature-by-sample matrix or a long data frame. A `ProBatchFeatures` object MUST instead use `pb_transform()` so storage and lineage are preserved.
+`pb_apply_matrix_method()` MUST accept a numeric feature-by-sample matrix or a long data frame plus either a function or registered step identifier, and MUST forward non-adapter arguments to that method. A `ProBatchFeatures` object MUST instead use `pb_transform()` so storage and lineage are preserved.
 
 Long input MUST identify feature, sample, and numeric measure columns. Duplicate feature/sample keys MUST cause an error rather than implicit aggregation.
 
-The adapter MUST construct a numeric feature-by-sample matrix, apply the canonical missing-value policy, align sample annotation by identifier, call the method with the matrix and aligned annotation, and validate the returned data.
+The adapter MUST construct a numeric feature-by-sample matrix, apply the canonical missing-value policy with `error` as its default, align sample annotation by identifier, call the method with the matrix and aligned annotation, and validate the returned data. It MUST reserve its matrix and annotation argument names from duplicate supply through forwarded arguments.
 
 Method output MUST contain only known feature and sample identifiers and MUST preserve input-relative order; an ordered subset is allowed. A non-`keep` result MUST NOT introduce missing values.
 
-For matrix input, the adapter MUST return a matrix. For long input, it MUST restore rows without a join or Cartesian expansion, preserve retained rows' relative order, and support documented minimal, original-column, and non-conflicting annotation-column retention modes.
+For matrix input, the adapter MUST return a matrix. For long input, it MUST restore rows without a join or Cartesian expansion, preserve retained rows' relative order, and support `minimal`, original-column `default`, and non-conflicting annotation-column `all` retention modes.
 
 ### Structured step results
 
