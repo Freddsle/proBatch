@@ -189,6 +189,16 @@ output = { type = "files", pattern = "@/R/proteome_wide_diagnostics.R" }
 
 [[rules]]
 relation = "tested_by"
+input = { type = "one_of", artifacts = ["@/R/plot_helpers.R"] }
+output = { type = "files", pattern = "@/tests/testthat/test-proteome_wide_diagnostics.R" }
+
+[[rules]]
+relation = "tests"
+input = { type = "one_of", artifacts = ["@/tests/testthat/test-proteome_wide_diagnostics.R"] }
+output = { type = "files", pattern = "@/R/plot_helpers.R" }
+
+[[rules]]
+relation = "tested_by"
 input = { type = "one_of", artifacts = ["@/R/pbf_input_helpers.R"] }
 output = { type = "files", pattern = "@/tests/testthat/test-plot_helpers.R" }
 
