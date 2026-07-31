@@ -20,6 +20,8 @@ Renviron.bioc
 ^vignettes/.*(_cache|_files)(/|$)
 ^vignettes/\.Rhistory$
 ^proBatch_.*\.tar\.gz$
+^\.agents$
+^\.codex$
 ^AGENTS\.md$
 ^bin$
 ^depmesh\.toml$
