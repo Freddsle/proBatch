@@ -140,7 +140,11 @@
             paste0(
                 "requires unavailable package",
                 if (length(availability$missing_requirements) ==
-                    1L) "" else "s",
+                    1L) {
+                    ""
+                } else {
+                    "s"
+                },
                 ": ",
                 paste(
                     shQuote(availability$missing_requirements),
@@ -187,13 +191,13 @@
 #' @export
 #' @md
 pb_register_step <- function(
-    name,
-    fun,
-    package = NULL,
-    kind = "transform",
-    requires = character(),
-    aliases = character(),
-    label = name
+  name,
+  fun,
+  package = NULL,
+  kind = "transform",
+  requires = character(),
+  aliases = character(),
+  label = name
 ) {
     name <- .pb_registry_character_scalar(name, "name")
     if (!is.function(fun)) {
@@ -475,9 +479,9 @@ pb_has_step <- function(name, available = FALSE) {
 }
 
 .pb_resolve_step <- function(
-    name,
-    package = NULL,
-    require_available = TRUE
+  name,
+  package = NULL,
+  require_available = TRUE
 ) {
     package <- .pb_expected_step_package(package)
     if (!is.logical(require_available) || length(require_available) != 1L ||
@@ -590,10 +594,10 @@ pb_has_step <- function(name, available = FALSE) {
 }
 
 .pb_builtin_log2_step <- function(
-    m,
-    pseudo = NULL,
-    log_base = 2,
-    offset = NULL
+  m,
+  pseudo = NULL,
+  log_base = 2,
+  offset = NULL
 ) {
     log_transform_dm.default(
         m,
@@ -603,11 +607,11 @@ pb_has_step <- function(name, available = FALSE) {
 }
 
 .pb_builtin_log_step <- function(
-    m,
-    base = exp(1),
-    pseudo = NULL,
-    log_base = NULL,
-    offset = NULL
+  m,
+  base = exp(1),
+  pseudo = NULL,
+  log_base = NULL,
+  offset = NULL
 ) {
     log_transform_dm.default(
         m,
@@ -617,13 +621,13 @@ pb_has_step <- function(name, available = FALSE) {
 }
 
 .pb_builtin_median_norm_step <- function(
-    m,
-    sample_annotation = NULL,
-    sample_id_col = "FullRunName",
-    group_col = NULL,
-    inside_batch = FALSE,
-    fill_the_missing = "keep",
-    fill_value = NULL
+  m,
+  sample_annotation = NULL,
+  sample_id_col = "FullRunName",
+  group_col = NULL,
+  inside_batch = FALSE,
+  fill_the_missing = "keep",
+  fill_value = NULL
 ) {
     missing_policy <- .pb_normalize_missing_policy(
         fill_the_missing,

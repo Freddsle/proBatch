@@ -61,16 +61,16 @@ plot_NA_intensity <- function(x, ...) UseMethod("plot_NA_intensity")
 #' @method plot_NA_intensity default
 #' @export
 plot_NA_intensity.default <- function(
-    x,
-    sample_annotation = NULL,
-    sample_id_col = NULL,
-    color_by = NULL,
-    color_scheme = "brewer",
-    col_vector = NULL,
-    spline_df = 3L,
-    point_alpha = 0.15,
-    point_size = 0.6,
-    ...
+  x,
+  sample_annotation = NULL,
+  sample_id_col = NULL,
+  color_by = NULL,
+  color_scheme = "brewer",
+  col_vector = NULL,
+  spline_df = 3L,
+  point_alpha = 0.15,
+  point_size = 0.6,
+  ...
 ) {
     data_matrix <- x
 
@@ -116,19 +116,19 @@ plot_NA_intensity.default <- function(
 #' @method plot_NA_intensity ProBatchFeatures
 #' @export
 plot_NA_intensity.ProBatchFeatures <- function(
-    x,
-    pbf_name = NULL,
-    color_by = NULL,
-    sample_id_col = NULL,
-    color_scheme = "brewer",
-    col_vector = NULL,
-    spline_df = 3L,
-    point_alpha = 0.15,
-    point_size = 0.6,
-    nrow = NULL,
-    ncol = NULL,
-    facet_scales = "free_y",
-    ...
+  x,
+  pbf_name = NULL,
+  color_by = NULL,
+  sample_id_col = NULL,
+  color_scheme = "brewer",
+  col_vector = NULL,
+  spline_df = 3L,
+  point_alpha = 0.15,
+  point_size = 0.6,
+  nrow = NULL,
+  ncol = NULL,
+  facet_scales = "free_y",
+  ...
 ) {
     object <- x
     assays <- .pb_missing_requested_assays(object, pbf_name)
@@ -187,10 +187,12 @@ plot_NA_intensity.ProBatchFeatures <- function(
 #' @return A data frame with columns `mean_intensity`, `prop_missing`,
 #'   `n_samples`, and optionally `.group`.
 #' @noRd
-.pb_NA_intensity_stats <- function(data_matrix,
-    sample_annotation = NULL,
-    sample_id_col = NULL,
-    color_by = NULL) {
+.pb_NA_intensity_stats <- function(
+  data_matrix,
+  sample_annotation = NULL,
+  sample_id_col = NULL,
+  color_by = NULL
+) {
     if (!is.matrix(data_matrix)) {
         data_matrix <- as.matrix(data_matrix)
     }
@@ -257,15 +259,17 @@ plot_NA_intensity.ProBatchFeatures <- function(
 
 #' Build the ggplot for missingness versus intensity.
 #' @noRd
-.pb_plot_NA_intensity <- function(stats_df,
-    color_by,
-    color_scheme,
-    spline_df = 3L,
-    point_alpha = 0.15,
-    point_size = 0.6,
-    nrow = NULL,
-    ncol = NULL,
-    facet_scales = "free_y") {
+.pb_plot_NA_intensity <- function(
+  stats_df,
+  color_by,
+  color_scheme,
+  spline_df = 3L,
+  point_alpha = 0.15,
+  point_size = 0.6,
+  nrow = NULL,
+  ncol = NULL,
+  facet_scales = "free_y"
+) {
     has_group <- ".group" %in% names(stats_df)
 
     if (has_group) {

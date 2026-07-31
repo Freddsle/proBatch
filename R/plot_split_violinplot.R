@@ -15,7 +15,8 @@ GeomSplitViolin <- ggplot2::ggproto("GeomSplitViolin", ggplot2::GeomViolin,
             drop = FALSE
         ]
         newdata <- rbind(
-            newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])
+            newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ]
+        )
         newdata[
             c(1, nrow(newdata) - 1, nrow(newdata)),
             "x"
@@ -55,10 +56,10 @@ GeomSplitViolin <- ggplot2::ggproto("GeomSplitViolin", ggplot2::GeomViolin,
 )
 
 geom_split_violin <- function(
-    mapping = NULL, data = NULL,
-    stat = "ydensity", position = "identity", ..., draw_quantiles = NULL,
-    trim = TRUE, scale = "area", na.rm = FALSE, show.legend = NA,
-    inherit.aes = TRUE
+  mapping = NULL, data = NULL,
+  stat = "ydensity", position = "identity", ..., draw_quantiles = NULL,
+  trim = TRUE, scale = "area", na.rm = FALSE, show.legend = NA,
+  inherit.aes = TRUE
 ) {
     ggplot2::layer(
         data = data, mapping = mapping, stat = stat, geom = GeomSplitViolin,
@@ -90,14 +91,17 @@ geom_split_violin <- function(
 #' @examples
 #' df <- data.frame(
 #'     x = rep(c("A", "B"), each = 100), y = rnorm(200),
-#'     m = rep(c("C", "D"), 100))
+#'     m = rep(c("C", "D"), 100)
+#' )
 #' plot_split_violin_with_boxplot(
-#'     df, y_col = "y", col_for_color = "m", col_for_box = "x")
+#'     df,
+#'     y_col = "y", col_for_color = "m", col_for_box = "x"
+#' )
 #'
 plot_split_violin_with_boxplot <- function(
-    df, y_col = "y", col_for_color = "m",
-    col_for_box = "x", colors_for_plot = c("#8f1811", "#F8C333"),
-    hlineintercept = NULL, plot_title = NULL, theme = "classic"
+  df, y_col = "y", col_for_color = "m",
+  col_for_box = "x", colors_for_plot = c("#8f1811", "#F8C333"),
+  hlineintercept = NULL, plot_title = NULL, theme = "classic"
 ) {
     p <- ggplot2::ggplot(df, ggplot2::aes(
         x = !!sym(col_for_box), y = !!sym(y_col),
@@ -120,7 +124,8 @@ plot_split_violin_with_boxplot <- function(
 
     if (!is.null(hlineintercept)) {
         p <- p + ggplot2::geom_hline(
-            yintercept = hlineintercept, linetype = "dashed")
+            yintercept = hlineintercept, linetype = "dashed"
+        )
     }
 
     if (theme == "classic") {

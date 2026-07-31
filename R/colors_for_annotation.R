@@ -47,7 +47,8 @@ sample_annotation_to_colors.default <- function(sample_annotation,
     if (missing(sample_annotation)) {
         stop(
             "argument \"sample_annotation\" is missing, with no default",
-            call. = FALSE)
+            call. = FALSE
+        )
     }
     sample_annotation <- as.data.frame(sample_annotation)
 
@@ -134,14 +135,14 @@ sample_annotation_to_colors.default <- function(sample_annotation,
 #' @export
 sample_annotation_to_colors.ProBatchFeatures <-
     function(sample_annotation, ...) {
-    object <- sample_annotation # ProBatchFeatures instance
-    sample_annotation <- .pb_default_sample_annotation(object = object)
-    color_list <- sample_annotation_to_colors.default(
-        sample_annotation = sample_annotation,
-        ...
-    )
-    return(color_list)
-}
+        object <- sample_annotation # ProBatchFeatures instance
+        sample_annotation <- .pb_default_sample_annotation(object = object)
+        color_list <- sample_annotation_to_colors.default(
+            sample_annotation = sample_annotation,
+            ...
+        )
+        return(color_list)
+    }
 
 #' Generic function for sample annotation to colors
 #' @export
@@ -250,12 +251,15 @@ map_factors_to_colors <- function(annotation_df_factors) {
     return(ann_colors_covariate)
 }
 
-map_numbers_to_colors <- function(annotation_df_numbers,
-    palette_type = "brewer") {
+map_numbers_to_colors <- function(
+    annotation_df_numbers,
+    palette_type = "brewer"
+) {
     n_colors_to_create <- ncol(annotation_df_numbers)
     if ((n_colors_to_create > 4 && palette_type == "viridis")) {
         warning(
-            "Too many colors for viridis palette, switching to Brewer palettes")
+            "Too many colors for viridis palette, switching to Brewer palettes"
+        )
         palette_type <- "brewer"
     }
     if ((n_colors_to_create > 18)) {
@@ -297,7 +301,8 @@ generate_colors_for_numeric <- function(palette_type = "brewer",
     palette_type <- match.arg(palette_type, c("brewer", "viridis"))
     if ((palette_type == "viridis") && (i > 4 || i < 1)) {
         warning(
-            "When using viridis palette i must be >= 1 and <= 4. Setting it to 1.")
+            "When using viridis palette i must be >= 1 and <= 4. Setting it to 1."
+        )
         i <- 1
     }
 
@@ -370,7 +375,8 @@ merge_rare_levels <- function(column, rare_thr = 2) {
 #' )
 #' @export
 warn_unmapped_columns <- function(
-    sample_annotation, columns_for_color_mapping, sample_id_col) {
+    sample_annotation, columns_for_color_mapping, sample_id_col
+) {
     undefined_cols <- setdiff(
         names(sample_annotation),
         c(columns_for_color_mapping, sample_id_col)
@@ -435,9 +441,11 @@ handle_factor_numeric_overlap <- function(factor_columns, numeric_columns) {
 #' )
 #' guessed
 #' @export
-guess_factor_columns_if_needed <- function(factor_columns,
+guess_factor_columns_if_needed <- function(
+    factor_columns,
     sample_annotation,
-    guess_factors) {
+    guess_factors
+) {
     numeric_columns <- NULL
     if (is.null(numeric_columns) && guess_factors) {
         warning("numeric columns not specified,
@@ -522,8 +530,10 @@ convert_annotation_classes <- function(df, factor_columns, numeric_columns) {
 #' @return a data frame representation of the input color list
 #' @keywords internal
 #'
-color_list_to_df <- function(color_list, sample_annotation,
-    sample_id_col = "FullRunName") {
+color_list_to_df <- function(
+    color_list, sample_annotation,
+    sample_id_col = "FullRunName"
+) {
     factors_to_map <- intersect(names(sample_annotation), names(color_list))
     n_annotation_rows <-
         if (!is.null(sample_annotation)) nrow(sample_annotation) else 0
@@ -567,8 +577,10 @@ color_list_to_df <- function(color_list, sample_annotation,
     return(color_df)
 }
 
-add_color_scheme_discrete <- function(color_scheme, n_batches, fill_or_color,
-    gg, batch_col) {
+add_color_scheme_discrete <- function(
+    color_scheme, n_batches, fill_or_color,
+    gg, batch_col
+) {
     if (length(color_scheme) == 1 && color_scheme == "brewer") {
         if (n_batches <= 9) {
             if (fill_or_color == "color") {
@@ -618,8 +630,10 @@ add_color_scheme_discrete <- function(color_scheme, n_batches, fill_or_color,
 }
 
 
-color_discrete <- function(color_scheme, batch_col, n_batches, fill_or_color,
-    gg) {
+color_discrete <- function(
+    color_scheme, batch_col, n_batches, fill_or_color,
+    gg
+) {
     if (fill_or_color == "color") {
         gg <- gg + aes(color = as.factor(!!sym(batch_col)))
     } else {
@@ -637,8 +651,10 @@ color_discrete <- function(color_scheme, batch_col, n_batches, fill_or_color,
     return(gg)
 }
 
-color_continuous <- function(color_scheme, batch_col, n_batches,
-    fill_or_color, gg) {
+color_continuous <- function(
+    color_scheme, batch_col, n_batches,
+    fill_or_color, gg
+) {
     batch_vector <- gg$data[[batch_col]]
     lab_datetime <- pretty(batch_vector)
 
@@ -692,12 +708,15 @@ color_continuous <- function(color_scheme, batch_col, n_batches,
     return(gg)
 }
 
-apply_color_strategy <- function(gg, is_factor, is_numeric,
+apply_color_strategy <- function(
+    gg, is_factor, is_numeric,
     color_scheme, batch_col,
-    n_batches, fill_or_color) {
+    n_batches, fill_or_color
+) {
     if (is_factor) {
         gg <- color_discrete(
-            color_scheme, batch_col, n_batches, fill_or_color, gg)
+            color_scheme, batch_col, n_batches, fill_or_color, gg
+        )
     } else if (is_numeric) {
         gg <- color_continuous(
             color_scheme, batch_col, n_batches, fill_or_color, gg

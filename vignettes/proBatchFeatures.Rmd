@@ -346,7 +346,8 @@ visualized as boxplots to identify potential batch-specific shifts:
 plot_boxplot(
     pbf,
     pbf_name = c(
-        "peptide::log2_on_raw", "protein::log2_on_raw"), # plot multiple on one
+        "peptide::log2_on_raw", "protein::log2_on_raw"
+    ), # plot multiple on one
     sample_id_col = "Run",
     order_col = "Run",
     batch_col = "Lab",

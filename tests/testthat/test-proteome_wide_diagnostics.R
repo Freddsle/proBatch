@@ -675,17 +675,20 @@ test_that("explicit embedding seeds reproduce backend coordinates", {
             inherits = FALSE
         )
     }
-    on.exit({
-        if (caller_rng_existed) {
-            assign(".Random.seed", original_caller_rng, envir = .GlobalEnv)
-        } else if (exists(
-            ".Random.seed",
-            envir = .GlobalEnv,
-            inherits = FALSE
-        )) {
-            rm(".Random.seed", envir = .GlobalEnv)
-        }
-    }, add = TRUE)
+    on.exit(
+        {
+            if (caller_rng_existed) {
+                assign(".Random.seed", original_caller_rng, envir = .GlobalEnv)
+            } else if (exists(
+                ".Random.seed",
+                envir = .GlobalEnv,
+                inherits = FALSE
+            )) {
+                rm(".Random.seed", envir = .GlobalEnv)
+            }
+        },
+        add = TRUE
+    )
 
     if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
         rm(".Random.seed", envir = .GlobalEnv)

@@ -36,9 +36,11 @@ find_duplicated_columns <- function(x, ...) {
     list(df = x, col_names = col_names)
 }
 
-.pb_metadata_component_df <- function(object,
-    component = c("colData", "rowData"),
-    assay = NULL) {
+.pb_metadata_component_df <- function(
+  object,
+  component = c("colData", "rowData"),
+  assay = NULL
+) {
     component <- match.arg(component)
     if (component == "colData") {
         target <- SummarizedExperiment::colData(object)
@@ -87,11 +89,11 @@ find_duplicated_columns.default <- function(x, ...) {
 #' @method find_duplicated_columns ProBatchFeatures
 #' @export
 find_duplicated_columns.ProBatchFeatures <- function(
-    x,
-    component = c("colData", "rowData"),
-    assay = NULL,
-    df = NULL,
-    ...
+  x,
+  component = c("colData", "rowData"),
+  assay = NULL,
+  df = NULL,
+  ...
 ) {
     object <- x
 
@@ -159,7 +161,8 @@ metadata_column_summary.default <- function(x, sort = TRUE, ...) {
     }
 
     n_unique <- vapply(
-        x, function(col) length(unique(col[!is.na(col)])), integer(1))
+        x, function(col) length(unique(col[!is.na(col)])), integer(1)
+    )
     n_na <- vapply(x, function(col) sum(is.na(col)), integer(1))
     pct_na <- if (nrow(x)) (n_na / nrow(x)) * 100 else rep(NaN, length(n_na))
 
@@ -173,7 +176,8 @@ metadata_column_summary.default <- function(x, sort = TRUE, ...) {
 
     if (sort) {
         ord <- order(
-            -summary_df$pct_NA, summary_df$n_unique, summary_df$colname)
+            -summary_df$pct_NA, summary_df$n_unique, summary_df$colname
+        )
         summary_df <- summary_df[ord, , drop = FALSE]
         rownames(summary_df) <- NULL
     }
@@ -192,12 +196,12 @@ metadata_column_summary.default <- function(x, sort = TRUE, ...) {
 #' @method metadata_column_summary ProBatchFeatures
 #' @export
 metadata_column_summary.ProBatchFeatures <- function(
-    x,
-    component = c("colData", "rowData"),
-    assay = NULL,
-    df = NULL,
-    sort = TRUE,
-    ...
+  x,
+  component = c("colData", "rowData"),
+  assay = NULL,
+  df = NULL,
+  sort = TRUE,
+  ...
 ) {
     object <- x
 
@@ -273,15 +277,15 @@ filter_metadata_columns <- function(x, ...) {
 #' @method filter_metadata_columns default
 #' @export
 filter_metadata_columns.default <- function(
-    x,
-    duplicate_keep = c("first", "last", "pattern"),
-    duplicate_pattern = NULL,
-    pattern_ignore_case = TRUE,
-    pattern_fixed = FALSE,
-    min_non_na = NULL,
-    max_pct_na = NULL,
-    sort = FALSE,
-    ...
+  x,
+  duplicate_keep = c("first", "last", "pattern"),
+  duplicate_pattern = NULL,
+  pattern_ignore_case = TRUE,
+  pattern_fixed = FALSE,
+  min_non_na = NULL,
+  max_pct_na = NULL,
+  sort = FALSE,
+  ...
 ) {
     info <- .pb_metadata_df(x)
     x <- info$df
@@ -326,7 +330,8 @@ filter_metadata_columns.default <- function(
                         cols[grepl(
                             duplicate_pattern, cols,
                             ignore.case = pattern_ignore_case,
-                            fixed = pattern_fixed)]
+                            fixed = pattern_fixed
+                        )]
                     if (length(hits)) {
                         hits[[1]]
                     } else {
@@ -346,12 +351,14 @@ filter_metadata_columns.default <- function(
         if (!is.null(min_non_na)) {
             dropped_missing <- union(
                 dropped_missing,
-                missing_summary$colname[missing_summary$n_non_na < min_non_na])
+                missing_summary$colname[missing_summary$n_non_na < min_non_na]
+            )
         }
         if (!is.null(max_pct_na)) {
             dropped_missing <- union(
                 dropped_missing,
-                missing_summary$colname[missing_summary$pct_NA >= max_pct_na])
+                missing_summary$colname[missing_summary$pct_NA >= max_pct_na]
+            )
         }
     }
 
@@ -359,17 +366,21 @@ filter_metadata_columns.default <- function(
         message(
             sprintf(
                 "Dropping %s duplicated columns:\n    ",
-                length(dropped_duplicates)),
+                length(dropped_duplicates)
+            ),
             paste(head(dropped_duplicates, 5), collapse = ", "),
-            ", ...")
+            ", ..."
+        )
     }
     if (length(dropped_missing)) {
         message(
             sprintf(
                 "Dropping %s columns based on missingness thresholds:\n    ",
-                length(dropped_missing)),
+                length(dropped_missing)
+            ),
             paste(head(dropped_missing, 5), collapse = ", "),
-            ", ...")
+            ", ..."
+        )
     }
 
     drop_candidates <- union(dropped_duplicates, dropped_missing)
@@ -385,7 +396,8 @@ filter_metadata_columns.default <- function(
     keep_cols <- info$col_names[keep_mask]
     if (!length(keep_cols)) {
         stop(
-            "All columns would be removed; adjust filtering thresholds or duplicate strategy.")
+            "All columns would be removed; adjust filtering thresholds or duplicate strategy."
+        )
     }
 
     filtered <- if (inherits(x, "data.table")) {
@@ -415,12 +427,12 @@ filter_metadata_columns.default <- function(
 #' @method filter_metadata_columns ProBatchFeatures
 #' @export
 filter_metadata_columns.ProBatchFeatures <- function(
-    x,
-    component = c("colData", "rowData"),
-    assay = NULL,
-    df = NULL,
-    inplace = FALSE,
-    ...
+  x,
+  component = c("colData", "rowData"),
+  assay = NULL,
+  df = NULL,
+  inplace = FALSE,
+  ...
 ) {
     object <- x
 
@@ -495,7 +507,9 @@ filter_metadata_columns.ProBatchFeatures <- function(
     normalised <- lapply(x, .pb_normalise_column)
     names(normalised) <- col_names
     signatures <- vapply(
-        normalised, .pb_column_signature, character(1), USE.NAMES = FALSE)
+        normalised, .pb_column_signature, character(1),
+        USE.NAMES = FALSE
+    )
     groups <- split(col_names, signatures)
     Filter(function(cols) length(cols) > 1L, groups)
 }
@@ -507,7 +521,8 @@ filter_metadata_columns.ProBatchFeatures <- function(
     }
     if (!length(chosen_assay)) {
         stop(
-            "Provide an assay name via `assay` or ensure the object stores assays.")
+            "Provide an assay name via `assay` or ensure the object stores assays."
+        )
     }
     if (length(chosen_assay) != 1L) {
         stop("`assay` must be a single assay name.")

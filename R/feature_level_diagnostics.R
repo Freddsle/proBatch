@@ -96,12 +96,14 @@
 NULL
 
 # Convert ProBatchFeatures inputs to long data and default sample metadata.
-.pb_feature_diag_prepare <- function(df_long,
-    sample_annotation,
-    sample_id_col,
-    feature_id_col,
-    measure_col,
-    pbf_name = NULL) {
+.pb_feature_diag_prepare <- function(
+  df_long,
+  sample_annotation,
+  sample_id_col,
+  feature_id_col,
+  measure_col,
+  pbf_name = NULL
+) {
     .pb_prepare_long_inputs(
         df_long = df_long,
         sample_annotation = sample_annotation,
@@ -112,12 +114,16 @@ NULL
     )
 }
 
-.pb_feature_diag_annotation_from_pbf <- function(prep,
-    peptide_annotation,
-    feature_id_col) {
+.pb_feature_diag_annotation_from_pbf <- function(
+  prep,
+  peptide_annotation,
+  feature_id_col
+) {
     if (!is.null(peptide_annotation)) {
         annotation <- as.data.frame(
-            peptide_annotation, stringsAsFactors = FALSE)
+            peptide_annotation,
+            stringsAsFactors = FALSE
+        )
         if (!feature_id_col %in% names(annotation)) {
             rn <- rownames(annotation)
             if (!is.null(rn) && !anyNA(rn) && length(rn) == nrow(annotation)) {
@@ -361,31 +367,33 @@ plot_single_feature <- function(feature_name, df_long,
 #' @export
 #' @rdname feature_level_diagnostics
 #'
-plot_peptides_of_one_protein <- function(protein_name,
-    peptide_annotation = NULL,
-    protein_col = "ProteinName",
-    df_long, sample_annotation = NULL,
-    pbf_name = NULL,
-    sample_id_col = "FullRunName",
-    measure_col = "Intensity",
-    feature_id_col = "peptide_group_label",
-    geom = c("point", "line"),
-    qual_col = NULL, qual_value = NULL,
-    batch_col = "MS_batch",
-    color_by_batch = FALSE,
-    color_scheme = "brewer",
-    order_col = "order",
-    vline_color = "red",
-    facet_col = NULL,
-    filename = NULL,
-    width = NA, height = NA,
-    units = c("cm", "in", "mm"),
-    plot_title = sprintf(
-        "Peptides of %s protein",
-        protein_name
-    ),
-    theme = "classic",
-    base_size = 20) {
+plot_peptides_of_one_protein <- function(
+  protein_name,
+  peptide_annotation = NULL,
+  protein_col = "ProteinName",
+  df_long, sample_annotation = NULL,
+  pbf_name = NULL,
+  sample_id_col = "FullRunName",
+  measure_col = "Intensity",
+  feature_id_col = "peptide_group_label",
+  geom = c("point", "line"),
+  qual_col = NULL, qual_value = NULL,
+  batch_col = "MS_batch",
+  color_by_batch = FALSE,
+  color_scheme = "brewer",
+  order_col = "order",
+  vline_color = "red",
+  facet_col = NULL,
+  filename = NULL,
+  width = NA, height = NA,
+  units = c("cm", "in", "mm"),
+  plot_title = sprintf(
+      "Peptides of %s protein",
+      protein_name
+  ),
+  theme = "classic",
+  base_size = 20
+) {
     prep <- .pb_feature_diag_prepare(
         df_long = df_long,
         sample_annotation = sample_annotation,
@@ -444,24 +452,26 @@ plot_peptides_of_one_protein <- function(protein_name,
 #' @export
 #' @rdname feature_level_diagnostics
 #'
-plot_spike_in <- function(spike_ins = "BOVIN", peptide_annotation = NULL,
-    protein_col = "ProteinName",
-    df_long, sample_annotation = NULL,
-    sample_id_col = "FullRunName",
-    measure_col = "Intensity",
-    feature_id_col = "peptide_group_label",
-    geom = c("point", "line"),
-    qual_col = NULL, qual_value = NULL,
-    batch_col = "MS_batch",
-    color_by_batch = FALSE, color_scheme = "brewer",
-    order_col = "order",
-    vline_color = "red",
-    facet_col = NULL,
-    filename = NULL, width = NA, height = NA,
-    units = c("cm", "in", "mm"),
-    plot_title = sprintf("Spike-in %s plots", spike_ins),
-    theme = "classic",
-    base_size = 20) {
+plot_spike_in <- function(
+  spike_ins = "BOVIN", peptide_annotation = NULL,
+  protein_col = "ProteinName",
+  df_long, sample_annotation = NULL,
+  sample_id_col = "FullRunName",
+  measure_col = "Intensity",
+  feature_id_col = "peptide_group_label",
+  geom = c("point", "line"),
+  qual_col = NULL, qual_value = NULL,
+  batch_col = "MS_batch",
+  color_by_batch = FALSE, color_scheme = "brewer",
+  order_col = "order",
+  vline_color = "red",
+  facet_col = NULL,
+  filename = NULL, width = NA, height = NA,
+  units = c("cm", "in", "mm"),
+  plot_title = sprintf("Spike-in %s plots", spike_ins),
+  theme = "classic",
+  base_size = 20
+) {
     prep <- .pb_feature_diag_prepare(
         df_long = df_long,
         sample_annotation = sample_annotation,
@@ -538,25 +548,27 @@ plot_spike_in <- function(spike_ins = "BOVIN", peptide_annotation = NULL,
 #' @export
 #' @rdname feature_level_diagnostics
 #'
-plot_iRT <- function(irt_pattern = "iRT",
-    peptide_annotation = NULL,
-    protein_col = "ProteinName",
-    df_long, sample_annotation = NULL,
-    sample_id_col = "FullRunName",
-    measure_col = "Intensity",
-    feature_id_col = "peptide_group_label",
-    geom = c("point", "line"),
-    qual_col = NULL, qual_value = NULL,
-    batch_col = "MS_batch",
-    color_by_batch = FALSE, color_scheme = "brewer",
-    order_col = "order",
-    vline_color = "red",
-    facet_col = NULL,
-    filename = NULL, width = NA, height = NA,
-    units = c("cm", "in", "mm"),
-    plot_title = "iRT peptide profile",
-    theme = "classic",
-    base_size = 20) {
+plot_iRT <- function(
+  irt_pattern = "iRT",
+  peptide_annotation = NULL,
+  protein_col = "ProteinName",
+  df_long, sample_annotation = NULL,
+  sample_id_col = "FullRunName",
+  measure_col = "Intensity",
+  feature_id_col = "peptide_group_label",
+  geom = c("point", "line"),
+  qual_col = NULL, qual_value = NULL,
+  batch_col = "MS_batch",
+  color_by_batch = FALSE, color_scheme = "brewer",
+  order_col = "order",
+  vline_color = "red",
+  facet_col = NULL,
+  filename = NULL, width = NA, height = NA,
+  units = c("cm", "in", "mm"),
+  plot_title = "iRT peptide profile",
+  theme = "classic",
+  base_size = 20
+) {
     prep <- .pb_feature_diag_prepare(
         df_long = df_long,
         sample_annotation = sample_annotation,

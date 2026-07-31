@@ -8,7 +8,8 @@
         if (isTRUE(inform_if_default)) {
             message(
                 "`pbf_name` not provided, using the most recent assay: ",
-                assay_name)
+                assay_name
+            )
         }
         return(assay_name)
     }
@@ -25,20 +26,28 @@
     assay_name
 }
 
-.pb_resolve_assays_for_input <- function(object,
-    pbf_name = NULL,
-    default = c("current", "all"),
-    deduplicate = FALSE,
-    inform_if_default = FALSE,
-    empty_message = "Provide at least one `pbf_name` to plot.") {
+.pb_resolve_assays_for_input <- function(
+  object,
+  pbf_name = NULL,
+  default = c("current", "all"),
+  deduplicate = FALSE,
+  inform_if_default = FALSE,
+  empty_message = "Provide at least one `pbf_name` to plot."
+) {
     stopifnot(is(object, "ProBatchFeatures"))
     default <- match.arg(default)
     using_default <- is.null(pbf_name)
 
     if (using_default) {
         assays <-
-            if (identical(default,
-                "all")) names(object) else pb_current_assay(object)
+            if (identical(
+                default,
+                "all"
+            )) {
+                names(object)
+            } else {
+                pb_current_assay(object)
+            }
     } else {
         if (!is.character(pbf_name) || !length(pbf_name) ||
             anyNA(pbf_name) || any(!nzchar(pbf_name))) {
@@ -62,22 +71,26 @@
         if (identical(default, "all")) {
             message(
                 "`pbf_name` not provided, using all assays: ",
-                paste(assays, collapse = ", "))
+                paste(assays, collapse = ", ")
+            )
         } else {
             message(
                 "`pbf_name` not provided, using the most recent assay: ",
-                assays[[1]])
+                assays[[1]]
+            )
         }
     }
 
     assays
 }
 
-.pb_default_sample_annotation <- function(object,
-    sample_annotation = NULL,
-    sample_id_col = "FullRunName",
-    sample_ids = NULL,
-    drop_rownames = FALSE) {
+.pb_default_sample_annotation <- function(
+  object,
+  sample_annotation = NULL,
+  sample_id_col = "FullRunName",
+  sample_ids = NULL,
+  drop_rownames = FALSE
+) {
     if (!is.null(sample_annotation)) {
         annotation <- as.data.frame(sample_annotation, stringsAsFactors = FALSE)
     } else {
@@ -101,16 +114,22 @@
     annotation
 }
 
-.pb_default_feature_annotation <- function(object,
-    assay_name,
-    feature_annotation = NULL,
-    feature_id_col = "peptide_group_label") {
+.pb_default_feature_annotation <- function(
+  object,
+  assay_name,
+  feature_annotation = NULL,
+  feature_id_col = "peptide_group_label"
+) {
     if (!is.null(feature_annotation)) {
         annotation <- as.data.frame(
-            feature_annotation, stringsAsFactors = FALSE)
+            feature_annotation,
+            stringsAsFactors = FALSE
+        )
     } else if (assay_name %in% names(object)) {
         annotation <- as.data.frame(
-            rowData(object[[assay_name]]), stringsAsFactors = FALSE)
+            rowData(object[[assay_name]]),
+            stringsAsFactors = FALSE
+        )
     } else {
         annotation <- NULL
     }

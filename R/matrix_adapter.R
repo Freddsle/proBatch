@@ -55,16 +55,16 @@
 #'     sample_id_col = "sample"
 #' )
 pb_apply_matrix_method <- function(
-    x,
-    fun,
-    sample_annotation = NULL,
-    feature_id_col = "peptide_group_label",
-    sample_id_col = "FullRunName",
-    measure_col = "Intensity",
-    missing = "error",
-    fill_value = NULL,
-    keep_all = "default",
-    ...
+  x,
+  fun,
+  sample_annotation = NULL,
+  feature_id_col = "peptide_group_label",
+  sample_id_col = "FullRunName",
+  measure_col = "Intensity",
+  missing = "error",
+  fill_value = NULL,
+  keep_all = "default",
+  ...
 ) {
     if (inherits(x, "ProBatchFeatures")) {
         stop(
@@ -242,10 +242,10 @@ pb_apply_matrix_method <- function(
 }
 
 .pb_adapter_long_to_matrix <- function(
-    value,
-    feature_id_col,
-    sample_id_col,
-    measure_col
+  value,
+  feature_id_col,
+  sample_id_col,
+  measure_col
 ) {
     if (anyDuplicated(names(value))) {
         stop("Long input must have unique column names.", call. = FALSE)
@@ -310,9 +310,9 @@ pb_apply_matrix_method <- function(
 }
 
 .pb_adapter_align_annotation <- function(
-    sample_annotation,
-    sample_ids,
-    sample_id_col
+  sample_annotation,
+  sample_ids,
+  sample_id_col
 ) {
     if (is.null(sample_annotation)) {
         annotation <- data.frame(
@@ -391,10 +391,10 @@ pb_apply_matrix_method <- function(
 }
 
 .pb_adapter_validate_output <- function(
-    result,
-    input_matrix,
-    missing,
-    allow_unnamed_features = FALSE
+  result,
+  input_matrix,
+  missing,
+  allow_unnamed_features = FALSE
 ) {
     restore_unnamed_features <- isTRUE(allow_unnamed_features) &&
         is.null(rownames(input_matrix)) &&
@@ -461,13 +461,13 @@ pb_apply_matrix_method <- function(
 }
 
 .pb_adapter_restore_long <- function(
-    original,
-    result,
-    annotation,
-    feature_id_col,
-    sample_id_col,
-    measure_col,
-    keep_all
+  original,
+  result,
+  annotation,
+  feature_id_col,
+  sample_id_col,
+  measure_col,
+  keep_all
 ) {
     feature_index <- match(
         as.character(original[[feature_id_col]]),

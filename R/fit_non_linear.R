@@ -20,7 +20,8 @@
 #' # Load necessary datasets
 #' data(
 #'     list = c("example_proteome", "example_sample_annotation"),
-#'     package = "proBatch")
+#'     package = "proBatch"
+#' )
 #'
 #' test_peptide <- example_proteome$peptide_group_label[1]
 #' selected_peptide <- example_proteome$peptide_group_label == test_peptide
@@ -41,14 +42,16 @@
 #'
 #' @export
 #'
-fit_nonlinear <- function(df_feature_batch,
-    measure_col = "Intensity", order_col = "order",
-    feature_id = NULL, batch_id = NULL,
-    fit_func = "loess_regression",
-    optimize_span = FALSE,
-    no_fit_imputed = TRUE, qual_col = "m_score",
-    qual_value = 2,
-    min_measurements = 8, ...) {
+fit_nonlinear <- function(
+  df_feature_batch,
+  measure_col = "Intensity", order_col = "order",
+  feature_id = NULL, batch_id = NULL,
+  fit_func = "loess_regression",
+  optimize_span = FALSE,
+  no_fit_imputed = TRUE, qual_col = "m_score",
+  qual_value = 2,
+  min_measurements = 8, ...
+) {
     df_feature_batch <- as.data.frame(df_feature_batch)
 
     x_all <- df_feature_batch[[order_col]]
@@ -59,17 +62,20 @@ fit_nonlinear <- function(df_feature_batch,
     if (no_fit_imputed) {
         if (!is.null(qual_col) && (qual_col %in% names(df_feature_batch))) {
             warning(
-                "Imputed-value column present; fitting only to measured (non-imputed) values.")
+                "Imputed-value column present; fitting only to measured (non-imputed) values."
+            )
             imputed_values <- df_feature_batch[[qual_col]] == qual_value
             df_feature_batch[[measure_col]][imputed_values] <- NA
         } else {
             stop(
-                "Imputed values should not be used, but no flag column specified.")
+                "Imputed values should not be used, but no flag column specified."
+            )
         }
     } else {
         if (!is.null(qual_col) && (qual_col %in% names(df_feature_batch))) {
             warning(
-                "Imputed-value column present; fitting non-linear curve to imputed values as well. Are you sure?")
+                "Imputed-value column present; fitting non-linear curve to imputed values as well. Are you sure?"
+            )
         }
     }
 
@@ -119,8 +125,10 @@ fit_nonlinear <- function(df_feature_batch,
 }
 
 #' @importFrom stats predict loess
-loess_regression <- function(x_to_fit, y, x_all, y_all,
-    feature_id = NULL, batch_id = NULL, ...) {
+loess_regression <- function(
+  x_to_fit, y, x_all, y_all,
+  feature_id = NULL, batch_id = NULL, ...
+) {
     loess_warning <- new.env(parent = emptyenv())
     fallback_fit <- rep(NA_real_, length(y_all))
     fit_range <- if (length(x_to_fit)) {
@@ -165,11 +173,13 @@ loess_regression <- function(x_to_fit, y, x_all, y_all,
     return(out)
 }
 
-loess_regression_opt <- function(x_to_fit, y, x_all, y_all,
-    feature_id = NULL, batch_id = NULL,
-    kernel = "normal",
-    bws = c(0.01, 0.5, 1, 1.5, 2, 5, 10),
-    ...) {
+loess_regression_opt <- function(
+  x_to_fit, y, x_all, y_all,
+  feature_id = NULL, batch_id = NULL,
+  kernel = "normal",
+  bws = c(0.01, 0.5, 1, 1.5, 2, 5, 10),
+  ...
+) {
     loess_warning <- new.env(parent = emptyenv())
     fallback_fit <- rep(NA_real_, length(y_all))
     fit_range <- if (length(x_to_fit)) {
@@ -183,8 +193,10 @@ loess_regression_opt <- function(x_to_fit, y, x_all, y_all,
                 bw <- optimise_bw(x_to_fit, y, kernel = kernel, bws = bws)
                 degr_freedom <- optimise_df(x_to_fit, bw)
                 fit <- loess(
-                    y ~ x_to_fit, enp.target = degr_freedom, surface = "direct",
-                    ...)
+                    y ~ x_to_fit,
+                    enp.target = degr_freedom, surface = "direct",
+                    ...
+                )
                 pred <- predict(fit, newdata = data.frame(x_to_fit = x_all))
                 if (all(is.finite(fit_range))) {
                     out_of_range <- !is.na(x_all) &

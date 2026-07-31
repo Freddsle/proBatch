@@ -18,7 +18,8 @@
 #' @examples
 #' data(
 #'     list = c("example_proteome", "example_proteome_matrix"),
-#'     package = "proBatch")
+#'     package = "proBatch"
+#' )
 #'
 #' log_transformed_df <- log_transform_df(example_proteome)
 #'
@@ -31,8 +32,10 @@ NULL
 #' Log transformation of the data long format.
 #' @rdname transform_raw_data
 #' @export
-log_transform_df <- function(df_long, log_base = 2, offset = 1,
-    measure_col = "Intensity") {
+log_transform_df <- function(
+  df_long, log_base = 2, offset = 1,
+  measure_col = "Intensity"
+) {
     if (!is.null(log_base)) {
         df_long <- df_long %>%
             mutate(!!(paste("beforeLog", measure_col, sep = "_")) :=
@@ -52,8 +55,10 @@ log_transform_df <- function(df_long, log_base = 2, offset = 1,
 #' @export
 #' @rdname transform_raw_data
 #'
-unlog_df <- function(df_long, log_base = 2, offset = 1,
-    measure_col = "Intensity") {
+unlog_df <- function(
+  df_long, log_base = 2, offset = 1,
+  measure_col = "Intensity"
+) {
     if (!is.null(log_base)) {
         df_long <- df_long %>%
             mutate(!!(paste("beforeUnLog", measure_col, sep = "_")) :=
@@ -90,8 +95,10 @@ log_transform_dm.default <- function(x, log_base = 2, offset = 1, ...) {
     return(data_matrix_log)
 }
 
-.pb_run_single_step_transform <- function(object, pbf_name, step, fun, params,
-    final_name = NULL, dots = list()) {
+.pb_run_single_step_transform <- function(
+  object, pbf_name, step, fun, params,
+  final_name = NULL, dots = list()
+) {
     assay_name <- .pb_resolve_assay_for_input(
         object = object,
         pbf_name = pbf_name,
@@ -113,10 +120,16 @@ log_transform_dm.default <- function(x, log_base = 2, offset = 1, ...) {
 #' @rdname transform_raw_data
 #' @method log_transform_dm ProBatchFeatures
 #' @export
-log_transform_dm.ProBatchFeatures <- function(x, log_base = 2, offset = 1,
-    pbf_name = NULL, final_name = NULL, ...) {
+log_transform_dm.ProBatchFeatures <- function(
+  x, log_base = 2, offset = 1,
+  pbf_name = NULL, final_name = NULL, ...
+) {
     step <- if (
-        !is.null(log_base) && log_base == 2 && offset == 1) "log2" else "log"
+        !is.null(log_base) && log_base == 2 && offset == 1) {
+        "log2"
+    } else {
+        "log"
+    }
     .pb_run_single_step_transform(
         object = x,
         pbf_name = pbf_name,
@@ -150,8 +163,10 @@ unlog_dm.default <- function(x, log_base = 2, offset = 1, ...) {
 #' @rdname transform_raw_data
 #' @method unlog_dm ProBatchFeatures
 #' @export
-unlog_dm.ProBatchFeatures <- function(x, log_base = 2, offset = 1,
-    pbf_name = NULL, final_name = NULL, ...) {
+unlog_dm.ProBatchFeatures <- function(
+  x, log_base = 2, offset = 1,
+  pbf_name = NULL, final_name = NULL, ...
+) {
     .pb_run_single_step_transform(
         object = x,
         pbf_name = pbf_name,

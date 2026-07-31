@@ -1,5 +1,7 @@
-.merge_df_with_annotation <- function(df_long, sample_annotation, sample_id_col,
-    batch_col, order_col, facet_col) {
+.merge_df_with_annotation <- function(
+  df_long, sample_annotation, sample_id_col,
+  batch_col, order_col, facet_col
+) {
     join_cols <- unique(c(sample_id_col, batch_col, order_col, facet_col))
     join_cols <- join_cols[!is.null(join_cols)]
     # keep only columns that are in both data frames
@@ -46,7 +48,8 @@
 #' # Load necessary datasets
 #' data(
 #'     list = c("example_proteome", "example_sample_annotation"),
-#'     package = "proBatch")
+#'     package = "proBatch"
+#' )
 #'
 #' df_test <- check_sample_consistency(
 #'     sample_annotation = example_sample_annotation,
@@ -54,9 +57,11 @@
 #'     batch_col = NULL, order_col = NULL, facet_col = NULL
 #' )
 #'
-check_sample_consistency <- function(sample_annotation, sample_id_col, df_long,
-    batch_col = NULL, order_col = NULL,
-    facet_col = NULL, merge = TRUE) {
+check_sample_consistency <- function(
+  sample_annotation, sample_id_col, df_long,
+  batch_col = NULL, order_col = NULL,
+  facet_col = NULL, merge = TRUE
+) {
     if (is.null(sample_annotation)) {
         warning("Sample annotation is not provided, only the using df_long alone for
             correction/plotting")
@@ -203,7 +208,8 @@ check_sample_consistency <- function(sample_annotation, sample_id_col, df_long,
 #' @examples
 #' data(
 #'     list = c("example_proteome", "example_sample_annotation"),
-#'     package = "proBatch")
+#'     package = "proBatch"
+#' )
 #' sample_order <- define_sample_order(
 #'     order_col = "order",
 #'     sample_annotation = example_sample_annotation,
@@ -296,7 +302,8 @@ define_sample_order <- function(order_col, sample_annotation, facet_col,
             color_by_batch &&
             batch_col %in% names(sample_annotation)) {
             warning(
-                "Order column is identical to sample ID column and coloring by batch is required; ordering by batch")
+                "Order column is identical to sample ID column and coloring by batch is required; ordering by batch"
+            )
             df_long <- df_long %>%
                 arrange(!!sym(batch_col)) %>%
                 mutate(!!sym(order_col) := factor(
@@ -305,14 +312,16 @@ define_sample_order <- function(order_col, sample_annotation, facet_col,
                 ))
         } else if (!is.null(sample_annotation)) {
             warning(
-                "Order column is identical to sample ID column; using annotation order")
+                "Order column is identical to sample ID column; using annotation order"
+            )
             df_long[[order_col]] <- as.integer(match(
                 df_long[[sample_id_col]],
                 sample_annotation[[sample_id_col]]
             ))
         } else {
             warning(
-                "Order column is identical to sample ID column and sample annotation is not defined; using data-frame order")
+                "Order column is identical to sample ID column and sample annotation is not defined; using data-frame order"
+            )
             df_long[[order_col]] <- as.integer(match(
                 df_long[[sample_id_col]],
                 unique(df_long[[sample_id_col]])
@@ -328,7 +337,8 @@ define_sample_order <- function(order_col, sample_annotation, facet_col,
             !is.null(batch_col) &&
             batch_col %in% names(df_long)) {
             warning(
-                "Order column is not defined and coloring by batch is required; ordering the samples by batch")
+                "Order column is not defined and coloring by batch is required; ordering the samples by batch"
+            )
             df_long <- df_long %>%
                 arrange(!!sym(batch_col)) %>%
                 mutate(!!sym(order_col) := factor(
@@ -360,9 +370,11 @@ define_sample_order <- function(order_col, sample_annotation, facet_col,
 }
 
 
-add_vertical_batch_borders <- function(order_col, sample_id_col, batch_col,
-    vline_color, facet_col,
-    sample_annotation, gg) {
+add_vertical_batch_borders <- function(
+  order_col, sample_id_col, batch_col,
+  vline_color, facet_col,
+  sample_annotation, gg
+) {
     if (!is.null(order_col) & (order_col != sample_id_col) &
         !(is.character(sample_annotation[[order_col]]) ||
             is.factor(sample_annotation[[order_col]])) &
@@ -375,7 +387,9 @@ add_vertical_batch_borders <- function(order_col, sample_id_col, batch_col,
             sample_annotation <- sample_annotation %>%
                 select(
                     all_of(
-                        c(order_col, sample_id_col, batch_col, facet_col))) %>%
+                        c(order_col, sample_id_col, batch_col, facet_col)
+                    )
+                ) %>%
                 distinct()
             order_vars <- c(facet_col, order_col)
             batch_vars <- c(facet_col, batch_col)
@@ -444,12 +458,16 @@ save_ggplot <- function(filename, units, width, height, gg) {
         height <- units_adjusted$height
 
         ggsave(
-            filename, plot = gg, width = width, height = height, units = units)
+            filename,
+            plot = gg, width = width, height = height, units = units
+        )
     }
 }
 
-check_feature_id_col_in_dm <- function(feature_id_col, data_matrix,
-    issue_reported = FALSE) {
+check_feature_id_col_in_dm <- function(
+  feature_id_col, data_matrix,
+  issue_reported = FALSE
+) {
     if (!is.null(feature_id_col)) {
         if (feature_id_col %in% colnames(data_matrix)) {
             if (is.data.frame(data_matrix) && !issue_reported) {
@@ -497,14 +515,18 @@ is_batch_factor <- function(batch_vector, color_scheme) {
 #' }
 #' @keywords internal
 #'
-subset_keep_cols <- function(df, keep_all = "default",
-    default_cols = names(df),
-    minimal_cols = default_cols) {
+subset_keep_cols <- function(
+  df, keep_all = "default",
+  default_cols = names(df),
+  minimal_cols = default_cols
+) {
     if (!keep_all %in% c("all", "default", "minimal")) {
         stop(
             sprintf(
                 "Invalid value for keep_all: %s. Must be one of 'all', 'default', or 'minimal'.",
-                keep_all))
+                keep_all
+            )
+        )
     }
 
     default_cols <- intersect(default_cols, names(df))

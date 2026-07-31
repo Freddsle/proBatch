@@ -116,7 +116,8 @@ setValidity("ProBatchFeatures", function(object) {
 
 # Choose materialization backend
 .pb_materialize_matrix <- function(
-    m, backend = c("auto", "memory", "hdf5"), hdf5_path = NULL) {
+  m, backend = c("auto", "memory", "hdf5"), hdf5_path = NULL
+) {
     backend <- match.arg(backend)
     if (backend == "memory") {
         return(m)
@@ -170,8 +171,10 @@ setValidity("ProBatchFeatures", function(object) {
     # factor-with-integer-like-levels vs numeric)
     .vec_equal <- function(a, b) {
         if (inherits(a, "POSIXct") && inherits(b, "POSIXct")) {
-            return(identical(as.numeric(a),
-                as.numeric(b))) # ignore tz/attr differences
+            return(identical(
+                as.numeric(a),
+                as.numeric(b)
+            )) # ignore tz/attr differences
         }
         .factor_numeric_equal <- function(factor_value, numeric_value) {
             factor_missing <- is.na(factor_value)
@@ -218,7 +221,8 @@ setValidity("ProBatchFeatures", function(object) {
 
     bad <- vapply(
         common_cols, function(cc) !.vec_equal(obj_cd[[cc]], se_cd[[cc]]),
-        logical(1))
+        logical(1)
+    )
     if (any(bad)) {
         type_in_object <- vapply(
             obj_cd[common_cols[bad]],
@@ -245,8 +249,14 @@ setValidity("ProBatchFeatures", function(object) {
     # Merge: keep object columns + append any NEW columns from se
     new_cols <- setdiff(colnames(se_cd), colnames(obj_cd))
     merged_cd <-
-        if (length(new_cols)) cbind(obj_cd,
-            se_cd[, new_cols, drop = FALSE]) else obj_cd
+        if (length(new_cols)) {
+            cbind(
+                obj_cd,
+                se_cd[, new_cols, drop = FALSE]
+            )
+        } else {
+            obj_cd
+        }
 
     colData(se) <- merged_cd
     se
@@ -273,13 +283,13 @@ setValidity("ProBatchFeatures", function(object) {
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 ProBatchFeatures <- function(
-    data_matrix,
-    sample_annotation = NULL,
-    sample_id_col = "FullRunName",
-    name = NULL,
-    level = "feature"
-    # TODO: add feature chain_sep - currently always "on" -
-    # and support it everywhere
+  data_matrix,
+  sample_annotation = NULL,
+  sample_id_col = "FullRunName",
+  name = NULL,
+  level = "feature"
+  # TODO: add feature chain_sep - currently always "on" -
+  # and support it everywhere
 ) {
     stopifnot(is.matrix(data_matrix) || is.data.frame(data_matrix))
     data_matrix <- as.matrix(data_matrix)
@@ -304,7 +314,8 @@ ProBatchFeatures <- function(
             if (!sample_id_col %in% colnames(sa)) {
                 stop(
                     "sample_id_col '", sample_id_col,
-                    "' not found in sample_annotation.")
+                    "' not found in sample_annotation."
+                )
             }
             rn <- .pb_validate_identifiers(
                 sa[[sample_id_col]],
@@ -313,7 +324,8 @@ ProBatchFeatures <- function(
             rownames(sa) <- rn
         } else if (is.null(rownames(sa))) {
             stop(
-                "Provide rownames(sample_annotation) or a valid sample_id_col.")
+                "Provide rownames(sample_annotation) or a valid sample_id_col."
+            )
         } else {
             rownames(sa) <- .pb_validate_identifiers(
                 rownames(sa),
@@ -323,7 +335,8 @@ ProBatchFeatures <- function(
         if (!all(colnames(data_matrix) %in% rownames(sa))) {
             miss <- setdiff(colnames(data_matrix), rownames(sa))
             stop(
-                "Sample annotation missing for: ", paste(miss, collapse = ", "))
+                "Sample annotation missing for: ", paste(miss, collapse = ", ")
+            )
         }
         sa <- sa[colnames(data_matrix), , drop = FALSE]
         cd <- DataFrame(sa)
@@ -333,7 +346,8 @@ ProBatchFeatures <- function(
     }
     message(
         "Sample annotation has ", ncol(cd), " columns and ", nrow(cd),
-        " samples.")
+        " samples."
+    )
 
     # Create SummarizedExperiment
     se <- SummarizedExperiment(
@@ -388,13 +402,13 @@ ProBatchFeatures <- function(
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 ProBatchFeatures_from_long <- function(
-    df_long,
-    sample_annotation = NULL,
-    feature_id_col = "peptide_group_label",
-    sample_id_col = "FullRunName",
-    measure_col = "Intensity",
-    level = "feature",
-    name = NULL
+  df_long,
+  sample_annotation = NULL,
+  feature_id_col = "peptide_group_label",
+  sample_id_col = "FullRunName",
+  measure_col = "Intensity",
+  level = "feature",
+  name = NULL
 ) {
     stopifnot(is.data.frame(df_long))
     # 1) long -> wide using existing proBatch utility
@@ -473,10 +487,18 @@ as_ProBatchFeatures <- function(object,
     # Normalize 'level' and 'pipeline' (avoid %||%)
     level <- if (
         is.null(level) || is.na(level) ||
-            !nzchar(level)) "feature" else as.character(level)
+            !nzchar(level)) {
+        "feature"
+    } else {
+        as.character(level)
+    }
     pipeline <- if (
         is.null(pipeline) || is.na(pipeline) ||
-            !nzchar(pipeline)) "raw" else as.character(pipeline)
+            !nzchar(pipeline)) {
+        "raw"
+    } else {
+        as.character(pipeline)
+    }
 
     if (length(qf) == 1L) {
         current_name <- if (length(nm)) nm[[1L]] else ""
@@ -485,7 +507,8 @@ as_ProBatchFeatures <- function(object,
         }
     } else if (length(nm) && any(!grepl("::", nm, fixed = TRUE))) {
         warning(
-            "Some assay names do not follow the '<level>::<pipeline>' convention; consider renaming manually.")
+            "Some assay names do not follow the '<level>::<pipeline>' convention; consider renaming manually."
+        )
     }
 
     empty_log <- DataFrame(
@@ -504,7 +527,7 @@ as_ProBatchFeatures <- function(object,
     if ((
         is.null(rownames(cd)) || anyNA(rownames(cd)) ||
             any(!nzchar(rownames(cd)))) &&
-            length(qf)) {
+        length(qf)) {
         first_se <- qf[[1L]]
         if (is(first_se, "SummarizedExperiment")) {
             cn <- colnames(first_se)
@@ -529,11 +552,13 @@ as_ProBatchFeatures <- function(object,
         if (!final_sample_id %in% colnames(cd)) {
             warning(
                 "sample_id_name '", final_sample_id,
-                "' not found in colData; initializing with rownames.")
+                "' not found in colData; initializing with rownames."
+            )
             if (is.null(rownames(cd))) {
                 stop(
                     "Cannot initialise sample_id_name without colData rownames.",
-                    call. = FALSE)
+                    call. = FALSE
+                )
             }
             cd[[final_sample_id]] <- rownames(cd)
         }
@@ -542,7 +567,8 @@ as_ProBatchFeatures <- function(object,
     } else if (!is.null(rownames(cd))) {
         final_sample_id <- "sample_id"
         message(
-            "sample_id_name not provided; creating 'sample_id' column from colData rownames.")
+            "sample_id_name not provided; creating 'sample_id' column from colData rownames."
+        )
         cd[[final_sample_id]] <- rownames(cd)
     }
 
@@ -572,8 +598,10 @@ as_ProBatchFeatures <- function(object,
     }
 
     out <- S4Vectors::new2(
-        "ProBatchFeatures", qf, chain = character(), oplog = empty_log,
-        check = TRUE)
+        "ProBatchFeatures", qf,
+        chain = character(), oplog = empty_log,
+        check = TRUE
+    )
     methods::validObject(out)
     out
 }
@@ -609,7 +637,7 @@ get_operation_log <- function(object) {
 }
 
 .pb_log_edge_matches <- function(
-    log, index, from, to, step, fun, pkg, params
+  log, index, from, to, step, fun, pkg, params
 ) {
     identical(as.character(log$from[[index]]), as.character(from)) &&
         identical(as.character(log$to[[index]]), as.character(to)) &&
@@ -667,8 +695,8 @@ get_operation_log <- function(object) {
 }
 
 .pb_target_retry_status <- function(
-    object, to, from, data, step, fun, params = list(),
-    pkg = "proBatch", name = "intensity"
+  object, to, from, data, step, fun, params = list(),
+  pkg = "proBatch", name = "intensity"
 ) {
     stopifnot(is(object, "ProBatchFeatures"))
     log <- get_operation_log(object)
@@ -863,8 +891,8 @@ pb_current_assay <- function(object) {
 }
 
 .pb_apply_logged_step <- function(
-    base_matrix, step, fun_name, params, pkg = "proBatch",
-    sample_annotation = NULL
+  base_matrix, step, fun_name, params, pkg = "proBatch",
+  sample_annotation = NULL
 ) {
     step <- as.character(step)
     fun_name <- as.character(fun_name)
@@ -1002,7 +1030,8 @@ pb_current_assay <- function(object) {
 }
 
 .pb_resolve_assay_from_log <- function(
-    object, assay, name = "intensity", visited = character()) {
+  object, assay, name = "intensity", visited = character()
+) {
     if (!length(visited)) {
         .pb_lineage_from_log(object, assay)
     }
@@ -1045,11 +1074,13 @@ pb_current_assay <- function(object) {
     pkg <- entry$pkg[[1]]
 
     base <- .pb_resolve_assay_from_log(
-        object, from_assay, name, c(visited, assay))
+        object, from_assay, name, c(visited, assay)
+    )
     if (is.null(base)) {
         stop(
             "Unable to resolve base assay '", from_assay, "' for '", assay,
-            "'.")
+            "'."
+        )
     }
 
     matrix <- .pb_apply_logged_step(
@@ -1112,8 +1143,8 @@ pb_current_assay <- function(object) {
 }
 
 .pb_enrich_step_params <- function(
-    object = NULL, assay = NULL, fun, params, sample_annotation = NULL,
-    sample_ids = NULL
+  object = NULL, assay = NULL, fun, params, sample_annotation = NULL,
+  sample_ids = NULL
 ) {
     if (is.null(params)) {
         params <- list()
@@ -1121,7 +1152,9 @@ pb_current_assay <- function(object) {
         params <- list(params)
     }
     fun_formals <- tryCatch(
-        names(formals(fun)), error = function(...) character())
+        names(formals(fun)),
+        error = function(...) character()
+    )
     needs_sa <- "sample_annotation" %in% fun_formals
     has_sa <- !is.null(params) && length(params) &&
         "sample_annotation" %in% names(params) &&
@@ -1238,14 +1271,16 @@ pb_assay_matrix <- function(object, assay = NULL, name = "intensity") {
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_as_long <- function(
-    object,
-    feature_id_col = "feature_label",
-    sample_id_col = "FullRunName",
-    measure_col = "Intensity",
-    pbf_name = pb_current_assay(object)
+  object,
+  feature_id_col = "feature_label",
+  sample_id_col = "FullRunName",
+  measure_col = "Intensity",
+  pbf_name = pb_current_assay(object)
 ) {
     payload <- .pb_assay_payload(
-        object, assay_name = pbf_name, name = "intensity")
+        object,
+        assay_name = pbf_name, name = "intensity"
+    )
     if (is.null(payload)) {
         stop("Assay '", pbf_name, "' not found in object or operation log.")
     }
@@ -1272,7 +1307,8 @@ pb_as_long <- function(
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_as_wide <- function(
-    object, assay = pb_current_assay(object), name = "intensity") {
+  object, assay = pb_current_assay(object), name = "intensity"
+) {
     stopifnot(is(object, "ProBatchFeatures"))
     pb_assay_matrix(object, assay = assay, name = name)
 }
@@ -1282,7 +1318,8 @@ pb_as_wide <- function(
 # ---------------------------
 
 .pb_add_log_entry <- function(
-    object, step, fun, from, to, params, pkg = "proBatch") {
+  object, step, fun, from, to, params, pkg = "proBatch"
+) {
     fun_name <- if (is.character(fun)) fun else deparse(substitute(fun))
     from <- as.character(from)
     to <- as.character(to)
@@ -1386,8 +1423,8 @@ pb_as_wide <- function(
 }
 
 .pb_add_assay_with_link <- function(
-    object, se, to, from, step = NULL, fun = NULL, params = list(),
-    pkg = "proBatch", lineage_from = from
+  object, se, to, from, step = NULL, fun = NULL, params = list(),
+  pkg = "proBatch", lineage_from = from
 ) {
     original_names <- names(object)
     stopifnot(
@@ -1401,7 +1438,8 @@ pb_as_wide <- function(
         if (is.null(resolved)) {
             stop(
                 "Assay '", from,
-                "' not found in object or operation log; cannot link.")
+                "' not found in object or operation log; cannot link."
+            )
         }
     }
 
@@ -1485,11 +1523,11 @@ pb_as_wide <- function(
 #' pb_transform() or pb_eval(). Do not export.
 #' @noRd
 .pb_apply_step <- function(
-    object, from, step, fun, params = list(),
-    store = TRUE, new_level = NULL, to_override = NULL,
-    backend = c("auto", "memory", "hdf5"),
-    hdf5_path = NULL, .base_m = NULL,
-    from_data = from
+  object, from, step, fun, params = list(),
+  store = TRUE, new_level = NULL, to_override = NULL,
+  backend = c("auto", "memory", "hdf5"),
+  hdf5_path = NULL, .base_m = NULL,
+  from_data = from
 ) {
     backend <- match.arg(backend)
     stopifnot(is(object, "ProBatchFeatures"))
@@ -1498,8 +1536,13 @@ pb_as_wide <- function(
     base_level <- if (length(from_parts) >= 1) from_parts[1] else "feature"
     new_level <- new_level %||% base_level
     from_pipeline <- if (length(from_parts) >= 2) from_parts[2] else "raw"
-    prev_tokens <- if (identical(from_pipeline, "raw")) "raw" else rev(
-        strsplit(from_pipeline, "_on_", fixed = TRUE)[[1]])
+    prev_tokens <- if (identical(from_pipeline, "raw")) {
+        "raw"
+    } else {
+        rev(
+            strsplit(from_pipeline, "_on_", fixed = TRUE)[[1]]
+        )
+    }
     new_pipeline <- .pb_make_pipeline_name(c(prev_tokens, step))
     to <- to_override %||% .pb_assay_name(new_level, new_pipeline)
 
@@ -1561,7 +1604,9 @@ pb_as_wide <- function(
     saved_assay <- NULL
     if (store) {
         mat <- .pb_materialize_matrix(
-            res_m, backend = backend, hdf5_path = hdf5_path)
+            res_m,
+            backend = backend, hdf5_path = hdf5_path
+        )
         if (identical(retry_status, "stored_idempotent")) {
             saved_assay <- to
         } else {
@@ -1647,25 +1692,28 @@ pb_as_wide <- function(
 #'
 #' @export
 pb_transform <- function(
-    object, from,
-    steps,
-    funs = NULL,
-    params_list = NULL,
-    level = NULL,
-    store_fast_steps = FALSE,
-    fast_steps = c("log", "log2", "medianNorm"),
-    store_intermediate = FALSE,
-    final_name = NULL,
-    backend = c("auto", "memory", "hdf5"),
-    hdf5_path = NULL
+  object, from,
+  steps,
+  funs = NULL,
+  params_list = NULL,
+  level = NULL,
+  store_fast_steps = FALSE,
+  fast_steps = c("log", "log2", "medianNorm"),
+  store_intermediate = FALSE,
+  final_name = NULL,
+  backend = c("auto", "memory", "hdf5"),
+  hdf5_path = NULL
 ) {
     backend <- match.arg(backend)
     stopifnot(is(object, "ProBatchFeatures"))
     if (is.null(funs)) funs <- steps
-    if (is.null(params_list)) params_list <-
-        replicate(length(steps), list(), simplify = FALSE)
+    if (is.null(params_list)) {
+        params_list <-
+            replicate(length(steps), list(), simplify = FALSE)
+    }
     stopifnot(
-        length(steps) == length(funs), length(steps) == length(params_list))
+        length(steps) == length(funs), length(steps) == length(params_list)
+    )
     if (!is.null(final_name)) {
         .pb_assay_parts(final_name, strict = TRUE)
         if (identical(final_name, from)) {
@@ -1740,17 +1788,20 @@ pb_transform <- function(
 #'
 #' @export
 pb_eval <- function(
-    object, from,
-    steps,
-    funs = NULL,
-    params_list = NULL
+  object, from,
+  steps,
+  funs = NULL,
+  params_list = NULL
 ) {
     stopifnot(is(object, "ProBatchFeatures"))
     if (is.null(funs)) funs <- steps
-    if (is.null(params_list)) params_list <-
-        replicate(length(steps), list(), simplify = FALSE)
+    if (is.null(params_list)) {
+        params_list <-
+            replicate(length(steps), list(), simplify = FALSE)
+    }
     stopifnot(
-        length(steps) == length(funs), length(steps) == length(params_list))
+        length(steps) == length(funs), length(steps) == length(params_list)
+    )
 
     m <- pb_assay_matrix(object, from)
     for (k in seq_along(steps)) {
@@ -1809,11 +1860,11 @@ pb_eval <- function(
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_aggregate_level <- function(
-    object, from,
-    feature_var,
-    fun = colMedians,
-    new_level = "protein",
-    new_pipeline = NULL
+  object, from,
+  feature_var,
+  fun = colMedians,
+  new_level = "protein",
+  new_pipeline = NULL
 ) {
     stopifnot(is(object, "ProBatchFeatures"))
     # Let QFeatures handle both aggregation and linkage book-keeping
@@ -1868,20 +1919,22 @@ pb_aggregate_level <- function(
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_add_level <- function(
-    object,
-    from, # e.g. "peptide::raw"
-    new_matrix, # numeric matrix (features x samples)
-    to_level, # e.g. "protein"
-    to_pipeline = NULL, # default = carry pipeline from 'from'
-    name = NULL, # override final assay name if desired
-    mapping_df = NULL, # data.frame with mapping
-    from_id = NULL, # column in mapping_df for 'from' IDs (e.g., "Precursor.Id")
-    to_id = NULL, # column in mapping_df for 'to' IDs   (e.g., "Protein.Ids")
-    map_strategy = c("as_is", "first",
-        "longest"), # how to resolve multiple to-ids per from-id
-    link_var = "ProteinID", # rowData variable name to use for linking
-    backend = c("auto", "memory", "hdf5"),
-    hdf5_path = NULL
+  object,
+  from, # e.g. "peptide::raw"
+  new_matrix, # numeric matrix (features x samples)
+  to_level, # e.g. "protein"
+  to_pipeline = NULL, # default = carry pipeline from 'from'
+  name = NULL, # override final assay name if desired
+  mapping_df = NULL, # data.frame with mapping
+  from_id = NULL, # column in mapping_df for 'from' IDs (e.g., "Precursor.Id")
+  to_id = NULL, # column in mapping_df for 'to' IDs   (e.g., "Protein.Ids")
+  map_strategy = c(
+      "as_is", "first",
+      "longest"
+  ), # how to resolve multiple to-ids per from-id
+  link_var = "ProteinID", # rowData variable name to use for linking
+  backend = c("auto", "memory", "hdf5"),
+  hdf5_path = NULL
 ) {
     stopifnot(is(object, "ProBatchFeatures"))
     backend <- match.arg(backend)
@@ -2063,7 +2116,8 @@ pb_add_level <- function(
     )
     if (identical(retry_status, "stored_idempotent")) {
         message(
-            "Assay '", to, "' is an exact existing retry; skipping addition.")
+            "Assay '", to, "' is an exact existing retry; skipping addition."
+        )
         return(object)
     }
 
@@ -2073,8 +2127,9 @@ pb_add_level <- function(
     }
     from_cd <- from_cd[colnames(m), , drop = FALSE]
     se_new <- SummarizedExperiment(
-        assays  = list(
-            intensity = .pb_materialize_matrix(m, backend, hdf5_path)),
+        assays = list(
+            intensity = .pb_materialize_matrix(m, backend, hdf5_path)
+        ),
         colData = from_cd
     )
 
@@ -2133,7 +2188,8 @@ pb_add_level <- function(
         uniq <- unique(cands_raw)
         if (length(uniq) != 1L || !.has_child(uniq)) {
             stop(
-                "map_strategy='as_is' but multiple or zero targets for a parent feature.")
+                "map_strategy='as_is' but multiple or zero targets for a parent feature."
+            )
         }
         return(uniq[[1]])
     }
@@ -2244,10 +2300,12 @@ setMethod(
 #' )
 #' @export
 #' @md
-pb_subset_samples <- function(object,
-    sample_id_col = "FullRunName",
-    subset_by = sample_id_col,
-    subset_values) {
+pb_subset_samples <- function(
+  object,
+  sample_id_col = "FullRunName",
+  subset_by = sample_id_col,
+  subset_values
+) {
     if (!is(object, "ProBatchFeatures")) {
         stop("`object` must be a `ProBatchFeatures` object.", call. = FALSE)
     }
@@ -2302,7 +2360,8 @@ setMethod("show", "ProBatchFeatures", function(object) {
         cat("  Processing chain:\n")
         ch_lines <- paste(
             utils::capture.output(print(noquote(object@chain))),
-            collapse = "; ")
+            collapse = "; "
+        )
         cat("  ", ch_lines, "\n", sep = "")
     }
     if (nrow(log)) {
@@ -2315,11 +2374,13 @@ setMethod("show", "ProBatchFeatures", function(object) {
             parts <- strsplit(x, "::", fixed = TRUE)
             lvl <- vapply(
                 parts, function(p) if (length(p) >= 2) p[1] else NA_character_,
-                character(1))
+                character(1)
+            )
             pipe <- vapply(
                 parts,
                 function(p) if (length(p) >= 2 && nzchar(p[2])) p[2] else p[1],
-                character(1))
+                character(1)
+            )
             list(level = lvl, pipeline = pipe)
         }
         from_lp <- .split_level_pipe(log$from)
@@ -2337,10 +2398,12 @@ setMethod("show", "ProBatchFeatures", function(object) {
                 chains[order(vapply(chains, n_tokens, integer(1)), chains)]
             if (length(chains)) {
                 cat("   - ", lvl, ": ", paste(chains, collapse = ", "), "\n",
-                    sep = "")
+                    sep = ""
+                )
             }
         }
         cat("  Steps logged: ", nrow(log), " (see get_operation_log())\n",
-            sep = "")
+            sep = ""
+        )
     }
 })

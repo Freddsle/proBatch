@@ -1,7 +1,7 @@
 .pb_normalize_missing_policy <- function(
-    missing,
-    fill_value = NULL,
-    argument = "missing"
+  missing,
+  fill_value = NULL,
+  argument = "missing"
 ) {
     choices <- c("error", "keep", "drop_features", "fill")
     legacy <- NULL
@@ -112,10 +112,10 @@
 #'     fill_value = 0
 #' )
 handle_missing_values <- function(
-    data_matrix,
-    warning_message,
-    fill_the_missing = "error",
-    fill_value = NULL
+  data_matrix,
+  warning_message,
+  fill_the_missing = "error",
+  fill_value = NULL
 ) {
     if (!is.matrix(data_matrix) || !is.numeric(data_matrix)) {
         stop("`data_matrix` must be a numeric matrix.", call. = FALSE)

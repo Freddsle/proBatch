@@ -27,11 +27,13 @@
 #'
 #' @export
 #'
-dates_to_posix <- function(sample_annotation,
-    time_column = c("RunDate", "RunTime"),
-    new_time_column = "DateTime",
-    dateTimeFormat = c("%b_%d", "%H:%M:%S"),
-    tz = "GMT", locale = "en_US.UTF-8") {
+dates_to_posix <- function(
+  sample_annotation,
+  time_column = c("RunDate", "RunTime"),
+  new_time_column = "DateTime",
+  dateTimeFormat = c("%b_%d", "%H:%M:%S"),
+  tz = "GMT", locale = "en_US.UTF-8"
+) {
     old_locale <- Sys.getlocale("LC_TIME")
     on.exit(Sys.setlocale("LC_TIME", old_locale), add = TRUE)
     Sys.setlocale("LC_TIME", locale)
@@ -91,12 +93,14 @@ dates_to_posix <- function(sample_annotation,
 #' @export
 #'
 #' @name date_to_sample_order
-date_to_sample_order <- function(sample_annotation,
-    time_column = c("RunDate", "RunTime"),
-    new_time_column = "DateTime",
-    dateTimeFormat = c("%b_%d", "%H:%M:%S"),
-    new_order_col = "order",
-    instrument_col = "instrument") {
+date_to_sample_order <- function(
+  sample_annotation,
+  time_column = c("RunDate", "RunTime"),
+  new_time_column = "DateTime",
+  dateTimeFormat = c("%b_%d", "%H:%M:%S"),
+  new_order_col = "order",
+  instrument_col = "instrument"
+) {
     sample_annotation <- dates_to_posix(
         sample_annotation = sample_annotation,
         time_column = time_column,

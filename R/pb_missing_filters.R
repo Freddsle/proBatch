@@ -90,7 +90,8 @@
 NULL
 
 .pb_apply_missing_qf_step <- function(
-    object, assays, fun, step, params, fun_name = step) {
+  object, assays, fun, step, params, fun_name = step
+) {
     for (nm in assays) {
         prior <- object
         object <- do.call(fun, c(list(object, i = nm), params))
@@ -171,13 +172,13 @@ pb_nNA <- function(object, pbf_name = names(object), ...) {
 }
 
 .pb_groupfilterNA_matrix <- function(
-    data_matrix,
-    sample_annotation,
-    group_cols,
-    min_valid = 2L,
-    pNA = NULL,
-    mask_failing = TRUE,
-    ...
+  data_matrix,
+  sample_annotation,
+  group_cols,
+  min_valid = 2L,
+  pNA = NULL,
+  mask_failing = TRUE,
+  ...
 ) {
     sample_annotation <- as.data.frame(sample_annotation)
     temporary <- suppressMessages(ProBatchFeatures(
@@ -205,11 +206,11 @@ pb_nNA <- function(object, pbf_name = names(object), ...) {
 #' @rdname pb_missing_helpers
 #' @export
 pb_filterNA <- function(
-    object,
-    pbf_name = NULL,
-    inplace = FALSE,
-    final_name = NULL,
-    ...
+  object,
+  pbf_name = NULL,
+  inplace = FALSE,
+  final_name = NULL,
+  ...
 ) {
     stopifnot(is(object, "ProBatchFeatures"))
     stopifnot(is.logical(inplace), length(inplace) == 1L)
@@ -291,15 +292,15 @@ pb_filterNA <- function(
 #' @rdname pb_missing_helpers
 #' @export
 pb_groupfilterNA <- function(
-    object,
-    pbf_name = NULL,
-    group_cols,
-    min_valid = 2L,
-    pNA = NULL,
-    inplace = FALSE,
-    final_name = NULL,
-    mask_failing = TRUE,
-    ...
+  object,
+  pbf_name = NULL,
+  group_cols,
+  min_valid = 2L,
+  pNA = NULL,
+  inplace = FALSE,
+  final_name = NULL,
+  mask_failing = TRUE,
+  ...
 ) {
     stopifnot(is(object, "ProBatchFeatures"))
     stopifnot(
@@ -314,7 +315,8 @@ pb_groupfilterNA <- function(
     if (anyNA(group_cols) || !all(nzchar(group_cols))) {
         stop(
             "`group_cols` must contain non-missing, non-empty column names.",
-            call. = FALSE)
+            call. = FALSE
+        )
     }
 
     if (!is.null(min_valid)) {
@@ -322,17 +324,19 @@ pb_groupfilterNA <- function(
         if (length(min_valid) != 1L || is.na(min_valid) || min_valid < 0L) {
             stop(
                 "`min_valid` must be a single non-negative integer.",
-                call. = FALSE)
+                call. = FALSE
+            )
         }
     }
 
     if (!is.null(pNA)) {
         if (!is.numeric(pNA) || length(pNA) != 1L || is.na(pNA) || pNA < 0 ||
             pNA >
-            1) {
+                1) {
             stop(
                 "`pNA` must be a single numeric value between 0 and 1.",
-                call. = FALSE)
+                call. = FALSE
+            )
         }
         pNA <- as.numeric(pNA)
     }
@@ -340,7 +344,8 @@ pb_groupfilterNA <- function(
     if (is.null(min_valid) && is.null(pNA)) {
         stop(
             "Provide at least one of `min_valid` or `pNA` to perform filtering.",
-            call. = FALSE)
+            call. = FALSE
+        )
     }
 
     assays <- .pb_require_materialised_assays(
@@ -355,7 +360,9 @@ pb_groupfilterNA <- function(
         )
     )
     params <- .pb_collect_missing_params(
-        list(...), forbidden = c("i", "name", "min", "pNA"))
+        list(...),
+        forbidden = c("i", "name", "min", "pNA")
+    )
 
     if (!inplace) {
         final_name <- .pb_prepare_final_names(
@@ -389,7 +396,8 @@ pb_groupfilterNA <- function(
 
         group_df <- cd_df[, group_cols, drop = FALSE]
         has_na_group <- vapply(
-            group_df, function(col) any(is.na(col)), logical(1L))
+            group_df, function(col) any(is.na(col)), logical(1L)
+        )
         if (any(has_na_group)) {
             bad_cols <- paste(group_cols[has_na_group], collapse = ", ")
             stop(
@@ -401,7 +409,9 @@ pb_groupfilterNA <- function(
 
         group_factor <- interaction(group_df, drop = TRUE, lex.order = TRUE)
         split_indices <- split(
-            seq_along(group_factor), group_factor, drop = TRUE)
+            seq_along(group_factor), group_factor,
+            drop = TRUE
+        )
 
         feature_ids <- rownames(current)
         if (is.null(feature_ids)) {
