@@ -184,10 +184,7 @@ assert_exact tests @/tests/testthat/test-pb_missing_helpers.R \
 
 assert_exact tested_by @/R/ProBatchFeatures.R \
     @/tests/testthat/test-ProBatchFeatures.R \
-    @/tests/testthat/test-ProBatchFeatures_links.R \
     @/tests/testthat/test-batch_effect_steps.R
-assert_exact tests @/tests/testthat/test-ProBatchFeatures_links.R \
-    @/R/ProBatchFeatures.R
 
 assert_exact tested_by @/R/zzz_helpers.R \
     @/tests/testthat/test-batch_effect_steps.R

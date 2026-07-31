@@ -173,16 +173,6 @@ output = { type = "files", pattern = "@/R/pb_missing_filters.R" }
 
 [[rules]]
 relation = "tested_by"
-input = { type = "one_of", artifacts = ["@/R/ProBatchFeatures.R"] }
-output = { type = "files", pattern = "@/tests/testthat/test-ProBatchFeatures_links.R" }
-
-[[rules]]
-relation = "tests"
-input = { type = "one_of", artifacts = ["@/tests/testthat/test-ProBatchFeatures_links.R"] }
-output = { type = "files", pattern = "@/R/ProBatchFeatures.R" }
-
-[[rules]]
-relation = "tested_by"
 input = { type = "one_of", artifacts = ["@/R/proteome_wide_diagnostics.R"] }
 output = { type = "files", pattern = "@/tests/testthat/test-explained_variance_plots.R" }
 
