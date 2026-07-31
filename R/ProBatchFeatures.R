@@ -535,11 +535,76 @@ get_operation_log <- function(object) {
     object@oplog
 }
 
+.pb_log_edge_equal <- function(log, left, right) {
+    stable_fields <- c("from", "to", "step", "fun", "pkg")
+    same_fields <- vapply(stable_fields, function(field) {
+        identical(
+            as.character(log[[field]][[left]]),
+            as.character(log[[field]][[right]])
+        )
+    }, logical(1))
+    all(same_fields) &&
+        identical(log$params[[left]], log$params[[right]])
+}
+
+.pb_log_edge_matches <- function(
+  log, index, from, to, step, fun, pkg, params
+) {
+    identical(as.character(log$from[[index]]), as.character(from)) &&
+        identical(as.character(log$to[[index]]), as.character(to)) &&
+        identical(as.character(log$step[[index]]), as.character(step)) &&
+        identical(as.character(log$fun[[index]]), as.character(fun)) &&
+        identical(as.character(log$pkg[[index]]), as.character(pkg)) &&
+        identical(log$params[[index]], params)
+}
+
+.pb_unique_log_edges <- function(log, indices) {
+    keep <- integer()
+    for (index in indices) {
+        duplicate <- length(keep) &&
+            any(vapply(
+                keep,
+                function(previous) .pb_log_edge_equal(
+                    log,
+                    previous,
+                    index
+                ),
+                logical(1)
+            ))
+        if (!duplicate) {
+            keep <- c(keep, index)
+        }
+    }
+    keep
+}
+
+.pb_lineage_parent_edge <- function(log, assay) {
+    matches <- which(
+        as.character(log$to) == assay &
+            as.character(log$from) != assay
+    )
+    if (!length(matches)) {
+        return(integer())
+    }
+
+    origins <- .pb_unique_log_edges(log, matches)
+    if (length(origins) > 1L) {
+        stop(
+            "Ambiguous operation-log lineage for result '",
+            assay, "': multiple non-self origins are recorded.",
+            call. = FALSE
+        )
+    }
+
+    tail(matches, 1L)
+}
+
 .pb_lineage_from_log <- function(object, assay) {
     log <- get_operation_log(object)
     node <- as.character(assay)
     visited <- character()
     reverse_steps <- character()
+    lineage_nodes <- node
 
     while (nrow(log)) {
         if (node %in% visited) {
@@ -556,6 +621,7 @@ get_operation_log <- function(object) {
         }
 
         self_matches <- matches[as.character(log$from[matches]) == node]
+        self_matches <- .pb_unique_log_edges(log, self_matches)
         if (length(self_matches)) {
             reverse_steps <- c(
                 reverse_steps,
@@ -563,33 +629,19 @@ get_operation_log <- function(object) {
             )
         }
 
-        parent_matches <- setdiff(matches, self_matches)
-        if (!length(parent_matches)) {
+        parent <- .pb_lineage_parent_edge(log, node)
+        if (!length(parent)) {
             break
         }
-        first <- parent_matches[[1L]]
-        identical_edges <- vapply(parent_matches, function(index) {
-            identical(as.character(log$from[[index]]), as.character(log$from[[first]])) &&
-                identical(as.character(log$step[[index]]), as.character(log$step[[first]])) &&
-                identical(as.character(log$fun[[index]]), as.character(log$fun[[first]])) &&
-                identical(as.character(log$pkg[[index]]), as.character(log$pkg[[first]])) &&
-                identical(log$params[[index]], log$params[[first]])
-        }, logical(1))
-        if (!all(identical_edges)) {
-            stop(
-                "Conflicting operation-log results target assay '",
-                node, "'.",
-                call. = FALSE
-            )
-        }
-        index <- parent_matches[[length(parent_matches)]]
-        reverse_steps <- c(reverse_steps, as.character(log$step[[index]]))
-        node <- as.character(log$from[[index]])
+        reverse_steps <- c(reverse_steps, as.character(log$step[[parent]]))
+        node <- as.character(log$from[[parent]])
+        lineage_nodes <- c(lineage_nodes, node)
     }
 
     list(
         steps = rev(reverse_steps),
-        root = node
+        root = node,
+        nodes = lineage_nodes
     )
 }
 
@@ -605,6 +657,7 @@ get_operation_log <- function(object) {
 }
 
 #' Retrieve operation chain as vector or single string "combat_on_mediannorm_on_log"
+#' @md
 #' @param object A `ProBatchFeatures` object.
 #' @param as_string logical(1). if `TRUE` returns the chain as a single string
 #'   of the form `"combat_on_mediannorm_on_log"`.
@@ -612,11 +665,19 @@ get_operation_log <- function(object) {
 #'   lineage from operation-log edges. When `NULL`, return the legacy global
 #'   `chain` slot.
 #' @return Character vector or string describing the processing chain.
+#' @details Logged lineage is validated before a chain is returned. Ambiguous
+#'   or cyclic lineage causes an error, including when `assay = NULL`.
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 get_chain <- function(object, as_string = FALSE, assay = NULL) {
     stopifnot(is(object, "ProBatchFeatures"))
     ch <- if (is.null(assay)) {
+        if (nrow(object@oplog)) {
+            logged_targets <- unique(as.character(object@oplog$to))
+            for (target in logged_targets) {
+                .pb_lineage_from_log(object, target)
+            }
+        }
         object@chain
     } else {
         assay <- as.character(assay)
@@ -645,9 +706,11 @@ get_chain <- function(object, as_string = FALSE, assay = NULL) {
 }
 
 #' Pretty pipeline name derived from the assay
+#' @md
 #' @param object ProBatchFeatures
 #' @param assay character(1) assay name; defaults to current assay
 #' @return character(1) pipeline string like "combat_on_medianNorm_on_log2" or "raw"
+#' @details The operation-log lineage must be unambiguous and acyclic.
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_pipeline_name <- function(object, assay = pb_current_assay(object)) {
@@ -711,16 +774,20 @@ pb_current_assay <- function(object) {
 }
 
 .pb_resolve_assay_from_log <- function(object, assay, name = "intensity", visited = character()) {
+    if (!length(visited)) {
+        .pb_lineage_from_log(object, assay)
+    }
+
+    if (assay %in% visited) {
+        stop("Detected cyclic dependency while resolving assay '", assay, "'.")
+    }
+
     if (assay %in% names(object)) {
         se <- object[[assay]]
         return(list(
             matrix = assay(se, i = name),
             colData = colData(se)
         ))
-    }
-
-    if (assay %in% visited) {
-        stop("Detected cyclic dependency while resolving assay '", assay, "'.")
     }
 
     log <- get_operation_log(object)
@@ -733,7 +800,14 @@ pb_current_assay <- function(object) {
         return(NULL)
     }
 
-    idx <- matches[length(matches)]
+    idx <- .pb_lineage_parent_edge(log, assay)
+    if (!length(idx)) {
+        stop(
+            "Unable to resolve virtual assay '", assay,
+            "' from self-referential operation-log entries.",
+            call. = FALSE
+        )
+    }
     entry <- log[idx, , drop = FALSE]
     from_assay <- as.character(entry$from[[1]])
     params <- entry$params[[1]] %||% list()
@@ -746,6 +820,17 @@ pb_current_assay <- function(object) {
     }
 
     matrix <- .pb_apply_logged_step(base$matrix, step, fun_name, params)
+    self_matches <- matches[as.character(log$from[matches]) == assay]
+    self_matches <- .pb_unique_log_edges(log, self_matches)
+    for (self_index in self_matches) {
+        self_entry <- log[self_index, , drop = FALSE]
+        matrix <- .pb_apply_logged_step(
+            matrix,
+            self_entry$step[[1]],
+            self_entry$fun[[1]],
+            self_entry$params[[1]] %||% list()
+        )
+    }
     list(matrix = matrix, colData = base$colData)
 }
 
@@ -881,23 +966,94 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 
 .pb_add_log_entry <- function(object, step, fun, from, to, params, pkg = "proBatch") {
     fun_name <- if (is.character(fun)) fun else deparse(substitute(fun))
+    from <- as.character(from)
+    to <- as.character(to)
+    pkg <- as.character(pkg)
+    self_edge <- identical(from, to)
+    if (self_edge) {
+        target_has_origin <- to %in% names(object) ||
+            (nrow(object@oplog) &&
+                any(
+                    as.character(object@oplog$to) == to &
+                        as.character(object@oplog$from) != to
+                ))
+        if (!target_has_origin) {
+            stop(
+                "A self operation-log edge requires an existing stored ",
+                "or virtual result target '", to, "'.",
+                call. = FALSE
+            )
+        }
+    }
 
     if (nrow(object@oplog)) {
-        dup <- object@oplog$step == step &
-            object@oplog$fun == fun_name &
-            object@oplog$from == as.character(from) &
-            object@oplog$to == as.character(to) &
-            vapply(object@oplog$params, function(p) identical(p, params), logical(1))
-        if (any(dup)) {
-            return(object)
+        target_rows <- which(as.character(object@oplog$to) == to)
+        exact_rows <- target_rows[vapply(
+            target_rows,
+            function(index) .pb_log_edge_matches(
+                log = object@oplog,
+                index = index,
+                from = from,
+                to = to,
+                step = step,
+                fun = fun_name,
+                pkg = pkg,
+                params = params
+            ),
+            logical(1)
+        )]
+
+        if (!self_edge) {
+            parent_rows <- target_rows[
+                as.character(object@oplog$from[target_rows]) != to
+            ]
+            if (length(parent_rows)) {
+                all_same <- all(vapply(
+                    parent_rows,
+                    function(index) .pb_log_edge_matches(
+                        log = object@oplog,
+                        index = index,
+                        from = from,
+                        to = to,
+                        step = step,
+                        fun = fun_name,
+                        pkg = pkg,
+                        params = params
+                    ),
+                    logical(1)
+                ))
+                if (all_same) {
+                    return(object)
+                }
+                stop(
+                    "Operation-log result '", to,
+                    "' already has a different non-self parent or stable origin.",
+                    call. = FALSE
+                )
+            }
+        } else {
+            if (length(exact_rows)) {
+                return(object)
+            }
+        }
+    }
+
+    if (!self_edge) {
+        ancestry <- .pb_lineage_from_log(object, from)$nodes
+        if (to %in% ancestry) {
+            stop(
+                "Adding operation-log edge '", from, "' -> '", to,
+                "' would create cyclic lineage.",
+                call. = FALSE
+            )
         }
     }
 
     entry <- DataFrame(
         step      = step,
         fun       = fun_name,
-        from      = as.character(from),
-        to        = as.character(to),
+        from      = from,
+        to        = to,
         params    = I(list(params)),
         timestamp = .pb_now(),
         pkg       = pkg

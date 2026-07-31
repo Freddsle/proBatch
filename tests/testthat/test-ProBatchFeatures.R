@@ -358,6 +358,330 @@ test_that("internal logging helper updates oplog and chain", {
     expect_identical(pb_pipeline_name(pbf), "raw")
 })
 
+test_that("lineage identity includes package and permits self edges", {
+    matrix <- matrix(
+        seq_len(4),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("S1", "S2"))
+    )
+    sample_annotation <- data.frame(
+        FullRunName = colnames(matrix),
+        row.names = colnames(matrix)
+    )
+    pbf <- ProBatchFeatures(
+        matrix,
+        sample_annotation,
+        "FullRunName",
+        name = "raw"
+    )
+    target <- "feature::result"
+    logged <- proBatch:::.pb_add_log_entry(
+        pbf,
+        step = "copy",
+        fun = "identity",
+        from = "feature::raw",
+        to = target,
+        params = list(mode = "strict"),
+        pkg = "providerA"
+    )
+
+    exact_retry <- proBatch:::.pb_add_log_entry(
+        logged,
+        step = "copy",
+        fun = "identity",
+        from = "feature::raw",
+        to = target,
+        params = list(mode = "strict"),
+        pkg = "providerA"
+    )
+    expect_identical(
+        nrow(get_operation_log(exact_retry)),
+        nrow(get_operation_log(logged))
+    )
+
+    expect_error(
+        proBatch:::.pb_add_log_entry(
+            logged,
+            step = "different_step",
+            fun = "identity",
+            from = "feature::raw",
+            to = target,
+            params = list(mode = "strict"),
+            pkg = "providerA"
+        ),
+        "different non-self parent or stable origin"
+    )
+    expect_error(
+        proBatch:::.pb_add_log_entry(
+            logged,
+            step = "copy",
+            fun = "different_fun",
+            from = "feature::raw",
+            to = target,
+            params = list(mode = "strict"),
+            pkg = "providerA"
+        ),
+        "different non-self parent or stable origin"
+    )
+    expect_error(
+        proBatch:::.pb_add_log_entry(
+            logged,
+            step = "copy",
+            fun = "identity",
+            from = "feature::raw",
+            to = target,
+            params = list(mode = "strict"),
+            pkg = "providerB"
+        ),
+        "different non-self parent or stable origin"
+    )
+    expect_error(
+        proBatch:::.pb_add_log_entry(
+            logged,
+            step = "copy",
+            fun = "identity",
+            from = "feature::raw",
+            to = target,
+            params = list(mode = "relaxed"),
+            pkg = "providerA"
+        ),
+        "different non-self parent or stable origin"
+    )
+    expect_error(
+        proBatch:::.pb_add_log_entry(
+            logged,
+            step = "copy",
+            fun = "identity",
+            from = "feature::other",
+            to = target,
+            params = list(mode = "strict"),
+            pkg = "providerA"
+        ),
+        "different non-self parent"
+    )
+
+    different_target <- proBatch:::.pb_add_log_entry(
+        logged,
+        step = "copy",
+        fun = "identity",
+        from = "feature::raw",
+        to = "feature::other_result",
+        params = list(mode = "strict"),
+        pkg = "providerA"
+    )
+    expect_identical(nrow(get_operation_log(different_target)), 2L)
+    expect_identical(get_chain(different_target), c("copy", "copy"))
+
+    with_self_edges <- proBatch:::.pb_add_log_entry(
+        logged,
+        step = "zeroIsNA",
+        fun = "zeroIsNA",
+        from = target,
+        to = target,
+        params = list(),
+        pkg = "proBatch"
+    )
+    with_self_edges <- proBatch:::.pb_add_log_entry(
+        with_self_edges,
+        step = "infIsNA",
+        fun = "infIsNA",
+        from = target,
+        to = target,
+        params = list(),
+        pkg = "proBatch"
+    )
+    expect_identical(
+        get_chain(with_self_edges, assay = target),
+        c("copy", "zeroIsNA", "infIsNA")
+    )
+    expect_identical(
+        nrow(get_operation_log(with_self_edges)),
+        3L
+    )
+
+    self_retry <- proBatch:::.pb_add_log_entry(
+        with_self_edges,
+        step = "infIsNA",
+        fun = "infIsNA",
+        from = target,
+        to = target,
+        params = list(),
+        pkg = "proBatch"
+    )
+    expect_identical(
+        nrow(get_operation_log(self_retry)),
+        nrow(get_operation_log(with_self_edges))
+    )
+
+    expect_error(
+        proBatch:::.pb_add_log_entry(
+            pbf,
+            step = "inplace",
+            fun = "identity",
+            from = "feature::orphan",
+            to = "feature::orphan",
+            params = list(),
+            pkg = "proBatch"
+        ),
+        "requires an existing stored or virtual result"
+    )
+    expect_error(
+        proBatch:::.pb_add_log_entry(
+            logged,
+            step = "inplace",
+            fun = "identity",
+            from = "feature::orphan",
+            to = "feature::orphan",
+            params = list(),
+            pkg = "proBatch"
+        ),
+        "requires an existing stored or virtual result"
+    )
+
+    replay_target <- "feature::ordered_replay"
+    replay_log <- proBatch:::.pb_add_log_entry(
+        pbf,
+        step = "log2",
+        fun = "log_transform_dm",
+        from = "feature::raw",
+        to = replay_target,
+        params = list(log_base = 2, offset = 1),
+        pkg = "proBatch"
+    )
+    replay_log <- proBatch:::.pb_add_log_entry(
+        replay_log,
+        step = "unlog",
+        fun = "unlog_dm",
+        from = replay_target,
+        to = replay_target,
+        params = list(log_base = 2, offset = 1),
+        pkg = "proBatch"
+    )
+    replay_log <- proBatch:::.pb_add_log_entry(
+        replay_log,
+        step = "log",
+        fun = "log_transform_dm",
+        from = replay_target,
+        to = replay_target,
+        params = list(base = 10, pseudo = 2),
+        pkg = "proBatch"
+    )
+    expect_equal(
+        suppressMessages(pb_assay_matrix(replay_log, replay_target)),
+        log(matrix + 2, base = 10)
+    )
+})
+
+test_that("lineage traversal rejects ambiguous and cyclic logs", {
+    matrix <- matrix(
+        seq_len(4),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("S1", "S2"))
+    )
+    sample_annotation <- data.frame(
+        FullRunName = colnames(matrix),
+        row.names = colnames(matrix)
+    )
+    pbf <- ProBatchFeatures(
+        matrix,
+        sample_annotation,
+        "FullRunName",
+        name = "raw"
+    )
+    target <- "feature::virtual"
+    logged <- proBatch:::.pb_add_log_entry(
+        pbf,
+        step = "copy",
+        fun = "identity",
+        from = "feature::raw",
+        to = target,
+        params = list(),
+        pkg = "proBatch"
+    )
+
+    expect_error(
+        proBatch:::.pb_add_log_entry(
+            logged,
+            step = "back",
+            fun = "identity",
+            from = target,
+            to = "feature::raw",
+            params = list(),
+            pkg = "proBatch"
+        ),
+        "cyclic lineage"
+    )
+
+    duplicate_entry <- get_operation_log(logged)[1, , drop = FALSE]
+    duplicate_entry$timestamp <- duplicate_entry$timestamp + 1
+    duplicated <- logged
+    duplicated@oplog <- rbind(
+        get_operation_log(duplicated),
+        duplicate_entry
+    )
+    expect_identical(get_chain(duplicated, assay = target), "copy")
+    expect_identical(
+        suppressMessages(pb_assay_matrix(duplicated, target)),
+        matrix
+    )
+
+    conflicting_entry <- get_operation_log(logged)[1, , drop = FALSE]
+    conflicting_entry$from <- "feature::other"
+    conflicting_entry$pkg <- "otherPackage"
+    ambiguous <- logged
+    ambiguous@oplog <- rbind(
+        get_operation_log(ambiguous),
+        conflicting_entry
+    )
+
+    expect_error(
+        get_chain(ambiguous, assay = target),
+        "Ambiguous operation-log lineage"
+    )
+    expect_error(
+        get_chain(ambiguous),
+        "Ambiguous operation-log lineage"
+    )
+    expect_error(
+        pb_assay_matrix(ambiguous, target),
+        "Ambiguous operation-log lineage"
+    )
+    reversed_ambiguous <- ambiguous
+    reversed_ambiguous@oplog <- get_operation_log(ambiguous)[
+        rev(seq_len(nrow(get_operation_log(ambiguous)))),
+        ,
+        drop = FALSE
+    ]
+    expect_error(
+        get_chain(reversed_ambiguous, assay = target),
+        "Ambiguous operation-log lineage"
+    )
+    expect_error(
+        pb_assay_matrix(reversed_ambiguous, target),
+        "Ambiguous operation-log lineage"
+    )
+
+    back_edge <- get_operation_log(logged)[1, , drop = FALSE]
+    back_edge$step <- "back"
+    back_edge$from <- target
+    back_edge$to <- "feature::raw"
+    cyclic <- logged
+    cyclic@oplog <- rbind(get_operation_log(cyclic), back_edge)
+
+    expect_error(
+        get_chain(cyclic, assay = target),
+        "Cyclic operation-log lineage"
+    )
+    expect_error(
+        get_chain(cyclic),
+        "Cyclic operation-log lineage"
+    )
+    expect_error(
+        pb_assay_matrix(cyclic, target),
+        "Cyclic operation-log lineage"
+    )
+})
+
 test_that("internal add-assay-with-link links one-to-one when rows match", {
     data(example_proteome_matrix, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
