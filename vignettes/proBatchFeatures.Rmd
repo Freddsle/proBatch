@@ -52,7 +52,7 @@ This vignette demonstrates how to:
 
 2. Apply and record standard preprocessing steps (filtering features with too many missing values, log-transformation, normalization, and batch-effect correction) in a chained workflow.
 
-3. Perform diagnostic checks.
+3. Perform diagnostic checks, including PCA, t-SNE, and UMAP.
 
 4. Retrieve processed assay data and the corresponding preprocessing pipeline for benchmarking or reuse.
 
@@ -346,7 +346,7 @@ pca1 <- plot_PCA(
     color_scheme = color_scheme,
     color_by = "Lab",
     shape_by = "Condition",
-    fill_the_missing = NULL, # remove all rows with missing values. Can be also "remove"
+    fill_the_missing = NULL, # remove incomplete feature rows for this plot
     plot_title = "NA rows removed, protein, log2",
     base_size = 10, point_size = 3, point_alpha = 0.5
 )
@@ -420,7 +420,7 @@ plot_PCA(
     color_scheme = color_scheme,
     color_by = "Lab",
     shape_by = "Condition",
-    fill_the_missing = NULL, # remove all rows with missing values. Can be also "remove"
+    fill_the_missing = NULL, # remove incomplete feature rows for these plots
     plot_title = c(
         "Before Median Normalization, protein level",
         "After Median Normalization, protein level"
@@ -602,9 +602,147 @@ plot_PCA(
     color_scheme = color_scheme,
     color_by = "Lab",
     shape_by = "Condition",
-    fill_the_missing = "remove",
+    fill_the_missing = NULL,
     base_size = 8, point_size = 3, point_alpha = 0.5
 )
+```
+
+### t-SNE and UMAP
+
+Core also provides `plot_TSNE()` and `plot_UMAP()` for matrices and
+`ProBatchFeatures` objects. Like PCA, these functions treat matrix
+columns as samples and align `colData()` by `sample_id_col`. Their
+plotting-family `fill_the_missing` control is deliberately different
+from the correction policy above: the default numeric value `-1` fills
+missing values, while `NULL` (or `FALSE`) removes incomplete feature
+rows. Both choices emit a warning when missing values are present.
+
+A single selected assay returns a static `ggplot`. Supply
+`random_state` explicitly when reproducible UMAP coordinates are
+required; omitting it leaves randomness under the caller's control:
+
+```{r plot_umap_single, fig.height=5, fig.width=6, eval=requireNamespace("umap", quietly=TRUE)}
+umap_protein <- plot_UMAP(
+    pbf,
+    pbf_name = "protein::combat_on_medianNorm_on_log2_on_raw",
+    sample_id_col = "Run",
+    color_by = "Lab",
+    shape_by = "Condition",
+    color_scheme = color_scheme,
+    fill_the_missing = NULL,
+    n_neighbors = 10,
+    random_state = 2026,
+    plot_title = "UMAP after protein-level ComBat correction"
+)
+umap_protein
+```
+
+For multiple assays, `pbf_name = NULL` selects assays in object order,
+whereas an explicit vector preserves the requested order. Shared
+arguments are supplied normally, and `assay_args` is a named list keyed
+by selected assay for settings that differ between assays. The next
+example requests a specific order, assigns per-assay t-SNE seeds and
+backend settings, and asks for both the arranged grob and its named plot
+list:
+
+```{r plot_tsne_multi, fig.height=5, fig.width=9, eval=requireNamespace("Rtsne", quietly=TRUE) && requireNamespace("gridExtra", quietly=TRUE)}
+embedding_assays <- c(
+    "protein::limmaRBE_on_medianNorm_on_log2_on_raw",
+    "protein::combat_on_medianNorm_on_log2_on_raw"
+)
+n_embedding_samples <- ncol(pb_assay_matrix(pbf, embedding_assays[[1L]]))
+tsne_perplexity <- min(
+    10,
+    max(1, floor((n_embedding_samples - 1) / 3))
+)
+tsne_args <- setNames(
+    list(
+        list(
+            perplexity = tsne_perplexity,
+            max_iter = 300,
+            random_seed = 2026
+        ),
+        list(
+            perplexity = tsne_perplexity,
+            max_iter = 300,
+            random_seed = 2027
+        )
+    ),
+    embedding_assays
+)
+
+tsne_protein <- plot_TSNE(
+    pbf,
+    pbf_name = embedding_assays,
+    sample_id_col = "Run",
+    color_by = "Lab",
+    shape_by = "Condition",
+    color_scheme = color_scheme,
+    fill_the_missing = NULL,
+    plot_title = setNames(
+        c("limma corrected", "ComBat corrected"),
+        embedding_assays
+    ),
+    assay_args = tsne_args,
+    return_gridExtra = TRUE,
+    plot_ncol = 2
+)
+names(tsne_protein$plots) # same order as embedding_assays
+grid::grid.draw(tsne_protein$grob)
+```
+
+`random_seed` controls t-SNE reproducibility. If a requested perplexity
+is too large for an assay's sample count, Core reduces it to the
+supported maximum and warns.
+
+Static rendering is the default and does not require Plotly. With
+`use_plotlyrender = TRUE`, one assay returns one `plotly` object and
+multiple assays return a named ordered list. Set
+`return_subplots = TRUE` to combine a multi-assay result; `subplot_ncol`
+and `share_axes` control its layout. This optional interactive variant
+is shown without executing it during vignette builds:
+
+```{r plot_umap_interactive, eval=FALSE}
+embedding_assays <- c(
+    "protein::limmaRBE_on_medianNorm_on_log2_on_raw",
+    "protein::combat_on_medianNorm_on_log2_on_raw"
+)
+umap_args <- setNames(
+    list(
+        list(n_neighbors = 10, random_state = 2026),
+        list(n_neighbors = 15, random_state = 2027)
+    ),
+    embedding_assays
+)
+
+umap_plotly_list <- plot_UMAP(
+    pbf,
+    pbf_name = embedding_assays,
+    sample_id_col = "Run",
+    color_by = "Lab",
+    shape_by = "Condition",
+    color_scheme = color_scheme,
+    fill_the_missing = NULL,
+    assay_args = umap_args,
+    use_plotlyrender = TRUE
+)
+names(umap_plotly_list) # same order as embedding_assays
+
+umap_subplot <- plot_UMAP(
+    pbf,
+    pbf_name = embedding_assays,
+    sample_id_col = "Run",
+    color_by = "Lab",
+    shape_by = "Condition",
+    color_scheme = color_scheme,
+    fill_the_missing = NULL,
+    assay_args = umap_args,
+    use_plotlyrender = TRUE,
+    return_subplots = TRUE,
+    subplot_ncol = 2,
+    share_axes = c(x = TRUE, y = TRUE)
+)
+umap_subplot
 ```
 
 ### Hierarchical clustering
@@ -631,7 +769,7 @@ plot_hierarchical_clustering(
     sample_id_col = "Run",
     label_font = 0.6,
     color_list = color_scheme,
-    fill_the_missing = "remove"
+    fill_the_missing = NULL
 )
 ```
 

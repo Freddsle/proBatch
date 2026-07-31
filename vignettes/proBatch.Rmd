@@ -668,6 +668,83 @@ pca_spec
 
 \pagebreak
 
+### t-SNE and UMAP
+
+Like PCA, `plot_TSNE()` and `plot_UMAP()` expect a numeric matrix with
+features in rows and samples in columns. Sample annotation is matched to
+the matrix columns by `sample_id_col`, rather than by row position. The
+three embedding functions share `fill_the_missing = -1` as their
+default. Set it to another numeric scalar to use a different fill value,
+or to `NULL` or `FALSE` to remove incomplete feature rows. Each function
+warns before applying its missing-value handling.
+
+The smaller matrix below keeps these examples quick while preserving the
+feature-by-sample orientation:
+
+```{r prepare_nonlinear_embeddings}
+embedding_matrix <- quantile_normalized_matrix[
+    seq_len(min(200L, nrow(quantile_normalized_matrix))),
+    seq_len(min(30L, ncol(quantile_normalized_matrix))),
+    drop = FALSE
+]
+embedding_sample_annotation <- example_sample_annotation[
+    match(
+        colnames(embedding_matrix),
+        example_sample_annotation[[sample_id_col]]
+    ),
+    ,
+    drop = FALSE
+]
+stopifnot(
+    identical(
+        embedding_sample_annotation[[sample_id_col]],
+        colnames(embedding_matrix)
+    )
+)
+```
+
+`Rtsne` is an optional backend. When it is available, use an explicit
+`random_seed` to make t-SNE coordinates reproducible for the same data,
+arguments, and backend version:
+
+```{r plot_TSNE, fig.show='hold', fig.width=5, fig.height=3.5}
+if (requireNamespace("Rtsne", quietly = TRUE)) {
+    tsne_plot <- plot_TSNE(
+        embedding_matrix,
+        embedding_sample_annotation,
+        sample_id_col = sample_id_col,
+        color_by = "MS_batch",
+        perplexity = 8,
+        max_iter = 250,
+        fill_the_missing = -1,
+        random_seed = 2026,
+        plot_title = "t-SNE by MS batch"
+    )
+    print(tsne_plot)
+}
+```
+
+Similarly, `umap` is optional. Use `random_state` when reproducible UMAP
+coordinates are required:
+
+```{r plot_UMAP, fig.show='hold', fig.width=5, fig.height=3.5}
+if (requireNamespace("umap", quietly = TRUE)) {
+    umap_plot <- plot_UMAP(
+        embedding_matrix,
+        embedding_sample_annotation,
+        sample_id_col = sample_id_col,
+        color_by = "MS_batch",
+        n_neighbors = 10,
+        fill_the_missing = -1,
+        random_state = 2026,
+        plot_title = "UMAP by MS batch"
+    )
+    print(umap_plot)
+}
+```
+
+\pagebreak
+
 ### Principal variance component analysis (PVCA)
 
 The main advantage of this approach is the quantification of the
@@ -695,9 +772,11 @@ derived from mass spectrometry batches. In a typical experiment, the
 overall magnitude of variances coming from biological factors should be
 high while technical variance should be kept at minimum[^1].
 
-[^1]: Application of hierarchical clustering, PCA and PVCA in their
-    classical implementation is not possible if missing values are
-    present in the matrix. It has been noticed previously that missing
+[^1]: Classical implementations of hierarchical clustering, PCA, and
+    PVCA cannot operate directly on matrices containing missing values.
+    The Core PCA, t-SNE, and UMAP plotting functions use the documented
+    `fill_the_missing` behavior described above. It has been noticed
+    previously that missing
     values can be associated with technical bias [8], and most commonly,
     it is suggested that missing values need to be imputed [8-9].
     However, we would like to suggest to use missing value imputation

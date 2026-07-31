@@ -256,6 +256,82 @@
     call_args
 }
 
+.pb_prepare_embedding_assay_args <- function(assay_args, assays) {
+    out <- setNames(vector("list", length(assays)), assays)
+    if (is.null(assay_args)) {
+        return(out)
+    }
+    if (!is.list(assay_args) || is.data.frame(assay_args)) {
+        stop(
+            "`assay_args` must be a named list keyed by selected assay.",
+            call. = FALSE
+        )
+    }
+
+    assay_arg_names <- names(assay_args)
+    if (is.null(assay_arg_names) ||
+        anyNA(assay_arg_names) ||
+        any(!nzchar(assay_arg_names)) ||
+        anyDuplicated(assay_arg_names)) {
+        stop(
+            "`assay_args` must have unique, non-missing selected-assay names.",
+            call. = FALSE
+        )
+    }
+
+    unknown <- setdiff(assay_arg_names, assays)
+    if (length(unknown)) {
+        stop(
+            "`assay_args` contains unselected or unknown assay name(s): ",
+            paste(unknown, collapse = ", "),
+            ".",
+            call. = FALSE
+        )
+    }
+
+    reserved <- c(
+        "data_matrix", "sample_annotation", "sample_id_col", "plot_title",
+        "use_plotlyrender"
+    )
+    for (assay in assay_arg_names) {
+        args <- assay_args[[assay]]
+        if (is.null(args)) {
+            next
+        }
+        if (!is.list(args) || is.data.frame(args)) {
+            stop(
+                "`assay_args[['", assay, "']]` must be a named argument list.",
+                call. = FALSE
+            )
+        }
+        arg_names <- names(args)
+        if (length(args) &&
+            (is.null(arg_names) ||
+                anyNA(arg_names) ||
+                any(!nzchar(arg_names)) ||
+                anyDuplicated(arg_names))) {
+            stop(
+                "`assay_args[['", assay,
+                "']]` must contain uniquely named arguments.",
+                call. = FALSE
+            )
+        }
+        collisions <- intersect(arg_names, reserved)
+        if (length(collisions)) {
+            stop(
+                "`assay_args[['", assay,
+                "']]` cannot override reserved argument(s): ",
+                paste(collisions, collapse = ", "),
+                ".",
+                call. = FALSE
+            )
+        }
+        out[[assay]] <- args
+    }
+
+    out
+}
+
 .pb_prepare_shape_column <- function(shape_by, sample_annotation, data_label = "sample_annotation") {
     if (is.null(shape_by) || !length(shape_by)) {
         return(list(shape_by = NULL, sample_annotation = sample_annotation))
@@ -326,6 +402,154 @@
     list(
         color_by_batch = color_by_batch,
         color_scheme = color_scheme
+    )
+}
+
+.pb_validate_embedding_collection_options <- function(
+  use_plotlyrender,
+  return_gridExtra,
+  plot_ncol,
+  return_subplots,
+  subplot_ncol,
+  share_axes
+) {
+    logical_args <- list(
+        use_plotlyrender = use_plotlyrender,
+        return_gridExtra = return_gridExtra,
+        return_subplots = return_subplots
+    )
+    invalid_logical <- vapply(logical_args, function(value) {
+        !is.logical(value) || length(value) != 1L || is.na(value)
+    }, logical(1))
+    if (any(invalid_logical)) {
+        stop(
+            "`", names(logical_args)[which(invalid_logical)[1L]],
+            "` must be TRUE or FALSE.",
+            call. = FALSE
+        )
+    }
+
+    if (!is.null(plot_ncol) &&
+        (!is.numeric(plot_ncol) ||
+            length(plot_ncol) != 1L ||
+            is.na(plot_ncol) ||
+            !is.finite(plot_ncol) ||
+            plot_ncol < 1 ||
+            plot_ncol %% 1 != 0)) {
+        stop("`plot_ncol` must be a positive integer or NULL.", call. = FALSE)
+    }
+    if (!is.null(subplot_ncol) &&
+        (!is.numeric(subplot_ncol) ||
+            length(subplot_ncol) != 1L ||
+            is.na(subplot_ncol) ||
+            !is.finite(subplot_ncol) ||
+            subplot_ncol < 1 ||
+            subplot_ncol %% 1 != 0)) {
+        stop("`subplot_ncol` must be a positive integer or NULL.", call. = FALSE)
+    }
+    if (!is.logical(share_axes) ||
+        !length(share_axes) ||
+        length(share_axes) > 2L ||
+        anyNA(share_axes)) {
+        stop(
+            "`share_axes` must be one logical value or two logical values for x and y.",
+            call. = FALSE
+        )
+    }
+
+    if (length(share_axes) == 1L) {
+        share_x <- share_y <- share_axes
+    } else if (!is.null(names(share_axes)) &&
+        all(c("x", "y") %in% names(share_axes))) {
+        share_x <- unname(share_axes[["x"]])
+        share_y <- unname(share_axes[["y"]])
+    } else {
+        share_x <- unname(share_axes[[1L]])
+        share_y <- unname(share_axes[[2L]])
+    }
+
+    list(share_x = share_x, share_y = share_y)
+}
+
+.pb_finalize_embedding_collection <- function(plot_list,
+                                              use_plotlyrender,
+                                              return_gridExtra,
+                                              plot_ncol,
+                                              return_subplots,
+                                              subplot_ncol,
+                                              share_axes) {
+    validated_options <- .pb_validate_embedding_collection_options(
+        use_plotlyrender = use_plotlyrender,
+        return_gridExtra = return_gridExtra,
+        plot_ncol = plot_ncol,
+        return_subplots = return_subplots,
+        subplot_ncol = subplot_ncol,
+        share_axes = share_axes
+    )
+    share_x <- validated_options$share_x
+    share_y <- validated_options$share_y
+
+    shared_title <- attr(plot_list, "pb_shared_title", exact = TRUE)
+    if (!length(plot_list)) {
+        return(invisible(NULL))
+    }
+    if (length(plot_list) == 1L) {
+        return(plot_list[[1L]])
+    }
+
+    if (use_plotlyrender) {
+        if (return_gridExtra) {
+            warning(
+                "`return_gridExtra` is ignored when `use_plotlyrender = TRUE`."
+            )
+        }
+        if (return_subplots) {
+            if (!requireNamespace("plotly", quietly = TRUE)) {
+                stop(
+                    "Package 'plotly' is required to combine interactive ",
+                    "embeddings; install it with install.packages('plotly').",
+                    call. = FALSE
+                )
+            }
+            n_plots <- length(plot_list)
+            ncol <- if (is.null(subplot_ncol)) {
+                ceiling(sqrt(n_plots))
+            } else {
+                as.integer(subplot_ncol)
+            }
+            subplot_obj <- do.call(
+                plotly::subplot,
+                c(plot_list, list(
+                    nrows = ceiling(n_plots / ncol),
+                    shareX = share_x,
+                    shareY = share_y,
+                    titleX = TRUE,
+                    titleY = TRUE
+                ))
+            )
+            if (!is.null(shared_title) && nzchar(shared_title)) {
+                subplot_obj <- plotly::layout(
+                    subplot_obj,
+                    title = list(text = shared_title)
+                )
+            }
+            return(subplot_obj)
+        }
+        return(.pb_attach_shared_title(plot_list, shared_title))
+    }
+
+    if (return_subplots) {
+        warning(
+            "`return_subplots = TRUE` requires `use_plotlyrender = TRUE`; ",
+            "arranging static plots instead."
+        )
+    }
+    .pb_arrange_plot_list(
+        plot_list,
+        convert_fun = ggplotGrob,
+        draw = !isTRUE(return_gridExtra),
+        plot_ncol = plot_ncol,
+        return_gridExtra = return_gridExtra
     )
 }
 
@@ -434,7 +658,16 @@
                                             sample_id_col,
                                             check_args = list(),
                                             allow_partial_annotation = TRUE) {
-    df_long <- matrix_to_long(data_matrix, sample_id_col = sample_id_col)
+    internal_feature_id_col <- ".pb_feature_id"
+    while (internal_feature_id_col %in%
+        c(colnames(data_matrix), sample_id_col)) {
+        internal_feature_id_col <- paste0(internal_feature_id_col, "_")
+    }
+    df_long <- matrix_to_long(
+        data_matrix,
+        feature_id_col = internal_feature_id_col,
+        sample_id_col = sample_id_col
+    )
     check_call <- modifyList(list(
         sample_annotation = sample_annotation,
         sample_id_col = sample_id_col,
@@ -442,7 +675,11 @@
         merge = FALSE
     ), check_args)
     df_long <- do.call(check_sample_consistency, check_call)
-    data_matrix <- long_to_matrix(df_long, sample_id_col = sample_id_col)
+    data_matrix <- long_to_matrix(
+        df_long,
+        feature_id_col = internal_feature_id_col,
+        sample_id_col = sample_id_col
+    )
 
     sample_ids <- colnames(data_matrix)
     annotation <- sample_annotation
@@ -467,13 +704,25 @@
         return(data_matrix)
     }
 
-    if (isFALSE(fill_the_missing) && isTRUE(drop_on_false)) {
-        return(data_matrix[complete.cases(data_matrix), , drop = FALSE])
+    warning(warning_message)
+    if ((isFALSE(fill_the_missing) || is.null(fill_the_missing)) &&
+        isTRUE(drop_on_false)) {
+        keep_rows <- complete.cases(data_matrix)
+        if (!any(keep_rows)) {
+            stop(
+                "Missing-value removal discarded every feature.",
+                call. = FALSE
+            )
+        }
+        warning(sprintf(
+            "removed %d rows and 0 columns",
+            sum(!keep_rows)
+        ))
+        return(data_matrix[keep_rows, , drop = FALSE])
     }
 
     # Diagnostic APIs retain their legacy missing-value controls while batch
     # correction adopts the canonical policy vocabulary.
-    warning(warning_message)
     if (isFALSE(fill_the_missing)) {
         warning("`fill_the_missing` is FALSE: keeping missing values unchanged")
         return(data_matrix)
@@ -511,6 +760,12 @@
             data_matrix <- data_matrix[keep_rows, , drop = FALSE]
         }
 
+        if (!nrow(data_matrix)) {
+            stop(
+                "Missing-value removal discarded every feature.",
+                call. = FALSE
+            )
+        }
         removed_rows <- nrow(original) - nrow(data_matrix)
         removed_cols <- ncol(original) - ncol(data_matrix)
         if (removed_rows > 0L || removed_cols > 0L) {
@@ -808,6 +1063,12 @@
                                          allow_partial_annotation = FALSE,
                                          check_args = list(),
                                          drop_on_false = TRUE) {
+    if (is.data.frame(data_matrix)) {
+        data_matrix <- check_feature_id_col_in_dm(
+            feature_id_col,
+            data_matrix
+        )
+    }
     alignment <- .pb_align_matrix_and_annotation(
         data_matrix = data_matrix,
         sample_annotation = sample_annotation,
@@ -818,8 +1079,6 @@
 
     data_matrix <- alignment$data_matrix
     sample_annotation <- alignment$sample_annotation
-
-    data_matrix <- check_feature_id_col_in_dm(feature_id_col, data_matrix)
 
     if (!is.null(warning_message)) {
         data_matrix <- .pb_handle_missing_wrapper(

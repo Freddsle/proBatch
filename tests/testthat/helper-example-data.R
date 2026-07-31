@@ -39,10 +39,18 @@ pb_test_expect_warnings <- function(object, patterns, fixed = FALSE) {
     invisible(value)
 }
 
-pb_test_make_pbf <- function(n_rows = 30, n_cols = 6, add_log2 = FALSE) {
+pb_test_make_pbf <- function(
+  n_rows = 30,
+  n_cols = 6,
+  add_log2 = FALSE,
+  complete = FALSE
+) {
     pb_test_load_example_data()
 
     matrix_small <- example_proteome_matrix[1:n_rows, 1:n_cols]
+    if (isTRUE(complete)) {
+        matrix_small[is.na(matrix_small)] <- 0
+    }
     sample_ids <- colnames(matrix_small)
     sample_ann <- example_sample_annotation[match(sample_ids, example_sample_annotation$FullRunName), ]
 

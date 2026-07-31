@@ -21,6 +21,15 @@ proBatch  v2.1.0
   canonical step and provider identities. `pb_transform()` records those
   identities for virtual replay, which verifies the provider before invocation.
 
+## Embedding diagnostics
+- Restored `plot_TSNE()` and `plot_UMAP()` for matrices and
+  `ProBatchFeatures`, with feature-row/sample-column orientation, identifier
+  alignment, static ggplot output, optional Plotly output, ordered multi-assay
+  results, and explicit subplot controls.
+- Added explicit t-SNE and UMAP seeds, backend argument forwarding, t-SNE
+  perplexity capping, categorical shape and categorical/numeric color support,
+  and the PCA-family `fill_the_missing = -1` default.
+
 ## Deprecations
 - Added `center_feature_batch()`: unified API for per-batch centering by `stat` (`"medians"` or `"means"`) and `format` (`"long"` or `"wide"`).
   - For `format = "wide"`, the function round-trips via `matrix_to_long()`/`long_to_matrix()` to reuse a single core implementation.
