@@ -350,7 +350,7 @@ done
 
 assert_test_graphics_absent
 trap cleanup_test_graphics_on_exit EXIT
-pixi run Rscript -e 'devtools::test(filter = "ProBatchFeatures|pb_missing_helpers|correct_batch_effect", reporter = "summary")'
+pixi run Rscript -e 'devtools::test(filter = "ProBatchFeatures|pb_missing_helpers|correct_batch_effect", reporter = "summary", stop_on_failure = TRUE)'
 remove_generated_test_graphics
 trap - EXIT
 git diff --check -- R tests/testthat
@@ -493,7 +493,7 @@ fi
 
 assert_test_graphics_absent
 trap cleanup_test_graphics_on_exit EXIT
-pixi run Rscript -e 'devtools::test(filter = "extension.contract|registry|ProBatchFeatures", reporter = "summary")'
+pixi run Rscript -e 'devtools::test(filter = "extension.contract|registry|ProBatchFeatures", reporter = "summary", stop_on_failure = TRUE)'
 remove_generated_test_graphics
 trap - EXIT
 depmesh -p llm dependencies @/R/ProBatchFeatures.R
@@ -616,7 +616,7 @@ rg -q '^plot_UMAP.ProBatchFeatures <- function' R/proteome_wide_diagnostics.R
 
 assert_test_graphics_absent
 trap cleanup_test_graphics_on_exit EXIT
-pixi run Rscript -e 'devtools::test(filter = "proteome_wide_diagnostics", reporter = "summary")'
+pixi run Rscript -e 'devtools::test(filter = "proteome_wide_diagnostics", reporter = "summary", stop_on_failure = TRUE)'
 remove_generated_test_graphics
 trap - EXIT
 git diff --check -- R tests/testthat DESCRIPTION pixi.toml pixi.lock
@@ -758,7 +758,7 @@ depmesh -p llm dependencies @/workflows/establish-standalone-core-baseline.donna
 donna -p llm validate --all
 assert_test_graphics_absent
 trap cleanup_test_graphics_on_exit EXIT
-pixi run Rscript -e 'devtools::test(reporter = "summary")'
+pixi run Rscript -e 'devtools::test(reporter = "summary", stop_on_failure = TRUE)'
 remove_generated_test_graphics
 trap - EXIT
 if rg -n 'proBatchBench::|Imports:.*proBatchBench|Depends:.*proBatchBench' R DESCRIPTION; then
