@@ -498,6 +498,7 @@ fi
 
 required_build_exclusions=(
     '^AGENTS\.md$'
+    '^air\.toml$'
     '^bin$'
     '^depmesh\.toml$'
     '^donna\.toml$'

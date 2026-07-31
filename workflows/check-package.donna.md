@@ -423,6 +423,7 @@ git --no-optional-locks diff --cached --check -- "${safe_diff_paths[@]}"
 
 for required_exclusion in \
     '^AGENTS\.md$' \
+    '^air\.toml$' \
     '^bin$' \
     '^depmesh\.toml$' \
     '^donna\.toml$' \

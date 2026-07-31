@@ -23,6 +23,7 @@ Renviron.bioc
 ^\.agents$
 ^\.codex$
 ^AGENTS\.md$
+^air\.toml$
 ^bin$
 ^depmesh\.toml$
 ^donna\.toml$
