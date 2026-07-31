@@ -1,102 +1,61 @@
-proBatch  v2.1.0
-==============
-* Added design diagnostics helpers for batch/design evaluation:
-  `validate_batch_design()`, `summarize_design()`, `detect_nested_batches()`,
-  `detect_outlier_samples()`, and `subbatch_detection()`.
+CHANGES IN VERSION 2.2.0
+-------------------------
 
-## Standalone Core baseline
-- Established a provider-neutral Core boundary: `proBatch` owns its containers,
-  transformations, corrections, missing-value policies, lineage, diagnostics,
-  and embeddings without depending on `proBatchBench` or provider engines.
-- Consolidated duplicate public implementations so source order no longer
-  selects correction or registry behavior, and removed direct `plyr` and
-  `reshape2` requirements after their remaining source uses were removed.
+NEW FEATURES
 
-## Breaking changes and defaults
-- Standardized correction missing-value handling on `"error"` (the default),
-  `"keep"`, `"drop_features"`, and `"fill"` with an explicit `fill_value`.
-  Legacy `FALSE`, numeric, and `"remove"`/`"rm"` spellings are translated with
-  a deprecation warning for one release; explicit `NULL` is now an error.
-- Explicit result names now share the stored-assay and virtual-target
-  namespace. Conflicting names are rejected rather than silently suffixed, and
-  `pb_filterNA()`/`pb_groupfilterNA()` no longer recycle an explicit scalar name
-  across multiple assays.
-- Lineage replay and target retries now reject conflicting or ambiguous origins
-  while retaining exact idempotent retries.
+    o Added design and metadata diagnostics, grouped missing-value filtering
+      and plots, and t-SNE and UMAP plots for matrices and ProBatchFeatures.
 
-## Provider-neutral extension contract
-- Extended the transformation registry with provider metadata, aliases,
-  availability reporting, collision-safe idempotent registration, and
-  provider-scoped cleanup through `pb_unregister_steps()`.
-- Added `pb_apply_matrix_method()` for identifier-safe matrix/long adaptation
-  and `pb_step_result()` for transformed data with provider-neutral artifacts.
-  Materialized structured results retain artifacts in assay metadata.
-- Registry aliases invoked through `pb_transform()` and `pb_eval()` now resolve
-  canonical step and provider identities. `pb_transform()` records those
-  identities for virtual replay, which verifies the provider before invocation.
+    o Added unified long/wide centering and batch correction, plus
+      provider-aware registered transformations for ProBatchFeatures.
 
-## Embedding diagnostics
-- Restored `plot_TSNE()` and `plot_UMAP()` for matrices and
-  `ProBatchFeatures`, with feature-row/sample-column orientation, identifier
-  alignment, static ggplot output, optional Plotly output, ordered multi-assay
-  results, and explicit subplot controls.
-- Added explicit t-SNE and UMAP seeds, backend argument forwarding, t-SNE
-  perplexity capping, categorical shape and categorical/numeric color support,
-  and the PCA-family `fill_the_missing = -1` default.
-- Scoped explicit t-SNE seeds to the backend call so reproducible embeddings no
-  longer advance or create the caller's random-number state.
+SIGNIFICANT USER-VISIBLE CHANGES
 
-## Deprecations
-- Added `center_feature_batch()`: unified API for per-batch centering by `stat` (`"medians"` or `"means"`) and `format` (`"long"` or `"wide"`).
-  - For `format = "wide"`, the function round-trips via `matrix_to_long()`/`long_to_matrix()` to reuse a single core implementation.
-  - For `format = "long"`, it adds `preBatchCorr_[measure_col]` and diagnostic columns:
-    - medians: `median_batch`, `median_global`, `diff_medians`
-    - means:   `mean_batch`, `mean_global`, `diff_means`
-- This result in deprecated `center_feature_batch_medians_df()`, `center_feature_batch_means_df()`,
-  `center_feature_batch_medians_dm()`, and `center_feature_batch_means_dm()` in favor of
-  `center_feature_batch()`. These wrappers now forward to the new API and emit `.Deprecated()` warnings.
+    o Batch correction now errors on missing values by default; use "keep",
+      "drop_features", or "fill" explicitly. Invalid or conflicting
+      identifiers, assay selections, lineage, and result names now also error.
+
+DEPRECATED
+
+    o Deprecated center_feature_batch_medians_df(),
+      center_feature_batch_means_df(), center_feature_batch_medians_dm(),
+      center_feature_batch_means_dm(), correct_with_ComBat_df(),
+      correct_with_ComBat_dm(), correct_batch_effects_df(),
+      correct_batch_effects_dm(), and correct_with_removeBatchEffect_dm(); use
+      center_feature_batch(), correct_with_ComBat(), correct_batch_effects(),
+      or correct_with_removeBatchEffect().
+
+BUG FIXES
+
+    o Fixed edge cases in batch correction, sample matching, CV and nonlinear
+      fitting, date parsing, and diagnostic plots.
 
 
-proBatch  v1.99.0
-==============
-Changes:
-* Added support for extended QFeatures object - `ProBatchFeatures` - as input data format. 
-  All functions that previously accepted `data_matrix` and `df_long` formats, 
-  now also accept `ProBatchFeatures` objects. 
-* Added support for multiple assays in `ProBatchFeatures` objects. All functions that
-  previously accepted only a single data matrix, now also accept multiple data
-  matrices stored in different assays of a `ProBatchFeatures` object, inluding plotting functions: `plot_heatmap_diagnostic`, `plot_pca`, `plot_sample_mean`, `plot_boxplot`.
-* Added support for multiple features in `ProBatchFeatures` objects. 
-* Added limma-based batch correction method (`removeBatchEffect`) for `ProBatchFeatures` objects.
-* Added new visualization functions to plot missing value patterns in `ProBatchFeatures` objects:
-  - `plot_NA_heatmap()`
-  - `plot_NA_density()`
-  - `plot_NA_frequency()`
+CHANGES IN VERSION 1.99.0
+--------------------------
+
+NEW FEATURES
+
+    o Added ProBatchFeatures support, including multiple assays and feature
+      levels, across correction and plotting functions.
+
+    o Added limma batch correction and missing-value heatmap, density, and
+      frequency plots for ProBatchFeatures objects.
 
 
-proBatch  v1.1.0
-==============
+CHANGES IN VERSION 1.1.0
+-------------------------
 
-Changes:
-* all functions that deal with data matrix and sample annotation, are checking 
-for sample consistency (discrepancies in sample IDs);
-* all functions, transforming the data (log, normalization, batch correction) 
-work with both `data_matrix` and `df_long` formats, and called as 
-`[correction_func]_dm` and `[correction_func]_df` correspondingly.
-* for all `df_long` functions, modifying `measure_col` (Intensity), keeping the 
-old column as:
-    - log_transform_df: beforeLog_[measure_col];
-    - normalization: preNorm_[measure_col];
-    - batch correction: preBatchCorr_[measure_col];
-    - (if adjusting trend): preTrendFit_[measure_col].
-  Note that this increases the data size. If this is of a concern, 
-  use `data_matrix` format instead.
-* renamed functions: 
-  - "center_peptide_batch_medians" to "center_feature_batch_medians"
-  - "normalize_custom_fit" into "adjust_batch_trend";
-* harmonised arguments in plotting functions, all of them now take sample annotation and color_list/color_scheme.
-* simplified color scheme definition and usage, which is now consistent over all plotting functions (check updated argument definitions!)
-* Added internal automated definition of color scheme (useful when single plotting functions are used, and color scheme consistency is not critical);
-* consistent handling of missing values by proteome-wide diagnostic functions;
-* renamed "plot_heatmap" into "plot_heatmap_diagnostic" as now "plot_heatmap_generic" is added for non-standard cases of heatmap plotting;
-* better legend for DateTime color mapping in meanplots, boxplots and feature-level plots.
+NEW FEATURES
+
+    o Added matrix and long-format transformation APIs with sample consistency
+      checks and preservation of original long-format measurements.
+
+    o Added generic heatmaps and consistent missing-value and colour handling
+      across diagnostic plots.
+
+SIGNIFICANT USER-VISIBLE CHANGES
+
+    o Renamed center_peptide_batch_medians() to
+      center_feature_batch_medians(), normalize_custom_fit() to
+      adjust_batch_trend(), and plot_heatmap() to plot_heatmap_diagnostic().
