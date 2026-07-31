@@ -119,6 +119,29 @@ test_that("plot_PCA warns on missing values and honors x/y PC selection", {
     expect_match(pca_xy$labels$y, "^PC3 ")
 })
 
+test_that("plot_PCA.default accepts and validates the generic dots contract", {
+    expect_true("..." %in% names(formals(proBatch:::plot_PCA.default)))
+
+    pb_test_load_example_data()
+    matrix_test <- stats::na.omit(example_proteome_matrix)[1:10, 1:4]
+    annotation_test <- example_sample_annotation[
+        match(
+            colnames(matrix_test),
+            example_sample_annotation$FullRunName
+        ), ,
+        drop = FALSE
+    ]
+
+    expect_error(
+        plot_PCA(
+            matrix_test,
+            annotation_test,
+            unsupported_argument = TRUE
+        ),
+        "must be empty"
+    )
+})
+
 test_that("plot_PCA builds numeric annotations with discrete or continuous colors", {
     pb_test_load_example_data()
 

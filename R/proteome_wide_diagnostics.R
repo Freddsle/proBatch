@@ -2021,7 +2021,8 @@ plot_PVCA_stacked_from_saved <- function(pvca_dir,
 #' @param return_gridExtra Logical; for multiple assays, return an invisible
 #'   list containing the arranged `grob` and named ordered `plots`.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
-#' @param ... Additional arguments forwarded to lower-level plotting helpers.
+#' @param ... For `ProBatchFeatures` input, additional arguments forwarded to
+#'   `plot_PCA.default()`. The default method rejects unused arguments.
 #'
 #' @return A `ggplot` PCA scatterplot colored by the column specified in
 #'   `color_by`. Factor-like values, including numeric values matched by a named
@@ -2087,7 +2088,9 @@ plot_PCA.default <- function(data_matrix,
                              theme_name = "classic",
                              base_size = 10, point_size = 3, point_alpha = 0.8,
                              marginal_density = FALSE,
-                             x_nPC = NULL, y_nPC = NULL) {
+                             x_nPC = NULL, y_nPC = NULL,
+                             ...) {
+    rlang::check_dots_empty()
     fill_the_missing <- .pb_validate_embedding_missing(fill_the_missing)
     prep <- .pb_prepare_embedding_inputs(
         data_matrix = data_matrix,
