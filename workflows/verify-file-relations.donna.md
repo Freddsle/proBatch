@@ -193,6 +193,7 @@ assert_exact tested_by @/R/zzz_helpers.R \
 assert_exact tests @/tests/testthat/test-batch_effect_steps.R \
     @/R/ProBatchFeatures.R \
     @/R/correct_batch_effects.R \
+    @/R/registry.R \
     @/R/zzz_helpers.R
 
 assert_exact tested_by @/R/proteome_wide_diagnostics.R \

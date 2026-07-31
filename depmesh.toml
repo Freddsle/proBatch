@@ -202,6 +202,7 @@ relation = "tested_by"
 input = { type = "one_of", artifacts = [
     "@/R/ProBatchFeatures.R",
     "@/R/correct_batch_effects.R",
+    "@/R/registry.R",
     "@/R/zzz_helpers.R",
 ] }
 output = { type = "files", pattern = "@/tests/testthat/test-batch_effect_steps.R" }
@@ -212,5 +213,38 @@ input = { type = "one_of", artifacts = ["@/tests/testthat/test-batch_effect_step
 output = { type = "list", artifacts = [
     "@/R/ProBatchFeatures.R",
     "@/R/correct_batch_effects.R",
+    "@/R/registry.R",
     "@/R/zzz_helpers.R",
+] }
+
+[[rules]]
+relation = "tested_by"
+input = { type = "one_of", artifacts = ["@/R/registry.R"] }
+output = { type = "list", artifacts = [
+    "@/tests/testthat/test-matrix_adapter.R",
+    "@/tests/testthat/test-ProBatchFeatures.R",
+] }
+
+[[rules]]
+relation = "tests"
+input = { type = "one_of", artifacts = ["@/tests/testthat/test-matrix_adapter.R"] }
+output = { type = "list", artifacts = [
+    "@/R/registry.R",
+    "@/R/step_result.R",
+] }
+
+[[rules]]
+relation = "tested_by"
+input = { type = "one_of", artifacts = ["@/R/step_result.R"] }
+output = { type = "list", artifacts = [
+    "@/tests/testthat/test-matrix_adapter.R",
+    "@/tests/testthat/test-ProBatchFeatures.R",
+] }
+
+[[rules]]
+relation = "tests"
+input = { type = "one_of", artifacts = ["@/tests/testthat/test-ProBatchFeatures.R"] }
+output = { type = "list", artifacts = [
+    "@/R/registry.R",
+    "@/R/step_result.R",
 ] }
