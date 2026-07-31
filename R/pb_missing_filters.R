@@ -2,6 +2,7 @@
 # filters for missing values in ProBatchFeatures
 ####################################################
 #' Apply `QFeatures` missing-data helpers to stored assays
+#' @md
 #'
 #' These wrappers delegate to the corresponding `QFeatures` generics while
 #' ensuring that the requested assays remain part of the `ProBatchFeatures`
@@ -18,8 +19,14 @@
 #'   `final_name` (if provided) or a function-specific suffix.
 #' @param final_name Character (used by `pb_filterNA()` and
 #'   `pb_groupfilterNA()`), name for the modified assay(s) if `inplace` is
-#'   `FALSE`. If `NULL` (default), the original name(s) receive suffix
-#'   `_filteredNA` or `_groupfilteredNA`, respectively.
+#'   `FALSE`. An explicit value must provide one unique, non-missing, non-empty
+#'   name per selected assay. A collision with a stored assay or virtual
+#'   operation-log target is accepted only for an exact idempotent retry with
+#'   identical data, parent assay, and stable lineage origin. Explicit names
+#'   are never recycled or disambiguated. If `NULL` (default), the original
+#'   name(s) receive suffix `_filteredNA` or `_groupfilteredNA`, respectively;
+#'   generated collisions across the stored and virtual result namespace are
+#'   disambiguated with numeric suffixes.
 #' @param group_cols Character vector (used by `pb_groupfilterNA()` only)
 #'   specifying sample-annotation column(s) that define the groups within which
 #'   missingness must be evaluated.
@@ -123,6 +130,49 @@ pb_nNA <- function(object, pbf_name = names(object), ...) {
     res
 }
 
+.pb_filterNA_matrix <- function(data_matrix, ...) {
+    input <- SummarizedExperiment::SummarizedExperiment(
+        assays = list(intensity = data_matrix)
+    )
+    filtered <- do.call(
+        filterNA,
+        c(list(input), list(...))
+    )
+    SummarizedExperiment::assay(filtered, "intensity")
+}
+
+.pb_groupfilterNA_matrix <- function(
+  data_matrix,
+  sample_annotation,
+  group_cols,
+  min_valid = 2L,
+  pNA = NULL,
+  mask_failing = TRUE,
+  ...
+) {
+    sample_annotation <- as.data.frame(sample_annotation)
+    temporary <- suppressMessages(ProBatchFeatures(
+        data_matrix = data_matrix,
+        sample_annotation = sample_annotation,
+        sample_id_col = NULL,
+        name = "feature::.pb_groupfilterNA_input"
+    ))
+    source_name <- pb_current_assay(temporary)
+    result_name <- "feature::.pb_groupfilterNA_result"
+    filtered <- suppressMessages(pb_groupfilterNA(
+        temporary,
+        pbf_name = source_name,
+        group_cols = group_cols,
+        min_valid = min_valid,
+        pNA = pNA,
+        inplace = FALSE,
+        final_name = result_name,
+        mask_failing = mask_failing,
+        ...
+    ))
+    SummarizedExperiment::assay(filtered[[result_name]], "intensity")
+}
+
 #' @rdname pb_missing_helpers
 #' @export
 pb_filterNA <- function(
@@ -149,7 +199,12 @@ pb_filterNA <- function(
     params <- .pb_collect_missing_params(list(...), forbidden = c("i", "name"))
 
     if (!inplace) {
-        final_name <- .pb_prepare_final_names(assays, final_name, suffix = "_filteredNA")
+        final_name <- .pb_prepare_final_names(
+            object,
+            assays,
+            final_name,
+            suffix = "_filteredNA"
+        )
     } else if (!is.null(final_name)) {
         warning("`final_name` is ignored when `inplace = TRUE`.")
     }
@@ -168,12 +223,29 @@ pb_filterNA <- function(
             filtered_obj <- do.call(filterNA, c(list(object, i = nm), params))
             filtered_obj <- .as_ProBatchFeatures(filtered_obj, from = object)
             filtered <- filtered_obj[[nm]]
-            new_nm <- .pb_unique_assay_name(object, final_name[[idx]])
-            prior <- object
-            object <- addAssay(object, filtered, name = new_nm)
-            object <- .as_ProBatchFeatures(object, from = prior)
+            new_nm <- final_name[[idx]]
+            log_params <- c(params, list(inplace = inplace))
+            retry_status <- .pb_target_retry_status(
+                object = object,
+                to = new_nm,
+                from = nm,
+                data = SummarizedExperiment::assay(filtered, "intensity"),
+                step = "filterNA",
+                fun = "filterNA",
+                params = log_params
+            )
+            if (!identical(retry_status, "stored_idempotent")) {
+                prior <- object
+                object <- addAssay(object, filtered, name = new_nm)
+                object <- .as_ProBatchFeatures(object, from = prior)
+            }
             to_nm <- new_nm
             message("  Features after filtering:\t", length(object[[new_nm]]))
+        }
+        log_params <- if (inplace) {
+            c(params, list(inplace = inplace))
+        } else {
+            log_params
         }
         object <- .pb_add_log_entry(
             object,
@@ -181,7 +253,7 @@ pb_filterNA <- function(
             fun = "filterNA",
             from = nm,
             to = to_nm,
-            params = c(params, list(inplace = inplace))
+            params = log_params
         )
     }
     object
@@ -246,7 +318,12 @@ pb_groupfilterNA <- function(
     params <- .pb_collect_missing_params(list(...), forbidden = c("i", "name", "min", "pNA"))
 
     if (!inplace) {
-        final_name <- .pb_prepare_final_names(assays, final_name, suffix = "_groupfilteredNA")
+        final_name <- .pb_prepare_final_names(
+            object,
+            assays,
+            final_name,
+            suffix = "_groupfilteredNA"
+        )
     } else if (!is.null(final_name)) {
         warning("`final_name` is ignored when `inplace = TRUE`.")
     }
@@ -360,22 +437,6 @@ pb_groupfilterNA <- function(
             SummarizedExperiment::assay(filtered_se) <- mat
         }
         features_after <- nrow(filtered_se)
-
-        if (inplace) {
-            prior <- object
-            object[[nm]] <- filtered_se
-            object <- .as_ProBatchFeatures(object, from = prior)
-            to_nm <- nm
-            message("  Features after filtering:\t", features_after)
-        } else {
-            new_nm <- .pb_unique_assay_name(object, final_name[[idx]])
-            prior <- object
-            object <- addAssay(object, filtered_se, name = new_nm)
-            object <- .as_ProBatchFeatures(object, from = prior)
-            to_nm <- new_nm
-            message("  Features after filtering:\t", features_after)
-        }
-
         log_params <- c(
             list(
                 group_cols = group_cols,
@@ -386,6 +447,32 @@ pb_groupfilterNA <- function(
             ),
             params
         )
+
+        if (inplace) {
+            prior <- object
+            object[[nm]] <- filtered_se
+            object <- .as_ProBatchFeatures(object, from = prior)
+            to_nm <- nm
+            message("  Features after filtering:\t", features_after)
+        } else {
+            new_nm <- final_name[[idx]]
+            retry_status <- .pb_target_retry_status(
+                object = object,
+                to = new_nm,
+                from = nm,
+                data = SummarizedExperiment::assay(filtered_se, "intensity"),
+                step = "groupfilterNA",
+                fun = "pb_groupfilterNA",
+                params = log_params
+            )
+            if (!identical(retry_status, "stored_idempotent")) {
+                prior <- object
+                object <- addAssay(object, filtered_se, name = new_nm)
+                object <- .as_ProBatchFeatures(object, from = prior)
+            }
+            to_nm <- new_nm
+            message("  Features after filtering:\t", features_after)
+        }
 
         object <- .pb_add_log_entry(
             object,
@@ -457,26 +544,61 @@ pb_groupfilterNA <- function(
     params
 }
 
-.pb_prepare_final_names <- function(assays, final_name, suffix) {
-    if (is.null(final_name)) {
-        final_name <- paste0(assays, suffix)
+.pb_result_namespace <- function(object) {
+    log <- get_operation_log(object)
+    virtual_targets <- if (nrow(log)) as.character(log$to) else character()
+    result_names <- unique(c(names(object), virtual_targets))
+    result_names[!is.na(result_names) & nzchar(result_names)]
+}
+
+.pb_disambiguate_generated_names <- function(proposed, reserved) {
+    result <- character(length(proposed))
+    for (idx in seq_along(proposed)) {
+        candidate <- proposed[[idx]]
+        suffix <- 0L
+        while (candidate %in% c(reserved, result)) {
+            suffix <- suffix + 1L
+            candidate <- paste0(proposed[[idx]], ".", suffix)
+        }
+        result[[idx]] <- candidate
     }
-    if (length(final_name) == 1L && length(assays) > 1L) {
-        final_name <- rep(final_name, length(assays))
+    result
+}
+
+.pb_prepare_final_names <- function(object, assays, final_name, suffix) {
+    if (is.null(final_name)) {
+        return(.pb_disambiguate_generated_names(
+            proposed = paste0(assays, suffix),
+            reserved = .pb_result_namespace(object)
+        ))
+    }
+
+    if (!is.character(final_name)) {
+        stop("`final_name` must be a character vector.", call. = FALSE)
     }
     if (length(final_name) != length(assays)) {
         stop(
-            "`final_name` must be length 1 or match `pbf_name` when `inplace = FALSE`.",
+            "`final_name` must contain exactly one name per selected assay ",
+            "(expected ", length(assays), ", got ", length(final_name), "); ",
+            "scalar names are not recycled.",
             call. = FALSE
         )
     }
-    as.character(final_name)
-}
-
-.pb_unique_assay_name <- function(object, proposed) {
-    existing <- names(object)
-    if (!length(existing) || !(proposed %in% existing)) {
-        return(proposed)
+    if (anyNA(final_name) || any(!nzchar(final_name))) {
+        stop(
+            "`final_name` must contain only non-missing, non-empty names.",
+            call. = FALSE
+        )
     }
-    make.unique(c(existing, proposed))[length(existing) + 1L]
+    if (anyDuplicated(final_name)) {
+        duplicated_names <- unique(final_name[duplicated(final_name)])
+        stop(
+            "`final_name` entries must be unique; duplicated name(s): ",
+            paste(duplicated_names, collapse = ", "),
+            ".",
+            call. = FALSE
+        )
+    }
+
+    final_name
 }

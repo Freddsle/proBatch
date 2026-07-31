@@ -4,6 +4,12 @@ proBatch  v2.1.0
   `validate_batch_design()`, `summarize_design()`, `detect_nested_batches()`,
   `detect_outlier_samples()`, and `subbatch_detection()`.
 
+## Breaking changes and defaults
+- Explicit result names now share the stored-assay and virtual-target
+  namespace. Conflicting names are rejected rather than silently suffixed, and
+  `pb_filterNA()`/`pb_groupfilterNA()` no longer recycle an explicit scalar name
+  across multiple assays.
+
 ## Provider-neutral extension contract
 - Extended the transformation registry with provider metadata, aliases,
   availability reporting, collision-safe idempotent registration, and

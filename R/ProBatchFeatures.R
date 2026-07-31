@@ -803,6 +803,33 @@ pb_current_assay <- function(object) {
     pkg <- as.character(pkg)
     params <- params %||% list()
 
+    if (identical(pkg, "proBatch") &&
+        identical(step, "filterNA") &&
+        identical(fun_name, "filterNA")) {
+        replay_params <- params
+        replay_params$inplace <- NULL
+        return(do.call(
+            .pb_filterNA_matrix,
+            c(list(data_matrix = base_matrix), replay_params)
+        ))
+    }
+    if (identical(pkg, "proBatch") &&
+        identical(step, "groupfilterNA") &&
+        identical(fun_name, "pb_groupfilterNA")) {
+        replay_params <- params
+        replay_params$inplace <- NULL
+        return(do.call(
+            .pb_groupfilterNA_matrix,
+            c(
+                list(
+                    data_matrix = base_matrix,
+                    sample_annotation = sample_annotation
+                ),
+                replay_params
+            )
+        ))
+    }
+
     registered_token <- NULL
     if (length(fun_name) == 1L && !is.na(fun_name) && nzchar(fun_name) &&
         pb_has_step(fun_name)) {
