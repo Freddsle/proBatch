@@ -599,6 +599,71 @@ get_operation_log <- function(object) {
     tail(matches, 1L)
 }
 
+.pb_assay_data_identical <- function(left, right) {
+    identical(as.matrix(left), as.matrix(right))
+}
+
+.pb_target_retry_status <- function(
+  object, to, from, data, step, fun, params = list(),
+  pkg = "proBatch", name = "intensity"
+) {
+    stopifnot(is(object, "ProBatchFeatures"))
+    log <- get_operation_log(object)
+    stored <- to %in% names(object)
+    target_rows <- if (nrow(log)) {
+        which(as.character(log$to) == to)
+    } else {
+        integer()
+    }
+
+    if (!stored && !length(target_rows)) {
+        return("available")
+    }
+
+    .pb_lineage_parent_edge(log, to)
+    exact_rows <- target_rows[vapply(
+        target_rows,
+        function(index) .pb_log_edge_matches(
+            log = log,
+            index = index,
+            from = from,
+            to = to,
+            step = step,
+            fun = fun,
+            pkg = pkg,
+            params = params
+        ),
+        logical(1)
+    )]
+    if (!length(exact_rows)) {
+        stop(
+            "Result target '", to,
+            "' already exists or is reserved with a different parent ",
+            "or stable lineage origin.",
+            call. = FALSE
+        )
+    }
+
+    .pb_lineage_from_log(object, to)
+    payload <- .pb_assay_payload(object, assay_name = to, name = name)
+    if (is.null(payload)) {
+        stop(
+            "Result target '", to,
+            "' is reserved but its existing data cannot be resolved.",
+            call. = FALSE
+        )
+    }
+    if (!.pb_assay_data_identical(payload$matrix, data)) {
+        stop(
+            "Result target '", to,
+            "' already exists or is reserved with conflicting data.",
+            call. = FALSE
+        )
+    }
+
+    if (stored) "stored_idempotent" else "virtual_idempotent"
+}
+
 .pb_lineage_from_log <- function(object, assay) {
     log <- get_operation_log(object)
     node <- as.character(assay)
@@ -1063,7 +1128,10 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
     object
 }
 
-.pb_add_assay_with_link <- function(object, se, to, from) {
+.pb_add_assay_with_link <- function(
+  object, se, to, from, step = NULL, fun = NULL, params = list(),
+  pkg = "proBatch", lineage_from = from
+) {
     original_names <- names(object)
     stopifnot(
         is.character(to), length(to) == 1L,
@@ -1075,6 +1143,34 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
         resolved <- .pb_resolve_assay_from_log(object, from, name = "intensity")
         if (is.null(resolved)) {
             stop("Assay '", from, "' not found in object or operation log; cannot link.")
+        }
+    }
+
+    target_exists <- to %in% names(object) ||
+        (nrow(object@oplog) &&
+            any(as.character(object@oplog$to) == to))
+    retry_status <- "available"
+    if (target_exists) {
+        if (is.null(step) || is.null(fun)) {
+            stop(
+                "Result target '", to,
+                "' already exists or is reserved; stable lineage origin ",
+                "is required to validate an exact retry.",
+                call. = FALSE
+            )
+        }
+        retry_status <- .pb_target_retry_status(
+            object = object,
+            to = to,
+            from = lineage_from,
+            data = assay(se, "intensity"),
+            step = step,
+            fun = fun,
+            params = params,
+            pkg = pkg
+        )
+        if (identical(retry_status, "stored_idempotent")) {
+            return(object)
         }
     }
 
@@ -1144,24 +1240,14 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
     new_pipeline <- .pb_make_pipeline_name(c(prev_tokens, step))
     to <- to_override %||% .pb_assay_name(new_level, new_pipeline)
 
-    # Avoid duplicate identical entries
-    fun_name <- if (is.character(fun)) fun else step
-    if (to %in% names(object) && nrow(object@oplog)) {
-        dup <- object@oplog$step == step &
-            object@oplog$fun == fun_name &
-            object@oplog$from == from &
-            object@oplog$to == to &
-            vapply(object@oplog$params, function(p) identical(p, params), logical(1))
-        if (any(dup)) {
-            return(list(
-                object = object,
-                assay = to,
-                matrix = pb_assay_matrix(object, to),
-                to = to
-            ))
-        }
+    logged_params <- if (is.null(params)) {
+        list()
+    } else if (is.list(params)) {
+        params
+    } else {
+        list(params)
     }
-
+    fun_name <- if (is.character(fun)) fun else step
     base_m <- if (!is.null(.base_m)) {
         .base_m
     } else {
@@ -1171,26 +1257,62 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
     }
 
     f <- .pb_get_step_fun(fun)
-    params <- .pb_enrich_step_params(object, from_data, f, params)
-    res_m <- do.call(f, c(list(base_m), params))
+    call_params <- .pb_enrich_step_params(
+        object,
+        from_data,
+        f,
+        logged_params
+    )
+    res_m <- do.call(f, c(list(base_m), call_params))
+    retry_status <- .pb_target_retry_status(
+        object = object,
+        to = to,
+        from = from,
+        data = res_m,
+        step = step,
+        fun = fun_name,
+        params = logged_params,
+        pkg = "proBatch"
+    )
 
     saved_assay <- NULL
     if (store) {
-        mat <- .pb_materialize_matrix(res_m, backend = backend, hdf5_path = hdf5_path)
-        cd_from <- .pb_coldata_for_assay(object, from_data)
-        se <- SummarizedExperiment(
-            assays  = list(intensity = mat),
-            colData = cd_from
+        mat <- .pb_materialize_matrix(
+            res_m,
+            backend = backend,
+            hdf5_path = hdf5_path
         )
-        object <- .pb_add_assay_with_link(object, se, to = to, from = from_data)
-        saved_assay <- to
+        if (identical(retry_status, "stored_idempotent")) {
+            saved_assay <- to
+        } else {
+            cd_from <- .pb_coldata_for_assay(object, from_data)
+            se <- SummarizedExperiment(
+                assays = list(intensity = mat),
+                colData = cd_from
+            )
+            object <- .pb_add_assay_with_link(
+                object,
+                se,
+                to = to,
+                from = from_data,
+                step = step,
+                fun = fun_name,
+                params = logged_params,
+                pkg = "proBatch",
+                lineage_from = from
+            )
+            saved_assay <- to
+        }
     }
 
     object <- .pb_add_log_entry(
         object,
         step = step,
         fun = fun_name,
-        from = from, to = to, params = params
+        from = from,
+        to = to,
+        params = logged_params,
+        pkg = "proBatch"
     )
 
     list(object = object, assay = saved_assay, matrix = res_m, to = to)
@@ -1211,8 +1333,11 @@ pb_as_wide <- function(object, assay = pb_current_assay(object), name = "intensi
 #' @param fast_steps which steps count as fast (default: c("log","log2","medianNorm"))
 #' @param store_intermediate logical; if TRUE store every step (overrides fast behavior)
 #' @param final_name Optional final assay name override in
-#'   `<level>::<pipeline>` form. It must differ from `from`. Supplying a name
-#'   materializes the final result even for an otherwise ephemeral log step.
+#'   `<level>::<pipeline>` form. It must differ from `from`. Stored assays and
+#'   virtual operation-log targets share one result namespace, so a conflicting
+#'   explicit name is rejected rather than disambiguated unless the request is
+#'   an exact idempotent retry. Supplying a name materializes the final result
+#'   even for an otherwise ephemeral log step.
 #' @param backend "memory","hdf5","auto"
 #' @param hdf5_path Optional file path used when `backend = "hdf5"`.
 #' @return ProBatchFeatures with the requested pipeline added (as log and/or assay)
@@ -1252,7 +1377,6 @@ pb_transform <- function(
     cur_from <- from
     cur_from_data <- from
     base_m <- NULL
-    last_assay <- NULL
 
     for (k in seq_along(steps)) {
         step <- steps[[k]]
@@ -1291,19 +1415,6 @@ pb_transform <- function(
         cur_from <- out$to %||% cur_from
         if (store_this) {
             cur_from_data <- out$assay %||% cur_from_data
-            last_assay <- cur_from_data
-        } else {
-            last_assay <- cur_from_data
-        }
-    }
-    # Rename final assay if requested and it exists
-    if (!is.null(final_name) && !is.null(last_assay) && last_assay %in% names(object) &&
-        !identical(last_assay, final_name) &&
-        !identical(last_assay, from)) {
-        names(object)[match(last_assay, names(object))] <- final_name
-        last_assay <- final_name
-        if (nrow(object@oplog)) {
-            object@oplog$to[nrow(object@oplog)] <- final_name
         }
     }
     object

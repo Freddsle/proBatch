@@ -358,6 +358,149 @@ test_that("internal logging helper updates oplog and chain", {
     expect_identical(pb_pipeline_name(pbf), "raw")
 })
 
+test_that("stored assay retries require identical data and parent lineage", {
+    matrix <- matrix(
+        seq_len(6),
+        nrow = 3,
+        dimnames = list(paste0("f", 1:3), c("S1", "S2"))
+    )
+    sample_annotation <- data.frame(
+        FullRunName = colnames(matrix),
+        row.names = colnames(matrix)
+    )
+    pbf <- ProBatchFeatures(
+        matrix,
+        sample_annotation,
+        "FullRunName",
+        name = "raw"
+    )
+    target <- "feature::copy"
+    identity_step <- function(value) value
+
+    transformed <- pb_transform(
+        pbf,
+        from = "feature::raw",
+        steps = "copy",
+        funs = list(identity_step),
+        final_name = target
+    )
+    retried <- pb_transform(
+        transformed,
+        from = "feature::raw",
+        steps = "copy",
+        funs = list(identity_step),
+        final_name = target
+    )
+
+    expect_identical(names(retried), names(transformed))
+    expect_identical(
+        nrow(get_operation_log(retried)),
+        nrow(get_operation_log(transformed))
+    )
+    expect_identical(
+        pb_assay_matrix(retried, target),
+        pb_assay_matrix(transformed, target)
+    )
+
+    expect_error(
+        pb_transform(
+            transformed,
+            from = "feature::raw",
+            steps = "copy",
+            funs = list(function(value) value + 1),
+            final_name = target
+        ),
+        "conflicting data"
+    )
+
+    other_se <- SummarizedExperiment(
+        assays = list(intensity = matrix),
+        colData = colData(transformed[["feature::raw"]])
+    )
+    with_other_parent <- proBatch:::.pb_add_assay_with_link(
+        transformed,
+        se = other_se,
+        to = "feature::other",
+        from = "feature::raw"
+    )
+    expect_error(
+        pb_transform(
+            with_other_parent,
+            from = "feature::other",
+            steps = "copy",
+            funs = list(identity_step),
+            final_name = target
+        ),
+        "different parent"
+    )
+})
+
+test_that("virtual targets reserve the stored assay namespace", {
+    matrix <- matrix(
+        c(2, 4, 8, 16),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("S1", "S2"))
+    )
+    sample_annotation <- data.frame(
+        FullRunName = colnames(matrix),
+        row.names = colnames(matrix)
+    )
+    pbf <- ProBatchFeatures(
+        matrix,
+        sample_annotation,
+        "FullRunName",
+        name = "raw"
+    )
+    logged <- pb_transform(
+        pbf,
+        from = "feature::raw",
+        steps = "log2"
+    )
+    target <- "feature::log2_on_raw"
+
+    expect_false(target %in% names(logged))
+    expect_true(target %in% as.character(get_operation_log(logged)$to))
+
+    exact_retry <- pb_transform(
+        logged,
+        from = "feature::raw",
+        steps = "log2"
+    )
+    expect_false(target %in% names(exact_retry))
+    expect_identical(
+        nrow(get_operation_log(exact_retry)),
+        nrow(get_operation_log(logged))
+    )
+
+    materialized_retry <- pb_transform(
+        logged,
+        from = "feature::raw",
+        steps = "log2",
+        store_fast_steps = TRUE
+    )
+    expect_true(target %in% names(materialized_retry))
+    expect_identical(
+        nrow(get_operation_log(materialized_retry)),
+        nrow(get_operation_log(logged))
+    )
+    expect_identical(
+        pb_assay_matrix(materialized_retry, target),
+        log2(matrix + 1)
+    )
+
+    expect_error(
+        pb_transform(
+            logged,
+            from = "feature::raw",
+            steps = "copy",
+            funs = list(function(value) value),
+            final_name = target
+        ),
+        "already exists or is reserved"
+    )
+    expect_false(target %in% names(logged))
+})
+
 test_that("lineage identity includes package and permits self edges", {
     matrix <- matrix(
         seq_len(4),
