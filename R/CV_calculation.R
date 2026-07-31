@@ -48,7 +48,8 @@ compute_cv <- function(data, measure_col, group_vars, cv_name) {
 #' CV_df <- calculate_feature_CV(example_proteome,
 #'     sample_annotation = example_sample_annotation,
 #'     measure_col = "Intensity",
-#'     batch_col = "MS_batch"
+#'     batch_col = "MS_batch",
+#'     biospecimen_id_col = "EarTag"
 #' )
 calculate_feature_CV <- function(df_long, sample_annotation = NULL,
                                  feature_id_col = "peptide_group_label",

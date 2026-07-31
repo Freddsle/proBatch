@@ -400,8 +400,14 @@ ProBatchFeatures_from_long <- function(
 #' if (requireNamespace("QFeatures", quietly = TRUE)) {
 #'     data(example_proteome_matrix, package = "proBatch")
 #'     data(example_sample_annotation, package = "proBatch")
-#'     cd <- S4Vectors::DataFrame(example_sample_annotation)
-#'     rownames(cd) <- example_sample_annotation$FullRunName
+#'     sample_order <- match(
+#'         colnames(example_proteome_matrix),
+#'         example_sample_annotation$FullRunName
+#'     )
+#'     cd <- S4Vectors::DataFrame(
+#'         example_sample_annotation[sample_order, , drop = FALSE]
+#'     )
+#'     rownames(cd) <- colnames(example_proteome_matrix)
 #'     se <- SummarizedExperiment::SummarizedExperiment(
 #'         assays = list(intensity = example_proteome_matrix),
 #'         colData = cd
