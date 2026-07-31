@@ -27,3 +27,6 @@ Renviron.bioc
 ^specs$
 ^workflows$
 ^\.session$
+^\.pixi$
+^pixi\.toml$
+^pixi\.lock$
