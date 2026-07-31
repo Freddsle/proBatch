@@ -619,10 +619,8 @@ pb_has_step <- function(name, available = FALSE) {
         )
         if (!nrow(m) || !ncol(m)) {
             stop(
-                paste(
-                    "No data remaining after handling missing values for",
-                    "median normalization"
-                ),
+                "No data remaining after handling missing values for ",
+                "median normalization",
                 call. = FALSE
             )
         }

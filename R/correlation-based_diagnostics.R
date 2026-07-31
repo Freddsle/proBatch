@@ -510,14 +510,13 @@ plot_sample_corr_heatmap <- function(data_matrix, samples_to_plot = NULL,
     }
     if (anyNA(mat_for_corr)) {
         n_complete <- sum(stats::complete.cases(mat_for_corr))
-        message(sprintf(
-            paste0(
-                "Sample correlation heatmap: %d/%d features fully observed; ",
-                "using pairwise.complete.obs."
-            ),
+        message(
+            "Sample correlation heatmap: ",
             n_complete,
-            nrow(mat_for_corr)
-        ))
+            "/",
+            nrow(mat_for_corr),
+            " features fully observed; using pairwise.complete.obs."
+        )
     }
     corr_matrix <- cor(mat_for_corr, use = "pairwise.complete.obs")
 

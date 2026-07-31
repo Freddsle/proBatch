@@ -2438,13 +2438,13 @@ plot_TSNE.default <- function(data_matrix,
     }
     max_perplexity <- max(1, floor((n_samples - 1) / 3))
     if (perplexity > max_perplexity) {
-        warning(sprintf(
-            paste0(
+        warning(
+            sprintf(
                 "`perplexity` %.2f exceeds the maximum %.2f for %d samples; ",
-                "adjusting to %.2f."
+                perplexity, max_perplexity, n_samples
             ),
-            perplexity, max_perplexity, n_samples, max_perplexity
-        ))
+            sprintf("adjusting to %.2f.", max_perplexity)
+        )
         perplexity <- max_perplexity
     }
 

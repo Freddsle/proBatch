@@ -1165,7 +1165,7 @@ correct_batch_effects <- function(
     sample_idx <- match(df_long[[sample_id_col]], colnames(data_matrix))
     if (anyNA(feature_idx) || anyNA(sample_idx)) {
         stop(
-            "Internal error: processed matrix is not aligned with long data.",
+            "Processed matrix is not aligned with long data.",
             call. = FALSE
         )
     }
@@ -1181,7 +1181,7 @@ correct_batch_effects <- function(
     old_measure_col <- .make_pre_col("preBatchCorr", measure_col)
     if (!(old_measure_col %in% names(df_long))) {
         stop(
-            "Internal error: corrected long data has no provenance column.",
+            "Corrected long data has no provenance column.",
             call. = FALSE
         )
     }
@@ -1201,10 +1201,7 @@ correct_batch_effects <- function(
             ))
         if (!same_keys) {
             stop(
-                paste0(
-                    "Internal error: duplicate long-data keys changed order ",
-                    "during correction."
-                ),
+                "Duplicate long-data keys changed order during correction.",
                 call. = FALSE
             )
         }
@@ -1232,7 +1229,7 @@ correct_batch_effects <- function(
     )
     if (anyNA(df_long[[present_col]])) {
         stop(
-            "Internal error: corrected long data cannot be matched to its input.",
+            "Corrected long data cannot be matched to its input.",
             call. = FALSE
         )
     }
