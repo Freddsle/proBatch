@@ -38,13 +38,12 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup, include = FALSE}
-chooseCRANmirror(graphics = FALSE, ind = 1)
 options(tinytex.verbose = TRUE)
 ```
 
 # Overview
 
-`ProBatchFeatures` is an extension of `proBatch` based on `QFeatures` [@QFeatures], which extends it's functionality by storing each processing stage (for example, raw data → log-transformation → normalization → batch effect correction → …) as a new `SummarizedExperiment` assay, and logging every step. It maintains full compatibility with `QFeatures` functions, and facilitates quick benchmarking of data preprocessing pipelines.
+`ProBatchFeatures` is an extension of `proBatch` based on `QFeatures` [@QFeatures], which extends its functionality by storing each processing stage (for example, raw data → log-transformation → normalization → batch effect correction → …) as a new `SummarizedExperiment` assay, and logging every step. It maintains full compatibility with `QFeatures` functions, and facilitates quick benchmarking of data preprocessing pipelines.
 
 This vignette demonstrates how to:
 
@@ -196,12 +195,12 @@ breakdown for each assay:
 head(na_counts[["peptide::raw"]]$nNAcols) %>% as_tibble()
 ```
 
-For each assay the following tables are availabe:
+For each assay the following tables are available:
 ```{r print_na_counts}
 print(names(na_counts[["peptide::raw"]]))
 ```
 
-Visualisations helps explore batch-specific patterns of missingness. Firstly, we define a color scheme which will be used in all diagnostic plots:
+Visualisations help explore batch-specific patterns of missingness. Firstly, we define a color scheme which will be used in all diagnostic plots:
 
 ```{r define_colors}
 # color scheme for lab and condition labels
@@ -376,7 +375,7 @@ library(gridExtra)
 grid.arrange(pca1, pca2, ncol = 2, nrow = 1)
 ```
 
-Simiarly, the PCA plots clearly demonstrate that the primary source of
+Similarly, the PCA plots clearly demonstrate that the primary source of
 variance in the raw data is the lab.
 
 ## Step 3 - median normalization
@@ -438,7 +437,7 @@ plot_PCA(
 )
 ```
 
-Although median normalization made itensity distributions more similar, the residual lab-specific batch effects remain evident on the PCA plots and need to be corrected.
+Although median normalization made intensity distributions more similar, the residual lab-specific batch effects remain evident on the PCA plots and need to be corrected.
 
 ## Step 4 - batch-effect correction
 
@@ -825,7 +824,7 @@ plot_PVCA(
     fill_the_missing = NULL,
     base_size = 7,
     plot_ncol = 2, # the number of plots in a row
-    variance_threshold = 0 # the the percentile value of weight each of the
+    variance_threshold = 0 # the percentile value of weight each of the
     # covariates needs to explain
     # (the rest will be lumped together)
 )

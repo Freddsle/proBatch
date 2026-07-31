@@ -40,7 +40,6 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup, include = FALSE}
-chooseCRANmirror(graphics = FALSE, ind = 1)
 options(tinytex.verbose = TRUE)
 ```
 
@@ -166,7 +165,7 @@ To analyze an experiment for batch effects, three tables need to be
 loaded into environment:
 
 The package typically requires three datasets: 1) measurement
-(datamatrix), 2) sample annotation, and 3) feature annotation (optional)
+(data matrix), 2) sample annotation, and 3) feature annotation (optional)
 tables. If you are familiar with the `Biobase` package, these correspond
 to 1) `assayData`, 2) joined `phenoData` and `protocolData`, and
 3)`featureData`.
@@ -458,7 +457,7 @@ signal was decreasing.
 
 ### Plotting boxplots
 
-Alternatively, `plot_boxplots()` captures the global distribution vs.
+Alternatively, `plot_boxplot()` captures the global distribution vs.
 the sample running order.
 
 ```{r plot_boxplots, fig.show='hold', fig.width=10, fig.height=5}
@@ -580,10 +579,10 @@ together and the driving force of this similarity can be visualized by
 coloring the leaves of the dendrogram by technical and biological
 variables.
 
-Our package provides `plot_sample_clustering()` and `plot_heatmap()` to
-plot the dendrogram by itself or with a heatmap. You can easily color
-annotations on the leaves of the dendrograms or heatmaps to identify
-what is the driving force of the clustering.
+Our package provides `plot_hierarchical_clustering()` and
+`plot_heatmap_diagnostic()` to plot the dendrogram by itself or with a
+heatmap. You can easily color annotations on the leaves of the
+dendrograms or heatmaps to identify what is driving the clustering.
 
 Once your color annotation is ready, for the specific covariates of
 interest, you can subset the color dataset and feed it into the
@@ -603,10 +602,9 @@ plot_hierarchical_clustering(
 )
 ```
 
-Similarly, you can plot a heatmap by supplementing the color list. You
-decide whether to show annotations in the column, row or both by
-specifying the required covariates with `sample_annotation_col`,
-`sample_annoation_row`, or both.
+Similarly, you can plot a heatmap by supplementing the color list. Use
+`factors_to_plot` to select sample annotations and `cluster_cols` or
+`cluster_rows` to control sample or feature clustering, respectively.
 
 \pagebreak
 
