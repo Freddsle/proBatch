@@ -699,7 +699,7 @@ A single selected assay returns a static `ggplot`. Supply
 `random_state` explicitly when reproducible UMAP coordinates are
 required; omitting it leaves randomness under the caller's control:
 
-```{r plot_umap_single, fig.height=5, fig.width=6, eval=requireNamespace("umap", quietly=TRUE)}
+```{r plot_umap_single, fig.height=3.2, fig.width=4, eval=requireNamespace("umap", quietly=TRUE)}
 umap_protein <- plot_UMAP(
     pbf,
     pbf_name = "protein::combat_on_medianNorm_on_log2_on_raw",
@@ -773,12 +773,12 @@ grid::grid.draw(tsne_protein$grob)
 is too large for an assay's sample count, Core reduces it to the
 supported maximum and warns.
 
-Static rendering is the default and does not require Plotly. With
-`use_plotlyrender = TRUE`, one assay returns one `plotly` object and
-multiple assays return a named ordered list. Set
-`return_subplots = TRUE` to combine a multi-assay result; `subplot_ncol`
-and `share_axes` control its layout. This optional interactive variant
-is shown without executing it during vignette builds:
+Static rendering is the default and does not require Plotly. To make the
+embeddings interactive, set `use_plotlyrender = TRUE`. One assay returns
+one `plotly` object, while multiple assays return a named ordered list.
+Set `return_subplots = TRUE` to combine a multi-assay result;
+`subplot_ncol` and `share_axes` control its layout. The example below
+shows both return forms:
 
 ```{r plot_umap_interactive, eval=FALSE}
 embedding_assays <- c(
@@ -858,7 +858,7 @@ PVCA quantifies the contribution of known factors to the observed
 variance [@bushel2025pvca] which can be compared across raw, normalised, and
 ComBat-corrected assays:
 
-```{r plot_pvca_panels, fig.height=6, fig.show='hold', fig.width=5, message=FALSE, warning=FALSE}
+```{r plot_pvca_panels, fig.height=4, fig.show='hold', fig.width=5, message=FALSE, warning=FALSE}
 plot_PVCA(
     pbf,
     pbf_name = c(
