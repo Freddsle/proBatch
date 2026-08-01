@@ -1,132 +1,240 @@
-test_that("numeric fill replaces missing values", {
-    data(example_proteome_matrix, package = "proBatch")
-    mat <- example_proteome_matrix[8:10, 1:3]
-    index_missing <- which(is.na(mat), arr.ind = TRUE)
-
-    expect_warning(
-        expect_warning(
-            res <- handle_missing_values(mat, "warn", fill_the_missing = -1),
-            "warn"
-        ),
-        "filling missing values with"
+test_that("missing-value policy defaults to an explicit error", {
+    matrix <- matrix(
+        c(1, NA_real_, 3, 4),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2"))
     )
 
-    expect_true(!any(is.na(res)))
-    expect_equal(res[index_missing], rep(-1, sum(is.na(mat))))
+    expect_error(
+        handle_missing_values(
+            matrix,
+            "method cannot operate with missing values"
+        ),
+        "method cannot operate with missing values"
+    )
+    expect_error(
+        handle_missing_values(
+            matrix,
+            "unused",
+            fill_the_missing = NULL
+        ),
+        "NULL.*ambiguous"
+    )
+
+    complete <- matrix
+    complete[is.na(complete)] <- 0
+    expect_error(
+        handle_missing_values(
+            complete,
+            "unused",
+            fill_the_missing = NULL
+        ),
+        "NULL.*ambiguous"
+    )
 })
 
+test_that("canonical keep, drop_features, and fill policies are deterministic", {
+    matrix <- matrix(
+        c(1, NA_real_, 3, 4, 5, 6),
+        nrow = 3,
+        byrow = TRUE,
+        dimnames = list(c("f1", "f2", "f3"), c("s1", "s2"))
+    )
 
-test_that("rows with NAs removed for rectangular matrix", {
-    mat <- matrix(c(1, 2, NA, 3, 4, 5), nrow = 3, byrow = TRUE)
-    expect_warning(
-        expect_warning(
-            res <- handle_missing_values(mat, "warn"),
-            "warn",
-            fixed = TRUE
+    kept <- expect_silent(handle_missing_values(
+        matrix,
+        "unused",
+        fill_the_missing = "keep"
+    ))
+    expect_identical(kept, matrix)
+
+    dropped <- pb_test_expect_warnings(
+        handle_missing_values(
+            matrix,
+            "unused",
+            fill_the_missing = "drop_features"
         ),
-        "removed 1 rows",
+        "removed 1 rows and 0 columns",
         fixed = TRUE
     )
-    expect_equal(nrow(res), 2)
-    expect_equal(res[, 1], c(1, 4))
+    expect_identical(rownames(dropped), c("f2", "f3"))
+    expect_identical(colnames(dropped), colnames(matrix))
+
+    filled <- expect_silent(handle_missing_values(
+        matrix,
+        "unused",
+        fill_the_missing = "fill",
+        fill_value = -1
+    ))
+    expect_false(anyNA(filled))
+    expect_identical(unname(filled[1, 2]), -1)
 })
 
-test_that("symmetric square matrix removes rows and columns with NAs", {
-    mat <- matrix(
+test_that("drop_features never removes matching sample columns", {
+    matrix <- matrix(
+        # fmt: skip
         c(
             1, 2, 3,
             2, 1, NA,
             3, NA, 1
         ),
-        nrow = 3, byrow = TRUE,
-        dimnames = list(paste0("r", 1:3), paste0("c", 1:3))
+        nrow = 3,
+        byrow = TRUE,
+        dimnames = list(paste0("f", 1:3), paste0("s", 1:3))
     )
-    expect_warning(
-        expect_warning(
-            expect_warning(
-                res <- handle_missing_values(mat, "warn"),
-                "removed 2 rows",
-                fixed = TRUE
-            ),
-            "Matrix is square but not symmetric",
-            fixed = TRUE
+
+    result <- pb_test_expect_warnings(
+        handle_missing_values(
+            matrix,
+            "unused",
+            fill_the_missing = "drop_features"
         ),
-        "warn",
+        "removed 2 rows and 0 columns",
         fixed = TRUE
     )
 
-    expect_equal(dim(res), c(1, 3))
-    expect_equal(res, matrix(c(1, 2, 3), nrow = 1, dimnames = list("r1", paste0("c", 1:3))))
+    expect_identical(dim(result), c(1L, 3L))
+    expect_identical(rownames(result), "f1")
+    expect_identical(colnames(result), colnames(matrix))
 })
 
+test_that("drop_features reports only removals that occur", {
+    complete <- matrix(
+        1:6,
+        nrow = 3,
+        dimnames = list(paste0("f", 1:3), paste0("s", 1:2))
+    )
+    expect_identical(
+        expect_silent(handle_missing_values(
+            complete,
+            "unused",
+            fill_the_missing = "drop_features"
+        )),
+        complete
+    )
 
-test_that("square but non-symmetric matrix removes rows only", {
-    mat <- matrix(c(1, 2, 3, NA), nrow = 2, byrow = TRUE)
-    expect_warning(
-        expect_warning(
-            expect_warning(
-                res <- handle_missing_values(mat, "warn"),
-                "Matrix is square but not symmetric",
-                fixed = TRUE
-            ),
-            "removed 1 rows",
-            fixed = TRUE
+    incomplete <- complete
+    incomplete[, 1] <- NA_real_
+    result <- pb_test_expect_warnings(
+        handle_missing_values(
+            incomplete,
+            "unused",
+            fill_the_missing = "drop_features"
         ),
-        "warn",
+        "removed 3 rows and 0 columns",
         fixed = TRUE
     )
-    expect_equal(dim(res), c(1, 2))
-    expect_true(all(!is.na(res)))
+    expect_identical(dim(result), c(0L, 2L))
 })
 
-
-test_that("all rows incomplete leads to empty matrix", {
-    mat <- matrix(
-        c(
-            NA, 2, 3,
-            2, NA, 4,
-            3, 4, NA
-        ),
-        nrow = 3, byrow = TRUE,
-        dimnames = list(paste0("r", 1:3), paste0("c", 1:3))
+test_that("legacy missing values translate with one deprecation warning", {
+    matrix <- matrix(
+        c(1, NA_real_, 3, 4),
+        nrow = 2,
+        byrow = TRUE,
+        dimnames = list(c("f1", "f2"), c("s1", "s2"))
     )
 
-    expect_warning(
-        expect_warning(
-            expect_warning(
-                res <- handle_missing_values(mat, "warn"),
-                "Matrix is square but not symmetric",
-                fixed = TRUE
+    kept <- pb_test_expect_warnings(
+        handle_missing_values(
+            matrix,
+            "unused",
+            fill_the_missing = FALSE
+        ),
+        "deprecated.*keep"
+    )
+    expect_true(anyNA(kept))
+
+    filled <- pb_test_expect_warnings(
+        handle_missing_values(
+            matrix,
+            "unused",
+            fill_the_missing = 0
+        ),
+        "deprecated.*fill"
+    )
+    expect_identical(unname(filled[1, 2]), 0)
+
+    for (legacy in c("remove", "rm", "REMOVE")) {
+        dropped <- pb_test_expect_warnings(
+            handle_missing_values(
+                matrix,
+                "unused",
+                fill_the_missing = legacy
             ),
-            "warn",
-            fixed = TRUE
-        ),
-        "removed 3 rows",
-        fixed = TRUE
-    )
-    expect_equal(dim(res), c(0, 3))
+            c("deprecated.*drop_features", "removed 1 rows and 0 columns")
+        )
+        expect_identical(rownames(dropped), "f2")
+    }
 })
 
-
-test_that("non-numeric fill replaces missing values with 0", {
-    data(example_proteome_matrix, package = "proBatch")
-    mat <- example_proteome_matrix[8:10, 1:3]
-
-    expect_true(any(is.na(mat)))
-
-    expect_warning(
-        expect_warning(
-            expect_warning(
-                res <- handle_missing_values(mat, "warn", fill_the_missing = "a"),
-                "filling value is not a finite numeric scalar",
-                fixed = TRUE
-            ),
-            "warn",
-            fixed = TRUE
-        ),
-        "filling missing values with 0",
+test_that("invalid policies and fill values are rejected", {
+    matrix <- matrix(
+        c(1, NA_real_, 3, 4),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2"))
     )
 
-    expect_true(!any(is.na(res)))
-    expect_equal(res[is.na(mat)], rep(0, sum(is.na(mat))))
+    for (invalid in list(TRUE, "anything", "d", c("keep", "fill"))) {
+        expect_error(
+            handle_missing_values(
+                matrix,
+                "unused",
+                fill_the_missing = invalid
+            ),
+            "must be one of"
+        )
+    }
+    expect_error(
+        handle_missing_values(
+            matrix,
+            "unused",
+            fill_the_missing = "fill"
+        ),
+        "fill_value"
+    )
+    expect_error(
+        handle_missing_values(
+            matrix,
+            "unused",
+            fill_the_missing = "keep",
+            fill_value = 0
+        ),
+        "only valid"
+    )
+    expect_error(
+        handle_missing_values(
+            matrix,
+            "unused",
+            fill_the_missing = 0,
+            fill_value = 1
+        ),
+        "legacy numeric"
+    )
+    expect_error(
+        handle_missing_values(
+            matrix,
+            "unused",
+            fill_the_missing = Inf
+        ),
+        "finite"
+    )
+    expect_error(
+        handle_missing_values(
+            as.data.frame(matrix),
+            "unused",
+            fill_the_missing = "keep"
+        ),
+        "numeric matrix"
+    )
+
+    character_matrix <- matrix(c("1", NA_character_), nrow = 1)
+    expect_error(
+        handle_missing_values(
+            character_matrix,
+            "unused",
+            fill_the_missing = "keep"
+        ),
+        "numeric matrix"
+    )
 })
