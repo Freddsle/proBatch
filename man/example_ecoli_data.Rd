@@ -7,32 +7,35 @@
 A named list with four elements:
 
 \describe{
-  \item{`all_metadata`}{`data.frame` (118 rows × 3 columns) with per-sample annotation.
-  Columns: `Run`, `Lab`, and `Condition`.}
-  \item{`all_precursors`}{`data.frame` (1463 rows × 118 columns) containing the
-  combined precursor-level Precursor.Normalised intensities (rows = precursors,
-  columns = samples).}
-  \item{`all_protein_groups`}{`data.frame` (400 rows × 118 columns) containing the
-  combined protein group-level PG.MaxLFQ intensities.}
-  \item{`all_precursor_pg_match`}{`data.frame` (1463 rows × 2 columns) linking
-  `Precursor.Id` to `Protein.Ids`.}
+  \item{`all_metadata`}{`data.frame` (118 rows × 3 columns)
+  with per-sample annotation. Columns: `Run`, `Lab`, and `Condition`.}
+  \item{`all_precursors`}{`data.frame` (1463 rows ×
+  118 columns) containing the combined precursor-level Precursor.Normalised
+  intensities (rows = precursors, columns = samples).}
+  \item{`all_protein_groups`}{`data.frame` (400 rows ×
+  118 columns) containing the combined protein
+  group-level PG.MaxLFQ intensities.}
+  \item{`all_precursor_pg_match`}{`data.frame` (1463
+  rows × 2 columns) linking `Precursor.Id` to `Protein.Ids`.}
 }
 }
 \source{
 PRIDE ID PXD053812
 }
 \value{
-A named list containing the combined metadata, quantification matrices, and precursor-to-protein mapping.
+A named list containing the combined metadata, quantification
+  matrices, and precursor-to-protein mapping.
 }
 \description{
-An example dataset illustrating a typical multi-center DIA (data-independent acquisition)
-proteomics study processed with DIA-NN. Subset of 300 proteins and 1119 precursors
-from the PRIDE ID PXD053812.
-Study design summary:
+An example dataset illustrating a typical multi-center DIA (data-independent
+acquisition) proteomics study processed with DIA-NN. Subset of 400 protein
+groups and 1463 precursors from the PRIDE ID PXD053812. Study design summary:
 - Five independent centers.
-- Per center: 10(9) samples of E.coli grown in different media (Pyruvate vs Glucose)
-The distributed object is a named list that contains the combined study-level tables
-derived from all centers (per-center sub-lists were removed to keep the package size below 5 MB).
+- Per center: 23 or 24 samples of E. coli grown in different
+  media (Pyruvate vs Glucose)
+The distributed object is a named list that contains the combined
+study-level tables derived from all centers (per-center sub-lists were
+removed to keep the package size below 5 MB).
 }
 \examples{
 data("example_ecoli_data", package = "proBatch")

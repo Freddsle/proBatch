@@ -22,6 +22,7 @@
   height = 25,
   units = c("cm", "in", "mm"),
   plot_title = NULL,
+  return_ggplot = FALSE,
   ...
 )
 
@@ -31,11 +32,14 @@
   sample_annotation = NULL,
   sample_id_col = "FullRunName",
   plot_title = NULL,
+  return_gridExtra = FALSE,
+  plot_ncol = NULL,
   ...
 )
 }
 \arguments{
-\item{data_matrix}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
+\item{data_matrix}{Input object: matrix-like data or a
+\code{ProBatchFeatures} instance.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -47,16 +51,16 @@
 where the filenames (colnames of the \code{data_matrix} are found).}
 
 \item{color_list}{list, as returned by \code{sample_annotation_to_colors},
-where each item contains a color vector for each factor to be mapped to the
-color.}
+where each item contains a color vector for each factor
+to be mapped to the color.}
 
 \item{factors_to_plot}{vector of technical and biological covariates to be
 plotted in this diagnostic plot (assumed to be present in
 \code{sample_annotation})}
 
 \item{fill_the_missing}{numeric value determining how  missing values
-should be substituted. If \code{NULL}, features with missing values are
-excluded.}
+should be substituted. If \code{NULL}, features with
+missing values are excluded.}
 
 \item{distance}{distance metric used for clustering}
 
@@ -69,9 +73,8 @@ excluded.}
 \code{TRUE}, ignored otherwise}
 
 \item{filename}{path where the results are saved.
-If null the object is returned to the active window;
-otherwise, the object is save into the file. Currently only
-pdf and png format is supported}
+If null the object is returned to the active window; otherwise, the object
+is save into the file. Currently only pdf and png format is supported}
 
 \item{width}{option  determining the output image width}
 
@@ -82,20 +85,41 @@ pdf and png format is supported}
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
+\item{return_ggplot}{logical; when \code{TRUE}, the dendrogram is returned
+as a \code{ggplot} object. Used internally to capture plots for multi-assay
+workflows. Defaults to \code{FALSE} for the default method.}
+
 \item{...}{other parameters of \code{plotDendroAndColors} from
 \code{WGCNA} package}
 
-\item{pbf_name}{Assay name(s) used when `x` is a `ProBatchFeatures`.}
+\item{pbf_name}{Assay name(s) used when \code{data_matrix} is a
+\code{ProBatchFeatures}.}
+
+\item{return_gridExtra}{logical; when plotting multiple assays from a
+\code{ProBatchFeatures} object, returning \code{TRUE} provides a list with the
+arranged grob and individual plots (see \code{gridExtra::arrangeGrob}).
+Ignored by the default method.}
+
+\item{plot_ncol}{optional integer controlling the number of columns when
+arranging multiple assays. Ignored by the default method.}
 }
 \value{
-No return
+For the default method, either \code{NULL} (when relying on base
+graphics) or a \code{ggplot} object when \code{return_ggplot = TRUE}. The
+\code{ProBatchFeatures} method returns a single \code{ggplot} (for one assay) or an
+arranged grob/\code{ggplot} collection when multiple assays are plotted; if
+\code{ggplotify} is unavailable, a list of per-assay
+results is returned invisibly.
 }
 \description{
 cluster the data matrix to visually inspect which confounder dominates
 }
 \examples{
 # Load necessary datasets
-data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+data(
+    list = c("example_proteome_matrix", "example_sample_annotation"),
+    package = "proBatch"
+)
 
 selected_batches <- example_sample_annotation$MS_batch \%in\%
     c("Batch_1", "Batch_2")
@@ -118,6 +142,6 @@ hierarchical_clustering_plot <- plot_hierarchical_clustering(
 }
 \seealso{
 \code{\link[stats]{hclust}},
-  \code{\link{sample_annotation_to_colors}},
-  \code{\link[WGCNA]{plotDendroAndColors}}
+\code{\link{sample_annotation_to_colors}},
+\code{\link[WGCNA]{plotDendroAndColors}}
 }

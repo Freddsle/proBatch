@@ -1,7 +1,7 @@
 Package: proBatch
 Type: Package
 Title: Tools for Diagnostics and Corrections of Batch Effects in Proteomics 
-Version: 2.1.0
+Version: 2.1.1
 Authors@R: c(
     person("Jelena", "Cuklina", email = "chuklina.jelena@gmail.com", role = "aut"),
     person("Chloe H.", "Lee", email = "chloe.h.lee94@gmail.com", role = "aut"),
@@ -32,6 +32,8 @@ Imports:
     data.table,
     ggfortify,
     ggplot2,
+    graphics,
+    grid,
     gridExtra,
     grDevices,
     lazyeval,
@@ -45,9 +47,9 @@ Imports:
     purrr,
     pvca,
     RColorBrewer,
-    reshape2, 
     rlang,
     scales,
+    splines,
     stats,
     sva,
     tidyr,
@@ -56,6 +58,7 @@ Imports:
     utils,
     viridis,
     wesanderson,
+    withr,
     WGCNA
 Suggests: 
     BiocStyle,
@@ -65,11 +68,15 @@ Suggests:
     rmarkdown,
     devtools,
     gtable,
+    plotly,
+    Rtsne,
     roxygen2,
-    testthat (>= 3.0.0),
+    testthat (>= 3.2.0),
     spelling,
-    HDF5Array
+    HDF5Array,
+    MASS,
+    umap
 VignetteBuilder: knitr
-RoxygenNote: 7.3.3
 Language: en-US
 Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0

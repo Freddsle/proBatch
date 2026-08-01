@@ -12,8 +12,17 @@ handle_factor_numeric_overlap(factor_columns, numeric_columns)
 \item{numeric_columns}{character vector of numeric columns.}
 }
 \value{
-List with updated factor_columns and a warning if overlaps exist
+A character vector containing \code{factor_columns} after any
+  columns in \code{numeric_columns} have been removed.
 }
 \description{
 Remove numeric columns from factor columns if overlap is detected.
+}
+\examples{
+factor_columns <- c("batch", "injection_order")
+overlap_result <- handle_factor_numeric_overlap(
+    factor_columns,
+    numeric_columns = "injection_order"
+)
+overlap_result
 }

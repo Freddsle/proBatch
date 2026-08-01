@@ -11,35 +11,38 @@ calculate_sample_corr_distr(
   repeated_samples = NULL,
   biospecimen_id_col = "EarTag",
   sample_id_col = "FullRunName",
-  batch_col = "MS_batch"
+  batch_col = "MS_batch",
+  pbf_name = NULL
 )
 }
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+feature IDs in rownames and file/sample names as colnames, or a
+`ProBatchFeatures` object. When `data_matrix` is a `ProBatchFeatures`
+object, `pbf_name` is used (or the current assay when `pbf_name = NULL`).}
 
-\item{sample_annotation}{data frame with:
-\enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
-  \item biological covariates
-  \item technical covariates (batches etc) }.
-  See \code{help("example_sample_annotation")}}
+\item{sample_annotation}{data frame with sample-level metadata. When
+`data_matrix` is a matrix, this argument is required. When `data_matrix`
+is a `ProBatchFeatures` object and `sample_annotation` is not provided,
+`as.data.frame(colData(data_matrix))` is used.}
 
 \item{repeated_samples}{vector of sample IDs to evaluate, if \code{NULL},
 all samples are taken into account for plotting}
 
 \item{biospecimen_id_col}{column in \code{sample_annotation}
-that defines a unique bio ID, which is usually a
-combination of conditions or groups.
- Tip: if such ID is absent, but can be defined from several columns,
- create new \code{biospecimen_id} column}
+that defines a unique bio ID, which is usually a combination
+of conditions or groups.
+ Tip: if such ID is absent, but can be defined from several columns, create
+ new \code{biospecimen_id} column}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
 
 \item{batch_col}{column in \code{sample_annotation} that should be used for
 batch comparison (or other, non-batch factor to be mapped to color in plots).}
+
+\item{pbf_name}{Assay name used when `data_matrix` is a `ProBatchFeatures`
+object. If `NULL`, [pb_current_assay()] is used.}
 }
 \value{
 dataframe with the following columns, that
@@ -64,7 +67,10 @@ Calculates correlation for all pairs of the samples in data matrix, labels
 as replicated/same_batch/unrelated in output columns (see "Value").
 }
 \examples{
-data(list = c("example_sample_annotation", "example_proteome_matrix"), package = "proBatch")
+data(
+    list = c("example_sample_annotation", "example_proteome_matrix"),
+    package = "proBatch"
+)
 corr_distribution <- calculate_sample_corr_distr(
     data_matrix = example_proteome_matrix,
     sample_annotation = example_sample_annotation,

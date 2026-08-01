@@ -19,18 +19,19 @@ ProBatchFeatures_from_long(
 
 \item{sample_annotation}{Optional sample metadata aligned to the samples.}
 
-\item{feature_id_col}{Column containing feature identifiers in `df_long`.}
+\item{feature_id_col}{Column containing feature identifiers in \code{df_long}.}
 
-\item{sample_id_col}{Column containing sample identifiers in `df_long`.}
+\item{sample_id_col}{Column containing sample identifiers in \code{df_long}.}
 
 \item{measure_col}{Column with the measured intensity values.}
 
 \item{level}{Character label describing the biological level of the assay.}
 
-\item{name}{Optional pipeline name; defaults to `<level>::raw` when missing.}
+\item{name}{Optional non-missing, non-empty pipeline or full assay name;
+defaults to \verb{<level>::raw} when missing.}
 }
 \value{
-A `ProBatchFeatures` object constructed from the long-format input.
+A \code{ProBatchFeatures} object constructed from the long-format input.
 }
 \description{
 Construct from LONG df via proBatch::long_to_matrix
@@ -57,8 +58,11 @@ pbf <- ProBatchFeatures(
 )
 
 # Register a custom step and evaluate it -----------------------------------
-pb_register_step("add_one", function(x) x + 1)
-head(pb_eval(pbf, from = "peptide::raw", steps = "add_one"))
+example_step <- "example_add_one"
+if (!pb_has_step(example_step)) {
+    pb_register_step(example_step, function(x) x + 1)
+}
+head(pb_eval(pbf, from = "peptide::raw", steps = example_step))
 
 # Derived objects for downstream helpers -----------------------------------
 pbf_logged <- pb_transform(

@@ -43,7 +43,8 @@
 )
 }
 \arguments{
-\item{data_matrix}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
+\item{data_matrix}{Input object: matrix-like data or a
+\code{ProBatchFeatures} instance.}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -59,13 +60,13 @@ plotted in this diagnostic plot (assumed to be present in
 \code{sample_annotation})}
 
 \item{fill_the_missing}{numeric value that the missing values are
-substituted with, or \code{NULL} if features with missing values are to be
-excluded.}
+substituted with, or \code{NULL} if features with missing
+values are to be excluded.}
 
 \item{color_for_missing}{special color to make missing values.
 Usually black or white, depending on \code{heatmap_color}}
 
-\item{heatmap_color}{vector of colors used in heatmap (typicall a gradient)}
+\item{heatmap_color}{vector of colors used in heatmap (typically a gradient)}
 
 \item{cluster_rows}{boolean value determining if rows
 should be clustered}
@@ -74,30 +75,29 @@ should be clustered}
 should be clustered}
 
 \item{color_list}{list, as returned by \code{sample_annotation_to_colors},
-where each item contains a color vector for each factor to be mapped to the
-color.}
+where each item contains a color vector for each factor
+to be mapped to the color.}
 
 \item{peptide_annotation}{long format data frame with peptide ID and their
-corresponding protein and/or gene annotations.
-See \code{help("example_peptide_annotation")}.}
+corresponding protein and/or gene annotations. See
+\code{help("example_peptide_annotation")}.}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{factors_of_feature_ann}{vector of factors that characterize features,
 as listed in \code{peptide_annotation}}
 
 \item{color_list_features}{list, as returned by
-\code{sample_annotation_to_colors},
-but mapping \code{peptide_annotation} where each item contains a color vector
-for each factor to be mapped to the color.}
+\code{sample_annotation_to_colors}, but mapping \code{peptide_annotation}
+where each item contains a color vector for each factor
+to be mapped to the color.}
 
 \item{filename}{path where the results are saved.
-If null the object is returned to the active window;
-otherwise, the object is save into the file. Currently only
-pdf and png format is supported}
+If null the object is returned to the active window; otherwise, the object
+is save into the file. Currently only pdf and png format is supported}
 
 \item{width}{option  determining the output image width}
 
@@ -110,21 +110,30 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{...}{other parameters of \code{link[pheatmap]{pheatmap}}}
 
-\item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
+\item{pbf_name}{Assay name(s) used when \code{data_matrix}
+is a \code{ProBatchFeatures}.}
 
-\item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
+\item{return_gridExtra}{Logical; for multiple assays, return an invisible
+list with \code{grob}, the arranged plot, and \code{plots}, the named per-assay
+results.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 }
 \value{
-object returned by \code{link[pheatmap]{pheatmap}}
+For matrix input or one selected \code{ProBatchFeatures} assay, a
+\code{pheatmap} object. For multiple assays, an arranged plot is returned
+invisibly; with \code{return_gridExtra = TRUE}, an invisible list containing
+\code{grob} and the named per-assay \code{plots} is returned.
 }
 \description{
 Plot the heatmap of samples (cols) vs features (rows)
 }
 \examples{
 # Load necessary datasets
-data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+data(
+    list = c("example_proteome_matrix", "example_sample_annotation"),
+    package = "proBatch"
+)
 
 # Use a smaller subset for the example
 example_proteome_matrix_small <- example_proteome_matrix[1:50, ]
@@ -138,7 +147,6 @@ color_list <- sample_annotation_to_colors(example_sample_annotation,
     numeric_columns = c("DateTime", "order")
 )
 
-log_transformed_matrix <- log_transform_dm(example_proteome_matrix)
 heatmap_plot <- plot_heatmap_diagnostic(log_transformed_matrix,
     example_sample_annotation,
     factors_to_plot = c("MS_batch", "digestion_batch", "Diet", "DateTime"),

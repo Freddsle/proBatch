@@ -37,9 +37,8 @@ measurements}
 }
 \value{
 sample annotation file with a new column \code{new_time_column} with
-  POSIX-formatted date & \code{new_order_col} used
-  in some diagnostic plots (e.g.
-  \code{\link{plot_iRT}}, \code{\link{plot_sample_mean}})
+  POSIX-formatted date & \code{new_order_col} used in some diagnostic plots
+  (e.g. \code{\link{plot_iRT}}, \code{\link{plot_sample_mean}})
 }
 \description{
 Converts date/time columns for sample_annotation to POSIXct format and

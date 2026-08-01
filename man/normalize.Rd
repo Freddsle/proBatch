@@ -23,7 +23,13 @@ quantile_normalize_df(
   keep_all = "default"
 )
 
-normalize_sample_medians_dm(data_matrix)
+normalize_sample_medians_dm(
+  data_matrix,
+  sample_annotation = NULL,
+  sample_id_col = "FullRunName",
+  group_col = NULL,
+  inside_batch = FALSE
+)
 
 normalize_sample_medians_df(
   df_long,
@@ -33,7 +39,10 @@ normalize_sample_medians_df(
   no_fit_imputed = FALSE,
   qual_col = NULL,
   qual_value = 2,
-  keep_all = "default"
+  keep_all = "default",
+  sample_annotation = NULL,
+  group_col = NULL,
+  inside_batch = FALSE
 )
 
 normalize_data_dm(
@@ -59,9 +68,9 @@ normalize_data_df(
 }
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+feature IDs in rownames and file/sample names as colnames. See
+"example_proteome_matrix" for more details (to call the description, use
+\code{help("example_proteome_matrix")})}
 
 \item{df_long}{data frame where each row is a single feature in a single
 sample. It minimally has a \code{sample_id_col}, a \code{feature_id_col}
@@ -70,8 +79,8 @@ output result file). See \code{help("example_proteome")} for more details.}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
@@ -80,13 +89,13 @@ where the filenames (colnames of the \code{data_matrix} are found).}
 column with expression/abundance/intensity; otherwise, it is used
 internally for consistency.}
 
-\item{no_fit_imputed}{(logical) whether to use imputed (requant) values, as flagged in
+\item{no_fit_imputed}{(logical) whether to use imputed
+  (requant) values, as flagged in
 \code{qual_col} by \code{qual_value} for data transformation}
 
 \item{qual_col}{column to color point by certain value denoted
-by \code{qual_value}. Design with inferred/requant values in
-OpenSWATH output data,
-which means argument value has to be set to \code{m_score}.}
+by \code{qual_value}. Design with inferred/requant values in OpenSWATH
+output data, which means argument value has to be set to \code{m_score}.}
 
 \item{qual_value}{value in \code{qual_col} to color. For OpenSWATH data,
 this argument value has to be set to \code{2} (this is an \code{m_score}
@@ -95,8 +104,18 @@ value for imputed values (requant values).}
 \item{keep_all}{when transforming the data (normalize, correct) - acceptable
 values: all/default/minimal (which set of columns be kept).}
 
+\item{sample_annotation}{optional data frame with sample-level metadata
+used to support within-batch normalization for data frames or matrices.}
+
+\item{group_col}{character(1); column in `sample_annotation` (or `df_long`)
+identifying batches/centers for within-batch normalization.}
+
+\item{inside_batch}{logical; when `TRUE`, perform median centering within
+each level of `group_col` after excluding rows that are entirely `NA`
+within the corresponding subset.}
+
 \item{normalize_func}{global batch normalization method
-(`quantile` or `MedianCentering`)}
+(`quantile` or `medianCentering`)}
 
 \item{log_base}{whether to log transform data matrix
 before normalization (e.g. `NULL`, `2` or `10`)}
@@ -104,28 +123,32 @@ before normalization (e.g. `NULL`, `2` or `10`)}
 \item{offset}{small positive number to prevent 0 conversion to \code{-Inf}}
 }
 \value{
-the data in the same format as input (\code{data_matrix} or
-\code{df_long}).
-For \code{df_long} the data frame stores the original values of
-\code{measure_col}
-in another column called "preNorm_intensity" if "intensity", and the
-normalized values in \code{measure_col} column.
+The data in the same format as input (\code{data_matrix} or
+  \code{df_long}). For long input, the pre-normalization values used by the
+  method are stored in \code{preNorm_<measure_col>} (for example,
+  \code{preNorm_Intensity}) and normalized values are stored in
+  \code{measure_col}. When median normalization excludes flagged imputed
+  values, the saved pre-normalization column contains the masked values used
+  for fitting.
 }
 \description{
 Normalization of raw (usually log-transformed) data.
-Normalization brings the samples to the same scale.
-Currently the following normalization functions are implemented:
-#' \enumerate{
+Normalization brings the samples to the same scale. Currently the following
+normalization functions are implemented:
+\enumerate{
   \item Quantile normalization: `quantile_normalize_dm()`.
   Quantile normalization of the data.
   \item Median normalization: `normalize_sample_medians_dm()`.
   Normalization by centering sample medians to global median of the data
 }
-Alternatively, one can call normalization function with `normalize_data_dm()`
-wrapper.
+Alternatively, one can call normalization function with
+`normalize_data_dm()` wrapper.
 }
 \examples{
-data(list = c("example_proteome", "example_proteome_matrix"), package = "proBatch")
+data(
+    list = c("example_proteome", "example_proteome_matrix"),
+    package = "proBatch"
+)
 
 # Quantile normalization:
 quantile_normalized_matrix <- quantile_normalize_dm(example_proteome_matrix)

@@ -2,60 +2,25 @@
 % Please edit documentation in R/correct_batch_effects.R
 \name{correct_batch_effects}
 \alias{correct_batch_effects}
-\alias{center_feature_batch_medians_df}
-\alias{center_feature_batch_medians_dm}
-\alias{center_feature_batch_means_df}
-\alias{center_feature_batch_means_dm}
-\alias{adjust_batch_trend_df}
 \alias{adjust_batch_trend_dm}
-\alias{correct_with_ComBat_df}
-\alias{correct_with_ComBat_dm}
-\alias{correct_batch_effects_df}
-\alias{correct_batch_effects_dm}
-\title{Batch correction of normalized data}
+\alias{adjust_batch_trend_df}
+\title{Batch correction methods for normalized data}
 \usage{
-center_feature_batch_medians_df(
-  df_long,
-  sample_annotation = NULL,
-  sample_id_col = "FullRunName",
-  batch_col = "MS_batch",
-  feature_id_col = "peptide_group_label",
-  measure_col = "Intensity",
-  keep_all = "default",
-  no_fit_imputed = TRUE,
-  qual_col = NULL,
-  qual_value = NULL
-)
-
-center_feature_batch_medians_dm(
+adjust_batch_trend_dm(
   data_matrix,
   sample_annotation,
-  sample_id_col = "FullRunName",
   batch_col = "MS_batch",
   feature_id_col = "peptide_group_label",
-  measure_col = "Intensity"
-)
-
-center_feature_batch_means_df(
-  df_long,
-  sample_annotation = NULL,
   sample_id_col = "FullRunName",
-  batch_col = "MS_batch",
-  feature_id_col = "peptide_group_label",
   measure_col = "Intensity",
-  keep_all = "default",
+  order_col = "order",
+  fit_func = "loess_regression",
+  return_fit_df = TRUE,
   no_fit_imputed = TRUE,
   qual_col = NULL,
-  qual_value = NULL
-)
-
-center_feature_batch_means_dm(
-  data_matrix,
-  sample_annotation,
-  sample_id_col = "FullRunName",
-  batch_col = "MS_batch",
-  feature_id_col = "peptide_group_label",
-  measure_col = "Intensity"
+  qual_value = NULL,
+  min_measurements = 8,
+  ...
 )
 
 adjust_batch_trend_df(
@@ -75,54 +40,12 @@ adjust_batch_trend_df(
   ...
 )
 
-adjust_batch_trend_dm(
-  data_matrix,
+correct_batch_effects(
+  x,
   sample_annotation,
-  batch_col = "MS_batch",
-  feature_id_col = "peptide_group_label",
-  sample_id_col = "FullRunName",
-  measure_col = "Intensity",
-  order_col = "order",
-  fit_func = "loess_regression",
-  return_fit_df = TRUE,
-  no_fit_imputed = TRUE,
-  qual_col = NULL,
-  qual_value = NULL,
-  min_measurements = 8,
-  ...
-)
-
-correct_with_ComBat_df(
-  df_long,
-  sample_annotation = NULL,
-  feature_id_col = "peptide_group_label",
-  measure_col = "Intensity",
-  sample_id_col = "FullRunName",
-  batch_col = "MS_batch",
-  par.prior = TRUE,
-  fill_the_missing = NULL,
-  no_fit_imputed = TRUE,
-  qual_col = NULL,
-  qual_value = NULL,
-  keep_all = "default"
-)
-
-correct_with_ComBat_dm(
-  data_matrix,
-  sample_annotation = NULL,
-  feature_id_col = "peptide_group_label",
-  measure_col = "Intensity",
-  sample_id_col = "FullRunName",
-  batch_col = "MS_batch",
-  par.prior = TRUE,
-  fill_the_missing = NULL
-)
-
-correct_batch_effects_df(
-  df_long,
-  sample_annotation,
+  format = c("long", "wide"),
   continuous_func = NULL,
-  discrete_func = c("MedianCentering", "MeanCentering", "ComBat"),
+  discrete_func = c("MedianCentering", "MeanCentering", "ComBat", "removeBatchEffect"),
   batch_col = "MS_batch",
   feature_id_col = "peptide_group_label",
   sample_id_col = "FullRunName",
@@ -132,32 +55,19 @@ correct_batch_effects_df(
   no_fit_imputed = TRUE,
   qual_col = NULL,
   qual_value = NULL,
-  fill_the_missing = NULL,
+  fill_the_missing = "error",
+  par.prior = TRUE,
+  covariates_cols = NULL,
   min_measurements = 8,
-  ...
-)
-
-correct_batch_effects_dm(
-  data_matrix,
-  sample_annotation,
-  continuous_func = NULL,
-  discrete_func = c("MedianCentering", "ComBat"),
-  batch_col = "MS_batch",
-  feature_id_col = "peptide_group_label",
-  sample_id_col = "FullRunName",
-  measure_col = "Intensity",
-  order_col = "order",
-  min_measurements = 8,
-  no_fit_imputed = TRUE,
-  fill_the_missing = NULL,
-  ...
+  ...,
+  fill_value = NULL
 )
 }
 \arguments{
-\item{df_long}{data frame where each row is a single feature in a single
-sample. It minimally has a \code{sample_id_col}, a \code{feature_id_col}
-and a \code{measure_col}, but usually also an \code{m_score} (in OpenSWATH
-output result file). See \code{help("example_proteome")} for more details.}
+\item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
+feature IDs in rownames and file/sample names as colnames. See
+"example_proteome_matrix" for more details (to call the description, use
+\code{help("example_proteome_matrix")})}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -165,139 +75,187 @@ output result file). See \code{help("example_proteome")} for more details.}
   \item technical covariates (batches etc) }.
   See \code{help("example_sample_annotation")}}
 
-\item{sample_id_col}{name of the column in \code{sample_annotation} table,
-where the filenames (colnames of the \code{data_matrix} are found).}
-
 \item{batch_col}{column in \code{sample_annotation} that should be used for
 batch comparison (or other, non-batch factor to be mapped to color in plots).}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
+
+\item{sample_id_col}{name of the column in \code{sample_annotation} table,
+where the filenames (colnames of the \code{data_matrix} are found).}
 
 \item{measure_col}{if \code{df_long} is among the parameters, it is the
 column with expression/abundance/intensity; otherwise, it is used
 internally for consistency.}
-
-\item{keep_all}{when transforming the data (normalize, correct) - acceptable
-values: all/default/minimal (which set of columns be kept).}
-
-\item{no_fit_imputed}{(logical) whether to use imputed (requant) values, as flagged in
-\code{qual_col} by \code{qual_value} for data transformation}
-
-\item{qual_col}{column to color point by certain value denoted
-by \code{qual_value}. Design with inferred/requant values in
-OpenSWATH output data,
-which means argument value has to be set to \code{m_score}.}
-
-\item{qual_value}{value in \code{qual_col} to color. For OpenSWATH data,
-this argument value has to be set to \code{2} (this is an \code{m_score}
-value for imputed values (requant values).}
-
-\item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
 
 \item{order_col}{column in \code{sample_annotation} that determines sample
 order. It is used for in initial assessment plots
 (\link{plot_sample_mean_or_boxplot}) and  feature-level diagnostics
 (\link{feature_level_diagnostics}). Can be `NULL`
    if sample order is irrelevant (e.g. in genomic experiments). For more
-   details,
-   order definition/inference, see \link{define_sample_order} and
+   details, order definition/inference, see \link{define_sample_order} and
    \link{date_to_sample_order}}
 
-\item{fit_func}{function to fit the (non)-linear trend}
+\item{fit_func}{Function used for trend fitting (e.g.,
+\code{"loess_regression"}).}
 
-\item{min_measurements}{the number of samples in a batch required for curve fitting.}
+\item{return_fit_df}{Logical; whether \code{\link{adjust_batch_trend_dm}()}
+returns the \code{fit_df} (for curve inspection)
+alongside the corrected matrix.}
 
-\item{...}{other parameters, usually of \code{adjust_batch_trend},
-and \code{fit_func}.}
+\item{no_fit_imputed}{(logical) whether to use imputed
+  (requant) values, as flagged in
+\code{qual_col} by \code{qual_value} for data transformation}
 
-\item{return_fit_df}{(logical) whether to return the \code{fit_df} from
-\code{adjust_batch_trend_dm} or only the data matrix}
+\item{qual_col}{column to color point by certain value denoted
+by \code{qual_value}. Design with inferred/requant values in OpenSWATH
+output data, which means argument value has to be set to \code{m_score}.}
 
-\item{par.prior}{use parametrical or non-parametrical prior}
+\item{qual_value}{value in \code{qual_col} to color. For OpenSWATH data,
+this argument value has to be set to \code{2} (this is an \code{m_score}
+value for imputed values (requant values).}
 
-\item{fill_the_missing}{numeric value used to impute missing measurements before
-correction. If \code{NULL} (default) missing values are left untouched, if
-\code{FALSE} rows with missing values are removed prior to correction.}
+\item{min_measurements}{Minimum number of samples per
+batch required for fitting.}
 
-\item{continuous_func}{function to use for the fit (currently
-only \code{loess_regression} available); if order-associated fix is not
-required, should be \code{NULL}.}
+\item{...}{Further arguments passed to the continuous fitter when enabled
+and to \code{limma::removeBatchEffect()} when that discrete method is
+selected. They are not forwarded to centering or ComBat.}
 
-\item{discrete_func}{function to use for adjustment of discrete batch effects
-(\code{MedianCentering} or \code{ComBat}).}
+\item{df_long}{data frame where each row is a single feature in a single
+sample. It minimally has a \code{sample_id_col}, a \code{feature_id_col}
+and a \code{measure_col}, but usually also an \code{m_score} (in OpenSWATH
+output result file). See \code{help("example_proteome")} for more details.}
+
+\item{keep_all}{when transforming the data (normalize, correct) - acceptable
+values: all/default/minimal (which set of columns be kept).}
+
+\item{x}{Data in long (\code{data.frame}) or wide (\code{matrix}) form,
+controlled by \code{format}.}
+
+\item{format}{One of \code{"long"} or \code{"wide"}.}
+
+\item{continuous_func}{e.g. \code{"loess_regression"} or \code{NULL}.}
+
+\item{discrete_func}{batch method name.}
+
+\item{fill_the_missing}{Missing-value policy applied \emph{before} discrete
+correction: \code{"error"} (default), \code{"keep"},
+\code{"drop_features"}, or \code{"fill"}. With \code{"keep"}, missing
+values are passed through; ComBat still requires an NA-free matrix, while
+removeBatchEffect can model expression values containing NA. For one
+release, \code{FALSE}, a numeric scalar, and \code{"remove"}, \code{"rm"},
+or \code{"REMOVE"} are translated with a deprecation warning. Explicit
+\code{NULL} is an error.}
+
+\item{par.prior}{Logical; use parametric prior (ComBat) or non-parametric.}
+
+\item{covariates_cols}{Optional character vector of
+\code{sample_annotation} columns included in \code{mod} for ComBat
+(biological or nuisance covariates).}
+
+\item{fill_value}{Finite numeric scalar used only with
+\code{fill_the_missing = "fill"}.}
 }
 \value{
-the data in the same format as input (\code{data_matrix} or
-\code{df_long}).
-For \code{df_long} the data frame stores the original values of
-\code{measure_col}
-in another column called "preBatchCorr_[measure_col]", and the normalized
-values in \code{measure_col} column.
+Returns data in the same format as input (\code{data_matrix} or
+\code{df_long}). For long-format discrete correction, original values from
+\code{measure_col} are preserved in
+\code{"preBatchCorr_[measure_col]"}; trend adjustment instead uses
+\code{"preTrendFit_[measure_col]"}. Corrected values are written to
+\code{measure_col}.
 
-The function \code{adjust_batch_trend_dm()}, if \code{return_fit_df} is
-\code{TRUE} returns list of two items:
+The function \code{\link{adjust_batch_trend_dm}()}, if
+\code{return_fit_df = TRUE}, returns a list with:
 \enumerate{
-  \item \code{data_matrix}
-  \item \code{fit_df}, used to examine the fitting curves
+  \item \code{corrected_dm} — corrected data matrix
+  \item \code{fit_df} — data frame to inspect fitted curves
 }
 }
 \description{
-Batch correction of normalized data. Batch correction
-brings each feature in each batch to the comparable shape.
-Currently the following batch correction functions are implemented:
+Batch correction of normalized data to bring each feature within each batch
+to a comparable scale. The following methods are available:
 \enumerate{
-  \item Per-feature median centering:
-  \code{center_feature_batch_medians_df()}.
-  Median centering of the features (per batch median).
-  \item correction with ComBat:  \code{correct_with_ComBat_df()}.
-Adjusts for discrete batch effects using ComBat. ComBat, described in
-Johnson et al. 2007. It uses either parametric or
-non-parametric empirical Bayes frameworks for adjusting data for batch
-effects. Users are returned an expression matrix that has been corrected for
-batch effects. The input data are assumed to be free of missing values
-and normalized before batch effect removal. Please note that missing values
-are common in proteomics, which is why in some cases corrections like
-\code{center_peptide_batch_medians_df} are more appropriate.
-  \item Continuous drift correction:  \code{adjust_batch_trend_df()}.
-Adjust batch signal trend with the custom (continuous) fit.
-Should be followed by discrete corrections,
-e.g. \code{center_feature_batch_medians_df()} or
-\code{correct_with_ComBat_df()}.
+  \item \strong{Per-feature centering by median/mean}:
+    \code{\link{center_feature_batch}()} — unified API for long
+    (\code{"long"}) and wide (\code{"wide"}) data via \code{format}, and for
+    medians/means via \code{stat}. \emph{Deprecated wrappers}:
+    \code{center_feature_batch_medians_df()},
+    \code{center_feature_batch_means_df()},
+    \code{center_feature_batch_medians_dm()},
+    \code{center_feature_batch_means_dm()} now forward to
+    \code{center_feature_batch()} and emit deprecation warnings.
+
+  \item \strong{Discrete batch correction with ComBat}:
+    \code{\link{correct_with_ComBat}()} adjusts for discrete batch effects
+    using parametric or non-parametric empirical Bayes (Johnson et al.,
+    2007). \strong{Missing data:} ComBat requires an \emph{NA-free} matrix.
+    If your data contain missing values, use
+    \code{fill_the_missing = "drop_features"} to drop NA-containing features
+    or \code{fill_the_missing = "fill"} with an explicit \code{fill_value}
+    to impute before calling ComBat.
+
+  \item \strong{Linear batch correction with limma}:
+    \code{\link{correct_with_removeBatchEffect}()} removes linear batch
+    effects via \code{limma::removeBatchEffect}. \strong{Missing data:} NA
+    values in the \emph{expression/intensity matrix} are allowed; the
+    \emph{design matrix} (batch/covariates) must be free of missing values.
+
+  \item \strong{Continuous drift correction}:
+    \code{\link{adjust_batch_trend_df}()} fits and removes within-batch
+    trends (e.g., LOESS) and is typically followed by a discrete adjustment
+    such as \code{center_feature_batch()}, \code{correct_with_ComBat()}, or
+    \code{correct_with_removeBatchEffect()}.
+
 }
-Alternatively, one can call the correction function with
-\code{correct_batch_effects_df()} wrapper.
-Batch correction method allows correction of
-continuous signal drift within batch (if required) and adjustment for
-discrete difference across batches.
+
+Alternatively, use the wrapper \code{\link{correct_batch_effects}()} to
+combine continuous and/or discrete corrections in one call.
+
+Adjust batch signal trend with the custom (continuous) fit.
+Should be followed by discrete corrections, e.g.
+\code{center_feature_batch()} or \code{correct_with_ComBat()}. Available for
+both long format data frame (\code{adjust_batch_trend_df()}) and data matrix
+(\code{adjust_batch_trend_dm()}).
+
+Optional continuous drift removal + discrete adjustment
+via \code{"MedianCentering"}, \code{"MeanCentering"}, \code{"ComBat"}, or
+\code{"removeBatchEffect"}. Works for long or wide via \code{format}.
 }
 \examples{
 data(
     list = c("example_sample_annotation", "example_proteome"),
     package = "proBatch"
 )
-median_centered_df <- center_feature_batch_medians_df(
-    example_proteome, example_sample_annotation
-)
-
-combat_corrected_df <- correct_with_ComBat_df(
-    example_proteome,
-    example_sample_annotation
-)
-
-# Adjust the MS signal drift:
 test_peptides <- unique(example_proteome$peptide_group_label)[1:3]
-test_peptide_filter <- example_proteome$peptide_group_label \%in\% test_peptides
-test_proteome <- example_proteome[test_peptide_filter, ]
-adjusted_df <- adjust_batch_trend_df(test_proteome,
-    example_sample_annotation,
-    span = 0.7,
-    min_measurements = 8
+test_df <- subset(example_proteome, peptide_group_label \%in\% test_peptides)
+
+# 1) Per-feature median centering
+median_centered_df <- center_feature_batch(
+    x = test_df,
+    sample_annotation = example_sample_annotation,
+    format = "long",
+    stat = "medians",
+    no_fit_imputed = FALSE
+)
+
+# 2) ComBat (discrete) — drop NA features first if needed
+combat_corrected_df <- correct_with_ComBat(
+    x = test_df,
+    sample_annotation = example_sample_annotation,
+    format = "long",
+    fill_the_missing = "drop_features",
+    no_fit_imputed = FALSE
+)
+
+# 3) Continuous drift correction (LOESS), then discrete centering if desired
+adjusted_df <- adjust_batch_trend_df(
+    df_long = test_df,
+    sample_annotation = example_sample_annotation,
+    span = 0.7, min_measurements = 8,
+    no_fit_imputed = FALSE
 )
 plot_fit <- plot_with_fitting_curve(
     unique(adjusted_df$peptide_group_label),
@@ -307,20 +265,31 @@ plot_fit <- plot_with_fitting_curve(
     sample_annotation = example_sample_annotation
 )
 
-# Correct the data in one go:
-batch_corrected_matrix <- correct_batch_effects_df(example_proteome,
-    example_sample_annotation,
+# 4) One-call wrapper (continuous + discrete)
+batch_corrected_df <- correct_batch_effects(
+    x = test_df, sample_annotation = example_sample_annotation,
+    format = "long",
     continuous_func = "loess_regression",
     discrete_func = "MedianCentering",
     batch_col = "MS_batch",
+    fill_the_missing = "keep",
+    no_fit_imputed = FALSE,
     span = 0.7, min_measurements = 8
 )
 
 }
+\references{
+Johnson WE, Li C, Rabinovic A (2007). Adjusting batch effects in microarray
+expression data using empirical Bayes methods. \emph{Biostatistics}
+8(1):118–127. Smyth GK (2025). \emph{limma User's Guide}, Bioconductor (see
+removeBatchEffect / lmFit). Leek JT et al. (2024).
+\emph{sva} vignette, Bioconductor.
+}
 \seealso{
-\code{\link{fit_nonlinear}}
-
-\code{\link{fit_nonlinear}}, \code{\link{plot_with_fitting_curve}}
+\code{\link{center_feature_batch}}, \code{\link{adjust_batch_trend_df}},
+\code{\link{adjust_batch_trend_dm}}, \code{\link{correct_with_ComBat}},
+\code{\link{correct_with_removeBatchEffect}},
+\code{\link{correct_batch_effects}}
 
 \code{\link{fit_nonlinear}}, \code{\link{plot_with_fitting_curve}}
 }

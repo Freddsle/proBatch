@@ -21,6 +21,18 @@ guess_factor_columns_if_needed(
 Named list containing updated factor_columns and numeric_columns.
 }
 \description{
-Derive numeric columns from factor columns if guess_factors is TRUE
-and numeric columns are NULL.
+Derive numeric columns from factor columns if guess_factors is TRUE and
+numeric columns are NULL.
+}
+\examples{
+annotation <- data.frame(
+    batch = rep(c("A", "B"), 6),
+    injection_order = seq_len(12)
+)
+guessed <- guess_factor_columns_if_needed(
+    names(annotation),
+    annotation,
+    guess_factors = TRUE
+)
+guessed
 }

@@ -12,10 +12,14 @@ pb_pipeline_name(object, assay = pb_current_assay(object))
 \item{assay}{character(1) assay name; defaults to current assay}
 }
 \value{
-character(1) pipeline string like "combat_on_medianNorm_on_log2" or "raw"
+character(1) pipeline string like
+\code{"combat_on_medianNorm_on_log2_on_raw"} or \code{"raw"}
 }
 \description{
 Pretty pipeline name derived from the assay
+}
+\details{
+The operation-log lineage must be unambiguous and acyclic.
 }
 \examples{
 # Shared setup for ProBatchFeatures documentation examples -----------------
@@ -39,8 +43,11 @@ pbf <- ProBatchFeatures(
 )
 
 # Register a custom step and evaluate it -----------------------------------
-pb_register_step("add_one", function(x) x + 1)
-head(pb_eval(pbf, from = "peptide::raw", steps = "add_one"))
+example_step <- "example_add_one"
+if (!pb_has_step(example_step)) {
+    pb_register_step(example_step, function(x) x + 1)
+}
+head(pb_eval(pbf, from = "peptide::raw", steps = example_step))
 
 # Derived objects for downstream helpers -----------------------------------
 pbf_logged <- pb_transform(

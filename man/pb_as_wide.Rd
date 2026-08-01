@@ -7,14 +7,15 @@
 pb_as_wide(object, assay = pb_current_assay(object), name = "intensity")
 }
 \arguments{
-\item{object}{A `ProBatchFeatures` object.}
+\item{object}{A \code{ProBatchFeatures} object.}
 
 \item{assay}{Assay identifier to extract; defaults to the current assay.}
 
-\item{name}{Assay entry name inside the `SummarizedExperiment` to return.}
+\item{name}{Assay entry name inside the \code{SummarizedExperiment} to return.}
 }
 \value{
-numeric matrix (wide) corresponding to the requested assay
+Numeric matrix-like data corresponding to the requested assay.
+HDF5-backed assays may return a \code{DelayedMatrix} without coercion.
 }
 \description{
 Get an assay matrix (wide)
@@ -41,8 +42,11 @@ pbf <- ProBatchFeatures(
 )
 
 # Register a custom step and evaluate it -----------------------------------
-pb_register_step("add_one", function(x) x + 1)
-head(pb_eval(pbf, from = "peptide::raw", steps = "add_one"))
+example_step <- "example_add_one"
+if (!pb_has_step(example_step)) {
+    pb_register_step(example_step, function(x) x + 1)
+}
+head(pb_eval(pbf, from = "peptide::raw", steps = example_step))
 
 # Derived objects for downstream helpers -----------------------------------
 pbf_logged <- pb_transform(

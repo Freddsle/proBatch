@@ -18,8 +18,8 @@ output result file). See \code{help("example_proteome")} for more details.}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{protein_col}{column where protein names are specified}
 }
@@ -27,8 +27,8 @@ names.}
 data frame containing peptide annotations
 }
 \description{
-Create light-weight peptide annotation data frame
-for selection of illustrative proteins
+Create light-weight peptide annotation data frame for selection
+of illustrative proteins
 }
 \examples{
 data("example_proteome", package = "proBatch")

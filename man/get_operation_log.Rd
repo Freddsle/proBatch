@@ -7,7 +7,7 @@
 get_operation_log(object)
 }
 \arguments{
-\item{object}{A `ProBatchFeatures` object.}
+\item{object}{A \code{ProBatchFeatures} object.}
 }
 \value{
 S4Vectors::DataFrame
@@ -37,8 +37,11 @@ pbf <- ProBatchFeatures(
 )
 
 # Register a custom step and evaluate it -----------------------------------
-pb_register_step("add_one", function(x) x + 1)
-head(pb_eval(pbf, from = "peptide::raw", steps = "add_one"))
+example_step <- "example_add_one"
+if (!pb_has_step(example_step)) {
+    pb_register_step(example_step, function(x) x + 1)
+}
+head(pb_eval(pbf, from = "peptide::raw", steps = example_step))
 
 # Derived objects for downstream helpers -----------------------------------
 pbf_logged <- pb_transform(

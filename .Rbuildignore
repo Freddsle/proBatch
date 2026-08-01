@@ -20,3 +20,4 @@ Renviron.bioc
 ^vignettes/.*(_cache|_files)(/|$)
 ^vignettes/\.Rhistory$
 ^proBatch_.*\.tar\.gz$
+^proBatch[.]Rcheck($|/)

@@ -4,7 +4,7 @@
 \alias{example_proteome}
 \title{Example protein data in long format}
 \format{
-A data frame with 124655 rows and 7 variables:
+A data frame with 85278 rows and 5 variables:
 \describe{
   \item{peptide_group_label}{peptide ID, which is regular feature level.
   This column is mostly used as \code{feature_id_col}} used for merging with
@@ -12,15 +12,13 @@ A data frame with 124655 rows and 7 variables:
   \item{Intensity}{peptide group intensity in given sample.
   Used in function as \code{measure_col}}
   \item{Protein}{Protein group ID, specified as
-  N/UniProtID1|UniProtID2|...,
-  where N is number of protein peptide group maps to. If
-  1/UniProtID, then this is proteotypic peptide, in functions used as
-  \code{protein_col}}
+  N/UniProtID1|UniProtID2|..., where N is number of protein peptide group
+  maps to. If 1/UniProtID, then this is proteotypic peptide, in functions
+  used as \code{protein_col}}
   \item{FullRunName}{name of the file, in most functions used for
   \code{sample_id_col}}
-  \item{m_score}{column marking the quality of peptide IDs, used as
-  \code{qual_col} throughout the script; when \code{qual_value} is 2 in this
-  column, peptide has been imputed (requantified)}
+  \item{m_score}{logical column marking peptide-identification quality,
+  usable as \code{qual_col}}
 ...
 }
 }
@@ -28,12 +26,13 @@ A data frame with 124655 rows and 7 variables:
 PRIDE ID will be added upon the publication of the dataset
 }
 \value{
-A data frame with 124655 rows and 7 variables.
+A data frame with 85278 rows and 5 variables.
 }
 \description{
-This is OpenSWATH-output data from Aging study with all iRT, spike-in peptides,
-few representative peptides and proteins for signal improvement demonstration.
-Using \code{matrix_to_long} can be converted to \code{example_proteome_matrix}
+This is OpenSWATH-output data from Aging study with all iRT, spike-in
+peptides, few representative peptides and proteins for signal improvement
+demonstration. Using \code{long_to_matrix} can be converted to
+\code{example_proteome_matrix}
 }
 \examples{
 data("example_proteome", package = "proBatch")

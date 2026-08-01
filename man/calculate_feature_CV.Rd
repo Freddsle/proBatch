@@ -14,25 +14,24 @@ calculate_feature_CV(
   biospecimen_id_col = NULL,
   unlog = TRUE,
   log_base = 2,
-  offset = 0
+  offset = 0,
+  pbf_name = NULL
 )
 }
 \arguments{
 \item{df_long}{data frame where each row is a single feature in a single
-sample. It minimally has a \code{sample_id_col}, a \code{feature_id_col}
-and a \code{measure_col}, but usually also an \code{m_score} (in OpenSWATH
-output result file). See \code{help("example_proteome")} for more details.}
+sample, or a `ProBatchFeatures` object.}
 
-\item{sample_annotation}{data frame with:
-\enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
-  \item biological covariates
-  \item technical covariates (batches etc) }.
-  See \code{help("example_sample_annotation")}}
+\item{sample_annotation}{data frame with sample-level metadata. For data
+frame input, this is optional when the requested batch and biospecimen
+columns are already present in `df_long`; otherwise it supplies those
+columns. For `ProBatchFeatures` input, omitted annotation defaults to
+`as.data.frame(colData(df_long))`.}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
@@ -45,28 +44,42 @@ internally for consistency.}
 batch comparison (or other, non-batch factor to be mapped to color in plots).}
 
 \item{biospecimen_id_col}{column in \code{sample_annotation}
-that defines a unique bio ID, which is usually a
-combination of conditions or groups.
- Tip: if such ID is absent, but can be defined from several columns,
- create new \code{biospecimen_id} column}
+that defines a unique bio ID, which is usually a combination
+of conditions or groups.
+ Tip: if such ID is absent, but can be defined from several columns, create
+ new \code{biospecimen_id} column}
 
-\item{unlog}{(logical) whether to reverse log transformation of the original data}
+\item{unlog}{(logical) whether to reverse log
+transformation of the original data}
 
 \item{log_base}{base of the logarithm for transformation}
 
 \item{offset}{small positive number to prevent 0 conversion to \code{-Inf}}
+
+\item{pbf_name}{Assay name used when `df_long` is a `ProBatchFeatures`
+object. If `NULL`, [pb_current_assay()] is used.}
 }
 \value{
-data frame with Total CV for each feature & (optionally) per-batch CV
+data frame with replicate-level CV values:
+  \itemize{
+  \item \code{CV_total}: per \code{feature_id_col} and
+  \code{biospecimen_id_col} (and per \code{Step}, if present),
+  \item \code{CV_perBatch}: additionally stratified by \code{batch_col}
+  when provided.
+  }
 }
 \description{
 Calculate CV distribution for each feature
 }
 \examples{
-data(list = c("example_sample_annotation", "example_proteome"), package = "proBatch")
+data(
+    list = c("example_sample_annotation", "example_proteome"),
+    package = "proBatch"
+)
 CV_df <- calculate_feature_CV(example_proteome,
     sample_annotation = example_sample_annotation,
     measure_col = "Intensity",
-    batch_col = "MS_batch"
+    batch_col = "MS_batch",
+    biospecimen_id_col = "EarTag"
 )
 }

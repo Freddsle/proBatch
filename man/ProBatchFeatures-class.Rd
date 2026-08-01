@@ -3,21 +3,28 @@
 \docType{class}
 \name{ProBatchFeatures-class}
 \alias{ProBatchFeatures-class}
-\title{ProBatchFeatures: QFeatures subclass with operation log, levels/pipelines, and lazy storage}
+\title{ProBatchFeatures: QFeatures subclass with operation log,
+levels/pipelines, and lazy storage}
+\value{
+No return value; defines the \code{ProBatchFeatures} S4 class.
+}
 \description{
 Assay naming convention:
   "<level>::<pipeline>"  e.g., "peptide::raw", "protein::median_on_log"
-Pipelines are strings produced by get_chain(as_string=TRUE), e.g., "combat_on_medianNorm_on_log".
+Pipelines are strings produced by get_chain(as_string=TRUE), e.g.,
+"combat_on_medianNorm_on_log".
 }
 \details{
-Ephemeral "fast" steps are computed but not stored by default (store_fast_steps = FALSE).
-Use pb_eval() to compute and return data after a step/pipeline without storing.
-Use pb_transform() to build pipelines and optionally materialize the final assay.
+Ephemeral "fast" steps are computed but not stored by default
+(store_fast_steps = FALSE). Use pb_eval() to compute and return data after a
+step/pipeline without storing. Use pb_transform() to build pipelines and
+optionally materialize the final assay.
 }
 \section{Slots}{
 
 \describe{
-\item{\code{chain}}{character() ordered list of steps (e.g., c("log","medianNorm","combat")).}
+\item{\code{chain}}{character() ordered list of steps (e.g.,
+c("log","medianNorm","combat")).}
 
 \item{\code{oplog}}{S4Vectors::DataFrame with columns:
 - step (character), fun (character), from (character), to (character),
@@ -46,8 +53,11 @@ pbf <- ProBatchFeatures(
 )
 
 # Register a custom step and evaluate it -----------------------------------
-pb_register_step("add_one", function(x) x + 1)
-head(pb_eval(pbf, from = "peptide::raw", steps = "add_one"))
+example_step <- "example_add_one"
+if (!pb_has_step(example_step)) {
+    pb_register_step(example_step, function(x) x + 1)
+}
+head(pb_eval(pbf, from = "peptide::raw", steps = example_step))
 
 # Derived objects for downstream helpers -----------------------------------
 pbf_logged <- pb_transform(

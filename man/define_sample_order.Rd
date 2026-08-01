@@ -20,8 +20,7 @@ order. It is used for in initial assessment plots
 (\link{plot_sample_mean_or_boxplot}) and  feature-level diagnostics
 (\link{feature_level_diagnostics}). Can be `NULL`
    if sample order is irrelevant (e.g. in genomic experiments). For more
-   details,
-   order definition/inference, see \link{define_sample_order} and
+   details, order definition/inference, see \link{define_sample_order} and
    \link{date_to_sample_order}}
 
 \item{sample_annotation}{data frame with:
@@ -34,8 +33,8 @@ order. It is used for in initial assessment plots
 separate plots into facets; usually 2nd to \code{batch_col}. Most meaningful
 for multi-instrument MS experiments (where each instrument has its own
 order-associated effects (see \code{order_col}) or simultaneous examination
-of two batch factors (e.g. preparation day and measurement day).
-For single-instrument case should be set to `NULL`}
+of two batch factors (e.g. preparation day and measurement day). For
+single-instrument case should be set to `NULL`}
 
 \item{batch_col}{column in \code{sample_annotation} that should be used for
 batch comparison (or other, non-batch factor to be mapped to color in plots).}
@@ -58,7 +57,10 @@ list of two items: \code{order_col} new name and new \code{df_long}
 Defining sample order internally
 }
 \examples{
-data(list = c("example_proteome", "example_sample_annotation"), package = "proBatch")
+data(
+    list = c("example_proteome", "example_sample_annotation"),
+    package = "proBatch"
+)
 sample_order <- define_sample_order(
     order_col = "order",
     sample_annotation = example_sample_annotation,

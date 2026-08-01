@@ -20,35 +20,56 @@ pb_transform(
 )
 }
 \arguments{
-\item{object}{A `ProBatchFeatures` object.}
+\item{object}{A \code{ProBatchFeatures} object.}
 
 \item{from}{Assay name to start the pipeline from.}
 
 \item{steps}{character vector, e.g. c("log2","medianNorm","combat")}
 
-\item{funs}{optional same-length vector/list of functions/names (default: steps)}
+\item{funs}{Optional same-length vector or list of functions or registered
+canonical names or aliases (default: \code{steps}). Registered aliases are
+resolved to their canonical names for operation logging.}
 
 \item{params_list}{list of parameter lists (same length as steps)}
 
 \item{level}{Optional level label to assign to the generated assay(s).}
 
-\item{store_fast_steps}{logical; if FALSE, fast steps are computed but not stored}
+\item{store_fast_steps}{Logical; if \code{FALSE}, intermediate steps listed in
+\code{fast_steps} are computed but not stored. A final \code{log} or \code{log2} step is
+also virtual unless \code{final_name} is supplied. Setting
+\code{store_fast_steps = TRUE} materializes it; other final steps are
+materialized regardless.}
 
-\item{fast_steps}{which steps count as fast (default: c("log","log2","medianNorm"))}
+\item{fast_steps}{Steps treated as fast (default:
+\code{c("log", "log2", "medianNorm")}).}
 
-\item{store_intermediate}{logical; if TRUE store every step (overrides fast behavior)}
+\item{store_intermediate}{logical; if TRUE store every step
+(overrides fast behavior)}
 
-\item{final_name}{optional final assay name override}
+\item{final_name}{Optional final assay name override in
+\verb{<level>::<pipeline>} form. It must differ from \code{from}. Stored assays and
+virtual operation-log targets share one result namespace, so a conflicting
+explicit name is rejected rather than disambiguated unless the request is
+an exact idempotent retry. Supplying a name materializes the final result
+even for an otherwise ephemeral log step.}
 
 \item{backend}{"memory","hdf5","auto"}
 
-\item{hdf5_path}{Optional file path used when `backend = "hdf5"`.}
+\item{hdf5_path}{Optional file path used when \code{backend = "hdf5"}.}
 }
 \value{
-ProBatchFeatures with the requested pipeline added (as log and/or assay)
+ProBatchFeatures with the requested pipeline
+added (as log and/or assay)
 }
 \description{
 Compute a pipeline and optionally store only the final result
+}
+\details{
+Registered steps record their canonical name and provider package.
+When a step returns \code{\link[=pb_step_result]{pb_step_result()}} and its assay is materialized, the
+result's artifacts are stored in that assay's metadata under
+\code{pb_step_artifacts}. Step results must retain all samples in input order;
+an input-ordered feature subset is allowed.
 }
 \examples{
 # Shared setup for ProBatchFeatures documentation examples -----------------
@@ -72,8 +93,11 @@ pbf <- ProBatchFeatures(
 )
 
 # Register a custom step and evaluate it -----------------------------------
-pb_register_step("add_one", function(x) x + 1)
-head(pb_eval(pbf, from = "peptide::raw", steps = "add_one"))
+example_step <- "example_add_one"
+if (!pb_has_step(example_step)) {
+    pb_register_step(example_step, function(x) x + 1)
+}
+head(pb_eval(pbf, from = "peptide::raw", steps = example_step))
 
 # Derived objects for downstream helpers -----------------------------------
 pbf_logged <- pb_transform(

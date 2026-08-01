@@ -43,7 +43,8 @@
 )
 }
 \arguments{
-\item{data_matrix}{Input object: matrix-like data or a `ProBatchFeatures` instance.}
+\item{data_matrix}{Input object: matrix-like data or a
+\code{ProBatchFeatures} instance.}
 
 \item{column_annotation_df}{data frame annotating columns of
 \code{data_matrix}}
@@ -57,16 +58,16 @@ unique identifiers of columns in \code{data_matrix}}
 unique identifiers of rows in \code{data_matrix}}
 
 \item{columns_for_cols}{vector of factors (columns) of
-\code{column_annotation_df}
-that will be mapped to color annotation of heatmap columns}
+\code{column_annotation_df} that will be mapped to color
+annotation of heatmap columns}
 
 \item{columns_for_rows}{vector of factors (columns) of
-\code{row_annotation_df}
-that will be mapped to color annotation of heatmap rows}
+\code{row_annotation_df} that will be mapped to color
+annotation of heatmap rows}
 
 \item{cluster_rows}{boolean: whether the rows should be clustered}
 
-\item{cluster_cols}{boolean: whether the rows should be clustered}
+\item{cluster_cols}{boolean: whether the columns should be clustered}
 
 \item{annotation_color_cols}{list of color vectors for column annotation,
 for each factor to be plotted; for factor-like variables a named vector
@@ -79,18 +80,17 @@ for each factor to be plotted; for factor-like variables a named vector
 color list returned by \code{sample_annotation_to_colors}}
 
 \item{fill_the_missing}{numeric value that the missing values are
-substituted with, or \code{NULL} if features with missing values are to be
-excluded.}
+substituted with, or \code{NULL} if features with missing
+values are to be excluded.}
 
 \item{color_for_missing}{special color to make missing values.
 Usually black or white, depending on \code{heatmap_color}}
 
-\item{heatmap_color}{vector of colors used in heatmap (typicall a gradient)}
+\item{heatmap_color}{vector of colors used in heatmap (typically a gradient)}
 
 \item{filename}{path where the results are saved.
-If null the object is returned to the active window;
-otherwise, the object is save into the file. Currently only
-pdf and png format is supported}
+If null the object is returned to the active window; otherwise, the object
+is save into the file. Currently only pdf and png format is supported}
 
 \item{width}{option  determining the output image width}
 
@@ -103,20 +103,29 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{...}{other parameters of \code{link[pheatmap]{pheatmap}}}
 
-\item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
+\item{pbf_name}{Assay name(s) used when \code{data_matrix}
+is a \code{ProBatchFeatures}.}
 
-\item{return_gridExtra}{Logical; return arranged grobs instead of a plot list.}
+\item{return_gridExtra}{Logical; for multiple assays, return an invisible
+list with \code{grob}, the arranged plot, and \code{plots}, the named per-assay
+results.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 }
 \value{
-pheatmap-type object
+For matrix input or one selected \code{ProBatchFeatures} assay, a
+\code{pheatmap} object. For multiple assays, an arranged plot is returned
+invisibly; with \code{return_gridExtra = TRUE}, an invisible list containing
+\code{grob} and the named per-assay \code{plots} is returned.
 }
 \description{
 Plot the heatmap
 }
 \examples{
-data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+data(
+    list = c("example_proteome_matrix", "example_sample_annotation"),
+    package = "proBatch"
+)
 p <- plot_heatmap_generic(log_transform_dm(example_proteome_matrix),
     column_annotation_df = example_sample_annotation,
     columns_for_cols = c("MS_batch", "digestion_batch", "Diet", "DateTime"),

@@ -13,11 +13,13 @@ pb_as_long(
 )
 }
 \arguments{
-\item{object}{A `ProBatchFeatures` object.}
+\item{object}{A \code{ProBatchFeatures} object.}
 
-\item{feature_id_col}{Column name used for feature identifiers in the long table.}
+\item{feature_id_col}{Column name used for feature
+identifiers in the long table.}
 
-\item{sample_id_col}{Column name used for sample identifiers in the long table.}
+\item{sample_id_col}{Column name used for sample
+identifiers in the long table.}
 
 \item{measure_col}{Column name containing measured values in the long table.}
 
@@ -51,8 +53,11 @@ pbf <- ProBatchFeatures(
 )
 
 # Register a custom step and evaluate it -----------------------------------
-pb_register_step("add_one", function(x) x + 1)
-head(pb_eval(pbf, from = "peptide::raw", steps = "add_one"))
+example_step <- "example_add_one"
+if (!pb_has_step(example_step)) {
+    pb_register_step(example_step, function(x) x + 1)
+}
+head(pb_eval(pbf, from = "peptide::raw", steps = example_step))
 
 # Derived objects for downstream helpers -----------------------------------
 pbf_logged <- pb_transform(

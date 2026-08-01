@@ -31,16 +31,26 @@ pb_add_level(
 
 \item{to_pipeline}{optional pipeline name (default carries over from 'from')}
 
-\item{name}{optional final assay name override}
+\item{name}{Optional final assay name override in
+\verb{<level>::<pipeline>} form. Stored assays and virtual operation-log
+targets share one result namespace. A stored-assay collision is accepted
+only for an exact idempotent retry with identical data, parent, mapping,
+and stable lineage origin; virtual-target collisions are rejected.}
 
-\item{mapping_df}{data.frame with mapping from 'from' IDs to 'to' IDs}
+\item{mapping_df}{Data frame mapping \code{from} IDs to \code{to} IDs. Required only
+when source and target row identifiers are not identical one-to-one.}
 
-\item{from_id}{column in mapping_df for 'from' IDs (e.g., "Precursor.Id")}
+\item{from_id}{Source-ID column in \code{mapping_df} (for example,
+\code{"Precursor.Id"}); required with \code{mapping_df}.}
 
-\item{to_id}{column in mapping_df for 'to' IDs (e.g., "Protein.Ids")}
+\item{to_id}{Target-ID column in \code{mapping_df} (for example,
+\code{"Protein.Ids"}); required with \code{mapping_df}.}
 
 \item{map_strategy}{how to resolve multiple to-ids per from-id:
-"as_is" (error if not 1:1), "first" (take first), "longest" (take longest string)}
+\code{"as_is"} (error if not one-to-one), \code{"first"} (take the first exact
+target), or \code{"longest"} (prefer the exact target with the most
+semicolon-separated identifiers, then the longest string,
+then its first occurrence).}
 
 \item{link_var}{rowData variable name to use for linking (e.g., "ProteinID")}
 
@@ -76,8 +86,11 @@ pbf <- ProBatchFeatures(
 )
 
 # Register a custom step and evaluate it -----------------------------------
-pb_register_step("add_one", function(x) x + 1)
-head(pb_eval(pbf, from = "peptide::raw", steps = "add_one"))
+example_step <- "example_add_one"
+if (!pb_has_step(example_step)) {
+    pb_register_step(example_step, function(x) x + 1)
+}
+head(pb_eval(pbf, from = "peptide::raw", steps = example_step))
 
 # Derived objects for downstream helpers -----------------------------------
 pbf_logged <- pb_transform(

@@ -15,18 +15,21 @@ ProBatchFeatures(
 \arguments{
 \item{data_matrix}{numeric matrix (features x samples)}
 
-\item{sample_annotation}{data.frame with sample metadata (rows = samples)}
+\item{sample_annotation}{Optional data frame with sample metadata (rows =
+samples). When \code{NULL}, the object uses empty sample metadata.}
 
-\item{sample_id_col}{character(1), column in sample_annotation that matches colnames(data_matrix)
-If missing, rownames(sample_annotation) are used.}
+\item{sample_id_col}{Character scalar naming the column in
+\code{sample_annotation} that matches \code{colnames(data_matrix)}. Set it to \code{NULL}
+or \code{""} to use row names instead.}
 
-\item{name}{character(1), optional; if missing, name is "<level>::raw".
-If only a single value is provided to the function, without specifying whether it is a name or level, it will be used as the name value.}
+\item{name}{Optional non-missing, non-empty character scalar. A pipeline
+shorthand is combined with \code{level}; a full name must use
+\verb{<level>::<pipeline>}. If missing, the name is \verb{<level>::raw}.}
 
 \item{level}{character label like "peptide"/"protein" (default "feature").}
 }
 \value{
-A `ProBatchFeatures` object.
+A \code{ProBatchFeatures} object.
 }
 \description{
 Construct a ProBatchFeatures object from a wide matrix + sample annotation.
@@ -53,8 +56,11 @@ pbf <- ProBatchFeatures(
 )
 
 # Register a custom step and evaluate it -----------------------------------
-pb_register_step("add_one", function(x) x + 1)
-head(pb_eval(pbf, from = "peptide::raw", steps = "add_one"))
+example_step <- "example_add_one"
+if (!pb_has_step(example_step)) {
+    pb_register_step(example_step, function(x) x + 1)
+}
+head(pb_eval(pbf, from = "peptide::raw", steps = example_step))
 
 # Derived objects for downstream helpers -----------------------------------
 pbf_logged <- pb_transform(

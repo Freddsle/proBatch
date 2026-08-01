@@ -21,8 +21,14 @@ tmp.R
 
 vignettes/batch_evaluation_metrics_cache/*
 vignettes/batch_evaluation_metrics_files/*
+/vignettes/*.html
+/vignettes/*.R
 .Rbuildignore
 Dockerfile
 Renviron.bioc
 .dockerignore
 proBatch_*.tar.gz
+
+# R package build and check artifacts
+.r-lib/
+proBatch.Rcheck/*

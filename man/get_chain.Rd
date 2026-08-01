@@ -2,21 +2,31 @@
 % Please edit documentation in R/ProBatchFeatures.R
 \name{get_chain}
 \alias{get_chain}
-\title{Retrieve operation chain as vector or single string "combat_on_mediannorm_on_log"}
+\title{Retrieve operation chain as vector or single string
+"combat_on_mediannorm_on_log"}
 \usage{
-get_chain(object, as_string = FALSE)
+get_chain(object, as_string = FALSE, assay = NULL)
 }
 \arguments{
-\item{object}{A `ProBatchFeatures` object.}
+\item{object}{A \code{ProBatchFeatures} object.}
 
-\item{as_string}{logical(1). if `TRUE` returns the chain as a single string
-of the form `"combat_on_mediannorm_on_log"`.}
+\item{as_string}{logical(1). if \code{TRUE} returns the chain as a single string
+of the form \code{"combat_on_mediannorm_on_log"}.}
+
+\item{assay}{Optional assay identifier. When supplied, derive that assay's
+lineage from operation-log edges. When \code{NULL}, return the
+legacy global \code{chain} slot.}
 }
 \value{
 Character vector or string describing the processing chain.
 }
 \description{
-Retrieve operation chain as vector or single string "combat_on_mediannorm_on_log"
+Retrieve operation chain as vector or single string
+"combat_on_mediannorm_on_log"
+}
+\details{
+Logged lineage is validated before a chain is returned. Ambiguous
+or cyclic lineage causes an error, including when \code{assay = NULL}.
 }
 \examples{
 # Shared setup for ProBatchFeatures documentation examples -----------------
@@ -40,8 +50,11 @@ pbf <- ProBatchFeatures(
 )
 
 # Register a custom step and evaluate it -----------------------------------
-pb_register_step("add_one", function(x) x + 1)
-head(pb_eval(pbf, from = "peptide::raw", steps = "add_one"))
+example_step <- "example_add_one"
+if (!pb_has_step(example_step)) {
+    pb_register_step(example_step, function(x) x + 1)
+}
+head(pb_eval(pbf, from = "peptide::raw", steps = example_step))
 
 # Derived objects for downstream helpers -----------------------------------
 pbf_logged <- pb_transform(

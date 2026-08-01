@@ -16,7 +16,8 @@ plot_split_violin_with_boxplot(
 )
 }
 \arguments{
-\item{df}{data.frame with \code{y_col}, \code{col_for_color}, \code{col_for_box}}
+\item{df}{data.frame with \code{y_col},
+\code{col_for_color}, \code{col_for_box}}
 
 \item{y_col}{value to explore the distribution of}
 
@@ -32,7 +33,8 @@ plot_split_violin_with_boxplot(
 \item{plot_title}{title of the plot (e.g., processing step + representation
 level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
-\item{theme}{ggplot theme, by default \code{classic}. Can be easily overriden}
+\item{theme}{ggplot theme, by default \code{classic}.
+Can be easily overridden}
 }
 \value{
 ggplot object
@@ -41,7 +43,13 @@ ggplot object
 Plot split violin plot (convenient to compare distribution before and after)
 }
 \examples{
-df <- data.frame(x = rep(c("A", "B"), each = 100), y = rnorm(200), m = rep(c("C", "D"), 100))
-plot_split_violin_with_boxplot(df, y_col = "y", col_for_color = "m", col_for_box = "x")
+df <- data.frame(
+    x = rep(c("A", "B"), each = 100), y = rnorm(200),
+    m = rep(c("C", "D"), 100)
+)
+plot_split_violin_with_boxplot(
+    df,
+    y_col = "y", col_for_color = "m", col_for_box = "x"
+)
 
 }

@@ -2,47 +2,43 @@
 % Please edit documentation in R/handle_missing_values.R
 \name{handle_missing_values}
 \alias{handle_missing_values}
-\title{Handle missing values in a data matrix}
+\title{Handle missing values in a numeric matrix}
 \usage{
-handle_missing_values(data_matrix, warning_message, fill_the_missing = NULL)
+handle_missing_values(
+  data_matrix,
+  warning_message,
+  fill_the_missing = "error",
+  fill_value = NULL
+)
 }
 \arguments{
-\item{data_matrix}{A numeric matrix with features in rows and samples in columns.}
+\item{data_matrix}{Numeric feature-by-sample matrix.}
 
-\item{warning_message}{A character string with a warning shown if missing values are found.}
+\item{warning_message}{Error message used when missing values are present
+under the default \code{"error"} policy.}
 
-\item{fill_the_missing}{A control value:
-- FALSE: do nothing (keep NAs).
-- Missing (arg not supplied) or "remove"/"rm"/"REMOVE": remove rows with any NA
-  (and matching columns if square & symmetric).
-- Numeric scalar: fill NAs with this value.
-- Non-numeric: coerced to 0 with a warning and used to fill NAs.}
+\item{fill_the_missing}{One of \code{"error"}, \code{"keep"},
+\code{"drop_features"}, or \code{"fill"}. For one release, \code{FALSE}, a
+numeric scalar, and \code{"remove"}, \code{"rm"}, or \code{"REMOVE"} are
+translated with a deprecation warning. Explicit \code{NULL} is an error.}
+
+\item{fill_value}{Finite numeric scalar used only with
+\code{fill_the_missing = "fill"}.}
 }
 \value{
-A matrix with missing values handled as specified.
+A numeric matrix with the requested missing-value policy applied.
 }
 \description{
-This function can either fill missing values with a specified value
-or remove rows (and columns, if applicable) with missing values.
-It is primarily intended for use prior to batch correction methods
-that cannot handle missing values, such as ComBat or limma's
-removeBatchEffect, or plotting functions that require complete data.
-}
-\details{
-Semantics:
-- If there are no NAs: return input unchanged.
-- If fill_the_missing is explicitly FALSE: do nothing (keep NAs).
-- If fill_the_missing is missing (argument not supplied) or one of
-  "remove","rm","REMOVE": remove rows with any NA; if the matrix is
-  square and symmetric (na.rm=TRUE), remove matching rows AND columns
-  using the same row keep-mask.
-- Otherwise: if non-numeric or NA, coerce to 0 with a warning; then fill NAs.
+Applies the package-wide missing-value policy used before matrix-oriented
+batch correction. Feature dropping never removes sample columns, including
+when the input happens to be square and symmetric.
 }
 \examples{
 mat <- matrix(c(1, NA, 3, 4), nrow = 2)
-suppressWarnings(proBatch:::handle_missing_values(
+handle_missing_values(
     mat,
     warning_message = "demo",
-    fill_the_missing = 0
-))
+    fill_the_missing = "fill",
+    fill_value = 0
+)
 }

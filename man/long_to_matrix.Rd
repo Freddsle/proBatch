@@ -21,8 +21,8 @@ output result file). See \code{help("example_proteome")} for more details.}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{measure_col}{if \code{df_long} is among the parameters, it is the
 column with expression/abundance/intensity; otherwise, it is used
@@ -32,9 +32,8 @@ internally for consistency.}
 where the filenames (colnames of the \code{data_matrix} are found).}
 
 \item{qual_col}{column to color point by certain value denoted
-by \code{qual_value}. Design with inferred/requant values in
-OpenSWATH output data,
-which means argument value has to be set to \code{m_score}.}
+by \code{qual_value}. Design with inferred/requant values in OpenSWATH
+output data, which means argument value has to be set to \code{m_score}.}
 
 \item{qual_value}{value in \code{qual_col} to color. For OpenSWATH data,
 this argument value has to be set to \code{2} (this is an \code{m_score}
@@ -53,7 +52,7 @@ proteome_matrix <- long_to_matrix(example_proteome)
 
 }
 \seealso{
-Other matrix manipulation functions: 
-\code{\link{matrix_to_long}()}
+Other matrix manipulation functions:
+\code{\link[=matrix_to_long]{matrix_to_long()}}
 }
 \concept{matrix manipulation functions}

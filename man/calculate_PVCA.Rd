@@ -29,9 +29,9 @@
 }
 \arguments{
 \item{data_matrix}{features (in rows) vs samples (in columns) matrix, with
-feature IDs in rownames and file/sample names as colnames.
-See "example_proteome_matrix" for more details (to call the description,
-use \code{help("example_proteome_matrix")})}
+feature IDs in rownames and file/sample names as colnames. See
+"example_proteome_matrix" for more details (to call the description, use
+\code{help("example_proteome_matrix")})}
 
 \item{sample_annotation}{data frame with:
 \enumerate{ \item \code{sample_id_col} (this can be repeated as row names)
@@ -41,8 +41,8 @@ use \code{help("example_proteome_matrix")})}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide
-formatted representation \code{data_matrix} this corresponds to the row
-names.}
+formatted representation \code{data_matrix} this
+corresponds to the row names.}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
@@ -57,24 +57,34 @@ variabilities that the selected principal components need to explain}
 needs to explain (the rest will be lumped together)}
 
 \item{fill_the_missing}{numeric value determining how  missing values
-should be substituted. If \code{NULL}, features with missing values are
-excluded.}
+should be substituted. If \code{NULL}, features with
+missing values are excluded.}
 
-\item{...}{Additional arguments forwarded between methods.}
+\item{...}{For \code{ProBatchFeatures} input, additional per-assay arguments
+forwarded to \code{calculate_PVCA.default()}. Unmatched arguments captured by
+the default method's own \code{...} are currently ignored.}
 
-\item{pbf_name}{Assay name(s) used when `data_matrix` is a `ProBatchFeatures`.}
+\item{pbf_name}{Assay name(s) used when \code{data_matrix}
+is a \code{ProBatchFeatures}.}
 }
 \value{
-data frame of weights of Principal Variance Components
+For matrix input, a data frame of Principal Variance Component
+weights. For \code{ProBatchFeatures} input, one selected assay returns that data
+frame and multiple assays return a named list of data frames.
 }
 \description{
 Calculate variance distribution by variable
 }
 \examples{
-data(list = c("example_proteome_matrix", "example_sample_annotation"), package = "proBatch")
+data(
+    list = c("example_proteome_matrix", "example_sample_annotation"),
+    package = "proBatch"
+)
 matrix_test <- na.omit(example_proteome_matrix)[1:50, ]
 pvca_df <- calculate_PVCA(matrix_test, example_sample_annotation,
-    factors_for_PVCA = c("MS_batch", "digestion_batch", "Diet", "Sex", "Strain"),
+    factors_for_PVCA = c(
+        "MS_batch", "digestion_batch", "Diet", "Sex", "Strain"
+    ),
     pca_threshold = .6, variance_threshold = .01, fill_the_missing = -1
 )
 }

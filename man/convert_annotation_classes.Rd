@@ -17,6 +17,18 @@ convert_annotation_classes(df, factor_columns, numeric_columns)
 data frame with converted columns.
 }
 \description{
-Convert specified factor columns to factor type and numeric columns to
-numeric.
+Convert specified factor columns to factor type and
+numeric columns to numeric.
+}
+\examples{
+annotation <- data.frame(
+    batch = c("A", "B"),
+    injection_order = c("1", "2")
+)
+converted <- convert_annotation_classes(
+    annotation,
+    factor_columns = "batch",
+    numeric_columns = "injection_order"
+)
+vapply(converted, class, character(1))
 }

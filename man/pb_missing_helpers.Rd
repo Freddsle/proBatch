@@ -6,7 +6,8 @@
 \alias{pb_infIsNA}
 \alias{pb_nNA}
 \alias{pb_filterNA}
-\title{Apply `QFeatures` missing-data helpers to stored assays}
+\alias{pb_groupfilterNA}
+\title{Apply \code{QFeatures} missing-data helpers to stored assays}
 \usage{
 pb_zeroIsNA(object, pbf_name = names(object), ...)
 
@@ -15,34 +16,114 @@ pb_infIsNA(object, pbf_name = names(object), ...)
 pb_nNA(object, pbf_name = names(object), ...)
 
 pb_filterNA(object, pbf_name = NULL, inplace = FALSE, final_name = NULL, ...)
+
+pb_groupfilterNA(
+  object,
+  pbf_name = NULL,
+  group_cols,
+  min_valid = 2L,
+  pNA = NULL,
+  inplace = FALSE,
+  final_name = NULL,
+  mask_failing = TRUE,
+  ...
+)
 }
 \arguments{
-\item{object}{A `ProBatchFeatures` object.}
+\item{object}{A \code{ProBatchFeatures} object.}
 
 \item{pbf_name}{Character vector of assay names. Defaults to
-`names(object)` - all assays.}
+\code{names(object)} - all assays.}
 
 \item{...}{Additional parameters forwarded to the underlying
-`QFeatures` method where applicable.}
+\code{QFeatures} method where applicable.}
 
-\item{inplace}{Logical (used by `pb_filterNA()` only), whether to modify the
-object in place. Default: `FALSE`.
-If `FALSE`, the modified assay(s) will be added to the object with
-`final_name` (if provided) or the original name(s) with suffix `_filteredNA`.}
+\item{inplace}{Logical (used by \code{pb_filterNA()} and
+\code{pb_groupfilterNA()}), whether to modify the object in place. Default:
+\code{FALSE}. If \code{FALSE}, the modified assay(s) are added to the object with
+\code{final_name} (if provided) or a function-specific suffix.}
 
-\item{final_name}{Character (used by `pb_filterNA()` only), name for the
-modified assay(s) if `inplace` is `FALSE`. If `NULL` (default), the
-original name(s) with suffix `_filteredNA` will be used.}
+\item{final_name}{Character (used by \code{pb_filterNA()} and
+\code{pb_groupfilterNA()}), name for the modified assay(s) if \code{inplace} is
+\code{FALSE}. An explicit value must provide one unique, non-missing, non-empty
+name per selected assay. A collision with a stored assay or virtual
+operation-log target is accepted only for an exact idempotent retry with
+identical data, parent assay, and stable lineage origin. Explicit names
+are never recycled or disambiguated. If \code{NULL} (default), the original
+name(s) receive suffix \verb{_filteredNA} or \verb{_groupfilteredNA}, respectively;
+generated collisions across the stored and virtual result namespace are
+disambiguated with numeric suffixes.}
+
+\item{group_cols}{Character vector (used by \code{pb_groupfilterNA()} only)
+specifying sample-annotation column(s) that define the groups within which
+missingness must be evaluated.}
+
+\item{min_valid}{Integer scalar (used by \code{pb_groupfilterNA()} only),
+minimum number of non-missing values required within each group to retain
+a feature. Default: \code{2L}.}
+
+\item{pNA}{Numeric scalar (used by \code{pb_groupfilterNA()} only), maximum
+proportion of missing values allowed within each group to retain a
+feature. Must be in the range \verb{[0, 1]}. If both \code{min_valid} and \code{pNA} are
+provided, the stricter requirement is applied per group by enforcing the
+larger minimum number of observed values implied by either threshold.}
+
+\item{mask_failing}{Logical scalar (used by \code{pb_groupfilterNA()} only).
+When \code{TRUE} (default), values in groups that did not pass the missingness
+threshold are set to \code{NA}. When \code{FALSE}, the original values in failing
+groups are kept as-is (the feature is still retained if it
+passes in at least one group).}
 }
 \value{
-`pb_zeroIsNA()`, `pb_infIsNA()` and `pb_filterNA()` return the
-  updated `ProBatchFeatures` object. `pb_nNA()` returns the output of the
-  corresponding `QFeatures::nNA()` call (a `list` of `DataFrame`s).
+\code{pb_zeroIsNA()}, \code{pb_infIsNA()}, \code{pb_filterNA()} and
+\code{pb_groupfilterNA()} return the updated \code{ProBatchFeatures} object. For one
+assay, \code{pb_nNA()} returns the corresponding \code{QFeatures::nNA()} result (a
+list of \code{DataFrame}s). For multiple assays it returns a named outer list
+with one such result per assay and a combined \code{nNA} \code{DataFrame}.
 }
 \description{
-These wrappers delegate to the corresponding `QFeatures` generics while
-ensuring that the requested assays remain part of the `ProBatchFeatures`
-object. Only assays that are already materialised can be modified.
-If a transformation step was applied as a "fast" step (log, log2, etc.),
-consider re-running it with `store_fast_steps = TRUE`.
+These wrappers delegate to the corresponding \code{QFeatures} generics while
+ensuring that the requested assays remain part of the \code{ProBatchFeatures}
+object. Only assays that are already materialised can be modified. If a
+transformation step was applied as a "fast" step (log, log2, etc.), consider
+re-running it with \code{store_fast_steps = TRUE}.
+}
+\details{
+For grouped filtering, features are retained if they meet the
+missingness criteria in at least one group defined by \code{group_cols}. When
+\code{mask_failing = TRUE} (the default), the values in groups where the
+feature did not pass the threshold are replaced with \code{NA}.
+
+With in-place \code{pb_filterNA()}, QFeatures preserves valid assay links and
+prunes their hits to the retained features. In-place \code{pb_groupfilterNA()}
+replaces the assay directly and may remove affected links when feature
+rows change; QFeatures warns when this occurs. Use \code{inplace = FALSE} to
+keep existing links unchanged.
+}
+\examples{
+values <- matrix(
+    c(0, 1, 2, Inf, 4, 5, 6, 7, 8),
+    nrow = 3,
+    byrow = TRUE,
+    dimnames = list(
+        paste0("feature", 1:3),
+        paste0("sample", 1:3)
+    )
+)
+annotation <- data.frame(sample = colnames(values))
+pbf <- ProBatchFeatures(
+    values,
+    sample_annotation = annotation,
+    sample_id_col = "sample"
+)
+pbf <- pb_zeroIsNA(pbf, "feature::raw")
+pbf <- pb_infIsNA(pbf, "feature::raw")
+pb_nNA(pbf, "feature::raw")$nNA
+
+filtered <- pb_filterNA(
+    pbf,
+    pbf_name = "feature::raw",
+    pNA = 0
+)
+rownames(filtered[["feature::raw_filteredNA"]])
 }
