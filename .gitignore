@@ -35,3 +35,6 @@ proBatch_*.tar.gz
 
 # R package build artifacts
 .r-lib/
+
+# R package check artifacts
+proBatch.Rcheck/*

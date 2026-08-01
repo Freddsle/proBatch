@@ -20,6 +20,9 @@ Renviron.bioc
 ^vignettes/.*(_cache|_files)(/|$)
 ^vignettes/\.Rhistory$
 ^proBatch_.*\.tar\.gz$
+
+# R package check artifacts
+^proBatch[.]Rcheck($|/)
 ^\.agents$
 ^\.codex$
 ^AGENTS\.md$
