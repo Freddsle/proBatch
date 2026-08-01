@@ -734,6 +734,177 @@ test_that("correct_batch_effects_dm returns matrix", {
     expect_equal(dim(corrected), dim(example_proteome_matrix))
 })
 
+test_that("deprecated batch-correction wrappers forward compatibility calls", {
+    forwarded <- list()
+    remove_forwarded <- list()
+    testthat::local_mocked_bindings(
+        correct_batch_effects = function(...) {
+            arguments <- list(...)
+            forwarded[[length(forwarded) + 1L]] <<- arguments
+            arguments$x
+        },
+        correct_with_removeBatchEffect = function(...) {
+            arguments <- list(...)
+            remove_forwarded[[length(remove_forwarded) + 1L]] <<- arguments
+            arguments$x
+        },
+        .package = "proBatch"
+    )
+
+    data_matrix <- matrix(
+        1:4,
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("s1", "s2"))
+    )
+    annotation <- data.frame(
+        FullRunName = colnames(data_matrix),
+        MS_batch = c("b1", "b2"),
+        Condition = c("A", "B"),
+        stringsAsFactors = FALSE
+    )
+    df_long <- data.frame(
+        peptide_group_label = rep(
+            rownames(data_matrix),
+            times = ncol(data_matrix)
+        ),
+        FullRunName = rep(colnames(data_matrix), each = nrow(data_matrix)),
+        Intensity = as.vector(data_matrix),
+        stringsAsFactors = FALSE
+    )
+
+    expect_warning(
+        df_result <- correct_batch_effects_df(
+            df_long,
+            annotation,
+            fill_the_missing = "keep"
+        ),
+        "deprecated"
+    )
+    expect_warning(
+        dm_result <- correct_batch_effects_dm(
+            data_matrix,
+            annotation,
+            fill_the_missing = "keep"
+        ),
+        "deprecated"
+    )
+    expect_warning(
+        dm_remove_result <- correct_batch_effects_dm(
+            data_matrix,
+            annotation,
+            discrete_func = "removeBatchEffect",
+            fill_the_missing = "keep"
+        ),
+        "deprecated"
+    )
+    expect_warning(
+        remove_result <- correct_with_removeBatchEffect_dm(
+            data_matrix,
+            annotation,
+            covariates_cols = "Condition",
+            fill_the_missing = "keep",
+            robust = TRUE
+        ),
+        "deprecated"
+    )
+
+    expect_identical(df_result, df_long)
+    expect_identical(dm_result, data_matrix)
+    expect_identical(dm_remove_result, data_matrix)
+    expect_identical(remove_result, data_matrix)
+    expect_length(forwarded, 3L)
+    expect_length(remove_forwarded, 1L)
+    expect_identical(forwarded[[1L]]$format, "long")
+    expect_identical(forwarded[[2L]]$format, "wide")
+    expect_identical(forwarded[[3L]]$format, "wide")
+    expect_identical(forwarded[[1L]]$discrete_func, "MedianCentering")
+    expect_identical(forwarded[[2L]]$discrete_func, "MedianCentering")
+    expect_identical(forwarded[[3L]]$discrete_func, "removeBatchEffect")
+    expect_identical(forwarded[[1L]]$fill_the_missing, "keep")
+    expect_identical(forwarded[[2L]]$fill_the_missing, "keep")
+    expect_identical(forwarded[[3L]]$fill_the_missing, "keep")
+    expect_identical(remove_forwarded[[1L]]$format, "wide")
+    expect_identical(
+        remove_forwarded[[1L]]$covariates_cols,
+        "Condition"
+    )
+    expect_identical(remove_forwarded[[1L]]$fill_the_missing, "keep")
+    expect_true(remove_forwarded[[1L]]$robust)
+})
+
+test_that("correction wrappers have one top-level definition each", {
+    check_root <- normalizePath(
+        file.path(testthat::test_path(), "..", ".."),
+        mustWork = TRUE
+    )
+    candidates <- c(
+        check_root,
+        file.path(check_root, "00_pkg_src", "proBatch")
+    )
+    valid <- vapply(
+        candidates,
+        function(candidate) {
+            file.exists(file.path(candidate, "DESCRIPTION")) &&
+                file.exists(
+                    file.path(candidate, "R", "correct_batch_effects.R")
+                )
+        },
+        logical(1L)
+    )
+    if (!any(valid)) {
+        skip("Definition checks require the proBatch source package")
+    }
+
+    source_root <- normalizePath(
+        candidates[[which(valid)[[1L]]]],
+        mustWork = TRUE
+    )
+    r_files <- sort(list.files(
+        file.path(source_root, "R"),
+        pattern = "[.]R$",
+        full.names = TRUE
+    ))
+    definitions <- unlist(
+        lapply(r_files, function(file) {
+            expressions <- parse(file = file)
+            vapply(
+                expressions,
+                function(expression) {
+                    is_assignment <- is.call(expression) &&
+                        identical(expression[[1L]], as.name("<-"))
+                    is_function <- is_assignment &&
+                        is.call(expression[[3L]]) &&
+                        identical(expression[[3L]][[1L]], as.name("function"))
+                    if (!is_function || !is.symbol(expression[[2L]])) {
+                        return(NA_character_)
+                    }
+                    as.character(expression[[2L]])
+                },
+                character(1L)
+            )
+        }),
+        use.names = FALSE
+    )
+    definitions <- definitions[!is.na(definitions)]
+
+    wrapper_symbols <- c(
+        "correct_batch_effects_df",
+        "correct_batch_effects_dm",
+        "correct_with_removeBatchEffect_dm"
+    )
+    definition_counts <- vapply(
+        wrapper_symbols,
+        function(symbol) sum(definitions == symbol),
+        integer(1L)
+    )
+
+    expect_identical(
+        definition_counts,
+        stats::setNames(rep(1L, length(wrapper_symbols)), wrapper_symbols)
+    )
+})
+
+
 test_that("adjust_batch_trend_df keeps order column", {
     data(example_proteome, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")

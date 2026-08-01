@@ -1730,3 +1730,453 @@ run_ComBat_core <- function(
     # call method
     method_fun(data_matrix = data_matrix, sample_annotation = sample_annotation)
 }
+
+# Effective compatibility wrappers from the later C-collated source file.
+# Keeping them here removes load-order ambiguity without
+# retaining a duplicate file.
+#' @title DEPRECATED: center_feature_batch_medians_dm
+#' @md
+#' @description Use [center_feature_batch()] with
+#'   `format="wide", stat="medians"`.
+#' @inheritParams correct_batch_effects
+#' @return A numeric matrix of batch-corrected values
+#'   (features \eqn{\times} samples).
+#' @examples
+#' # Use the unified replacement with `format = "wide"` and `stat = "medians"`.
+#' args(center_feature_batch)
+#' @export
+center_feature_batch_medians_dm <- function(
+    data_matrix,
+    sample_annotation,
+    sample_id_col = "FullRunName",
+    batch_col = "MS_batch",
+    feature_id_col = "peptide_group_label",
+    measure_col = "Intensity"
+) {
+    .Deprecated("center_feature_batch")
+    center_feature_batch(
+        x = data_matrix,
+        sample_annotation = sample_annotation,
+        format = "wide",
+        stat = "medians",
+        sample_id_col = sample_id_col,
+        batch_col = batch_col,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col
+    )
+}
+
+#' @title DEPRECATED: center_feature_batch_means_dm
+#' @md
+#' @description Use [center_feature_batch()] with `format="wide", stat="means"`.
+#' @inheritParams correct_batch_effects
+#' @return A numeric matrix of batch-corrected values
+#'   (features \eqn{\times} samples).
+#' @examples
+#' # Use the unified replacement with `format = "wide"` and `stat = "means"`.
+#' args(center_feature_batch)
+#' @export
+center_feature_batch_means_dm <- function(
+    data_matrix,
+    sample_annotation,
+    sample_id_col = "FullRunName",
+    batch_col = "MS_batch",
+    feature_id_col = "peptide_group_label",
+    measure_col = "Intensity"
+) {
+    .Deprecated("center_feature_batch")
+    center_feature_batch(
+        x = data_matrix,
+        sample_annotation = sample_annotation,
+        format = "wide",
+        stat = "means",
+        sample_id_col = sample_id_col,
+        batch_col = batch_col,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col
+    )
+}
+
+#' @title DEPRECATED: center_feature_batch_medians_df
+#' @md
+#' @description Use [center_feature_batch()] with
+#'   `format="long", stat="medians"`.
+#' @inheritParams correct_batch_effects
+#' @return A data.frame in long format with batch-corrected
+#'   values in \code{measure_col} and original values preserved in
+#'   \code{preBatchCorr_[measure_col]}.
+#' @examples
+#' # Use the unified replacement with `format = "long"` and `stat = "medians"`.
+#' args(center_feature_batch)
+#' @export
+center_feature_batch_medians_df <- function(
+    df_long,
+    sample_annotation = NULL,
+    sample_id_col = "FullRunName",
+    batch_col = "MS_batch",
+    feature_id_col = "peptide_group_label",
+    measure_col = "Intensity",
+    keep_all = "default",
+    no_fit_imputed = TRUE,
+    qual_col = NULL,
+    qual_value = NULL
+) {
+    .Deprecated("center_feature_batch")
+    center_feature_batch(
+        x = df_long,
+        sample_annotation = sample_annotation,
+        format = "long",
+        stat = "medians",
+        sample_id_col = sample_id_col,
+        batch_col = batch_col,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col,
+        keep_all = keep_all,
+        no_fit_imputed = no_fit_imputed,
+        qual_col = qual_col,
+        qual_value = qual_value
+    )
+}
+
+#' @title DEPRECATED: center_feature_batch_means_df
+#' @md
+#' @description Use [center_feature_batch()] with `format="long", stat="means"`.
+#' @inheritParams correct_batch_effects
+#' @return A data.frame in long format with batch-corrected
+#'   values in \code{measure_col} and original values preserved in
+#'   \code{preBatchCorr_[measure_col]}.
+#' @examples
+#' # Use the unified replacement with `format = "long"` and `stat = "means"`.
+#' args(center_feature_batch)
+#' @export
+center_feature_batch_means_df <- function(
+    df_long,
+    sample_annotation = NULL,
+    sample_id_col = "FullRunName",
+    batch_col = "MS_batch",
+    feature_id_col = "peptide_group_label",
+    measure_col = "Intensity",
+    keep_all = "default",
+    no_fit_imputed = TRUE,
+    qual_col = NULL,
+    qual_value = NULL
+) {
+    .Deprecated("center_feature_batch")
+    center_feature_batch(
+        x = df_long,
+        sample_annotation = sample_annotation,
+        format = "long",
+        stat = "means",
+        sample_id_col = sample_id_col,
+        batch_col = batch_col,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col,
+        keep_all = keep_all,
+        no_fit_imputed = no_fit_imputed,
+        qual_col = qual_col,
+        qual_value = qual_value
+    )
+}
+
+
+#' @title DEPRECATED: correct_with_ComBat_df
+#' @md
+#' @description Use [correct_with_ComBat()] with `format="long"`.
+#' @inheritParams correct_batch_effects
+#' @param ... Further arguments passed to \code{sva::ComBat()}.
+#' @return A data.frame in long format with ComBat-corrected
+#'   values in \code{measure_col} and original values preserved in
+#'   \code{preBatchCorr_[measure_col]}.
+#' @examples
+#' # Use the unified replacement with `format = "long"`.
+#' args(correct_with_ComBat)
+#' @export
+correct_with_ComBat_df <- function(
+    df_long,
+    sample_annotation = NULL,
+    feature_id_col = "peptide_group_label",
+    measure_col = "Intensity",
+    sample_id_col = "FullRunName",
+    batch_col = "MS_batch",
+    par.prior = TRUE,
+    fill_the_missing = "error",
+    no_fit_imputed = TRUE,
+    qual_col = NULL,
+    qual_value = NULL,
+    keep_all = "default",
+    covariates_cols = NULL,
+    ...,
+    fill_value = NULL
+) {
+    .Deprecated("correct_with_ComBat")
+    correct_with_ComBat(
+        x = df_long,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col,
+        sample_id_col = sample_id_col,
+        batch_col = batch_col,
+        format = "long",
+        par.prior = par.prior,
+        covariates_cols = covariates_cols,
+        fill_the_missing = fill_the_missing,
+        fill_value = fill_value,
+        keep_all = keep_all,
+        no_fit_imputed = no_fit_imputed,
+        qual_col = qual_col,
+        qual_value = qual_value,
+        ...
+    )
+}
+
+#' @title DEPRECATED: correct_with_ComBat_dm
+#' @md
+#' @description Use [correct_with_ComBat()] with `format="wide"`.
+#' @inheritParams correct_batch_effects
+#' @param ... Further arguments passed to \code{sva::ComBat()}.
+#' @return A numeric matrix of ComBat-corrected values
+#'   (features \eqn{\times} samples).
+#' @examples
+#' # Use the unified replacement with `format = "wide"`.
+#' args(correct_with_ComBat)
+#' @export
+correct_with_ComBat_dm <- function(
+    data_matrix,
+    sample_annotation = NULL,
+    feature_id_col = "peptide_group_label",
+    measure_col = "Intensity",
+    sample_id_col = "FullRunName",
+    batch_col = "MS_batch",
+    par.prior = TRUE,
+    fill_the_missing = "error",
+    covariates_cols = NULL,
+    ...,
+    fill_value = NULL
+) {
+    .Deprecated("correct_with_ComBat")
+    correct_with_ComBat(
+        x = data_matrix,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col,
+        sample_id_col = sample_id_col,
+        batch_col = batch_col,
+        format = "wide",
+        par.prior = par.prior,
+        covariates_cols = covariates_cols,
+        fill_the_missing = fill_the_missing,
+        fill_value = fill_value,
+        ...
+    )
+}
+
+#' @title DEPRECATED: correct_batch_effects_df
+#' @md
+#' @description Use [correct_batch_effects()] with `format="long"`.
+#' @inheritParams correct_batch_effects
+#' @param ... Further arguments forwarded to [correct_batch_effects()].
+#' @return A data.frame in long format with batch-corrected
+#'   values in \code{measure_col}.
+#' @examples
+#' # Use the unified replacement with `format = "long"`.
+#' args(correct_batch_effects)
+#' @export
+correct_batch_effects_df <- function(
+    df_long,
+    sample_annotation,
+    continuous_func = NULL,
+    discrete_func = c(
+        "MedianCentering",
+        "MeanCentering",
+        "ComBat",
+        "removeBatchEffect"
+    ),
+    batch_col = "MS_batch",
+    feature_id_col = "peptide_group_label",
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    order_col = "order",
+    keep_all = "default",
+    no_fit_imputed = TRUE,
+    qual_col = NULL,
+    qual_value = NULL,
+    fill_the_missing = "error",
+    par.prior = TRUE,
+    covariates_cols = NULL,
+    min_measurements = 8,
+    ...,
+    fill_value = NULL
+) {
+    .Deprecated("correct_batch_effects")
+    correct_batch_effects(
+        x = df_long,
+        sample_annotation = sample_annotation,
+        format = "long",
+        continuous_func = continuous_func,
+        discrete_func = match.arg(discrete_func),
+        batch_col = batch_col,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        measure_col = measure_col,
+        order_col = order_col,
+        keep_all = keep_all,
+        no_fit_imputed = no_fit_imputed,
+        qual_col = qual_col,
+        qual_value = qual_value,
+        fill_the_missing = fill_the_missing,
+        fill_value = fill_value,
+        par.prior = par.prior,
+        covariates_cols = covariates_cols,
+        min_measurements = min_measurements,
+        ...
+    )
+}
+
+#' @title DEPRECATED: correct_batch_effects_dm
+#' @md
+#' @description Use [correct_batch_effects()] with `format="wide"`.
+#' @inheritParams correct_batch_effects
+#' @param ... Further arguments forwarded to [correct_batch_effects()].
+#' @return A numeric matrix of batch-corrected values
+#'   (features \eqn{\times} samples).
+#' @examples
+#' # Use the unified replacement with `format = "wide"`.
+#' args(correct_batch_effects)
+#' @export
+correct_batch_effects_dm <- function(
+    data_matrix,
+    sample_annotation,
+    continuous_func = NULL,
+    discrete_func = c(
+        "MedianCentering",
+        "MeanCentering",
+        "ComBat",
+        "removeBatchEffect"
+    ),
+    batch_col = "MS_batch",
+    feature_id_col = "peptide_group_label",
+    sample_id_col = "FullRunName",
+    measure_col = "Intensity",
+    order_col = "order",
+    min_measurements = 8,
+    no_fit_imputed = TRUE,
+    fill_the_missing = "error",
+    par.prior = TRUE,
+    covariates_cols = NULL,
+    ...,
+    fill_value = NULL
+) {
+    .Deprecated("correct_batch_effects")
+    correct_batch_effects(
+        x = data_matrix,
+        sample_annotation = sample_annotation,
+        format = "wide",
+        continuous_func = continuous_func,
+        discrete_func = match.arg(discrete_func),
+        batch_col = batch_col,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col,
+        measure_col = measure_col,
+        order_col = order_col,
+        min_measurements = min_measurements,
+        no_fit_imputed = no_fit_imputed,
+        fill_the_missing = fill_the_missing,
+        fill_value = fill_value,
+        par.prior = par.prior,
+        covariates_cols = covariates_cols,
+        ...
+    )
+}
+
+#' @title DEPRECATED: correct_with_removeBatchEffect_df
+#' @md
+#' @description Use [correct_with_removeBatchEffect()] with `format="long"`.
+#' @inheritParams correct_batch_effects
+#' @param ... Further arguments passed to
+#'   \code{limma::removeBatchEffect()}.
+#' @return A data.frame in long format with batch effects
+#'   removed in \code{measure_col}.
+#' @examples
+#' # Use the unified replacement with `format = "long"`.
+#' args(correct_with_removeBatchEffect)
+#' @export
+correct_with_removeBatchEffect_df <- function(
+    df_long,
+    sample_annotation = NULL,
+    feature_id_col = "peptide_group_label",
+    measure_col = "Intensity",
+    sample_id_col = "FullRunName",
+    batch_col = "MS_batch",
+    covariates_cols = NULL,
+    fill_the_missing = "error",
+    keep_all = "default",
+    ...,
+    fill_value = NULL
+) {
+    .Deprecated("correct_with_removeBatchEffect")
+    correct_with_removeBatchEffect(
+        x = df_long,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col,
+        sample_id_col = sample_id_col,
+        batch_col = batch_col,
+        format = "long",
+        covariates_cols = covariates_cols,
+        fill_the_missing = fill_the_missing,
+        fill_value = fill_value,
+        keep_all = keep_all,
+        ...
+    )
+}
+
+#' @title DEPRECATED: correct_with_removeBatchEffect_dm
+#' @md
+#' @description Use [correct_with_removeBatchEffect()] with `format="wide"`.
+#' @inheritParams correct_batch_effects
+#' @param ... Further arguments passed to \code{limma::removeBatchEffect()}.
+#' @return A numeric matrix with batch effects removed
+#'   (features \eqn{\times} samples).
+#' @examples
+#' data(
+#'     list = c("example_sample_annotation", "example_proteome_matrix"),
+#'     package = "proBatch"
+#' )
+#' example_proteome_small <- example_proteome_matrix[1:100, ]
+#' batch_corrected_matrix <- correct_with_removeBatchEffect(
+#'     example_proteome_small,
+#'     example_sample_annotation,
+#'     format = "wide",
+#'     batch_col = "MS_batch",
+#'     covariates_cols = c("Diet", "Sex"),
+#'     fill_the_missing = "drop_features"
+#' )
+#' @seealso \code{\link[limma:removeBatchEffect]{removeBatchEffect}}
+#' @export
+correct_with_removeBatchEffect_dm <- function(
+    data_matrix,
+    sample_annotation,
+    feature_id_col = "peptide_group_label",
+    measure_col = "Intensity",
+    sample_id_col = "FullRunName",
+    batch_col = "MS_batch",
+    covariates_cols = NULL,
+    fill_the_missing = "error",
+    ...,
+    fill_value = NULL
+) {
+    .Deprecated("correct_with_removeBatchEffect")
+    correct_with_removeBatchEffect(
+        x = data_matrix,
+        sample_annotation = sample_annotation,
+        feature_id_col = feature_id_col,
+        measure_col = measure_col,
+        sample_id_col = sample_id_col,
+        batch_col = batch_col,
+        format = "wide",
+        covariates_cols = covariates_cols,
+        fill_the_missing = fill_the_missing,
+        fill_value = fill_value,
+        ...
+    )
+}
