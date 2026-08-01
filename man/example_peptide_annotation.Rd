@@ -4,7 +4,7 @@
 \alias{example_peptide_annotation}
 \title{Peptide annotation data}
 \format{
-A data frame with 535 rows and 10 variables:
+A data frame with 366 rows and 3 variables:
 \describe{
   \item{peptide_group_label}{peptide group label ID, identical to
   \code{peptide_group_label} in \code{example_proteome}}
@@ -14,7 +14,7 @@ A data frame with 535 rows and 10 variables:
   }
 }
 \value{
-A data frame with 535 rows and 10 variables.
+A data frame with 366 rows and 3 variables.
 }
 \description{
 This is data from Aging study annotated with gene names

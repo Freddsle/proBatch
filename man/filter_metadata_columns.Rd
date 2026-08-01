@@ -52,8 +52,9 @@ Defaults to `FALSE` to allow regular expressions.}
 \item{min_non_na}{Optional minimum number of non-missing values a column must
 contain to be retained. Set to `NULL` to skip this filter.}
 
-\item{max_pct_na}{Optional maximum percentage (0–100) of missing values a
-column may contain to be retained. Set to `NULL` to disable.}
+\item{max_pct_na}{Optional percentage threshold (0–100). Columns with
+missingness greater than or equal to this value are removed. Set to `NULL`
+to disable.}
 
 \item{sort}{Logical flag forwarded to [metadata_column_summary()] while
 computing missingness statistics. Has no impact on the returned data frame.}
@@ -77,6 +78,8 @@ For data frames, a filtered data frame with attributes
   `"dropped_columns"`, `"dropped_duplicates"`, and `"dropped_missing"`
   describing the removal decisions. For `ProBatchFeatures` objects, either a
   filtered data frame (default) or the modified object when `inplace = TRUE`.
+  Supplying `df` always returns the filtered data frame and ignores
+  `component`, `assay`, and `inplace`.
 }
 \description{
 Automate common metadata cleaning steps by dropping duplicated columns while

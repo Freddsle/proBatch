@@ -14,7 +14,8 @@ pb_as_wide(object, assay = pb_current_assay(object), name = "intensity")
 \item{name}{Assay entry name inside the \code{SummarizedExperiment} to return.}
 }
 \value{
-numeric matrix (wide) corresponding to the requested assay
+Numeric matrix-like data corresponding to the requested assay.
+HDF5-backed assays may return a \code{DelayedMatrix} without coercion.
 }
 \description{
 Get an assay matrix (wide)

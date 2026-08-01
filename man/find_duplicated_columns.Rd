@@ -38,10 +38,10 @@ A list of character vectors (each of length two) naming duplicated
   column pairs. An empty list is returned when no duplicates are detected.
 }
 \description{
-Compare columns cell-by-cell and report the pairs that contain identical
-values, including matching `NA` placements. The method works on plain data
-frames as well as on [`ProBatchFeatures`] objects by extracting the
-relevant annotation tables.
+Compare columns after stripping attributes and normalising integer storage
+to double, then report pairs with matching values and `NA` placements. The
+method works on plain data frames as well as on [`ProBatchFeatures`] objects
+by extracting the relevant annotation tables.
 }
 \examples{
 metadata <- data.frame(

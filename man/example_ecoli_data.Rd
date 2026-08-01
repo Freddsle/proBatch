@@ -28,10 +28,10 @@ A named list containing the combined metadata, quantification
 }
 \description{
 An example dataset illustrating a typical multi-center DIA (data-independent
-acquisition) proteomics study processed with DIA-NN. Subset of 300 proteins
-and 1119 precursors from the PRIDE ID PXD053812. Study design summary:
+acquisition) proteomics study processed with DIA-NN. Subset of 400 protein
+groups and 1463 precursors from the PRIDE ID PXD053812. Study design summary:
 - Five independent centers.
-- Per center: 10(9) samples of E.coli grown in different
+- Per center: 23 or 24 samples of E. coli grown in different
   media (Pyruvate vs Glucose)
 The distributed object is a named list that contains the combined
 study-level tables derived from all centers (per-center sub-lists were

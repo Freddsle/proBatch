@@ -113,13 +113,17 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 \item{pbf_name}{Assay name(s) used when \code{data_matrix}
 is a \code{ProBatchFeatures}.}
 
-\item{return_gridExtra}{Logical; return arranged
-grobs instead of a plot list.}
+\item{return_gridExtra}{Logical; for multiple assays, return an invisible
+list with \code{grob}, the arranged plot, and \code{plots}, the named per-assay
+results.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 }
 \value{
-object returned by \code{link[pheatmap]{pheatmap}}
+For matrix input or one selected \code{ProBatchFeatures} assay, a
+\code{pheatmap} object. For multiple assays, an arranged plot is returned
+invisibly; with \code{return_gridExtra = TRUE}, an invisible list containing
+\code{grob} and the named per-assay \code{plots} is returned.
 }
 \description{
 Plot the heatmap of samples (cols) vs features (rows)
@@ -143,7 +147,6 @@ color_list <- sample_annotation_to_colors(example_sample_annotation,
     numeric_columns = c("DateTime", "order")
 )
 
-log_transformed_matrix <- log_transform_dm(example_proteome_matrix)
 heatmap_plot <- plot_heatmap_diagnostic(log_transformed_matrix,
     example_sample_annotation,
     factors_to_plot = c("MS_batch", "digestion_batch", "Diet", "DateTime"),

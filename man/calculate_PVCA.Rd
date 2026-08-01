@@ -60,13 +60,17 @@ needs to explain (the rest will be lumped together)}
 should be substituted. If \code{NULL}, features with
 missing values are excluded.}
 
-\item{...}{Additional arguments forwarded between methods.}
+\item{...}{For \code{ProBatchFeatures} input, additional per-assay arguments
+forwarded to \code{calculate_PVCA.default()}. Unmatched arguments captured by
+the default method's own \code{...} are currently ignored.}
 
 \item{pbf_name}{Assay name(s) used when \code{data_matrix}
 is a \code{ProBatchFeatures}.}
 }
 \value{
-data frame of weights of Principal Variance Components
+For matrix input, a data frame of Principal Variance Component
+weights. For \code{ProBatchFeatures} input, one selected assay returns that data
+frame and multiple assays return a named list of data frames.
 }
 \description{
 Calculate variance distribution by variable

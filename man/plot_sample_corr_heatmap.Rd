@@ -38,10 +38,10 @@ object, `pbf_name` is used (or all assays when `pbf_name = NULL`).}
 \item{samples_to_plot}{string vector of samples in
 \code{data_matrix} to be used in the plot}
 
-\item{sample_annotation}{data frame with sample-level metadata. When
-`data_matrix` is a matrix, this argument is required. When `data_matrix`
-is a `ProBatchFeatures` object and `sample_annotation` is not provided,
-`as.data.frame(colData(data_matrix))` is used.}
+\item{sample_annotation}{optional data frame with sample-level metadata.
+Supply it for matrix input when annotation tracks are requested. For
+`ProBatchFeatures` input, omitted annotation defaults to
+`as.data.frame(colData(data_matrix))`.}
 
 \item{sample_id_col}{name of the column in \code{sample_annotation} table,
 where the filenames (colnames of the \code{data_matrix} are found).}
@@ -50,11 +50,9 @@ where the filenames (colnames of the \code{data_matrix} are found).}
 plotted in this diagnostic plot (assumed to be present in
 \code{sample_annotation})}
 
-\item{cluster_rows}{boolean values determining if rows should be
-clustered or \code{hclust} object}
+\item{cluster_rows}{logical; whether rows should be clustered.}
 
-\item{cluster_cols}{boolean values determining if columns should be
-clustered or \code{hclust} object}
+\item{cluster_cols}{logical; whether columns should be clustered.}
 
 \item{show_row_dend, show_column_dend}{Logical, whether row/column dendrograms
 should be shown when clustering is enabled.}
@@ -107,6 +105,7 @@ specified_samples <- example_sample_annotation$FullRunName[
 
 sample_corr_heatmap <- plot_sample_corr_heatmap(example_proteome_matrix,
     samples_to_plot = specified_samples,
+    sample_annotation = example_sample_annotation,
     factors_to_plot = c("MS_batch", "Diet", "DateTime", "digestion_batch"),
     cluster_rows = FALSE, cluster_cols = FALSE,
     annotation_names_col = TRUE, annotation_legend = FALSE,

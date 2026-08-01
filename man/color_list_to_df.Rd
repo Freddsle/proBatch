@@ -11,6 +11,9 @@ color_list_to_df(color_list, sample_annotation, sample_id_col = "FullRunName")
 
 \item{sample_annotation}{factor-based configuration
 of the sample annotation}
+
+\item{sample_id_col}{Column containing sample identifiers. When absent or
+unusable, row names and then row positions are used.}
 }
 \value{
 a data frame representation of the input color list

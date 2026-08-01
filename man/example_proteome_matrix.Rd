@@ -4,13 +4,13 @@
 \alias{example_proteome_matrix}
 \title{Example protein data in matrix}
 \format{
-A matrix with 535 rows and 233 columns:
+A matrix with 366 rows and 233 columns:
 }
 \source{
 PRIDE ID will be added upon the publication of the dataset
 }
 \value{
-A matrix with 535 rows and 233 columns.
+A matrix with 366 rows and 233 columns.
 }
 \description{
 This is measurement data from Aging study with columns representing samples

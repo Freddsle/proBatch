@@ -74,8 +74,10 @@ are written as \code{PVCA_results_aggregated.csv}.}
 is a \code{ProBatchFeatures}.}
 }
 \value{
-data frame with weights and factors, combined in
-a way ready for plotting
+For matrix input, a plotting-ready data frame containing weights,
+labels, and factor categories. For \code{ProBatchFeatures} input, one selected
+assay returns that data frame and multiple assays return a named list of
+data frames.
 }
 \description{
 prepare the weights of Principal Variance Components

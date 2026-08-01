@@ -29,11 +29,12 @@ stacked plot (matching \code{sort_stacked} in \link{plot_PVCA.ProBatchFeatures})
 \item{colors_for_bars}{Character vector of four colors (residual, biological,
 biol:techn, technical) passed to the stacked bar helper.}
 
-\item{plot_title}{Optional plot title.}
+\item{plot_title}{Fallback plot title used when
+\code{stacked_plot_title = NULL}.}
 
-\item{stacked_plot_title}{Optional character vector
-used to annotate the stacked plot title; elements are joined
-with newline characters.}
+\item{stacked_plot_title}{Optional character vector used as the stacked plot
+title; elements are joined with newline characters. Its non-\code{NULL} default
+takes precedence over \code{plot_title}.}
 
 \item{theme}{Plot theme; only \code{"classic"} is currently implemented.}
 

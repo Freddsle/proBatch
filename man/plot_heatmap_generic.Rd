@@ -67,7 +67,7 @@ annotation of heatmap rows}
 
 \item{cluster_rows}{boolean: whether the rows should be clustered}
 
-\item{cluster_cols}{boolean: whether the rows should be clustered}
+\item{cluster_cols}{boolean: whether the columns should be clustered}
 
 \item{annotation_color_cols}{list of color vectors for column annotation,
 for each factor to be plotted; for factor-like variables a named vector
@@ -106,13 +106,17 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 \item{pbf_name}{Assay name(s) used when \code{data_matrix}
 is a \code{ProBatchFeatures}.}
 
-\item{return_gridExtra}{Logical; return arranged
-grobs instead of a plot list.}
+\item{return_gridExtra}{Logical; for multiple assays, return an invisible
+list with \code{grob}, the arranged plot, and \code{plots}, the named per-assay
+results.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 }
 \value{
-pheatmap-type object
+For matrix input or one selected \code{ProBatchFeatures} assay, a
+\code{pheatmap} object. For multiple assays, an arranged plot is returned
+invisibly; with \code{return_gridExtra = TRUE}, an invisible list containing
+\code{grob} and the named per-assay \code{plots} is returned.
 }
 \description{
 Plot the heatmap

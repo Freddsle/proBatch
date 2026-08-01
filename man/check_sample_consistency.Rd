@@ -51,8 +51,10 @@ single-instrument case should be set to `NULL`}
 \code{sample_annotation} or not}
 }
 \value{
-\code{df_long} format data frame, merged with sample_annotation using
-inner_join (samples represented in both)
+`df_long`. When `sample_annotation` is supplied and `merge = TRUE`,
+  it is inner-joined to `df_long` by the applicable annotation columns, so
+  only intersecting sample identifiers remain. When `merge = FALSE` or
+  `sample_annotation = NULL`, `df_long` is returned without merging.
 }
 \description{
 Check if sample annotation is consistent with data matrix and join the two

@@ -66,8 +66,9 @@ Can be easily overridden}
 
 \item{base_size}{base size of the text in the plot}
 
-\item{return_gridExtra}{Logical; return arranged
-grobs instead of a plot list.}
+\item{return_gridExtra}{Logical; for multiple assays, return an invisible
+list with \code{grob}, the arranged plot, and \code{plots}, the named per-assay
+results.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 
@@ -78,8 +79,11 @@ including \code{path_to_save_results}, are forwarded to \code{prepare_PVCA_df()}
 For all inputs, \code{add_values = TRUE} annotates bars with rounded weights.}
 }
 \value{
-\code{ggplot} object with bars as weights,
-colored by bio/tech factors
+For data-frame input or one selected assay, a \code{ggplot} object. For
+multiple \code{ProBatchFeatures} assays, \code{stacked_bar = TRUE} returns one
+stacked \code{ggplot}; otherwise an arranged plot is returned invisibly. With
+\code{return_gridExtra = TRUE}, an invisible list containing \code{grob} and the
+named per-assay \code{plots} is returned.
 }
 \description{
 plot PVCA, when the analysis is completed
@@ -105,5 +109,8 @@ names(colors_for_bars) <- c(
     "residual", "biological", "biol:techn", "technical"
 )
 
-pvca_plot <- plot_PVCA.df(pvca_df_res, colors_for_bars)
+pvca_plot <- plot_PVCA.df(
+    pvca_df_res,
+    colors_for_bars = colors_for_bars
+)
 }

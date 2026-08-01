@@ -90,8 +90,9 @@ batch comparison (or other, non-batch factor to be mapped to color in plots).}
 \item{color_by_batch}{(logical) whether to color points and connecting lines
 by batch factor as defined by \code{batch_col}.}
 
-\item{color_scheme}{Named vector whose names correspond to unique values of
-`batch_col` in `sample_annotation`. A suitable mapping can be created with
+\item{color_scheme}{Either `"brewer"` for an inferred palette or a named
+vector whose names correspond to unique values of `batch_col` in
+`sample_annotation`. A suitable mapping can be created with
 [sample_annotation_to_colors()].}
 
 \item{order_col}{column in \code{sample_annotation} that determines sample
@@ -132,8 +133,8 @@ level (fragments, transitions, proteins) + purpose (meanplot/corrplot etc))}
 
 \item{ylimits}{Optional y-axis range for comparing plots side by side.}
 
-\item{pbf_name}{Assay name or names used when `x` is a
-`ProBatchFeatures` object.}
+\item{pbf_name}{Assay name used by `plot_sample_mean()` or one or more assay
+names used by `plot_boxplot()` when `x` is a `ProBatchFeatures` object.}
 
 \item{...}{Additional arguments forwarded between methods.}
 
@@ -146,11 +147,14 @@ hide them when `FALSE`.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 
-\item{return_gridExtra}{Logical; return arranged grobs instead of a plot
-list.}
+\item{return_gridExtra}{Logical; for multiple boxplots, return an invisible
+list containing the arranged `grob` and named per-assay `plots`.}
 }
 \value{
-A `ggplot` object. Its aesthetics can be overridden with ggplot2.
+For matrix/data-frame input or one selected assay, a `ggplot`
+  object. Multiple `ProBatchFeatures` boxplots return an arranged plot
+  invisibly; with `return_gridExtra = TRUE`, an invisible list containing
+  the arranged `grob` and named per-assay `plots` is returned.
 }
 \description{
 Plot per-sample means or boxplots showing medians and quantiles. For ordered

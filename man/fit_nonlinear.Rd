@@ -40,12 +40,15 @@ order. It is used for in initial assessment plots
 
 \item{batch_id}{the name of the batch, required for warnings}
 
-\item{fit_func}{function to use for the fit, e.g. \code{loess_regression}}
+\item{fit_func}{method name used for the fit. Currently only
+\code{"loess_regression"} is accepted.}
 
 \item{optimize_span}{logical, whether to specify span or optimize it
 (specific entirely for LOESS regression)}
 
-\item{no_fit_imputed}{(logical) whether to fit the imputed (requant) values}
+\item{no_fit_imputed}{logical; when \code{TRUE}, exclude values identified
+by \code{qual_col == qual_value} from fitting. A matching quality column
+is then required.}
 
 \item{qual_col}{column to color point by certain value denoted
 by \code{qual_value}. Design with inferred/requant values in OpenSWATH
@@ -55,7 +58,8 @@ output data, which means argument value has to be set to \code{m_score}.}
 this argument value has to be set to \code{2} (this is an \code{m_score}
 value for imputed values (requant values).}
 
-\item{min_measurements}{the absolute threshold to filter}
+\item{min_measurements}{minimum length of a consecutive non-missing run
+required to fit a curve. Shorter runs return an all-\code{NA} fit.}
 
 \item{...}{additional parameters to be passed to the fitting function}
 }

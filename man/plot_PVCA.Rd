@@ -110,8 +110,9 @@ method accepts \code{add_values = TRUE} to annotate bars with rounded weights.}
 \item{pbf_name}{Assay name(s) used when \code{data_matrix}
 is a \code{ProBatchFeatures}.}
 
-\item{return_gridExtra}{Logical; return arranged
-grobs instead of a plot list.}
+\item{return_gridExtra}{Logical; for multiple assays, return an invisible
+list with \code{grob}, the arranged plot, and \code{plots}, the named per-assay
+results.}
 
 \item{plot_ncol}{Number of columns when arranging multiple assay plots.}
 
@@ -131,7 +132,11 @@ factor in descending order.}
 in a stacked PVCA plot.}
 }
 \value{
-\code{ggplot} object with the plot
+For matrix/data-frame input or one selected assay, a \code{ggplot} object.
+For multiple \code{ProBatchFeatures} assays, \code{stacked_bar = TRUE} returns one
+stacked \code{ggplot}; otherwise an arranged plot is returned invisibly. With
+\code{return_gridExtra = TRUE}, an invisible list containing \code{grob} and the
+named per-assay \code{plots} is returned.
 }
 \description{
 Plot variance distribution by variable

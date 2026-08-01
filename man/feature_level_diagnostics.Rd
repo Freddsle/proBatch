@@ -236,7 +236,7 @@ Can be easily overridden}
 
 \item{base_size}{base font size}
 
-\item{protein_name}{name of the protein as defined in \code{ProteinName}}
+\item{protein_name}{name of the protein as defined in \code{protein_col}}
 
 \item{peptide_annotation}{long format data frame with peptide ID and their
 corresponding protein and/or gene annotations. See
@@ -247,8 +247,8 @@ corresponding protein and/or gene annotations. See
 \item{spike_ins}{name of feature(s), typically proteins that were spiked in
 for control}
 
-\item{irt_pattern}{substring used to identify iRT proteins in the column
-'ProteinName'}
+\item{irt_pattern}{substring used to identify iRT proteins in
+\code{protein_col}}
 
 \item{fit_df}{data frame output of \code{adjust_batch_trend_df} to be plotted
 with the line}
@@ -258,7 +258,7 @@ trend are found}
 }
 \value{
 ggplot2 type plot of \code{measure_col} vs \code{order_col},
-  faceted by \code{feature_name} and (optionally) by \code{batch_col}
+  faceted by \code{feature_name} and (optionally) by \code{facet_col}
 }
 \description{
 Creates a peptide faceted ggplot2 plot of the value in

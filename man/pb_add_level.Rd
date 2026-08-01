@@ -33,9 +33,9 @@ pb_add_level(
 
 \item{name}{Optional final assay name override in
 \verb{<level>::<pipeline>} form. Stored assays and virtual operation-log
-targets share one result namespace. A collision is accepted only for an
-exact idempotent retry with identical data, parent, mapping,
-and stable lineage origin.}
+targets share one result namespace. A stored-assay collision is accepted
+only for an exact idempotent retry with identical data, parent, mapping,
+and stable lineage origin; virtual-target collisions are rejected.}
 
 \item{mapping_df}{Data frame mapping \code{from} IDs to \code{to} IDs. Required only
 when source and target row identifiers are not identical one-to-one.}

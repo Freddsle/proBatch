@@ -36,11 +36,9 @@ or \code{sample_id_col} for sample correlation heatmap}
 plotted in this diagnostic plot (assumed to be present in
 \code{sample_annotation})}
 
-\item{cluster_rows}{boolean values determining if rows should be
-clustered or \code{hclust} object}
+\item{cluster_rows}{logical; whether rows should be clustered.}
 
-\item{cluster_cols}{boolean values determining if columns should be
-clustered or \code{hclust} object}
+\item{cluster_cols}{logical; whether columns should be clustered.}
 
 \item{heatmap_color}{vector of colors used in heatmap.}
 

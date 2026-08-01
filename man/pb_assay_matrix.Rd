@@ -14,7 +14,8 @@ pb_assay_matrix(object, assay = NULL, name = "intensity")
 \item{name}{Assay entry to read from the underlying \code{SummarizedExperiment}.}
 }
 \value{
-Assay data matrix with features in rows and samples in columns.
+Assay data with features in rows and samples in columns. In-memory
+assays return a matrix; HDF5-backed assays may return a \code{DelayedMatrix}.
 }
 \description{
 Stored assays are read directly. A virtual target recorded in the operation

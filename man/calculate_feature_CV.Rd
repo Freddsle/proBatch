@@ -22,11 +22,11 @@ calculate_feature_CV(
 \item{df_long}{data frame where each row is a single feature in a single
 sample, or a `ProBatchFeatures` object.}
 
-\item{sample_annotation}{data frame with sample-level metadata. When
-`df_long` is a data frame, this argument is optional but required for
-batch/replicate-aware calculations. When `df_long` is a `ProBatchFeatures`
-object and `sample_annotation` is not provided,
-`as.data.frame(colData(df_long))` is used.}
+\item{sample_annotation}{data frame with sample-level metadata. For data
+frame input, this is optional when the requested batch and biospecimen
+columns are already present in `df_long`; otherwise it supplies those
+columns. For `ProBatchFeatures` input, omitted annotation defaults to
+`as.data.frame(colData(df_long))`.}
 
 \item{feature_id_col}{name of the column with feature/gene/peptide/protein
 ID used in the long format representation \code{df_long}. In the wide

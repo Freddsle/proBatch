@@ -45,7 +45,9 @@ object. If `NULL`, [pb_current_assay()] is used.}
 A data frame with \code{sample_id}, \code{batch} (if provided),
   \code{mdist}, and \code{is_outlier}. Attributes include \code{cutoff},
   \code{df}, \code{mdist_cutoff}, and \code{outlier_mode}. The object has
-  class \code{"pb_outliers"}.
+  class \code{"pb_outliers"}. When \code{batch_col} is supplied, the
+  \code{batch_summary} attribute contains per-batch outlier counts and
+  percentages.
 }
 \description{
 Detect outlier samples in PCA space

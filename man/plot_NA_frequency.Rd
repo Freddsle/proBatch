@@ -26,7 +26,7 @@ plot_NA_frequency(x, ...)
 `ProBatchFeatures` object. The default method accepts any matrix-like
 input (including `SummarizedExperiment`).}
 
-\item{...}{Additional parameters forwarded to [pheatmap::pheatmap()].}
+\item{...}{Additional arguments are currently ignored.}
 
 \item{show_percent}{Logical; display percentages instead of raw counts.}
 

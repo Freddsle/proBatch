@@ -115,7 +115,7 @@ each level of `group_col` after excluding rows that are entirely `NA`
 within the corresponding subset.}
 
 \item{normalize_func}{global batch normalization method
-(`quantile` or `MedianCentering`)}
+(`quantile` or `medianCentering`)}
 
 \item{log_base}{whether to log transform data matrix
 before normalization (e.g. `NULL`, `2` or `10`)}
@@ -123,16 +123,19 @@ before normalization (e.g. `NULL`, `2` or `10`)}
 \item{offset}{small positive number to prevent 0 conversion to \code{-Inf}}
 }
 \value{
-the data in the same format as input (\code{data_matrix} or
-\code{df_long}). For \code{df_long} the data frame stores the original
-values of \code{measure_col} in another column called "preNorm_intensity" if
-"intensity", and the normalized values in \code{measure_col} column.
+The data in the same format as input (\code{data_matrix} or
+  \code{df_long}). For long input, the pre-normalization values used by the
+  method are stored in \code{preNorm_<measure_col>} (for example,
+  \code{preNorm_Intensity}) and normalized values are stored in
+  \code{measure_col}. When median normalization excludes flagged imputed
+  values, the saved pre-normalization column contains the masked values used
+  for fitting.
 }
 \description{
 Normalization of raw (usually log-transformed) data.
 Normalization brings the samples to the same scale. Currently the following
 normalization functions are implemented:
-#' \enumerate{
+\enumerate{
   \item Quantile normalization: `quantile_normalize_dm()`.
   Quantile normalization of the data.
   \item Median normalization: `normalize_sample_medians_dm()`.
