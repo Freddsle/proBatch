@@ -919,7 +919,7 @@ get_chain <- function(object, as_string = FALSE, assay = NULL) {
 #' @param object ProBatchFeatures
 #' @param assay character(1) assay name; defaults to current assay
 #' @return character(1) pipeline string like
-#'   "combat_on_medianNorm_on_log2" or "raw"
+#'   `"combat_on_medianNorm_on_log2_on_raw"` or `"raw"`
 #' @details The operation-log lineage must be unambiguous and acyclic.
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
@@ -1344,7 +1344,8 @@ pb_current_assay <- function(object) {
 #' @param object A `ProBatchFeatures` object.
 #' @param assay Assay identifier to extract; defaults to the current assay.
 #' @param name Assay entry to read from the underlying `SummarizedExperiment`.
-#' @return Assay data matrix with features in rows and samples in columns.
+#' @return Assay data with features in rows and samples in columns. In-memory
+#'   assays return a matrix; HDF5-backed assays may return a `DelayedMatrix`.
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_assay_matrix <- function(object, assay = NULL, name = "intensity") {
@@ -1410,7 +1411,8 @@ pb_as_long <- function(
 #' @param object A `ProBatchFeatures` object.
 #' @param assay Assay identifier to extract; defaults to the current assay.
 #' @param name Assay entry name inside the `SummarizedExperiment` to return.
-#' @return numeric matrix (wide) corresponding to the requested assay
+#' @return Numeric matrix-like data corresponding to the requested assay.
+#'   HDF5-backed assays may return a `DelayedMatrix` without coercion.
 #' @example inst/examples/ProBatchFeatures-basic.R
 #' @export
 pb_as_wide <- function(
@@ -2074,9 +2076,9 @@ pb_aggregate_level <- function(
 #' @param to_pipeline optional pipeline name (default carries over from 'from')
 #' @param name Optional final assay name override in
 #'   `<level>::<pipeline>` form. Stored assays and virtual operation-log
-#'   targets share one result namespace. A collision is accepted only for an
-#'   exact idempotent retry with identical data, parent, mapping,
-#'   and stable lineage origin.
+#'   targets share one result namespace. A stored-assay collision is accepted
+#'   only for an exact idempotent retry with identical data, parent, mapping,
+#'   and stable lineage origin; virtual-target collisions are rejected.
 #' @param backend "memory","hdf5","auto"
 #' @param hdf5_path optional filepath for HDF5Array
 #' @return ProBatchFeatures with new assay and link added

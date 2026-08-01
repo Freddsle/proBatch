@@ -7,10 +7,8 @@
 #'
 #' @inheritParams proBatch
 #' @param corr_matrix square correlation matrix
-#' @param cluster_rows boolean values determining if rows should be
-#'   clustered or \code{hclust} object
-#' @param cluster_cols boolean values determining if columns should be
-#'   clustered or \code{hclust} object
+#' @param cluster_rows logical; whether rows should be clustered.
+#' @param cluster_cols logical; whether columns should be clustered.
 #' @param heatmap_color vector of colors used in heatmap.
 #' @param annotation data frame with \code{peptide_annotation} for protein
 #' correlation heatmap or \code{sample_annotation} for
@@ -218,10 +216,8 @@ plot_corr_matrix <- function(
 #'
 #' @inheritParams proBatch
 #' @param protein_name the name of the protein
-#' @param cluster_rows boolean values determining if rows should be
-#'   clustered or \code{hclust} object
-#' @param cluster_cols boolean values determining if columns should be
-#'   clustered or \code{hclust} object
+#' @param cluster_rows logical; whether rows should be clustered.
+#' @param cluster_cols logical; whether columns should be clustered.
 #' @param heatmap_color vector of colors used in heatmap.
 #' @param ... parameters for the corrplot visualisation
 #'
@@ -381,19 +377,17 @@ plot_protein_corrplot <- function(
 #'   feature IDs in rownames and file/sample names as colnames, or a
 #'   `ProBatchFeatures` object. When `data_matrix` is a `ProBatchFeatures`
 #'   object, `pbf_name` is used (or all assays when `pbf_name = NULL`).
-#' @param sample_annotation data frame with sample-level metadata. When
-#'   `data_matrix` is a matrix, this argument is required. When `data_matrix`
-#'   is a `ProBatchFeatures` object and `sample_annotation` is not provided,
-#'   `as.data.frame(colData(data_matrix))` is used.
+#' @param sample_annotation optional data frame with sample-level metadata.
+#'   Supply it for matrix input when annotation tracks are requested. For
+#'   `ProBatchFeatures` input, omitted annotation defaults to
+#'   `as.data.frame(colData(data_matrix))`.
 #' @param pbf_name Assay name(s) used when `data_matrix` is a
 #'   `ProBatchFeatures` object. If `NULL`, all assays are plotted.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
 #' @param samples_to_plot string vector of samples in
 #' \code{data_matrix} to be used in the plot
-#' @param cluster_rows boolean values determining if rows should be
-#'   clustered or \code{hclust} object
-#' @param cluster_cols boolean values determining if columns should be
-#'   clustered or \code{hclust} object
+#' @param cluster_rows logical; whether rows should be clustered.
+#' @param cluster_cols logical; whether columns should be clustered.
 #' @param show_row_dend,show_column_dend Logical, whether row/column dendrograms
 #'   should be shown when clustering is enabled.
 #' @param x_axis_label_size,y_axis_label_size Optional numeric font sizes for
@@ -418,6 +412,7 @@ plot_protein_corrplot <- function(
 #'
 #' sample_corr_heatmap <- plot_sample_corr_heatmap(example_proteome_matrix,
 #'     samples_to_plot = specified_samples,
+#'     sample_annotation = example_sample_annotation,
 #'     factors_to_plot = c("MS_batch", "Diet", "DateTime", "digestion_batch"),
 #'     cluster_rows = FALSE, cluster_cols = FALSE,
 #'     annotation_names_col = TRUE, annotation_legend = FALSE,

@@ -8,12 +8,18 @@
 #' @param pbf_name Assay name to transform when `x` is a `ProBatchFeatures`.
 #' @param final_name Optional name for the stored assay
 #'   produced by the S3 methods.
-#' @param ... Additional arguments forwarded between method implementations.
+#' @param ... For `log_transform_dm.ProBatchFeatures()`, additional arguments
+#'   forwarded to [pb_transform()]. The default matrix methods and
+#'   `unlog_dm.ProBatchFeatures()` currently ignore additional arguments.
 #'
-#' @return `log_transform_df()` returns \code{df_long}-size data frame, with
-#' \code{measure_col} log transformed; with old value in another column called
-#' "beforeLog_intensity" if "intensity" was the value of \code{measure_col};
-#' `log_transform_dm()` returns \code{data_matrix} format matrix
+#' @return `log_transform_df()` returns a data frame with `measure_col`
+#'   log-transformed and the original values stored in
+#'   `beforeLog_<measure_col>`. `unlog_df()` returns a data frame with
+#'   `measure_col` restored to its pre-log scale and the prior values stored in
+#'   `beforeUnLog_<measure_col>`. When `log_base = NULL`, these functions return
+#'   the input unchanged. The default matrix methods return the transformed
+#'   matrix. The `ProBatchFeatures` methods return the transformed
+#'   `ProBatchFeatures` result produced by [pb_transform()].
 #'
 #' @examples
 #' data(

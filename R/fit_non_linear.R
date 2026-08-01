@@ -6,11 +6,15 @@
 #' feature (peptide) in a specific batch
 #' @param feature_id the name of the feature, required for warnings
 #' @param batch_id  the name of the batch, required for warnings
-#' @param fit_func function to use for the fit, e.g. \code{loess_regression}
+#' @param fit_func method name used for the fit. Currently only
+#'   \code{"loess_regression"} is accepted.
 #' @param optimize_span logical, whether to specify span or optimize it
 #' (specific entirely for LOESS regression)
-#' @param no_fit_imputed (logical) whether to fit the imputed (requant) values
-#' @param min_measurements the absolute threshold to filter
+#' @param no_fit_imputed logical; when \code{TRUE}, exclude values identified
+#'   by \code{qual_col == qual_value} from fitting. A matching quality column
+#'   is then required.
+#' @param min_measurements minimum length of a consecutive non-missing run
+#'   required to fit a curve. Shorter runs return an all-\code{NA} fit.
 #'
 #' @param ... additional parameters to be passed to the fitting function
 #'

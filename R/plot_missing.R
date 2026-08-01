@@ -602,6 +602,7 @@ plot_NA_density.ProBatchFeatures <- function(
 #' @param facet_scales Scaling behaviour for facets when plotting multiple
 #'   assays.
 #' @param show_percent Logical; display percentages instead of raw counts.
+#' @param ... Additional arguments are currently ignored.
 #'
 #' @return A `ggplot` object showing the frequency distribution.
 #'

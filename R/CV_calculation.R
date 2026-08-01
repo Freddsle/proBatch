@@ -22,11 +22,11 @@ compute_cv <- function(data, measure_col, group_vars, cv_name) {
 #' @inheritParams transform_raw_data
 #' @param df_long data frame where each row is a single feature in a single
 #'   sample, or a `ProBatchFeatures` object.
-#' @param sample_annotation data frame with sample-level metadata. When
-#'   `df_long` is a data frame, this argument is optional but required for
-#'   batch/replicate-aware calculations. When `df_long` is a `ProBatchFeatures`
-#'   object and `sample_annotation` is not provided,
-#'   `as.data.frame(colData(df_long))` is used.
+#' @param sample_annotation data frame with sample-level metadata. For data
+#'   frame input, this is optional when the requested batch and biospecimen
+#'   columns are already present in `df_long`; otherwise it supplies those
+#'   columns. For `ProBatchFeatures` input, omitted annotation defaults to
+#'   `as.data.frame(colData(df_long))`.
 #' @param pbf_name Assay name used when `df_long` is a `ProBatchFeatures`
 #'   object. If `NULL`, [pb_current_assay()] is used.
 #' @param biospecimen_id_col column in \code{sample_annotation}

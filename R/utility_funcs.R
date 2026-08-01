@@ -47,8 +47,10 @@
 #' @param merge (logical) whether to merge \code{df_long} with
 #' \code{sample_annotation} or not
 #'
-#' @return \code{df_long} format data frame, merged with sample_annotation using
-#' inner_join (samples represented in both)
+#' @return `df_long`. When `sample_annotation` is supplied and `merge = TRUE`,
+#'   it is inner-joined to `df_long` by the applicable annotation columns, so
+#'   only intersecting sample identifiers remain. When `merge = FALSE` or
+#'   `sample_annotation = NULL`, `df_long` is returned without merging.
 #'
 #' @export
 #'

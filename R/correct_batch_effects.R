@@ -73,9 +73,11 @@
 #'
 #' @return
 #' Returns data in the same format as input (\code{data_matrix} or
-#' \code{df_long}). For long format, original values from \code{measure_col}
-#' are preserved in \code{"preBatchCorr_[measure_col]"} and corrected values
-#' are written to \code{measure_col}.
+#' \code{df_long}). For long-format discrete correction, original values from
+#' \code{measure_col} are preserved in
+#' \code{"preBatchCorr_[measure_col]"}; trend adjustment instead uses
+#' \code{"preTrendFit_[measure_col]"}. Corrected values are written to
+#' \code{measure_col}.
 #'
 #' The function \code{\link{adjust_batch_trend_dm}()}, if
 #' \code{return_fit_df = TRUE}, returns a list with:

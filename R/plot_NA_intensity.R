@@ -3,7 +3,9 @@
 #' For each feature (row), compute the mean observed intensity and the
 #' proportion of missing values, optionally stratified by a sample-level
 #' grouping variable. A scatter plot with a spline-smoothed trend and per-group
-#' Spearman correlations is returned.
+#' Spearman correlations is returned. The x-axis label assumes that the input
+#' intensities are log2 transformed; callers using another scale can relabel
+#' the returned plot.
 #'
 #' @param x A data container.
 #'   For the `ProBatchFeatures` method this must be a `ProBatchFeatures`

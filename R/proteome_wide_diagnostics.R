@@ -302,11 +302,15 @@ plot_hierarchical_clustering <-
 #'   `ProBatchFeatures` instance.
 #' @param pbf_name Assay name(s) used when `data_matrix`
 #'   is a `ProBatchFeatures`.
-#' @param return_gridExtra Logical; return arranged
-#'   grobs instead of a plot list.
+#' @param return_gridExtra Logical; for multiple assays, return an invisible
+#'   list with `grob`, the arranged plot, and `plots`, the named per-assay
+#'   results.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
 #'
-#' @return object returned by \code{link[pheatmap]{pheatmap}}
+#' @return For matrix input or one selected `ProBatchFeatures` assay, a
+#'   `pheatmap` object. For multiple assays, an arranged plot is returned
+#'   invisibly; with `return_gridExtra = TRUE`, an invisible list containing
+#'   `grob` and the named per-assay `plots` is returned.
 #' @export
 #'
 #' @examples
@@ -328,7 +332,6 @@ plot_hierarchical_clustering <-
 #'     numeric_columns = c("DateTime", "order")
 #' )
 #'
-#' log_transformed_matrix <- log_transform_dm(example_proteome_matrix)
 #' heatmap_plot <- plot_heatmap_diagnostic(log_transformed_matrix,
 #'     example_sample_annotation,
 #'     factors_to_plot = c("MS_batch", "digestion_batch", "Diet", "DateTime"),
@@ -551,7 +554,7 @@ plot_heatmap_diagnostic <-
 #' \code{row_annotation_df} that will be mapped to color
 #' annotation of heatmap rows
 #' @param cluster_rows boolean: whether the rows should be clustered
-#' @param cluster_cols boolean: whether the rows should be clustered
+#' @param cluster_cols boolean: whether the columns should be clustered
 #' @param annotation_color_cols list of color vectors for column annotation,
 #' for each factor to be plotted; for factor-like variables a named vector
 #' (names should correspond to the levels of factors). Advisable to supply here
@@ -571,13 +574,17 @@ plot_heatmap_diagnostic <-
 #'   `ProBatchFeatures` instance.
 #' @param pbf_name Assay name(s) used when `data_matrix`
 #'   is a `ProBatchFeatures`.
-#' @param return_gridExtra Logical; return arranged
-#'   grobs instead of a plot list.
+#' @param return_gridExtra Logical; for multiple assays, return an invisible
+#'   list with `grob`, the arranged plot, and `plots`, the named per-assay
+#'   results.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
 #'
 #' @name plot_heatmap_generic
 #'
-#' @return pheatmap-type object
+#' @return For matrix input or one selected `ProBatchFeatures` assay, a
+#'   `pheatmap` object. For multiple assays, an arranged plot is returned
+#'   invisibly; with `return_gridExtra = TRUE`, an invisible list containing
+#'   `grob` and the named per-assay `plots` is returned.
 #' @export
 #'
 #' @examples
@@ -863,10 +870,14 @@ plot_heatmap_generic <-
 #' missing values are excluded.
 #' @param pbf_name Assay name(s) used when `data_matrix`
 #'   is a `ProBatchFeatures`.
-#' @param ... Additional arguments forwarded between methods.
+#' @param ... For `ProBatchFeatures` input, additional per-assay arguments
+#'   forwarded to `calculate_PVCA.default()`. Unmatched arguments captured by
+#'   the default method's own `...` are currently ignored.
 #'
 #' @name calculate_PVCA
-#' @return data frame of weights of Principal Variance Components
+#' @return For matrix input, a data frame of Principal Variance Component
+#'   weights. For `ProBatchFeatures` input, one selected assay returns that data
+#'   frame and multiple assays return a named list of data frames.
 #' @export
 #'
 #' @examples
@@ -1123,8 +1134,9 @@ calculate_PVCA <- function(data_matrix, ...) UseMethod("calculate_PVCA")
 #'   `ProBatchFeatures` instance.
 #' @param pbf_name Assay name(s) used when `data_matrix`
 #'   is a `ProBatchFeatures`.
-#' @param return_gridExtra Logical; return arranged
-#'   grobs instead of a plot list.
+#' @param return_gridExtra Logical; for multiple assays, return an invisible
+#'   list with `grob`, the arranged plot, and `plots`, the named per-assay
+#'   results.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
 #' @param stacked_bar logical; when `TRUE` and multiple `pbf_name` values are
 #'   provided, combines all assays in a single stacked bar chart (supported for
@@ -1144,7 +1156,11 @@ calculate_PVCA <- function(data_matrix, ...) UseMethod("calculate_PVCA")
 #' @param base_size base size of the text in the plot
 #'
 #' @name plot_PVCA
-#' @return \code{ggplot} object with the plot
+#' @return For matrix/data-frame input or one selected assay, a `ggplot` object.
+#'   For multiple `ProBatchFeatures` assays, `stacked_bar = TRUE` returns one
+#'   stacked `ggplot`; otherwise an arranged plot is returned invisibly. With
+#'   `return_gridExtra = TRUE`, an invisible list containing `grob` and the
+#'   named per-assay `plots` is returned.
 #' @export
 #'
 #' @examples
@@ -1444,8 +1460,10 @@ plot_PVCA <- function(data_matrix, ...) UseMethod("plot_PVCA")
 #'   are written as `PVCA_results_aggregated.csv`.
 #' @param ... Additional arguments forwarded between methods.
 #'
-#' @return data frame with weights and factors, combined in
-#'   a way ready for plotting
+#' @return For matrix input, a plotting-ready data frame containing weights,
+#'   labels, and factor categories. For `ProBatchFeatures` input, one selected
+#'   assay returns that data frame and multiple assays return a named list of
+#'   data frames.
 #' @export
 #'
 #' @examples
@@ -1910,8 +1928,9 @@ prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
 #' @param base_size base size of the text in the plot
 #' @param pbf_name Assay name(s) used when `data_matrix`
 #'   is a `ProBatchFeatures`.
-#' @param return_gridExtra Logical; return arranged
-#'   grobs instead of a plot list.
+#' @param return_gridExtra Logical; for multiple assays, return an invisible
+#'   list with `grob`, the arranged plot, and `plots`, the named per-assay
+#'   results.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
 #' @param ... Additional arguments. For a `ProBatchFeatures` input,
 #'   `stacked_bar`, `stacked_plot_title`, `sort_stacked`, and `category_order`
@@ -1919,8 +1938,11 @@ prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
 #'   including `path_to_save_results`, are forwarded to `prepare_PVCA_df()`.
 #'   For all inputs, `add_values = TRUE` annotates bars with rounded weights.
 #'
-#' @return \code{ggplot} object with bars as weights,
-#'   colored by bio/tech factors
+#' @return For data-frame input or one selected assay, a `ggplot` object. For
+#'   multiple `ProBatchFeatures` assays, `stacked_bar = TRUE` returns one
+#'   stacked `ggplot`; otherwise an arranged plot is returned invisibly. With
+#'   `return_gridExtra = TRUE`, an invisible list containing `grob` and the
+#'   named per-assay `plots` is returned.
 #' @details `plot_PVCA.df()` is retained as a directly callable compatibility
 #'   helper and registered for the historical `"df"` S3 class. Prepared PVCA
 #'   data frames can continue to call the helper directly.
@@ -1944,7 +1966,10 @@ prepare_PVCA_df <- function(data_matrix, ...) UseMethod("prepare_PVCA_df")
 #'     "residual", "biological", "biol:techn", "technical"
 #' )
 #'
-#' pvca_plot <- plot_PVCA.df(pvca_df_res, colors_for_bars)
+#' pvca_plot <- plot_PVCA.df(
+#'     pvca_df_res,
+#'     colors_for_bars = colors_for_bars
+#' )
 #' @name plot_PVCA.df
 plot_PVCA.df <- function(
     data_matrix,
@@ -2214,10 +2239,11 @@ plot_PVCA.df <- function(
 #'   stacked plot (matching `sort_stacked` in [plot_PVCA.ProBatchFeatures]).
 #' @param colors_for_bars Character vector of four colors (residual, biological,
 #'   biol:techn, technical) passed to the stacked bar helper.
-#' @param plot_title Optional plot title.
-#' @param stacked_plot_title Optional character vector
-#'   used to annotate the stacked plot title; elements are joined
-#'   with newline characters.
+#' @param plot_title Fallback plot title used when
+#'   `stacked_plot_title = NULL`.
+#' @param stacked_plot_title Optional character vector used as the stacked plot
+#'   title; elements are joined with newline characters. Its non-`NULL` default
+#'   takes precedence over `plot_title`.
 #' @param theme Plot theme; only `"classic"` is currently implemented.
 #' @param base_size Base font size passed to `theme_classic()`.
 #' @param filename Optional path to save the stacked plot.

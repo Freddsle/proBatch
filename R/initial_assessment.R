@@ -578,8 +578,9 @@ plot_boxplot.ProBatchFeatures <- function(
 #' order-associated effects.
 #'
 #' @inheritParams proBatch
-#' @param color_scheme Named vector whose names correspond to unique values of
-#'   `batch_col` in `sample_annotation`. A suitable mapping can be created with
+#' @param color_scheme Either `"brewer"` for an inferred palette or a named
+#'   vector whose names correspond to unique values of `batch_col` in
+#'   `sample_annotation`. A suitable mapping can be created with
 #'   [sample_annotation_to_colors()].
 #' @param vline_color Color of vertical lines that typically denote different
 #'   MS batches in ordered runs. Use `NULL` for experiments
@@ -590,14 +591,17 @@ plot_boxplot.ProBatchFeatures <- function(
 #' @param theme_name Name of the ggplot theme to apply to the resulting plot.
 #' @param x Input supplied to the generics: a matrix, long data frame, or
 #'   `ProBatchFeatures` object.
-#' @param pbf_name Assay name or names used when `x` is a
-#'   `ProBatchFeatures` object.
+#' @param pbf_name Assay name used by `plot_sample_mean()` or one or more assay
+#'   names used by `plot_boxplot()` when `x` is a `ProBatchFeatures` object.
 #' @param plot_ncol Number of columns when arranging multiple assay plots.
-#' @param return_gridExtra Logical; return arranged grobs instead of a plot
-#'   list.
+#' @param return_gridExtra Logical; for multiple boxplots, return an invisible
+#'   list containing the arranged `grob` and named per-assay `plots`.
 #' @param ... Additional arguments forwarded between methods.
 #'
-#' @return A `ggplot` object. Its aesthetics can be overridden with ggplot2.
+#' @return For matrix/data-frame input or one selected assay, a `ggplot`
+#'   object. Multiple `ProBatchFeatures` boxplots return an arranged plot
+#'   invisibly; with `return_gridExtra = TRUE`, an invisible list containing
+#'   the arranged `grob` and named per-assay `plots` is returned.
 #'
 #' @seealso [ggplot2::ggplot()], [date_to_sample_order()]
 #' @name plot_sample_mean_or_boxplot

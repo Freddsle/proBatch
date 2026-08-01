@@ -19,9 +19,9 @@
 #' @param geom whether to show the feature as points and/or connect by lines
 #' (accepted values are: 1. \code{point}, \code{line} and
 #' \code{c('point', 'line')})
-#' @param protein_name name of the protein as defined in \code{ProteinName}
-#' @param irt_pattern substring used to identify iRT proteins in the column
-#'   'ProteinName'
+#' @param protein_name name of the protein as defined in \code{protein_col}
+#' @param irt_pattern substring used to identify iRT proteins in
+#'   \code{protein_col}
 #' @param spike_ins name of feature(s), typically proteins that were spiked in
 #' for control
 #' @param vline_color color of vertical lines, typically separating
@@ -34,7 +34,7 @@
 #' trend are found
 #'
 #' @return ggplot2 type plot of \code{measure_col} vs \code{order_col},
-#'   faceted by \code{feature_name} and (optionally) by \code{batch_col}
+#'   faceted by \code{feature_name} and (optionally) by \code{facet_col}
 #' @examples
 #' data(list = c(
 #'     "example_sample_annotation", "example_proteome",

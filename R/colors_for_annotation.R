@@ -563,6 +563,8 @@ convert_annotation_classes <- function(df, factor_columns, numeric_columns) {
 #' @param color_list list of colors
 #' @param sample_annotation factor-based configuration
 #' of the sample annotation
+#' @param sample_id_col Column containing sample identifiers. When absent or
+#'   unusable, row names and then row positions are used.
 #'
 #' @return a data frame representation of the input color list
 #' @keywords internal

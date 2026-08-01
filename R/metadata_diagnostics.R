@@ -1,9 +1,9 @@
 #' Identify duplicated columns in metadata or assays
 #'
-#' Compare columns cell-by-cell and report the pairs that contain identical
-#' values, including matching `NA` placements. The method works on plain data
-#' frames as well as on [`ProBatchFeatures`] objects by extracting the
-#' relevant annotation tables.
+#' Compare columns after stripping attributes and normalising integer storage
+#' to double, then report pairs with matching values and `NA` placements. The
+#' method works on plain data frames as well as on [`ProBatchFeatures`] objects
+#' by extracting the relevant annotation tables.
 #'
 #' @param x A data frame-like or `ProBatchFeatures` object to inspect.
 #' @param ... Additional arguments passed to specific methods.
@@ -245,8 +245,9 @@ metadata_column_summary.ProBatchFeatures <- function(
 #'   Defaults to `FALSE` to allow regular expressions.
 #' @param min_non_na Optional minimum number of non-missing values a column must
 #'   contain to be retained. Set to `NULL` to skip this filter.
-#' @param max_pct_na Optional maximum percentage (0–100) of missing values a
-#'   column may contain to be retained. Set to `NULL` to disable.
+#' @param max_pct_na Optional percentage threshold (0–100). Columns with
+#'   missingness greater than or equal to this value are removed. Set to `NULL`
+#'   to disable.
 #' @param sort Logical flag forwarded to [metadata_column_summary()] while
 #'   computing missingness statistics. Has no impact on the returned data frame.
 #' @param ... Additional arguments passed to specific methods.
@@ -255,6 +256,8 @@ metadata_column_summary.ProBatchFeatures <- function(
 #'   `"dropped_columns"`, `"dropped_duplicates"`, and `"dropped_missing"`
 #'   describing the removal decisions. For `ProBatchFeatures` objects, either a
 #'   filtered data frame (default) or the modified object when `inplace = TRUE`.
+#'   Supplying `df` always returns the filtered data frame and ignores
+#'   `component`, `assay`, and `inplace`.
 #'
 #' @examples
 #' metadata <- data.frame(
