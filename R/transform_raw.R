@@ -3,19 +3,29 @@
 #' @inheritParams proBatch
 #' @param log_base base of the logarithm for transformation
 #' @param offset small positive number to prevent 0 conversion to \code{-Inf}
-#' @param x Input object supplied to the generics (long data frame, matrix, or `ProBatchFeatures`).
+#' @param x Input object supplied to the generics (long data frame,
+#'   matrix, or `ProBatchFeatures`).
 #' @param pbf_name Assay name to transform when `x` is a `ProBatchFeatures`.
-#' @param final_name Optional name for the stored assay produced by the S3 methods.
-#' @param ... Additional arguments forwarded between method implementations.
+#' @param final_name Optional name for the stored assay
+#'   produced by the S3 methods.
+#' @param ... For `log_transform_dm.ProBatchFeatures()`, additional arguments
+#'   forwarded to [pb_transform()]. The default matrix methods and
+#'   `unlog_dm.ProBatchFeatures()` currently ignore additional arguments.
 #'
-#' @return `log_transform_df()` returns \code{df_long}-size data frame, with
-#' \code{measure_col} log transformed; with old value in another column
-#' called "beforeLog_intensity" if "intensity" was the value of
-#' \code{measure_col};
-#' `log_transform_dm()` returns \code{data_matrix} format matrix
+#' @return `log_transform_df()` returns a data frame with `measure_col`
+#'   log-transformed and the original values stored in
+#'   `beforeLog_<measure_col>`. `unlog_df()` returns a data frame with
+#'   `measure_col` restored to its pre-log scale and the prior values stored in
+#'   `beforeUnLog_<measure_col>`. When `log_base = NULL`, these functions return
+#'   the input unchanged. The default matrix methods return the transformed
+#'   matrix. The `ProBatchFeatures` methods return the transformed
+#'   `ProBatchFeatures` result produced by [pb_transform()].
 #'
 #' @examples
-#' data(list = c("example_proteome", "example_proteome_matrix"), package = "proBatch")
+#' data(
+#'     list = c("example_proteome", "example_proteome_matrix"),
+#'     package = "proBatch"
+#' )
 #'
 #' log_transformed_df <- log_transform_df(example_proteome)
 #'
@@ -28,14 +38,25 @@ NULL
 #' Log transformation of the data long format.
 #' @rdname transform_raw_data
 #' @export
-log_transform_df <- function(df_long, log_base = 2, offset = 1,
-                             measure_col = "Intensity") {
+log_transform_df <- function(
+    df_long,
+    log_base = 2,
+    offset = 1,
+    measure_col = "Intensity"
+) {
     if (!is.null(log_base)) {
         df_long <- df_long %>%
-            mutate(!!(paste("beforeLog", measure_col, sep = "_")) :=
-                !!(sym(measure_col))) %>%
-            mutate(!!(sym(measure_col)) :=
-                log(!!(sym(measure_col)) + offset, base = log_base))
+            mutate(
+                !!(paste("beforeLog", measure_col, sep = "_")) := !!(sym(
+                    measure_col
+                ))
+            ) %>%
+            mutate(
+                !!(sym(measure_col)) := log(
+                    !!(sym(measure_col)) + offset,
+                    base = log_base
+                )
+            )
     } else {
         warning("Log base is NULL, returning the original data frame")
     }
@@ -43,19 +64,28 @@ log_transform_df <- function(df_long, log_base = 2, offset = 1,
 }
 
 
-#' "Unlog" transformation of the data to pre-log form (for quantification, forcing log-transform)
+#' "Unlog" transformation of the data to pre-log form (for
+#' quantification, forcing log-transform)
 #'
 #' @export
 #' @rdname transform_raw_data
 #'
-unlog_df <- function(df_long, log_base = 2, offset = 1,
-                     measure_col = "Intensity") {
+unlog_df <- function(
+    df_long,
+    log_base = 2,
+    offset = 1,
+    measure_col = "Intensity"
+) {
     if (!is.null(log_base)) {
         df_long <- df_long %>%
-            mutate(!!(paste("beforeUnLog", measure_col, sep = "_")) :=
-                !!(sym(measure_col))) %>%
-            mutate(!!(sym(measure_col)) :=
-                log_base^(!!sym(measure_col)) - offset)
+            mutate(
+                !!(paste("beforeUnLog", measure_col, sep = "_")) := !!(sym(
+                    measure_col
+                ))
+            ) %>%
+            mutate(
+                !!(sym(measure_col)) := log_base^(!!sym(measure_col)) - offset
+            )
     } else {
         warning("Log base is NULL, returning the original data frame")
     }
@@ -86,26 +116,61 @@ log_transform_dm.default <- function(x, log_base = 2, offset = 1, ...) {
     return(data_matrix_log)
 }
 
+.pb_run_single_step_transform <- function(
+    object,
+    pbf_name,
+    step,
+    fun,
+    params,
+    final_name = NULL,
+    dots = list()
+) {
+    assay_name <- .pb_resolve_assay_for_input(
+        object = object,
+        pbf_name = pbf_name,
+        inform_if_default = TRUE
+    )
+
+    call_args <- c(
+        list(
+            object = object,
+            from = assay_name,
+            steps = step,
+            funs = list(fun),
+            params_list = list(params),
+            final_name = final_name
+        ),
+        dots
+    )
+
+    do.call(pb_transform, call_args)
+}
+
 #' @rdname transform_raw_data
 #' @method log_transform_dm ProBatchFeatures
 #' @export
-log_transform_dm.ProBatchFeatures <- function(x, log_base = 2, offset = 1,
-                                              pbf_name = NULL, final_name = NULL, ...) {
-    object <- x
-    if (is.null(pbf_name)) {
-        pbf_name <- pb_current_assay(object)
-        message("`pbf_name` not provided, using the most recent assay: ", pbf_name)
+log_transform_dm.ProBatchFeatures <- function(
+    x,
+    log_base = 2,
+    offset = 1,
+    pbf_name = NULL,
+    final_name = NULL,
+    ...
+) {
+    step <- if (!is.null(log_base) && log_base == 2 && offset == 1) {
+        "log2"
+    } else {
+        "log"
     }
-    step <- if (!is.null(log_base) && log_base == 2 && offset == 1) "log2" else "log"
-    object <- pb_transform(
-        object,
-        from = pbf_name,
-        steps = step,
-        funs = list(log_transform_dm.default),
-        params_list = list(list(log_base = log_base, offset = offset)),
-        final_name = final_name
+    .pb_run_single_step_transform(
+        object = x,
+        pbf_name = pbf_name,
+        step = step,
+        fun = log_transform_dm.default,
+        params = list(log_base = log_base, offset = offset),
+        final_name = final_name,
+        dots = list(...)
     )
-    object
 }
 
 #' @export
@@ -130,20 +195,20 @@ unlog_dm.default <- function(x, log_base = 2, offset = 1, ...) {
 #' @rdname transform_raw_data
 #' @method unlog_dm ProBatchFeatures
 #' @export
-unlog_dm.ProBatchFeatures <- function(x, log_base = 2, offset = 1,
-                                      pbf_name = NULL, final_name = NULL, ...) {
-    object <- x
-    if (is.null(pbf_name)) {
-        pbf_name <- pb_current_assay(object)
-        message("`pbf_name` not provided, using the most recent assay: ", pbf_name)
-    }
-    object <- pb_transform(
-        object,
-        from = pbf_name,
-        steps = "unlog",
-        funs = list(unlog_dm.default),
-        params_list = list(list(log_base = log_base, offset = offset)),
+unlog_dm.ProBatchFeatures <- function(
+    x,
+    log_base = 2,
+    offset = 1,
+    pbf_name = NULL,
+    final_name = NULL,
+    ...
+) {
+    .pb_run_single_step_transform(
+        object = x,
+        pbf_name = pbf_name,
+        step = "unlog",
+        fun = unlog_dm.default,
+        params = list(log_base = log_base, offset = offset),
         final_name = final_name
     )
-    object
 }
