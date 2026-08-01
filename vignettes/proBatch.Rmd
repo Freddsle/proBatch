@@ -274,9 +274,9 @@ excluded from the example data as age-related differences are the focus
 of an unpublished manuscript).
 
 This dataset has a few features, that make it a good illustrative
-example: 1. This is a large dataset of 371 samples, that was affected by
+example: 1. This is a large dataset of 233 samples, that was affected by
 multiple technical factors, described above in the `sample_annotation`
-subsection. Specifically, 7 MS batches drive the similarity of the
+subsection. Specifically, 4 MS batches drive the similarity of the
 samples. 2. The technical factors bias the data in at least two ways:
 discrete shifts (affecting different peptides in a batch-specific way),
 and continuous shifts from MS drift associated with sample running

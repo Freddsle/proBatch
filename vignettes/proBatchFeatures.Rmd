@@ -278,7 +278,7 @@ plot_NA_frequency(
 ```
 
 In the resulting plot, particularly for peptides, batch-specific patterns are
-evident, reflecting the 19-20 samples contributed by each laboratory.
+evident, reflecting the 23-24 samples contributed by each laboratory.
 
 Here, we apply a simple filter that retains only features quantified in at
 least 40% of the samples.
