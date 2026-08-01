@@ -14,28 +14,41 @@
 #'
 #' @export
 #'
-long_to_matrix <- function(df_long,
-                           feature_id_col = "peptide_group_label",
-                           measure_col = "Intensity",
-                           sample_id_col = "FullRunName",
-                           qual_col = NULL,
-                           qual_value = 2) {
+long_to_matrix <- function(
+    df_long,
+    feature_id_col = "peptide_group_label",
+    measure_col = "Intensity",
+    sample_id_col = "FullRunName",
+    qual_col = NULL,
+    qual_value = 2
+) {
+    .pb_validate_long_keys(
+        df_long,
+        feature_id_col = feature_id_col,
+        sample_id_col = sample_id_col
+    )
     casting_formula <- as.formula(paste(
-        feature_id_col, sample_id_col,
+        feature_id_col,
+        sample_id_col,
         sep = " ~ "
     ))
     if (!is.null(qual_col)) {
         message("removing imputed values (requants)")
         df_long <- df_long %>%
-            mutate(!!sym(measure_col) := ifelse(
-                !!sym(qual_col) == qual_value, NA, !!sym(measure_col)
-            ))
+            mutate(
+                !!sym(measure_col) := ifelse(
+                    !!sym(qual_col) == qual_value,
+                    NA,
+                    !!sym(measure_col)
+                )
+            )
     }
-    proteome_wide <- dcast(
-        df_long,
-        formula = casting_formula,
-        value.var = measure_col
-    ) %>%
+    proteome_wide <- df_long %>%
+        tidyr::pivot_wider(
+            id_cols = !!sym(feature_id_col),
+            names_from = !!sym(sample_id_col),
+            values_from = !!sym(measure_col)
+        ) %>%
         column_to_rownames(feature_id_col) %>%
         as.matrix()
     return(proteome_wide)
@@ -70,17 +83,34 @@ long_to_matrix <- function(df_long,
 #'
 #' @export
 #'
-matrix_to_long <- function(data_matrix, sample_annotation = NULL,
-                           feature_id_col = "peptide_group_label",
-                           measure_col = "Intensity",
-                           sample_id_col = "FullRunName",
-                           step = NULL) {
+matrix_to_long <- function(
+    data_matrix,
+    sample_annotation = NULL,
+    feature_id_col = "peptide_group_label",
+    measure_col = "Intensity",
+    sample_id_col = "FullRunName",
+    step = NULL
+) {
+    if (!is.null(rownames(data_matrix))) {
+        rownames(data_matrix) <- .pb_validate_identifiers(
+            rownames(data_matrix),
+            "`data_matrix` feature axis"
+        )
+    }
+    if (!is.null(colnames(data_matrix))) {
+        colnames(data_matrix) <- .pb_validate_identifiers(
+            colnames(data_matrix),
+            "`data_matrix` sample axis"
+        )
+    }
     df_long <- data_matrix %>%
         as.data.frame() %>%
         rownames_to_column(var = feature_id_col) %>%
-        melt(
-            id.var = feature_id_col, value.name = measure_col,
-            variable.name = sample_id_col, factorsAsStrings = FALSE
+        tidyr::pivot_longer(
+            cols = -dplyr::all_of(feature_id_col),
+            names_to = sample_id_col,
+            values_to = measure_col,
+            values_drop_na = FALSE
         )
     if (!is.null(step)) {
         df_long <- df_long %>%
@@ -88,13 +118,17 @@ matrix_to_long <- function(data_matrix, sample_annotation = NULL,
     }
 
     if (!is.null(sample_annotation)) {
-        message("Checking sample consistency and merging with sample annotation")
+        message(
+            "Checking sample consistency and merging with sample annotation"
+        )
         df_long <- check_sample_consistency(
             sample_annotation = sample_annotation,
             sample_id_col = sample_id_col,
             df_long = df_long,
-            batch_col = NULL, order_col = NULL,
-            facet_col = NULL, merge = TRUE
+            batch_col = NULL,
+            order_col = NULL,
+            facet_col = NULL,
+            merge = TRUE
         )
     }
 
@@ -104,8 +138,8 @@ matrix_to_long <- function(data_matrix, sample_annotation = NULL,
 
 #' Prepare peptide annotation from long format data frame
 #'
-#' Create light-weight peptide annotation data frame
-#' for selection of illustrative proteins
+#' Create light-weight peptide annotation data frame for selection
+#' of illustrative proteins
 #'
 #' @inheritParams proBatch
 #'
@@ -121,9 +155,11 @@ matrix_to_long <- function(data_matrix, sample_annotation = NULL,
 #'
 #' @seealso \code{\link{plot_peptides_of_one_protein}},
 #' \code{\link{plot_protein_corrplot}}
-create_peptide_annotation <- function(df_long,
-                                      feature_id_col = "peptide_group_label",
-                                      protein_col = c("ProteinName", "Gene")) {
+create_peptide_annotation <- function(
+    df_long,
+    feature_id_col = "peptide_group_label",
+    protein_col = c("ProteinName", "Gene")
+) {
     if (!all(protein_col %in% names(df_long))) {
         stop(
             sprintf(

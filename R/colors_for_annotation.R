@@ -1,13 +1,13 @@
 #' Generate colors for sample annotation
 #'
-#' Convert the sample annotation data frame to list of colors
-#' the list is named as columns included to use in plotting functions
+#' Convert the sample annotation data frame to list of colors the list is named
+#' as columns included to use in plotting functions
 #'
 #' @inheritParams proBatch
 #' @param factor_columns columns of \code{sample_annotation} to be
 #' treated as factors. Sometimes categorical variables are depicted as integers
-#' (e.g. in column "Batch", values are 1, 2 and 3), specification here allows to
-#' map them correctly to qualitative palettes.
+#' (e.g. in column "Batch", values are 1, 2 and 3), specification here allows
+#' to map them correctly to qualitative palettes.
 #' @param numeric_columns columns of \code{sample_annotation} to be
 #' treated as continuous numeric values.
 #' @param rare_categories_to_other if \code{True} rare categories
@@ -16,12 +16,12 @@
 #'  are actually numeric
 #' @param numeric_palette_type palette to be used for
 #' numeric values coloring (can be \code{'brewer' and 'viridis'})
-#' @param sample_annotation Input object supplied to the generic (data frame or `ProBatchFeatures`).
+#' @param sample_annotation Input object supplied to the generic (data
+#'   frame or `ProBatchFeatures`).
 #' @param ... Additional arguments forwarded to method implementations.
 #'
 #' @return list of colors for the selected annotation columns. Use
-#' \code{\link{color_list_to_df}} if a data frame representation is
-#' needed.
+#' \code{\link{color_list_to_df}} if a data frame representation is needed.
 #'
 #' @examples
 #' data("example_sample_annotation", package = "proBatch")
@@ -36,16 +36,21 @@
 #' @export
 #'
 #' @name sample_annotation_to_colors
-sample_annotation_to_colors.default <- function(sample_annotation,
-                                                sample_id_col = "FullRunName",
-                                                factor_columns = NULL,
-                                                numeric_columns = NULL,
-                                                rare_categories_to_other = TRUE,
-                                                guess_factors = FALSE,
-                                                numeric_palette_type = "brewer",
-                                                ...) {
+sample_annotation_to_colors.default <- function(
+    sample_annotation,
+    sample_id_col = "FullRunName",
+    factor_columns = NULL,
+    numeric_columns = NULL,
+    rare_categories_to_other = TRUE,
+    guess_factors = FALSE,
+    numeric_palette_type = "brewer",
+    ...
+) {
     if (missing(sample_annotation)) {
-        stop("argument \"sample_annotation\" is missing, with no default", call. = FALSE)
+        stop(
+            "argument \"sample_annotation\" is missing, with no default",
+            call. = FALSE
+        )
     }
     sample_annotation <- as.data.frame(sample_annotation)
 
@@ -68,7 +73,9 @@ sample_annotation_to_colors.default <- function(sample_annotation,
 
     # Warn if some columns won't be mapped
     warn_unmapped_columns(
-        sample_annotation, columns_for_color_mapping, sample_id_col
+        sample_annotation,
+        columns_for_color_mapping,
+        sample_id_col
     )
 
     # Subset annotation to relevant columns
@@ -77,12 +84,15 @@ sample_annotation_to_colors.default <- function(sample_annotation,
 
     # Handle overlap between factor and numeric columns
     factor_columns <- handle_factor_numeric_overlap(
-        factor_columns, numeric_columns
+        factor_columns,
+        numeric_columns
     )
 
     # Possibly guess numeric columns from factor columns
     guessed <- guess_factor_columns_if_needed(
-        factor_columns, sample_annotation, guess_factors
+        factor_columns,
+        sample_annotation,
+        guess_factors
     )
     factor_columns <- guessed$factor_columns
     if (!is.null(guessed$numeric_columns)) {
@@ -91,7 +101,9 @@ sample_annotation_to_colors.default <- function(sample_annotation,
 
     # Convert classes
     sample_annotation <- convert_annotation_classes(
-        sample_annotation, factor_columns, numeric_columns
+        sample_annotation,
+        factor_columns,
+        numeric_columns
     )
 
     # Handle factor columns: merge rare levels if needed
@@ -110,7 +122,10 @@ sample_annotation_to_colors.default <- function(sample_annotation,
 
     # Handle numeric columns
     non_factor_cols <- setdiff(columns_for_color_mapping, factor_columns)
-    if (!is.null(non_factor_cols) && !identical(non_factor_cols, character(0))) {
+    if (
+        !is.null(non_factor_cols) &&
+            !identical(non_factor_cols, character(0))
+    ) {
         numeric_df <- sample_annotation %>%
             select(all_of(non_factor_cols))
         list_of_col_for_numeric <- map_numbers_to_colors(
@@ -129,19 +144,21 @@ sample_annotation_to_colors.default <- function(sample_annotation,
 #' @rdname sample_annotation_to_colors
 #' @method sample_annotation_to_colors ProBatchFeatures
 #' @export
-sample_annotation_to_colors.ProBatchFeatures <- function(sample_annotation, ...) {
-    object <- sample_annotation # ProBatchFeatures instance
-    sample_annotation <- as.data.frame(colData(object))
-    color_list <- sample_annotation_to_colors.default(
-        sample_annotation = sample_annotation,
-        ...
-    )
-    return(color_list)
-}
+sample_annotation_to_colors.ProBatchFeatures <-
+    function(sample_annotation, ...) {
+        object <- sample_annotation # ProBatchFeatures instance
+        sample_annotation <- .pb_default_sample_annotation(object = object)
+        color_list <- sample_annotation_to_colors.default(
+            sample_annotation = sample_annotation,
+            ...
+        )
+        return(color_list)
+    }
 
 #' Generic function for sample annotation to colors
 #' @export
-sample_annotation_to_colors <- function(sample_annotation, ...) UseMethod("sample_annotation_to_colors")
+sample_annotation_to_colors <-
+    function(sample_annotation, ...) UseMethod("sample_annotation_to_colors")
 
 map_numeric_colors_to_intervals <- function(color_vector, col_values) {
     breaks <- pretty(col_values)
@@ -154,7 +171,8 @@ map_numeric_colors_to_intervals <- function(color_vector, col_values) {
 
 map_factors_to_colors <- function(annotation_df_factors) {
     # calculate number of colors to create
-    col_class <- vapply(annotation_df_factors,
+    col_class <- vapply(
+        annotation_df_factors,
         FUN = function(x) paste(class(x), collapse = "; "),
         FUN.VALUE = character(1)
     )
@@ -163,8 +181,12 @@ map_factors_to_colors <- function(annotation_df_factors) {
     if (length(non_factor_cols) > 0) {
         col_string <- paste(non_factor_cols, collapse = ", ")
         col_classes <- paste(wrong_classes, collapse = ", ")
-        warning(sprintf("Columns %s are non factors, but %s, they will be converted
-                    to factors for mapping to colors", col_string, col_classes))
+        warning(sprintf(
+            "Columns %s are non factors, but %s, they will be converted
+                    to factors for mapping to colors",
+            col_string,
+            col_classes
+        ))
         annotation_df_factors <- annotation_df_factors %>%
             mutate(across(where(~ !is.factor(.)), as.factor))
     }
@@ -176,12 +198,15 @@ map_factors_to_colors <- function(annotation_df_factors) {
             "Too many colors, consider merging some covariate values for better visualisation\n"
         )
     } else if (any(nlev_covariate > 20)) {
-        warning("Some colors will be hard to distinguish\n")
+        warning("Some colors will be hard to distinguish...")
     }
 
     number_colors_for_factors <- sum(nlev_covariate)
-    standard_colors_base <- grep("(white|(gr(a|e)y))", standardColors(45),
-        value = TRUE, invert = TRUE
+    standard_colors_base <- grep(
+        "(white|(gr(a|e)y))",
+        standardColors(45),
+        value = TRUE,
+        invert = TRUE
     )
     n_base <- length(standard_colors_base)
     qual_col_pals <- brewer.pal.info[brewer.pal.info$category == "qual", ]
@@ -194,12 +219,17 @@ map_factors_to_colors <- function(annotation_df_factors) {
         colors <- standard_colors_base
     } else if (number_colors_for_factors <= length(brewer_colors)) {
         colors <- brewer_colors
-    } else if (number_colors_for_factors <= sum(length(brewer_colors), n_base)) {
+    } else if (
+        number_colors_for_factors <= sum(length(brewer_colors), n_base)
+    ) {
         colors <- c(standard_colors_base, brewer_colors)
     } else {
         # deterministic ordering of all standardColors(), excluding white/grey
-        colors_to_sample <- grep("(white|(gr(a|e)y))", standardColors(),
-            value = TRUE, invert = TRUE
+        colors_to_sample <- grep(
+            "(white|(gr(a|e)y))",
+            standardColors(),
+            value = TRUE,
+            invert = TRUE
         )
         # Interpret hex code as integer and sort ascending:
         # substring removes leading "#", strtoi parses hex.
@@ -214,7 +244,8 @@ map_factors_to_colors <- function(annotation_df_factors) {
         if (length(colors) < number_colors_for_factors) {
             warning(sprintf(
                 "Needed %d colors but only %d distinct colors available; colors will repeat",
-                number_colors_for_factors, length(colors)
+                number_colors_for_factors,
+                length(colors)
             ))
         }
     }
@@ -244,11 +275,15 @@ map_factors_to_colors <- function(annotation_df_factors) {
     return(ann_colors_covariate)
 }
 
-map_numbers_to_colors <- function(annotation_df_numbers,
-                                  palette_type = "brewer") {
+map_numbers_to_colors <- function(
+    annotation_df_numbers,
+    palette_type = "brewer"
+) {
     n_colors_to_create <- ncol(annotation_df_numbers)
     if ((n_colors_to_create > 4 && palette_type == "viridis")) {
-        warning("Too many colors for viridis palette, switching to Brewer palettes")
+        warning(
+            "Too many colors for viridis palette, switching to Brewer palettes"
+        )
         palette_type <- "brewer"
     }
     if ((n_colors_to_create > 18)) {
@@ -269,15 +304,15 @@ map_numbers_to_colors <- function(annotation_df_numbers,
 }
 
 
-#' Generates color vector from continous palette
+#' Generates color vector from continuous palette
 #'
 #' Generates a vector of colors for a vector of numeric, POSIXct (i.e. the
 #' (signed) number of seconds since the beginning of 1970 , or factors
 #'
 #' @param palette_type 'brewer' or 'viridis'
 #' @param i if \code{palette_type} is 'brewer' the palette argument to
-#'   \code{brewer_pal}. If \code{palette_type} is 'viridis' the option argument
-#'   to \code{viridis_pal}
+#'   \code{brewer_pal}. If \code{palette_type} is 'viridis' the option
+#'   argument to \code{viridis_pal}
 #'
 #' @return vector of colors
 #' @keywords internal
@@ -285,15 +320,17 @@ map_numbers_to_colors <- function(annotation_df_numbers,
 #' @examples
 #' generate_colors_for_numeric("brewer", i = 1)
 #'
-generate_colors_for_numeric <- function(palette_type = "brewer",
-                                        i = 1) {
+generate_colors_for_numeric <- function(palette_type = "brewer", i = 1) {
     palette_type <- match.arg(palette_type, c("brewer", "viridis"))
     if ((palette_type == "viridis") && (i > 4 || i < 1)) {
-        warning("When using viridis palette i must be >= 1 and <= 4. Setting it to 1.")
+        warning(
+            "When using viridis palette i must be >= 1 and <= 4. Setting it to 1."
+        )
         i <- 1
     }
 
-    color_for_column <- switch(palette_type,
+    color_for_column <- switch(
+        palette_type,
         brewer = brewer_pal(type = "div", i)(5)[seq_len(5)],
         viridis = viridis_pal(option = LETTERS[5 - i])(5)
     )
@@ -304,7 +341,8 @@ generate_colors_for_numeric <- function(palette_type = "brewer",
 check_rare_levels <- function(column) {
     tb_col <- table(column)
     freq_table <- table(tb_col) / length(tb_col)
-    is_rare <- as.character(1) %in% names(freq_table) &
+    is_rare <- as.character(1) %in%
+        names(freq_table) &
         freq_table[as.character(1)] > .5
     return(is_rare)
 }
@@ -350,8 +388,22 @@ merge_rare_levels <- function(column, rare_thr = 2) {
 #' @param columns_for_color_mapping character vector of columns to be mapped.
 #' @param sample_id_col character, the ID column.
 #' @return No return value, called for side effects (warning).
+#' @examples
+#' annotation <- data.frame(
+#'     sample = c("s1", "s2"),
+#'     batch = c("A", "B"),
+#'     injection_order = 1:2
+#' )
+#' tryCatch(
+#'     warn_unmapped_columns(annotation, "batch", "sample"),
+#'     warning = function(w) conditionMessage(w)
+#' )
 #' @export
-warn_unmapped_columns <- function(sample_annotation, columns_for_color_mapping, sample_id_col) {
+warn_unmapped_columns <- function(
+    sample_annotation,
+    columns_for_color_mapping,
+    sample_id_col
+) {
     undefined_cols <- setdiff(
         names(sample_annotation),
         c(columns_for_color_mapping, sample_id_col)
@@ -360,7 +412,8 @@ warn_unmapped_columns <- function(sample_annotation, columns_for_color_mapping, 
         warning(
             "The following columns will not be mapped to colors: ",
             toString(undefined_cols),
-            "; if these have to be mapped, please assign them to factor, date or numeric and add to factor_columns or numeric_columns parameters"
+            "; \n\tif these have to be mapped, please add them to columns_for_color_mapping list",
+            ", \n\tor assign them to factor, date or numeric and add to factor_columns or numeric_columns parameters"
         )
     }
 }
@@ -370,7 +423,15 @@ warn_unmapped_columns <- function(sample_annotation, columns_for_color_mapping, 
 #' Remove numeric columns from factor columns if overlap is detected.
 #' @param factor_columns character vector of factor columns.
 #' @param numeric_columns character vector of numeric columns.
-#' @return List with updated factor_columns and a warning if overlaps exist
+#' @return A character vector containing \code{factor_columns} after any
+#'   columns in \code{numeric_columns} have been removed.
+#' @examples
+#' factor_columns <- c("batch", "injection_order")
+#' overlap_result <- handle_factor_numeric_overlap(
+#'     factor_columns,
+#'     numeric_columns = "injection_order"
+#' )
+#' overlap_result
 #' @export
 handle_factor_numeric_overlap <- function(factor_columns, numeric_columns) {
     if (!is.null(numeric_columns)) {
@@ -389,35 +450,56 @@ handle_factor_numeric_overlap <- function(factor_columns, numeric_columns) {
 
 #' Guess factors if numeric columns were not provided
 #'
-#' Derive numeric columns from factor columns if guess_factors is TRUE
-#' and numeric columns are NULL.
+#' Derive numeric columns from factor columns if guess_factors is TRUE and
+#' numeric columns are NULL.
 #' @param factor_columns character vector of factor columns.
 #' @param sample_annotation data frame of sample annotations.
 #' @param guess_factors logical indicating whether to guess numeric columns.
 #' @return Named list containing updated factor_columns and numeric_columns.
+#' @examples
+#' annotation <- data.frame(
+#'     batch = rep(c("A", "B"), 6),
+#'     injection_order = seq_len(12)
+#' )
+#' guessed <- guess_factor_columns_if_needed(
+#'     names(annotation),
+#'     annotation,
+#'     guess_factors = TRUE
+#' )
+#' guessed
 #' @export
-guess_factor_columns_if_needed <- function(factor_columns,
-                                           sample_annotation,
-                                           guess_factors) {
+guess_factor_columns_if_needed <- function(
+    factor_columns,
+    sample_annotation,
+    guess_factors
+) {
     numeric_columns <- NULL
     if (is.null(numeric_columns) && guess_factors) {
-        warning("numeric columns not specified,
-            extracting numeric columns from factors")
+        warning(
+            "numeric columns not specified,
+            extracting numeric columns from factors"
+        )
 
-        which_factors <- vapply(factor_columns, function(col) {
-            batch_vector <- sample_annotation[[col]]
-            is_factor <- is_batch_factor(batch_vector, color_scheme = NULL)
-            return(is_factor)
-        }, FUN.VALUE = logical(1))
+        which_factors <- vapply(
+            factor_columns,
+            function(col) {
+                batch_vector <- sample_annotation[[col]]
+                is_factor <- is_batch_factor(batch_vector, color_scheme = NULL)
+                return(is_factor)
+            },
+            FUN.VALUE = logical(1)
+        )
         factor_candidates <- factor_columns[which_factors]
 
-        which_dates <- vapply(factor_columns,
+        which_dates <- vapply(
+            factor_columns,
             function(col) is.POSIXct(sample_annotation[[col]]),
             FUN.VALUE = logical(1)
         )
         date_columns <- factor_columns[which_dates]
 
-        is_not_factor <- vapply(factor_columns,
+        is_not_factor <- vapply(
+            factor_columns,
             function(col) is.numeric(sample_annotation[[col]]),
             FUN.VALUE = logical(1)
         )
@@ -444,16 +526,29 @@ guess_factor_columns_if_needed <- function(factor_columns,
 
 #' Convert factor and numeric columns
 #'
-#' Convert specified factor columns to factor type and numeric columns to
-#' numeric.
+#' Convert specified factor columns to factor type and
+#' numeric columns to numeric.
 #' @param df data frame with sample annotations.
 #' @param factor_columns character vector of factor columns.
 #' @param numeric_columns character vector of numeric columns.
 #' @return data frame with converted columns.
+#' @examples
+#' annotation <- data.frame(
+#'     batch = c("A", "B"),
+#'     injection_order = c("1", "2")
+#' )
+#' converted <- convert_annotation_classes(
+#'     annotation,
+#'     factor_columns = "batch",
+#'     numeric_columns = "injection_order"
+#' )
+#' vapply(converted, class, character(1))
 #' @export
 convert_annotation_classes <- function(df, factor_columns, numeric_columns) {
-    message("converting columns to corresponding classes
-          (factor, numeric)")
+    message(
+        "converting columns to corresponding classes
+          (factor, numeric)"
+    )
     df <- df %>%
         mutate(across(all_of(factor_columns), as.factor)) %>%
         mutate(across(all_of(numeric_columns), as.numeric))
@@ -468,19 +563,47 @@ convert_annotation_classes <- function(df, factor_columns, numeric_columns) {
 #' @param color_list list of colors
 #' @param sample_annotation factor-based configuration
 #' of the sample annotation
+#' @param sample_id_col Column containing sample identifiers. When absent or
+#'   unusable, row names and then row positions are used.
 #'
 #' @return a data frame representation of the input color list
 #' @keywords internal
 #'
-color_list_to_df <- function(color_list, sample_annotation,
-                             sample_id_col = "FullRunName") {
+color_list_to_df <- function(
+    color_list,
+    sample_annotation,
+    sample_id_col = "FullRunName"
+) {
     factors_to_map <- intersect(names(sample_annotation), names(color_list))
+    n_annotation_rows <-
+        if (!is.null(sample_annotation)) nrow(sample_annotation) else 0
+    sample_id_values <-
+        if (!is.null(sample_annotation)) {
+            sample_annotation[[sample_id_col]]
+        } else {
+            NULL
+        }
+    if (is.null(sample_id_values)) {
+        sample_id_values <-
+            if (!is.null(sample_annotation)) {
+                rownames(sample_annotation)
+            } else {
+                NULL
+            }
+    }
+    if (is.null(sample_id_values)) {
+        sample_id_values <- seq_len(n_annotation_rows)
+    } else if (length(sample_id_values) != n_annotation_rows) {
+        sample_id_values <- seq_len(n_annotation_rows)
+    }
     if (!setequal(names(sample_annotation), names(color_list))) {
-        warning("color list and sample annotation have different factors,
-            using only intersection in color scheme!")
+        warning(
+            "color list and sample annotation have different factors,
+            using only intersection in color scheme!"
+        )
     }
     if (length(factors_to_map) == 0) {
-        color_df <- data.frame(row.names = sample_annotation[[sample_id_col]])
+        color_df <- data.frame(row.names = sample_id_values)
         return(color_df)
     }
     list_df <- lapply(factors_to_map, function(col_name) {
@@ -490,7 +613,8 @@ color_list_to_df <- function(color_list, sample_annotation,
         if (is_factor) {
             col_colors <- color_scheme[col_values]
         } else {
-            col_colors <- map_numeric_colors_to_intervals(color_scheme, col_values)
+            col_colors <-
+                map_numeric_colors_to_intervals(color_scheme, col_values)
         }
         if (any(is.na(col_values))) {
             col_colors[is.na(col_values)] <- "white"
@@ -499,12 +623,17 @@ color_list_to_df <- function(color_list, sample_annotation,
     })
     names(list_df) <- factors_to_map
     color_df <- as.data.frame(do.call(cbind, list_df))
-    rownames(color_df) <- sample_annotation[[sample_id_col]]
+    rownames(color_df) <- sample_id_values
     return(color_df)
 }
 
-add_color_scheme_discrete <- function(color_scheme, n_batches, fill_or_color,
-                                      gg, batch_col) {
+add_color_scheme_discrete <- function(
+    color_scheme,
+    n_batches,
+    fill_or_color,
+    gg,
+    batch_col
+) {
     if (length(color_scheme) == 1 && color_scheme == "brewer") {
         if (n_batches <= 9) {
             if (fill_or_color == "color") {
@@ -554,8 +683,13 @@ add_color_scheme_discrete <- function(color_scheme, n_batches, fill_or_color,
 }
 
 
-color_discrete <- function(color_scheme, batch_col, n_batches, fill_or_color,
-                           gg) {
+color_discrete <- function(
+    color_scheme,
+    batch_col,
+    n_batches,
+    fill_or_color,
+    gg
+) {
     if (fill_or_color == "color") {
         gg <- gg + aes(color = as.factor(!!sym(batch_col)))
     } else {
@@ -566,15 +700,23 @@ color_discrete <- function(color_scheme, batch_col, n_batches, fill_or_color,
 
     # Define the color scheme on the fly
     gg <- add_color_scheme_discrete(
-        color_scheme, n_batches, fill_or_color,
-        gg, batch_col
+        color_scheme,
+        n_batches,
+        fill_or_color,
+        gg,
+        batch_col
     )
 
     return(gg)
 }
 
-color_continuous <- function(color_scheme, batch_col, n_batches,
-                             fill_or_color, gg) {
+color_continuous <- function(
+    color_scheme,
+    batch_col,
+    n_batches,
+    fill_or_color,
+    gg
+) {
     batch_vector <- gg$data[[batch_col]]
     lab_datetime <- pretty(batch_vector)
 
@@ -589,38 +731,42 @@ color_continuous <- function(color_scheme, batch_col, n_batches,
     # Define the color scheme on the fly
     if (length(color_scheme) == 1 && color_scheme == "brewer") {
         if (fill_or_color == "color") {
-            gg <- gg + scale_color_distiller(
-                palette = "PiYG",
-                breaks = as.numeric(lab_datetime),
-                labels = lab_datetime
-            ) +
-                labs(color = batch_col)
-        } else {
-            if (fill_or_color == "fill") {
-                gg <- gg + scale_fill_distiller(
+            gg <- gg +
+                scale_color_distiller(
                     palette = "PiYG",
                     breaks = as.numeric(lab_datetime),
                     labels = lab_datetime
                 ) +
+                labs(color = batch_col)
+        } else {
+            if (fill_or_color == "fill") {
+                gg <- gg +
+                    scale_fill_distiller(
+                        palette = "PiYG",
+                        breaks = as.numeric(lab_datetime),
+                        labels = lab_datetime
+                    ) +
                     labs(fill = batch_col)
             }
         }
     } else {
         # color vector provided by "sample_annotation_to_colors"
         if (fill_or_color == "color") {
-            gg <- gg + scale_color_gradientn(
-                colors = color_scheme,
-                breaks = as.numeric(lab_datetime),
-                labels = lab_datetime
-            ) +
-                labs(color = batch_col)
-        } else {
-            if (fill_or_color == "fill") {
-                gg <- gg + scale_fill_gradientn(
+            gg <- gg +
+                scale_color_gradientn(
                     colors = color_scheme,
                     breaks = as.numeric(lab_datetime),
                     labels = lab_datetime
                 ) +
+                labs(color = batch_col)
+        } else {
+            if (fill_or_color == "fill") {
+                gg <- gg +
+                    scale_fill_gradientn(
+                        colors = color_scheme,
+                        breaks = as.numeric(lab_datetime),
+                        labels = lab_datetime
+                    ) +
                     labs(fill = batch_col)
             }
         }
@@ -628,24 +774,48 @@ color_continuous <- function(color_scheme, batch_col, n_batches,
     return(gg)
 }
 
-apply_color_strategy <- function(gg, is_factor, is_numeric,
-                                 color_scheme, batch_col,
-                                 n_batches, fill_or_color) {
+apply_color_strategy <- function(
+    gg,
+    is_factor,
+    is_numeric,
+    color_scheme,
+    batch_col,
+    n_batches,
+    fill_or_color
+) {
     if (is_factor) {
-        gg <- color_discrete(color_scheme, batch_col, n_batches, fill_or_color, gg)
+        gg <- color_discrete(
+            color_scheme,
+            batch_col,
+            n_batches,
+            fill_or_color,
+            gg
+        )
     } else if (is_numeric) {
         gg <- color_continuous(
-            color_scheme, batch_col, n_batches, fill_or_color, gg
+            color_scheme,
+            batch_col,
+            n_batches,
+            fill_or_color,
+            gg
         )
     } else {
-        stop("batch_col class is neither factor-like nor numeric-like,
-          check sample_annotation and/or color_scheme")
+        stop(
+            "batch_col class is neither factor-like nor numeric-like,
+          check sample_annotation and/or color_scheme"
+        )
     }
     gg
 }
 
-color_by_factor <- function(color_by_batch, batch_col, gg, color_scheme,
-                            sample_annotation, fill_or_color = "color") {
+color_by_factor <- function(
+    color_by_batch,
+    batch_col,
+    gg,
+    color_scheme,
+    sample_annotation,
+    fill_or_color = "color"
+) {
     if (color_by_batch && !is.null(batch_col)) {
         batch_vector <- sample_annotation[[batch_col]]
         n_batches <- length(unique(batch_vector))
@@ -655,8 +825,10 @@ color_by_factor <- function(color_by_batch, batch_col, gg, color_scheme,
         is_numeric <- (!is_factor) &&
             (is.numeric(batch_vector) || is.POSIXct(batch_vector))
 
-        if (is_numeric &&
-            (n_batches <= 10 || n_batches < 0.1 * nrow(sample_annotation))) {
+        if (
+            is_numeric &&
+                (n_batches <= 10 || n_batches < 0.1 * nrow(sample_annotation))
+        ) {
             warning(sprintf(
                 "%s column has very few values, but is numeric-like,\nshould it be treated as factor?\nThen modify it with as.factor() function",
                 batch_col
@@ -668,9 +840,11 @@ color_by_factor <- function(color_by_batch, batch_col, gg, color_scheme,
         }
 
         if ((length(color_scheme) == 1) && color_scheme == "brewer") {
-            warning("color_scheme will be inferred automatically.
+            warning(
+                "color_scheme will be inferred automatically.
               Numeric/factor columns are guessed, for more controlled color
-              mapping use sample_annotation_to_colors()")
+              mapping use sample_annotation_to_colors()"
+            )
         }
 
         gg <- apply_color_strategy(
