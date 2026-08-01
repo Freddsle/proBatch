@@ -34,6 +34,8 @@ Raised: 2026-07-30
 
 Reconfirmed: 2026-07-31
 
+Reconfirmed: 2026-08-01
+
 Resolved: 2026-07-31
 
 In the 2026-07-30 run, the final Donna repair boundary contained
@@ -94,3 +96,13 @@ did not reproduce either normalization failure, confirming that this blocker
 was confined to the agent's Pixi environment. No normalization or test change
 is justified by the environment-only failure. That rerun exposed only a
 separate spelling NOTE, whose two Roxygen source phrases were then corrected.
+
+The 2026-08-01 clean-export preparation reran the complete source-level suite
+against the full package-facing delta from the Bioconductor devel baseline.
+Every test context passed except the same two quantile-normalization calls,
+now at `tests/testthat/test-normalize.R:5:5` and `:150:5`. A separately
+authorized execution outside the ordinary sandbox reproduced the identical
+`pthread_create()` return code 22, while the Git-visible package sources and
+test environment remained unchanged. The installed threaded `preprocessCore`
+build is therefore still the limiting environment component; no `proBatch`
+source or test repair is justified.

@@ -95,3 +95,76 @@ No cataloged workflow owns this product decision. Once the contract is chosen
 and specified, the affected implementation and test work should use the normal
 specification-verification and focused-test workflows before this
 documentation-source review is rerun.
+
+## 2026-08-01 clean-export review
+
+The clean-export documentation review validated and rendered the workflow,
+captured a protected baseline for 26 R sources, read every scoped source, and
+queried all configured Depmesh relations separately for each source. The
+review repaired only Roxygen2 lines, including stale packaged-data dimensions
+and classes, argument/default descriptions, conditional and multi-assay return
+values, and examples. It did not inspect or modify `man/` or `NAMESPACE` and
+did not generate documentation, run examples, stage files, create commits, or
+change package behavior.
+
+The deterministic post-edit gate was not run because semantic inspection found
+the behavior-level questions below and the workflow therefore followed its
+required blocker path.
+
+### Ignored base-size argument
+
+Source: `@/R/feature_level_diagnostics.R`
+
+Public interface: `plot_peptides_of_one_protein()`
+
+Evidence: the public function exposes and inherits documentation for
+`base_size`, but its call to `plot_single_feature()` omits that argument. A
+non-default value is accepted and silently ignored.
+
+Ownership question: whether the function should honor its existing public
+argument or remove/deprecate that argument and document the compatibility
+path.
+
+Required decision: authorize the intended public contract. If `base_size`
+remains supported, forward it and add focused regression coverage.
+
+### Custom measurement column omitted during combined normalization
+
+Source: `@/R/normalize.R`
+
+Public interface: `normalize_data_df()`
+
+Evidence: the public function accepts `measure_col`, but when `log_base` is not
+`NULL` its call to `log_transform_df()` omits `measure_col`. The optional log
+step therefore operates on the default `Intensity` column instead of the
+requested measurement column.
+
+Ownership question: whether the combined wrapper is required to honor the
+existing custom-column contract during every enabled step.
+
+Required decision: authorize forwarding `measure_col` to the log step and add
+focused coverage, or explicitly narrow and deprecate the current public
+argument contract.
+
+### Custom feature identifier omitted from median normalization
+
+Source: `@/R/normalize.R`
+
+Public interface: `normalize_data_df()`
+
+Evidence: the median-centering branch calls `normalize_sample_medians_df()`
+without forwarding the public `feature_id_col` argument. Non-default feature
+identifier columns therefore do not receive the contract exposed by the
+wrapper.
+
+Ownership question: whether the wrapper should consistently propagate custom
+identifier columns to its selected implementation.
+
+Required decision: authorize forwarding `feature_id_col` and add focused
+regression coverage, or explicitly narrow and deprecate the wrapper contract.
+
+No cataloged workflow can make these product decisions. If behavior repairs
+are authorized, their specification impact should be assessed with
+`@/workflows/verify-specifications.donna.md`, their tests run with
+`@/workflows/run-tests.donna.md`, and this documentation-source workflow rerun
+before the maintainer regenerates documentation and `NAMESPACE`.
