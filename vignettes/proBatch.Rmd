@@ -546,10 +546,21 @@ by default, and subsequent examples use the median-normalized matrix.
 Change the chunk option to `eval=TRUE` to execute quantile normalization
 and use that result instead.
 
-> On some systems `preprocessCore` this code can throw an error. You can
-> try re-install it with disable threading:
-> `BiocManager::install("preprocessCore", configure.args = c(preprocessCore = "--disable-threading"), force= TRUE, update=TRUE, type = "source")` and restart your R session.
-> [Source](https://github.com/Bioconductor/bioconductor_docker/issues/2).
+**Troubleshooting.** On some systems, quantile normalization can fail
+because of how `preprocessCore` was built. Reinstall it with threading
+disabled:
+
+```{r reinstall_preprocess_core, eval=FALSE}
+BiocManager::install(
+    "preprocessCore",
+    configure.args = c(preprocessCore = "--disable-threading"),
+    force = TRUE,
+    update = TRUE,
+    type = "source"
+)
+```
+
+Restart your R session after installation.
 
 After quantile or median normalization, you can easily check if the
 global pattern improved by generating mean or boxplots and comparing
@@ -560,7 +571,8 @@ normalization of the log transformed dataset.
 plot_sample_mean(
     normalized_matrix, example_sample_annotation,
     color_by_batch = TRUE, ylimits = c(12, 16),
-    color_scheme = color_list[[batch_col]]
+    color_scheme = color_list[[batch_col]],
+    base_size = 10
 )
 ```
 
@@ -672,7 +684,7 @@ Note that when the color scheme is not provided, `digestion_batch` is
 mapped to continuous scale. Which is why defining color scheme is so
 important.
 
-```{r plot_PCA_spec, fig.show='hold', fig.width=5, fig.height=3.5}
+```{r plot_PCA_spec, fig.show='hold', fig.width=4, fig.height=2.8}
 pca_spec <- plot_PCA(
     normalized_matrix, example_sample_annotation,
     color_by = "digestion_batch",
@@ -693,39 +705,18 @@ default. Set it to another numeric scalar to use a different fill value,
 or to `NULL` or `FALSE` to remove incomplete feature rows. Each function
 warns before applying its missing-value handling.
 
-The smaller matrix below keeps these examples quick while preserving the
-feature-by-sample orientation:
+The examples below use the same `normalized_matrix` and
+`example_sample_annotation` as the PCA examples above.
 
-```{r prepare_nonlinear_embeddings}
-embedding_matrix <- normalized_matrix[
-    seq_len(min(200L, nrow(normalized_matrix))),
-    seq_len(min(30L, ncol(normalized_matrix))),
-    drop = FALSE
-]
-embedding_sample_annotation <- example_sample_annotation[
-    match(
-        colnames(embedding_matrix),
-        example_sample_annotation[[sample_id_col]]
-    ), ,
-    drop = FALSE
-]
-stopifnot(
-    identical(
-        embedding_sample_annotation[[sample_id_col]],
-        colnames(embedding_matrix)
-    )
-)
-```
+`plot_TSNE()` uses the optional `Rtsne` package, so this example runs
+only when that package is installed. A fixed `random_seed` makes
+repeated runs reproducible with the same data and settings:
 
-`Rtsne` is an optional backend. When it is available, use an explicit
-`random_seed` to make t-SNE coordinates reproducible for the same data,
-arguments, and backend version:
-
-```{r plot_TSNE, fig.show='hold', fig.width=5, fig.height=3.5}
+```{r plot_TSNE, fig.show='hold', fig.width=4, fig.height=2.8}
 if (requireNamespace("Rtsne", quietly = TRUE)) {
     tsne_plot <- plot_TSNE(
-        embedding_matrix,
-        embedding_sample_annotation,
+        normalized_matrix,
+        example_sample_annotation,
         sample_id_col = sample_id_col,
         color_by = "MS_batch",
         perplexity = 8,
@@ -738,14 +729,14 @@ if (requireNamespace("Rtsne", quietly = TRUE)) {
 }
 ```
 
-Similarly, `umap` is optional. Use `random_state` when reproducible UMAP
-coordinates are required:
+`plot_UMAP()` similarly uses the optional `umap` package. A fixed
+`random_state` makes repeated runs reproducible:
 
-```{r plot_UMAP, fig.show='hold', fig.width=5, fig.height=3.5}
+```{r plot_UMAP, fig.show='hold', fig.width=4, fig.height=2.8}
 if (requireNamespace("umap", quietly = TRUE)) {
     umap_plot <- plot_UMAP(
-        embedding_matrix,
-        embedding_sample_annotation,
+        normalized_matrix,
+        example_sample_annotation,
         sample_id_col = sample_id_col,
         color_by = "MS_batch",
         n_neighbors = 10,
@@ -773,7 +764,7 @@ data matrix of several hundred samples and several thousands of peptides
 it can easily take several hours. So it is generally a good idea to run
 this analysis as a stand-alone script on a powerful machine.
 
-```{r plot_PVCA, fig.show='hold', fig.width=5, fig.height=5}
+```{r plot_PVCA, fig.show='hold', fig.width=4, fig.height=4}
 plot_PVCA(
     normalized_matrix, example_sample_annotation,
     technical_factors = technical_factors,
@@ -841,19 +832,21 @@ of these methods, proceed by selecting a batch correction method.
 
 Depending on the type of batch effects, different batch correction
 methods should be implemented. In most cases, batch-specific signal
-shift needs to be corrected. For this case, feature median-centering can
-be applied, or, to use across-feature information in a Bayesian
-framework, the ComBat approach can be used. If there is continuous drift
-in the data, one has to start from continuous drift correction.
+shift needs to be corrected. For this case, use feature-level centering,
+ComBat, or limma's `removeBatchEffect()` method (`limmaRBE`) in
+`ProBatchFeatures` workflows. If there is continuous drift in the data,
+one has to start from continuous drift correction.
 
-The unified correction functions accept the data as `x` and use
-`format = "long"` or `format = "wide"` to preserve its representation.
-Where missing-value handling is needed, the canonical policies are
-`"error"` (the default), `"keep"`, `"drop_features"`, and `"fill"`.
+The correction functions accept the data as `x`; use `format = "long"`
+or `format = "wide"` to preserve its representation. The available
+missing-value options are `"error"` (the default), `"keep"`,
+`"drop_features"`, and `"fill"`.
 Use `"keep"` only with a method that supports missing values, use
 `"drop_features"` to remove incomplete feature rows, or pair `"fill"`
 with an explicit numeric `fill_value`. ComBat requires an NA-free
-matrix, so its examples below use `"drop_features"`.
+matrix, so its examples below use `"drop_features"`. The limma method
+can retain missing intensity values with `"keep"`, but the batch and
+covariate columns in the sample annotation must be complete.
 
 ### Continuous drift correction
 
@@ -866,7 +859,7 @@ normalized data and this trend is subtracted to correct for within-batch
 variation. Note, that the resulting data are not batch-free as
 within-batch means and variances are batch-dependent. However, now the
 batches are discrete and thus can be corrected using discrete methods
-such as median-centering or ComBat.
+such as median-centering, ComBat, or limma's `removeBatchEffect()`.
 
 ```{r loess_fit, fig.show='hold', fig.width=5, fig.height=2.4}
 loess_fit_df <- adjust_batch_trend_df(
@@ -925,13 +918,15 @@ absolute and relative thresholds (`abs_threshold` and `pct_threshold`)
 on the number of missing values for each peptide can be passed as
 parameters to `adjust_batch_trend_df()`.
 
-### Discrete batch correction: ComBat or feature-level centering
+### Discrete batch correction: centering, ComBat, or limmaRBE
 
 Once the data are normalized and corrected for continuous drift, only
 discrete batch effects are left to be corrected.
 
-The unified API supports median or mean centering per feature and batch,
-ComBat, and `limma::removeBatchEffect()`.
+`proBatch` provides three batch-correction approaches: median or mean
+centering of each feature within each batch, ComBat, and limma's
+`removeBatchEffect()` method (`limmaRBE` in `ProBatchFeatures`
+workflows).
 
 #### Feature-level median centering
 
@@ -939,7 +934,7 @@ Feature-level median centering is the simplest approach for batch
 effects correction. However, if the variance is different between
 batches, other approaches need to be used.
 
-```{r median_batch, fig.show='hold', fig.width=3, fig.height=2.4}
+```{r median_batch, fig.show='hold', fig.width=2.5, fig.height=2}
 peptide_median_df <- center_feature_batch(
     x = loess_fit_df,
     sample_annotation = example_sample_annotation,
@@ -960,8 +955,8 @@ plot_single_feature(
 ComBat is well-suited for batches with distinct distributions, but it
 requires an NA-free matrix. ComBat uses a parametric or non-parametric
 empirical Bayes framework for adjusting data for batch effects [11].
-The unified `correct_with_ComBat()` function can incorporate covariates
-and accepts long or wide data through its `format` argument.
+`correct_with_ComBat()` can include covariates and accepts long or wide
+data through its `format` argument.
 
 ```{r comBat, fig.show='hold'}
 comBat_df <- correct_with_ComBat(
@@ -975,7 +970,7 @@ comBat_df <- correct_with_ComBat(
 To illustrate the correction we use the '10231_QDVDVWLWQQEGSSK_2'
 spike-in peptide.
 
-```{r combat_result, fig.show='hold',  fig.width=3, fig.height=2.4}
+```{r combat_result, fig.show='hold', fig.width=2.5, fig.height=2}
 plot_single_feature(
     feature_name = "10231_QDVDVWLWQQEGSSK_2",
     df_long = loess_fit_df,
@@ -995,15 +990,35 @@ plot_single_feature(
 ComBat fixed the discrete batch effects and also made the distributions
 between batches similar to one another.
 
+#### limma `removeBatchEffect()` (`limmaRBE`)
+
+Like ComBat, this method corrects discrete batch differences. Unlike
+ComBat, it can retain missing intensity values. Use
+`fill_the_missing = "keep"`; the batch and any selected covariate columns
+in the sample annotation must still be complete. For data frames or
+matrices, call the method with `correct_with_removeBatchEffect()`:
+
+```{r limma_rbe}
+limma_rbe_df <- correct_with_removeBatchEffect(
+    x = loess_fit_df,
+    sample_annotation = example_sample_annotation,
+    format = "long",
+    fill_the_missing = "keep"
+)
+```
+
 ### Correct batch effects: universal function
 
 We provide a convenient all-in-one function for batch correction. The
 function `correct_batch_effects()` corrects MS signal drift and a
 discrete shift in a single function call. Select the input
-representation with `format`, choose a discrete method such as
-`"ComBat"` or `"MedianCentering"` with `discrete_func`, and supplement
-other arguments such as `span`, `abs_threshold`, or `pct_threshold` as
-in `adjust_batch_trend_df()`.
+representation with `format`, then use `discrete_func` to choose
+`"MedianCentering"`, `"MeanCentering"`, `"ComBat"`, or
+`"removeBatchEffect"`. The last option selects the limmaRBE method. It
+can retain missing intensity values when `fill_the_missing = "keep"`,
+provided that the batch and covariate annotations are complete. Other
+arguments such as `span`, `abs_threshold`, or `pct_threshold` work as in
+`adjust_batch_trend_df()`.
 
 ```{r batch_corr_general, fig.show='hold'}
 batch_corrected_df <- correct_batch_effects(
@@ -1017,6 +1032,10 @@ batch_corrected_df <- correct_batch_effects(
 )
 batch_corrected_matrix <- long_to_matrix(batch_corrected_df)
 ```
+
+To use limmaRBE in this all-in-one call, set
+`discrete_func = "removeBatchEffect"` and
+`fill_the_missing = "keep"`.
 
 \pagebreak
 
