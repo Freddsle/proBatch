@@ -120,6 +120,33 @@ setValidity("ProBatchFeatures", function(object) {
     isTRUE(step %in% fast_steps)
 }
 
+.pb_step_target_name <- function(
+    from,
+    step,
+    new_level = NULL,
+    to_override = NULL
+) {
+    from_parts <- strsplit(from, "::", fixed = TRUE)[[1L]]
+    base_level <- if (length(from_parts) >= 1L) {
+        from_parts[[1L]]
+    } else {
+        "feature"
+    }
+    new_level <- new_level %||% base_level
+    from_pipeline <- if (length(from_parts) >= 2L) {
+        from_parts[[2L]]
+    } else {
+        "raw"
+    }
+    previous_tokens <- if (identical(from_pipeline, "raw")) {
+        "raw"
+    } else {
+        rev(strsplit(from_pipeline, "_on_", fixed = TRUE)[[1L]])
+    }
+    new_pipeline <- .pb_make_pipeline_name(c(previous_tokens, step))
+    to_override %||% .pb_assay_name(new_level, new_pipeline)
+}
+
 # Choose materialization backend
 .pb_materialize_matrix <- function(
     m,
@@ -740,7 +767,9 @@ get_operation_log <- function(object) {
     fun,
     params = list(),
     pkg = "proBatch",
-    name = "intensity"
+    name = "intensity",
+    artifacts = NULL,
+    validate_virtual_data = TRUE
 ) {
     stopifnot(is(object, "ProBatchFeatures"))
     log <- get_operation_log(object)
@@ -783,6 +812,21 @@ get_operation_log <- function(object) {
     }
 
     .pb_lineage_from_log(object, to)
+    if (!stored && !isTRUE(validate_virtual_data)) {
+        self_rows <- target_rows[
+            as.character(log$from[target_rows]) == to
+        ]
+        if (length(self_rows)) {
+            stop(
+                "Result target '",
+                to,
+                "' is virtual and includes additional in-place operations; ",
+                "it cannot be materialized from a one-step supplied result.",
+                call. = FALSE
+            )
+        }
+        return("virtual_idempotent")
+    }
     payload <- .pb_assay_payload(object, assay_name = to, name = name)
     if (is.null(payload)) {
         stop(
@@ -798,6 +842,13 @@ get_operation_log <- function(object) {
             to,
             "' already exists or is reserved with conflicting data.",
             call. = FALSE
+        )
+    }
+    if (stored && !is.null(artifacts)) {
+        .pb_assert_step_artifacts_match(
+            object[[to]],
+            expected = artifacts,
+            target = to
         )
     }
 
@@ -1555,7 +1606,10 @@ pb_as_wide <- function(
     fun = NULL,
     params = list(),
     pkg = "proBatch",
-    lineage_from = from
+    lineage_from = from,
+    retry_status = NULL,
+    source_resolved = FALSE,
+    record_link_status = TRUE
 ) {
     original_names <- names(object)
     stopifnot(
@@ -1566,7 +1620,7 @@ pb_as_wide <- function(
     )
 
     has_from <- from %in% names(object)
-    if (!has_from) {
+    if (!has_from && !isTRUE(source_resolved)) {
         resolved <- .pb_resolve_assay_from_log(object, from, name = "intensity")
         if (is.null(resolved)) {
             stop(
@@ -1581,8 +1635,10 @@ pb_as_wide <- function(
         names(object) ||
         (nrow(object@oplog) &&
             any(as.character(object@oplog$to) == to))
-    retry_status <- "available"
-    if (target_exists) {
+    if (is.null(retry_status)) {
+        retry_status <- "available"
+    }
+    if (target_exists && identical(retry_status, "available")) {
         if (is.null(step) || is.null(fun)) {
             stop(
                 "Result target '",
@@ -1629,7 +1685,9 @@ pb_as_wide <- function(
             ok_link <- TRUE
         }
     }
-    metadata(object)$linked_last <- ok_link
+    if (isTRUE(record_link_status)) {
+        metadata(object)$linked_last <- ok_link
+    }
 
     if (!(from %in% original_names) && from %in% names(object)) {
         object <- object[names(object) != from]
@@ -1639,8 +1697,125 @@ pb_as_wide <- function(
 }
 
 # ---------------------------
-# The small internal helper: ONE step apply
+# Shared step-result finalization and one-step application
 # ---------------------------
+
+.pb_finalize_step_result <- function(
+    object,
+    from,
+    step,
+    fun_name,
+    fun_package,
+    params,
+    result_parts,
+    source_matrix,
+    from_data = from,
+    source_col_data = NULL,
+    store = TRUE,
+    new_level = NULL,
+    to_override = NULL,
+    backend = c("auto", "memory", "hdf5"),
+    hdf5_path = NULL,
+    allow_unnamed_features = TRUE,
+    validate_virtual_data = TRUE,
+    record_link_status = TRUE
+) {
+    backend <- match.arg(backend)
+    to <- .pb_step_target_name(
+        from = from,
+        step = step,
+        new_level = new_level,
+        to_override = to_override
+    )
+    result_matrix <- .pb_adapter_validate_output(
+        result_parts$data,
+        input_matrix = source_matrix,
+        missing = "keep",
+        allow_unnamed_features = allow_unnamed_features
+    )
+    if (!identical(colnames(result_matrix), colnames(source_matrix))) {
+        stop(
+            "Step '",
+            step,
+            "' result must preserve every input sample in order. ",
+            "Use `pb_subset_samples()` to change the sample set.",
+            call. = FALSE
+        )
+    }
+
+    retry_artifacts <- if (isTRUE(result_parts$structured)) {
+        result_parts$artifacts
+    } else {
+        NULL
+    }
+    retry_status <- .pb_target_retry_status(
+        object = object,
+        to = to,
+        from = from,
+        data = result_matrix,
+        step = step,
+        fun = fun_name,
+        params = params,
+        pkg = fun_package,
+        artifacts = retry_artifacts,
+        validate_virtual_data = validate_virtual_data
+    )
+
+    saved_assay <- NULL
+    if (store) {
+        if (identical(retry_status, "stored_idempotent")) {
+            saved_assay <- to
+        } else {
+            materialized <- .pb_materialize_matrix(
+                result_matrix,
+                backend = backend,
+                hdf5_path = hdf5_path
+            )
+            if (is.null(source_col_data)) {
+                source_col_data <- .pb_coldata_for_assay(object, from_data)
+            }
+            se <- SummarizedExperiment(
+                assays = list(intensity = materialized),
+                colData = source_col_data
+            )
+            if (isTRUE(result_parts$structured)) {
+                se <- .pb_attach_step_artifacts(se, result_parts$artifacts)
+            }
+            object <- .pb_add_assay_with_link(
+                object,
+                se,
+                to = to,
+                from = from_data,
+                step = step,
+                fun = fun_name,
+                params = params,
+                pkg = fun_package,
+                lineage_from = from,
+                retry_status = retry_status,
+                source_resolved = !(from_data %in% names(object)),
+                record_link_status = record_link_status
+            )
+            saved_assay <- to
+        }
+    }
+
+    object <- .pb_add_log_entry(
+        object,
+        step = step,
+        fun = fun_name,
+        from = from,
+        to = to,
+        params = params,
+        pkg = fun_package
+    )
+
+    list(
+        object = object,
+        assay = saved_assay,
+        matrix = result_matrix,
+        to = to
+    )
+}
 
 #' Apply a single step to an assay, optionally store result, always log
 #' @param object ProBatchFeatures
@@ -1677,20 +1852,6 @@ pb_as_wide <- function(
     backend <- match.arg(backend)
     stopifnot(is(object, "ProBatchFeatures"))
 
-    from_parts <- strsplit(from, "::", fixed = TRUE)[[1]]
-    base_level <- if (length(from_parts) >= 1) from_parts[1] else "feature"
-    new_level <- new_level %||% base_level
-    from_pipeline <- if (length(from_parts) >= 2) from_parts[2] else "raw"
-    prev_tokens <- if (identical(from_pipeline, "raw")) {
-        "raw"
-    } else {
-        rev(
-            strsplit(from_pipeline, "_on_", fixed = TRUE)[[1]]
-        )
-    }
-    new_pipeline <- .pb_make_pipeline_name(c(prev_tokens, step))
-    to <- to_override %||% .pb_assay_name(new_level, new_pipeline)
-
     invocation <- .pb_step_invocation(fun, step = step)
     fun_name <- invocation$name
     fun_package <- invocation$package
@@ -1721,79 +1882,22 @@ pb_as_wide <- function(
         raw_result,
         paste0("Step '", step, "' result")
     )
-    res_m <- .pb_adapter_validate_output(
-        result_parts$data,
-        input_matrix = base_m,
-        missing = "keep",
-        allow_unnamed_features = TRUE
-    )
-    if (!identical(colnames(res_m), colnames(base_m))) {
-        stop(
-            "Step '",
-            step,
-            "' result must preserve every input sample in order. ",
-            "Use `pb_subset_samples()` to change the sample set.",
-            call. = FALSE
-        )
-    }
-    retry_status <- .pb_target_retry_status(
+    .pb_finalize_step_result(
         object = object,
-        to = to,
         from = from,
-        data = res_m,
         step = step,
-        fun = fun_name,
+        fun_name = fun_name,
+        fun_package = fun_package,
         params = logged_params,
-        pkg = fun_package
+        result_parts = result_parts,
+        source_matrix = base_m,
+        from_data = from_data,
+        store = store,
+        new_level = new_level,
+        to_override = to_override,
+        backend = backend,
+        hdf5_path = hdf5_path
     )
-
-    saved_assay <- NULL
-    if (store) {
-        mat <- .pb_materialize_matrix(
-            res_m,
-            backend = backend,
-            hdf5_path = hdf5_path
-        )
-        if (identical(retry_status, "stored_idempotent")) {
-            saved_assay <- to
-        } else {
-            cd_from <- .pb_coldata_for_assay(object, from_data)
-            se <- SummarizedExperiment(
-                assays = list(intensity = mat),
-                colData = cd_from
-            )
-            if (isTRUE(result_parts$structured)) {
-                se <- .pb_attach_step_artifacts(
-                    se,
-                    result_parts$artifacts
-                )
-            }
-            object <- .pb_add_assay_with_link(
-                object,
-                se,
-                to = to,
-                from = from_data,
-                step = step,
-                fun = fun_name,
-                params = logged_params,
-                pkg = fun_package,
-                lineage_from = from
-            )
-            saved_assay <- to
-        }
-    }
-
-    object <- .pb_add_log_entry(
-        object,
-        step = step,
-        fun = fun_name,
-        from = from,
-        to = to,
-        params = logged_params,
-        pkg = fun_package
-    )
-
-    list(object = object, assay = saved_assay, matrix = res_m, to = to)
 }
 
 # ---------------------------
@@ -1831,9 +1935,9 @@ pb_as_wide <- function(
 #'   added (as log and/or assay)
 #' @details Registered steps record their canonical name and provider package.
 #'   When a step returns [pb_step_result()] and its assay is materialized, the
-#'   result's artifacts are stored in that assay's metadata under
-#'   `pb_step_artifacts`. Step results must retain all samples in input order;
-#'   an input-ordered feature subset is allowed.
+#'   result's artifacts are available through [pb_step_artifacts()]. Step
+#'   results must retain all samples in input order; an input-ordered feature
+#'   subset is allowed.
 #'
 #' @example inst/examples/ProBatchFeatures-basic.R
 #'
@@ -1926,6 +2030,138 @@ pb_transform <- function(
         }
     }
     object
+}
+
+#' Materialize an externally computed structured step result
+#'
+#' Validates and stores a precomputed, matrix-valued [pb_step_result()] using
+#' the same axis, backend, assay, collision, operation-log, and lineage rules as
+#' [pb_transform()]. The registered step is resolved only for its identity; its
+#' function is never invoked by this API.
+#'
+#' Core validates the result structure, source-relative feature and sample
+#' axes, registered canonical identity and owner, target namespace, storage,
+#' artifacts, operation log, and lineage. The caller is responsible for
+#' asserting that `result` was actually computed by `step` with `params`.
+#' Artifact values are treated as opaque provider-neutral data.
+#'
+#' The result is always materialized. A matching one-step virtual target may
+#' become stored without replaying `step`; a virtual target with additional
+#' in-place operations is rejected. A stored retry is idempotent only when its
+#' source, target, matrix, requested and canonical identities, registry owner,
+#' parameters, and artifacts are all identical. Any difference is a conflict.
+#'
+#' @param object A `ProBatchFeatures` object.
+#' @param from Stored or virtual source assay identifier.
+#' @param step One currently registered canonical step name or alias. The
+#'   requested identifier is retained in the operation log while the canonical
+#'   name and registry owner are recorded separately.
+#' @param result A [pb_step_result()] containing a numeric feature-by-sample
+#'   matrix and a list of artifacts. It must retain every source sample in
+#'   source order and may retain an input-ordered feature subset.
+#' @param params A list recorded exactly as supplied in the operation log.
+#' @param final_name Optional target assay name in `<level>::<pipeline>` form.
+#'   `NULL` uses the one-step naming convention of [pb_transform()].
+#' @param backend Storage backend: `"auto"`, `"memory"`, or `"hdf5"`.
+#' @param hdf5_path Optional file path used with the HDF5 backend. The existing
+#'   optional-backend policy applies when HDF5 support is unavailable.
+#'
+#' @return The updated `ProBatchFeatures` object with the result materialized.
+#' @export
+#' @md
+#' @examples
+#' local({
+#'     input <- matrix(
+#'         1:4,
+#'         nrow = 2,
+#'         dimnames = list(c("f1", "f2"), c("s1", "s2"))
+#'     )
+#'     pbf <- ProBatchFeatures(input, name = "raw")
+#'     provider <- "proBatchExampleProvider"
+#'     provider_step <- function(m, multiplier = 1) m * multiplier
+#'     on.exit(pb_unregister_steps(provider), add = TRUE)
+#'     pb_register_step(
+#'         "example_precomputed",
+#'         provider_step,
+#'         package = provider
+#'     )
+#'     computed <- provider_step(input, multiplier = 2)
+#'     result <- pb_step_result(computed, list(converged = TRUE))
+#'     updated <- pb_materialize_step_result(
+#'         pbf,
+#'         from = "feature::raw",
+#'         step = "example_precomputed",
+#'         result = result,
+#'         params = list(multiplier = 2),
+#'         final_name = "feature::example_result",
+#'         backend = "memory"
+#'     )
+#'     pb_step_artifacts(updated, "feature::example_result")
+#' })
+pb_materialize_step_result <- function(
+    object,
+    from,
+    step,
+    result,
+    params = list(),
+    final_name = NULL,
+    backend = c("auto", "memory", "hdf5"),
+    hdf5_path = NULL
+) {
+    if (!is(object, "ProBatchFeatures")) {
+        stop("`object` must be a ProBatchFeatures object.", call. = FALSE)
+    }
+    backend <- match.arg(backend)
+    from <- .pb_registry_character_scalar(from, "from")
+    step <- .pb_registry_character_scalar(step, "step")
+    if (!inherits(result, "pb_step_result")) {
+        stop("`result` must be a pb_step_result.", call. = FALSE)
+    }
+    result_parts <- .pb_step_result_matrix_parts(
+        result,
+        "`result`"
+    )
+    if (!is.list(params)) {
+        stop("`params` must be a list.", call. = FALSE)
+    }
+    if (!is.null(final_name)) {
+        .pb_assay_parts(final_name, strict = TRUE)
+        if (identical(final_name, from)) {
+            stop(
+                "`final_name` conflicts with the source assay '",
+                from,
+                "'.",
+                call. = FALSE
+            )
+        }
+    }
+
+    resolution <- .pb_resolve_step(step, require_available = FALSE)
+    source <- .pb_assay_payload(object, assay_name = from, name = "intensity")
+    if (is.null(source)) {
+        stop("Assay '", from, "' not found in object or operation log.")
+    }
+
+    finalized <- .pb_finalize_step_result(
+        object = object,
+        from = from,
+        step = step,
+        fun_name = resolution$name,
+        fun_package = resolution$package,
+        params = params,
+        result_parts = result_parts,
+        source_matrix = source$matrix,
+        from_data = from,
+        source_col_data = source$colData,
+        store = TRUE,
+        to_override = final_name,
+        backend = backend,
+        hdf5_path = hdf5_path,
+        allow_unnamed_features = FALSE,
+        validate_virtual_data = FALSE,
+        record_link_status = FALSE
+    )
+    finalized$object
 }
 
 #' Evaluate a pipeline and return the matrix, without storing

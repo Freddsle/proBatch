@@ -878,6 +878,31 @@ plot_PVCA(
 ```
 
 
+# Materializing an already computed result
+
+Normally, use `pb_transform()` so Core runs the registered step. If the result
+was already computed, wrap it in `pb_step_result()` and materialize it without
+running the provider again:
+
+```{r materialize_external_result, eval=FALSE}
+computed <- provider_function(input_matrix, option = "value")
+result <- pb_step_result(computed$matrix, computed$artifacts)
+
+materialized_pbf <- pb_materialize_step_result(
+    pbf,
+    from = "peptide::raw",
+    step = "registered_provider_alias",
+    result = result,
+    params = list(option = "value"),
+    final_name = "peptide::provider_on_raw"
+)
+pb_step_artifacts(materialized_pbf, "peptide::provider_on_raw")
+```
+
+Core validates and records the supplied result; the caller asserts that it was
+computed with the recorded step and parameters.
+
+
 # Inspecting operation log
 
 Each call to `pb_transform()` or `pb_filterNA()` creates a log entry that

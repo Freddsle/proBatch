@@ -67,9 +67,9 @@ Compute a pipeline and optionally store only the final result
 \details{
 Registered steps record their canonical name and provider package.
 When a step returns \code{\link[=pb_step_result]{pb_step_result()}} and its assay is materialized, the
-result's artifacts are stored in that assay's metadata under
-\code{pb_step_artifacts}. Step results must retain all samples in input order;
-an input-ordered feature subset is allowed.
+result's artifacts are available through \code{\link[=pb_step_artifacts]{pb_step_artifacts()}}. Step
+results must retain all samples in input order; an input-ordered feature
+subset is allowed.
 }
 \examples{
 # Shared setup for ProBatchFeatures documentation examples -----------------

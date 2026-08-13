@@ -29,6 +29,8 @@ pb_step_result <- function(data, artifacts = list()) {
     )
 }
 
+.pb_step_artifacts_key <- "pb_step_artifacts"
+
 .pb_step_result_parts <- function(value) {
     if (!inherits(value, "pb_step_result")) {
         return(list(
@@ -76,7 +78,111 @@ pb_step_result <- function(data, artifacts = list()) {
         stop("`artifacts` must be a list.", call. = FALSE)
     }
     assay_metadata <- S4Vectors::metadata(assay)
-    assay_metadata$pb_step_artifacts <- artifacts
+    assay_metadata[[.pb_step_artifacts_key]] <- artifacts
     S4Vectors::metadata(assay) <- assay_metadata
     assay
+}
+
+.pb_read_step_artifact_metadata <- function(assay, context) {
+    assay_metadata <- S4Vectors::metadata(assay)
+    present <- .pb_step_artifacts_key %in% names(assay_metadata)
+    if (!present) {
+        return(list(present = FALSE, artifacts = list()))
+    }
+
+    artifacts <- assay_metadata[[.pb_step_artifacts_key]]
+    if (!is.list(artifacts)) {
+        stop(
+            context,
+            " has malformed structured artifact metadata; expected a list.",
+            call. = FALSE
+        )
+    }
+    list(present = TRUE, artifacts = artifacts)
+}
+
+.pb_assert_step_artifacts_match <- function(assay, expected, target) {
+    stored <- .pb_read_step_artifact_metadata(
+        assay,
+        paste0("Result target '", target, "'")
+    )
+    if (!stored$present || !identical(stored$artifacts, expected)) {
+        stop(
+            "Result target '",
+            target,
+            "' already exists with conflicting structured artifacts.",
+            call. = FALSE
+        )
+    }
+    invisible(TRUE)
+}
+
+#' Retrieve structured artifacts from a stored assay
+#'
+#' Returns the opaque, provider-neutral artifact list persisted when a
+#' structured step result was materialized. The selected assay must be stored;
+#' this accessor never replays a virtual transformation or provider. Assays
+#' without structured artifacts return an empty list. Unknown assays, virtual
+#' targets, and stored assays with malformed non-list artifact metadata cause
+#' an error.
+#'
+#' @param object A `ProBatchFeatures` object.
+#' @param assay Stored assay identifier. `NULL` selects the current assay.
+#'
+#' @return The persisted artifact list, unchanged, or `list()` when the stored
+#'   assay has no structured artifacts.
+#' @export
+#' @md
+#' @examples
+#' input <- matrix(
+#'     1:4,
+#'     nrow = 2,
+#'     dimnames = list(c("f1", "f2"), c("s1", "s2"))
+#' )
+#' pbf <- ProBatchFeatures(input, name = "raw")
+#' pb_step_artifacts(pbf)
+pb_step_artifacts <- function(object, assay = NULL) {
+    if (!methods::is(object, "ProBatchFeatures")) {
+        stop("`object` must be a ProBatchFeatures object.", call. = FALSE)
+    }
+    if (is.null(assay)) {
+        assay <- pb_current_assay(object)
+        if (length(assay) != 1L || is.na(assay) || !nzchar(assay)) {
+            stop(
+                "`object` has no current stored assay.",
+                call. = FALSE
+            )
+        }
+    } else if (
+        !is.character(assay) ||
+            length(assay) != 1L ||
+            is.na(assay) ||
+            !nzchar(assay)
+    ) {
+        stop(
+            "`assay` must be NULL or one non-missing, non-empty character value.",
+            call. = FALSE
+        )
+    }
+
+    if (!(assay %in% names(object))) {
+        operation_log <- get_operation_log(object)
+        virtual <- nrow(operation_log) &&
+            any(as.character(operation_log$to) == assay)
+        if (virtual) {
+            stop(
+                "Assay '",
+                assay,
+                "' is virtual and has not been materialized.",
+                call. = FALSE
+            )
+        }
+        stop("Assay '", assay, "' is not stored in the object.", call. = FALSE)
+    }
+
+    stored <- .pb_read_step_artifact_metadata(
+        object[[assay]],
+        paste0("Stored assay '", assay, "'")
+    )
+    stored$artifacts
 }

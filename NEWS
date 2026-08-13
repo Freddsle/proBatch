@@ -9,6 +9,9 @@ NEW FEATURES
     o Added unified long/wide centering and batch correction, plus
       provider-aware registered transformations for ProBatchFeatures.
 
+    o Added materialization of externally computed structured step results and
+      stable retrieval of their opaque persisted artifacts from stored assays.
+
 SIGNIFICANT USER-VISIBLE CHANGES
 
     o Batch correction now errors on missing values by default; use "keep",
