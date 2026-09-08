@@ -2193,6 +2193,133 @@ test_that("as_ProBatchFeatures warns on multi-assay naming mismatches", {
 })
 
 
+test_that("pb_step_target_name follows the existing pipeline naming rules", {
+    expect_identical(
+        pb_step_target_name("feature::raw", "log2"),
+        "feature::log2_on_raw"
+    )
+    expect_identical(
+        pb_step_target_name("peptide::medianNorm_on_log2_on_raw", "adjust"),
+        "peptide::adjust_on_medianNorm_on_log2_on_raw"
+    )
+    expect_identical(
+        pb_step_target_name(
+            "peptide::medianNorm_on_log2_on_raw", "adjust", new_level = "protein"
+        ),
+        "protein::adjust_on_medianNorm_on_log2_on_raw"
+    )
+    expect_identical(
+        pb_step_target_name("feature::raw_on_", "adjust"),
+        "feature::adjust_on_raw"
+    )
+    expect_identical(
+        pb_step_target_name("feature::raw", "custom::step", new_level = "a::b"),
+        "a::b::custom::step_on_raw"
+    )
+})
+
+test_that("pb_step_target_name validates scalar arguments and source names", {
+    invalid <- list(
+        NULL, character(), "", NA_character_, 1L, TRUE, c("a", "b"),
+        factor("feature::raw"), list("feature::raw")
+    )
+    for (value in invalid) {
+        expect_error(pb_step_target_name(value, "copy"), "Assay name")
+        expect_error(pb_step_target_name("feature::raw", value), "step")
+    }
+    for (value in invalid[-1L]) {
+        expect_error(
+            pb_step_target_name("feature::raw", "copy", new_level = value),
+            "new_level"
+        )
+    }
+    for (from in c("raw", "::raw", "feature::", "feature::raw::extra")) {
+        expect_error(pb_step_target_name(from, "copy"), "<level>::<pipeline>")
+    }
+    expect_identical(
+        pb_step_target_name("feature::raw", "copy", new_level = NULL),
+        "feature::copy_on_raw"
+    )
+})
+
+test_that("pb_step_target_name preserves literal steps without registry changes", {
+    provider <- "proBatchTargetNameProvider"
+    canonical <- "target_name_canonical"
+    alias <- "target-name-alias"
+    unregistered <- "target_name_unregistered"
+    on.exit(pb_unregister_steps(provider, steps = canonical), add = TRUE)
+    pb_register_step(
+        canonical,
+        function(x) stop("Prediction must not invoke a provider."),
+        package = provider,
+        aliases = alias
+    )
+    before <- pb_list_steps(details = TRUE)
+    expect_false(pb_has_step(alias, available = TRUE))
+    expect_false(pb_has_step(unregistered))
+
+    expect_identical(
+        pb_step_target_name("feature::raw", alias),
+        "feature::target-name-alias_on_raw"
+    )
+    expected <- "feature::target_name_unregistered_on_raw"
+    expect_identical(pb_step_target_name("feature::raw", unregistered), expected)
+    expect_identical(pb_step_target_name("feature::raw", unregistered), expected)
+    expect_false(pb_has_step(unregistered))
+    expect_identical(pb_list_steps(details = TRUE), before)
+})
+
+test_that("pb_step_target_name agrees with transform and materialization targets", {
+    provider <- "testthat"
+    canonical <- "target_name_identity"
+    alias <- "target-name-copy"
+    on.exit(pb_unregister_steps(provider, steps = canonical), add = TRUE)
+    pb_register_step(
+        canonical, function(x) x + 1, package = provider, aliases = alias
+    )
+    input <- matrix(
+        seq_len(4),
+        nrow = 2,
+        dimnames = list(c("f1", "f2"), c("S1", "S2"))
+    )
+    result <- pb_step_result(input + 1)
+    sources <- c(
+        "peptide::raw", "peptide::medianNorm_on_log2_on_raw", "peptide::raw_on_"
+    )
+    for (from in sources) {
+        object <- ProBatchFeatures(input, name = from)
+        predicted <- pb_step_target_name(from, alias)
+        transformed <- pb_transform(
+            object, from = from, steps = alias, backend = "memory"
+        )
+        materialized <- pb_materialize_step_result(
+            object, from = from, step = alias, result = result, backend = "memory"
+        )
+        for (updated in list(transformed, materialized)) {
+            expect_identical(pb_current_assay(updated), predicted)
+            expect_identical(get_operation_log(updated)$to, predicted)
+        }
+    }
+
+    predicted <- pb_step_target_name(from, alias, new_level = "protein")
+    transformed <- pb_transform(
+        object, from = from, steps = alias, level = "protein", backend = "memory"
+    )
+    explicit_transform <- pb_transform(
+        object, from = from, steps = alias,
+        final_name = predicted, backend = "memory"
+    )
+    explicit_materialization <- pb_materialize_step_result(
+        object, from = from, step = alias, result = result,
+        final_name = predicted, backend = "memory"
+    )
+    updates <- list(transformed, explicit_transform, explicit_materialization)
+    for (updated in updates) {
+        expect_identical(pb_current_assay(updated), predicted)
+        expect_identical(get_operation_log(updated)$to, predicted)
+    }
+})
+
 test_that("pb_transform honors final_name without colliding with pipeline-derived assay", {
     pb_test_load_example_data()
 

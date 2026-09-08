@@ -147,6 +147,42 @@ setValidity("ProBatchFeatures", function(object) {
     to_override %||% .pb_assay_name(new_level, new_pipeline)
 }
 
+#' Calculate the generated target name for one step
+#'
+#' Uses the same one-step pipeline naming convention as [pb_transform()] and
+#' [pb_materialize_step_result()] when no explicit final name is supplied.
+#' The requested step is placed before the source pipeline using Core's
+#' pipeline token ordering, including the `raw` suffix for an unprocessed
+#' source. Aliases are used as supplied, without resolving a canonical name.
+#'
+#' This function only calculates a name. It does not require an object or a
+#' registered step, inspect or modify the registry, or reserve a target name.
+#' Storage and collision checks still apply when the result is materialized.
+#'
+#' @param from One non-missing, non-empty source assay name in
+#'   `<level>::<pipeline>` form, with both components non-empty.
+#' @param step One non-missing, non-empty character step identifier.
+#' @param new_level Optional non-missing, non-empty character level label.
+#'   `NULL` retains the source level. This corresponds to `level` in
+#'   [pb_transform()]. To use it with [pb_materialize_step_result()], pass the
+#'   calculated name as `final_name`.
+#'
+#' @return One character string containing the generated target name.
+#' @export
+#' @md
+#' @examples
+#' pb_step_target_name("peptide::raw", "log2")
+#' pb_step_target_name("peptide::medianNorm_on_log2_on_raw", "combat")
+#' pb_step_target_name("peptide::raw", "aggregate", new_level = "protein")
+pb_step_target_name <- function(from, step, new_level = NULL) {
+    .pb_assay_parts(from, strict = TRUE)
+    step <- .pb_registry_character_scalar(step, "step")
+    if (!is.null(new_level)) {
+        new_level <- .pb_registry_character_scalar(new_level, "new_level")
+    }
+    .pb_step_target_name(from = from, step = step, new_level = new_level)
+}
+
 # Choose materialization backend
 .pb_materialize_matrix <- function(
     m,

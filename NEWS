@@ -18,6 +18,9 @@ NEW FEATURES
     o Added pb_assay_lineage() to inspect resolved operation-log rows and the
       root of a stored or virtual assay, including in-place operations.
 
+    o Added pb_step_target_name() to calculate Core's generated target assay
+      name for one step, with an optional output level.
+
 SIGNIFICANT USER-VISIBLE CHANGES
 
     o Batch correction now errors on missing values by default; use "keep",
