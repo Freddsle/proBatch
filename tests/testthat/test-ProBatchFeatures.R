@@ -1056,7 +1056,11 @@ local({
             list(options = list(center = TRUE), weights = c(S1 = 1, S2 = 2))
         )
         object <- lineage_edge(
-            lineage_object(), root, middle, "first", params[[1L]]
+            lineage_object(),
+            root,
+            middle,
+            "first",
+            params[[1L]]
         )
         object <- lineage_edge(object, root, "feature::branch", "unrelated")
         object <- lineage_edge(object, middle, target, "second", params[[2L]])
@@ -1086,7 +1090,10 @@ local({
             result$operations$pkg,
             rep("proBatchUnavailableLineageProvider", 2L)
         )
-        expect_identical(result$operations$step, get_chain(object, assay = target))
+        expect_identical(
+            result$operations$step,
+            get_chain(object, assay = target)
+        )
         expect_identical(serialize(object, NULL), before)
     })
 
@@ -1121,7 +1128,9 @@ local({
         expect_identical(pb_assay_lineage(object, "feature::raw"), empty)
 
         object <- lineage_edge(
-            object, "feature::external_root", "feature::external"
+            object,
+            "feature::external_root",
+            "feature::external"
         )
         external <- pb_assay_lineage(object, "feature::external_root")
         expect_identical(external$root, "feature::external_root")
@@ -1138,8 +1147,20 @@ local({
         target <- "feature::target"
         object <- lineage_edge(lineage_object(), root, root, "root_inplace")
         object <- lineage_edge(object, root, middle, "repeat")
-        object <- lineage_edge(object, middle, middle, "repeat", list(pass = 1L))
-        object <- lineage_edge(object, middle, middle, "repeat", list(pass = 2L))
+        object <- lineage_edge(
+            object,
+            middle,
+            middle,
+            "repeat",
+            list(pass = 1L)
+        )
+        object <- lineage_edge(
+            object,
+            middle,
+            middle,
+            "repeat",
+            list(pass = 2L)
+        )
         object <- lineage_edge(object, middle, target, "repeat")
         object <- lineage_edge(object, target, target, "target_first")
         object <- lineage_edge(object, target, target, "target_last")
@@ -1160,7 +1181,10 @@ local({
         )
         expect_identical(result$operations$params[[3L]], list(pass = 1L))
         expect_identical(result$operations$params[[4L]], list(pass = 2L))
-        expect_identical(result$operations$step, get_chain(object, assay = target))
+        expect_identical(
+            result$operations$step,
+            get_chain(object, assay = target)
+        )
         expect_identical(
             pb_assay_lineage(object, root)$operations$step,
             "root_inplace"
@@ -1170,7 +1194,13 @@ local({
     test_that("pb_assay_lineage collapses stable duplicate parent and self edges", {
         target <- "feature::target"
         object <- lineage_edge(lineage_object(), "feature::raw", target)
-        object <- lineage_edge(object, target, target, "inplace", list(pass = 1L))
+        object <- lineage_edge(
+            object,
+            target,
+            target,
+            "inplace",
+            list(pass = 1L)
+        )
         expected <- pb_assay_lineage(object, target)
         duplicate <- get_operation_log(object)
         duplicate$timestamp <- duplicate$timestamp + 1
@@ -1235,8 +1265,14 @@ local({
         object <- lineage_object()
         expect_error(pb_assay_lineage(list()), "ProBatchFeatures")
         invalid <- list(
-            character(), "", NA_character_, 1L, TRUE, c("a", "b"),
-            factor("feature::raw"), list("feature::raw")
+            character(),
+            "",
+            NA_character_,
+            1L,
+            TRUE,
+            c("a", "b"),
+            factor("feature::raw"),
+            list("feature::raw")
         )
         for (assay in invalid) {
             expect_error(pb_assay_lineage(object, assay), "assay")
@@ -1244,7 +1280,8 @@ local({
         expect_error(pb_assay_lineage(object, "feature::unknown"), "not found")
 
         empty <- methods::new(
-            "ProBatchFeatures", QFeatures::QFeatures(),
+            "ProBatchFeatures",
+            QFeatures::QFeatures(),
             oplog = get_operation_log(object)
         )
         expect_error(pb_assay_lineage(empty), "no current stored assay")
@@ -2204,7 +2241,9 @@ test_that("pb_step_target_name follows the existing pipeline naming rules", {
     )
     expect_identical(
         pb_step_target_name(
-            "peptide::medianNorm_on_log2_on_raw", "adjust", new_level = "protein"
+            "peptide::medianNorm_on_log2_on_raw",
+            "adjust",
+            new_level = "protein"
         ),
         "protein::adjust_on_medianNorm_on_log2_on_raw"
     )
@@ -2220,8 +2259,15 @@ test_that("pb_step_target_name follows the existing pipeline naming rules", {
 
 test_that("pb_step_target_name validates scalar arguments and source names", {
     invalid <- list(
-        NULL, character(), "", NA_character_, 1L, TRUE, c("a", "b"),
-        factor("feature::raw"), list("feature::raw")
+        NULL,
+        character(),
+        "",
+        NA_character_,
+        1L,
+        TRUE,
+        c("a", "b"),
+        factor("feature::raw"),
+        list("feature::raw")
     )
     for (value in invalid) {
         expect_error(pb_step_target_name(value, "copy"), "Assay name")
@@ -2263,8 +2309,14 @@ test_that("pb_step_target_name preserves literal steps without registry changes"
         "feature::target-name-alias_on_raw"
     )
     expected <- "feature::target_name_unregistered_on_raw"
-    expect_identical(pb_step_target_name("feature::raw", unregistered), expected)
-    expect_identical(pb_step_target_name("feature::raw", unregistered), expected)
+    expect_identical(
+        pb_step_target_name("feature::raw", unregistered),
+        expected
+    )
+    expect_identical(
+        pb_step_target_name("feature::raw", unregistered),
+        expected
+    )
     expect_false(pb_has_step(unregistered))
     expect_identical(pb_list_steps(details = TRUE), before)
 })
@@ -2275,7 +2327,10 @@ test_that("pb_step_target_name agrees with transform and materialization targets
     alias <- "target-name-copy"
     on.exit(pb_unregister_steps(provider, steps = canonical), add = TRUE)
     pb_register_step(
-        canonical, function(x) x + 1, package = provider, aliases = alias
+        canonical,
+        function(x) x + 1,
+        package = provider,
+        aliases = alias
     )
     input <- matrix(
         seq_len(4),
@@ -2284,16 +2339,25 @@ test_that("pb_step_target_name agrees with transform and materialization targets
     )
     result <- pb_step_result(input + 1)
     sources <- c(
-        "peptide::raw", "peptide::medianNorm_on_log2_on_raw", "peptide::raw_on_"
+        "peptide::raw",
+        "peptide::medianNorm_on_log2_on_raw",
+        "peptide::raw_on_"
     )
     for (from in sources) {
         object <- ProBatchFeatures(input, name = from)
         predicted <- pb_step_target_name(from, alias)
         transformed <- pb_transform(
-            object, from = from, steps = alias, backend = "memory"
+            object,
+            from = from,
+            steps = alias,
+            backend = "memory"
         )
         materialized <- pb_materialize_step_result(
-            object, from = from, step = alias, result = result, backend = "memory"
+            object,
+            from = from,
+            step = alias,
+            result = result,
+            backend = "memory"
         )
         for (updated in list(transformed, materialized)) {
             expect_identical(pb_current_assay(updated), predicted)
@@ -2303,15 +2367,26 @@ test_that("pb_step_target_name agrees with transform and materialization targets
 
     predicted <- pb_step_target_name(from, alias, new_level = "protein")
     transformed <- pb_transform(
-        object, from = from, steps = alias, level = "protein", backend = "memory"
+        object,
+        from = from,
+        steps = alias,
+        level = "protein",
+        backend = "memory"
     )
     explicit_transform <- pb_transform(
-        object, from = from, steps = alias,
-        final_name = predicted, backend = "memory"
+        object,
+        from = from,
+        steps = alias,
+        final_name = predicted,
+        backend = "memory"
     )
     explicit_materialization <- pb_materialize_step_result(
-        object, from = from, step = alias, result = result,
-        final_name = predicted, backend = "memory"
+        object,
+        from = from,
+        step = alias,
+        result = result,
+        final_name = predicted,
+        backend = "memory"
     )
     updates <- list(transformed, explicit_transform, explicit_materialization)
     for (updated in updates) {

@@ -1004,12 +1004,15 @@ pb_assay_lineage <- function(object, assay = NULL) {
         )
     }
     log <- get_operation_log(object)
-    known <- assay %in% names(object) ||
+    known <- assay %in%
+        names(object) ||
         assay %in% as.character(log$to) ||
         assay %in% as.character(log$from)
     if (!known) {
         stop(
-            "Assay '", assay, "' not found in object or operation log.",
+            "Assay '",
+            assay,
+            "' not found in object or operation log.",
             call. = FALSE
         )
     }

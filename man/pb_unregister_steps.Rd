@@ -2,19 +2,26 @@
 % Please edit documentation in R/registry.R
 \name{pb_unregister_steps}
 \alias{pb_unregister_steps}
-\title{Unregister all transformation steps from one provider}
+\title{Unregister transformation steps from one provider}
 \usage{
-pb_unregister_steps(package)
+pb_unregister_steps(package, steps = NULL)
 }
 \arguments{
 \item{package}{One non-missing, non-empty provider package name.}
+
+\item{steps}{Optional character vector of unique, non-missing, non-empty
+canonical step names. \code{NULL} removes every registration owned by \code{package};
+\code{character()} removes nothing.}
 }
 \value{
-The removed canonical names, invisibly.
+The removed canonical names in sorted order, invisibly. Returns
+\code{character()} invisibly when no registrations are removed.
 }
 \description{
-Removes every canonical registration and alias owned by \code{package}. Calling
-the function when the provider owns no registrations is a no-op.
+Removes all or selected canonical registrations owned by \code{package}, together
+with their aliases. Canonical names that are not registered are ignored.
+Registered aliases and canonical names not owned by \code{package} cause an error
+without changing the registry. Use canonical names to select steps.
 }
 \examples{
 local({
@@ -27,7 +34,10 @@ local({
         aliases = "example_unregister_no_change"
     )
     alias_registered <- pb_has_step("example_unregister_no_change")
-    removed <- pb_unregister_steps(provider)
+    removed <- pb_unregister_steps(
+        provider,
+        steps = "example_unregister_identity"
+    )
     c(
         alias_registered = alias_registered,
         alias_removed = !pb_has_step("example_unregister_no_change"),
