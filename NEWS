@@ -15,6 +15,9 @@ NEW FEATURES
     o pb_unregister_steps() now accepts optional canonical step names to remove
       selected registrations within one provider.
 
+    o Added pb_assay_lineage() to inspect resolved operation-log rows and the
+      root of a stored or virtual assay, including in-place operations.
+
 SIGNIFICANT USER-VISIBLE CHANGES
 
     o Batch correction now errors on missing values by default; use "keep",

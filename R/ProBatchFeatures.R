@@ -860,6 +860,7 @@ get_operation_log <- function(object) {
     node <- as.character(assay)
     visited <- character()
     reverse_steps <- character()
+    reverse_edges <- integer()
     lineage_nodes <- node
 
     while (nrow(log)) {
@@ -884,6 +885,7 @@ get_operation_log <- function(object) {
                 reverse_steps,
                 rev(as.character(log$step[self_matches]))
             )
+            reverse_edges <- c(reverse_edges, rev(self_matches))
         }
 
         parent <- .pb_lineage_parent_edge(log, node)
@@ -891,6 +893,7 @@ get_operation_log <- function(object) {
             break
         }
         reverse_steps <- c(reverse_steps, as.character(log$step[[parent]]))
+        reverse_edges <- c(reverse_edges, parent)
         node <- as.character(log$from[[parent]])
         lineage_nodes <- c(lineage_nodes, node)
     }
@@ -898,8 +901,87 @@ get_operation_log <- function(object) {
     list(
         steps = rev(reverse_steps),
         root = node,
-        nodes = lineage_nodes
+        nodes = lineage_nodes,
+        edges = rev(reverse_edges)
     )
+}
+
+#' Retrieve resolved operation-log lineage for one assay
+#'
+#' Returns the selected assay's recorded operations in order from its lineage
+#' root to the assay. The traversal uses the same parent, duplicate-edge, and
+#' cycle rules as [get_chain()]. In-place operations are included after their
+#' node's parent operation, in log order, with identical stable edges included
+#' only once. Ambiguous parent origins or cyclic lineage cause an error.
+#'
+#' This accessor reads metadata only. It does not replay transformations,
+#' require registered or available providers, or modify `object`. A recorded
+#' root need not still be stored in the object.
+#'
+#' @param object A `ProBatchFeatures` object.
+#' @param assay One non-missing, non-empty character assay identifier. `NULL`
+#'   selects the current stored assay. Explicit names may identify stored
+#'   assays, virtual targets, or origins in the operation log. Unknown names
+#'   and a missing current assay cause an error.
+#'
+#' @return A list with `root`, the root assay identifier, and `operations`, an
+#'   `S4Vectors::DataFrame` with columns `step`, `fun`, `from`, `to`, `params`,
+#'   and `pkg`. Parameter lists and recorded identities are preserved;
+#'   timestamps and row names are omitted. An assay with no recorded operations
+#'   returns itself as `root` and a zero-row `operations` with the same columns.
+#' @export
+#' @md
+#' @examples
+#' input <- matrix(
+#'     1:4,
+#'     nrow = 2,
+#'     dimnames = list(c("f1", "f2"), c("s1", "s2"))
+#' )
+#' pbf <- ProBatchFeatures(input, name = "raw")
+#' pb_assay_lineage(pbf)
+#' transformed <- pb_transform(
+#'     pbf,
+#'     from = "feature::raw",
+#'     steps = "log2",
+#'     store_fast_steps = TRUE
+#' )
+#' pb_assay_lineage(transformed)
+pb_assay_lineage <- function(object, assay = NULL) {
+    if (!methods::is(object, "ProBatchFeatures")) {
+        stop("`object` must be a ProBatchFeatures object.", call. = FALSE)
+    }
+    if (is.null(assay)) {
+        assay <- pb_current_assay(object)
+        if (!length(assay)) {
+            stop("`object` has no current stored assay.", call. = FALSE)
+        }
+    }
+    if (
+        !is.character(assay) ||
+            length(assay) != 1L ||
+            is.na(assay) ||
+            !nzchar(assay)
+    ) {
+        stop(
+            "`assay` must be NULL or one non-missing, non-empty character value.",
+            call. = FALSE
+        )
+    }
+    log <- get_operation_log(object)
+    known <- assay %in% names(object) ||
+        assay %in% as.character(log$to) ||
+        assay %in% as.character(log$from)
+    if (!known) {
+        stop(
+            "Assay '", assay, "' not found in object or operation log.",
+            call. = FALSE
+        )
+    }
+    lineage <- .pb_lineage_from_log(object, assay)
+    fields <- c("step", "fun", "from", "to", "params", "pkg")
+    operations <- log[lineage$edges, fields, drop = FALSE]
+    rownames(operations) <- NULL
+    list(root = lineage$root, operations = operations)
 }
 
 .pb_pipeline_tokens <- function(object, assay) {

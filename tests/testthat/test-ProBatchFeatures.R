@@ -1025,6 +1025,232 @@ test_that("lineage traversal rejects ambiguous and cyclic logs", {
     )
 })
 
+local({
+    lineage_object <- function() {
+        input <- matrix(
+            seq_len(4),
+            nrow = 2,
+            dimnames = list(c("f1", "f2"), c("S1", "S2"))
+        )
+        ProBatchFeatures(input, name = "raw")
+    }
+
+    lineage_edge <- function(object, from, to, step = "copy", params = list()) {
+        proBatch:::.pb_add_log_entry(
+            object,
+            step = step,
+            fun = "unregistered_lineage_function",
+            from = from,
+            to = to,
+            params = params,
+            pkg = "proBatchUnavailableLineageProvider"
+        )
+    }
+
+    test_that("pb_assay_lineage returns the selected branch and stable metadata", {
+        root <- "feature::raw"
+        middle <- "feature::middle"
+        target <- "feature::target"
+        params <- list(
+            list(offset = 2L, annotation = data.frame(group = c("a", "b"))),
+            list(options = list(center = TRUE), weights = c(S1 = 1, S2 = 2))
+        )
+        object <- lineage_edge(
+            lineage_object(), root, middle, "first", params[[1L]]
+        )
+        object <- lineage_edge(object, root, "feature::branch", "unrelated")
+        object <- lineage_edge(object, middle, target, "second", params[[2L]])
+        object@oplog <- get_operation_log(object)[c(3L, 2L, 1L), , drop = FALSE]
+        before <- serialize(object, NULL)
+
+        result <- pb_assay_lineage(object, target)
+
+        expect_identical(names(result), c("root", "operations"))
+        expect_identical(result$root, root)
+        expect_s4_class(result$operations, "DataFrame")
+        expect_identical(
+            names(result$operations),
+            c("step", "fun", "from", "to", "params", "pkg")
+        )
+        expect_null(rownames(result$operations))
+        expect_identical(result$operations$step, c("first", "second"))
+        expect_identical(result$operations$from, c(root, middle))
+        expect_identical(result$operations$to, c(middle, target))
+        expect_identical(result$operations$params[[1L]], params[[1L]])
+        expect_identical(result$operations$params[[2L]], params[[2L]])
+        expect_identical(
+            result$operations$fun,
+            rep("unregistered_lineage_function", 2L)
+        )
+        expect_identical(
+            result$operations$pkg,
+            rep("proBatchUnavailableLineageProvider", 2L)
+        )
+        expect_identical(result$operations$step, get_chain(object, assay = target))
+        expect_identical(serialize(object, NULL), before)
+    })
+
+    test_that("pb_assay_lineage handles roots and defaults to the current assay", {
+        object <- lineage_object()
+        empty <- pb_assay_lineage(object)
+        expect_identical(empty$root, "feature::raw")
+        expect_s4_class(empty$operations, "DataFrame")
+        expect_identical(nrow(empty$operations), 0L)
+        expect_identical(
+            names(empty$operations),
+            c("step", "fun", "from", "to", "params", "pkg")
+        )
+        expect_identical(empty$operations$step, character())
+        expect_true(is.list(empty$operations$params))
+        expect_null(rownames(empty$operations))
+
+        object <- pb_transform(
+            object,
+            from = "feature::raw",
+            steps = "log2",
+            store_fast_steps = TRUE,
+            final_name = "feature::stored"
+        )
+        object <- lineage_edge(object, "feature::raw", "feature::virtual")
+        expect_identical(pb_current_assay(object), "feature::stored")
+        expect_identical(
+            pb_assay_lineage(object),
+            pb_assay_lineage(object, "feature::stored")
+        )
+        expect_identical(pb_assay_lineage(object)$operations$step, "log2")
+        expect_identical(pb_assay_lineage(object, "feature::raw"), empty)
+
+        object <- lineage_edge(
+            object, "feature::external_root", "feature::external"
+        )
+        external <- pb_assay_lineage(object, "feature::external_root")
+        expect_identical(external$root, "feature::external_root")
+        expect_identical(nrow(external$operations), 0L)
+        expect_identical(
+            pb_assay_lineage(object, "feature::external")$root,
+            "feature::external_root"
+        )
+    })
+
+    test_that("pb_assay_lineage retains ordered in-place operations at every node", {
+        root <- "feature::raw"
+        middle <- "feature::middle"
+        target <- "feature::target"
+        object <- lineage_edge(lineage_object(), root, root, "root_inplace")
+        object <- lineage_edge(object, root, middle, "repeat")
+        object <- lineage_edge(object, middle, middle, "repeat", list(pass = 1L))
+        object <- lineage_edge(object, middle, middle, "repeat", list(pass = 2L))
+        object <- lineage_edge(object, middle, target, "repeat")
+        object <- lineage_edge(object, target, target, "target_first")
+        object <- lineage_edge(object, target, target, "target_last")
+
+        result <- pb_assay_lineage(object, target)
+        expect_identical(result$root, root)
+        expect_identical(
+            result$operations$step,
+            c("root_inplace", rep("repeat", 4L), "target_first", "target_last")
+        )
+        expect_identical(
+            result$operations$from,
+            c(root, root, middle, middle, middle, target, target)
+        )
+        expect_identical(
+            result$operations$to,
+            c(root, middle, middle, middle, target, target, target)
+        )
+        expect_identical(result$operations$params[[3L]], list(pass = 1L))
+        expect_identical(result$operations$params[[4L]], list(pass = 2L))
+        expect_identical(result$operations$step, get_chain(object, assay = target))
+        expect_identical(
+            pb_assay_lineage(object, root)$operations$step,
+            "root_inplace"
+        )
+    })
+
+    test_that("pb_assay_lineage collapses stable duplicate parent and self edges", {
+        target <- "feature::target"
+        object <- lineage_edge(lineage_object(), "feature::raw", target)
+        object <- lineage_edge(object, target, target, "inplace", list(pass = 1L))
+        expected <- pb_assay_lineage(object, target)
+        duplicate <- get_operation_log(object)
+        duplicate$timestamp <- duplicate$timestamp + 1
+        object@oplog <- rbind(get_operation_log(object), duplicate)
+
+        expect_identical(pb_assay_lineage(object, target), expected)
+        expect_identical(nrow(pb_assay_lineage(object, target)$operations), 2L)
+    })
+
+    test_that("pb_assay_lineage rejects ambiguous and cyclic selected lineages", {
+        target <- "feature::target"
+        object <- lineage_edge(lineage_object(), "feature::raw", target)
+        conflict <- get_operation_log(object)
+        conflict$params[[1L]] <- list(changed = TRUE)
+        ambiguous <- object
+        ambiguous@oplog <- rbind(get_operation_log(object), conflict)
+        before <- serialize(ambiguous, NULL)
+        expect_error(
+            pb_assay_lineage(ambiguous, target),
+            "Ambiguous operation-log lineage"
+        )
+        expect_identical(serialize(ambiguous, NULL), before)
+        ambiguous@oplog <- get_operation_log(ambiguous)[2:1, , drop = FALSE]
+        expect_error(
+            pb_assay_lineage(ambiguous, target),
+            "Ambiguous operation-log lineage"
+        )
+
+        back <- get_operation_log(object)
+        back$from <- target
+        back$to <- "feature::raw"
+        cyclic <- object
+        cyclic@oplog <- rbind(get_operation_log(object), back)
+        before <- serialize(cyclic, NULL)
+        expect_error(
+            pb_assay_lineage(cyclic, target),
+            "Cyclic operation-log lineage"
+        )
+        expect_identical(serialize(cyclic, NULL), before)
+    })
+
+    test_that("pb_assay_lineage reads virtual provider metadata without replay", {
+        target <- "feature::virtual"
+        object <- lineage_edge(lineage_object(), "feature::raw", target)
+        before <- serialize(object, NULL)
+        expect_false(pb_has_step("unregistered_lineage_function"))
+        expect_false(target %in% names(object))
+
+        result <- pb_assay_lineage(object, target)
+
+        expect_identical(result$root, "feature::raw")
+        expect_identical(result$operations$fun, "unregistered_lineage_function")
+        expect_identical(
+            result$operations$pkg,
+            "proBatchUnavailableLineageProvider"
+        )
+        expect_false(target %in% names(object))
+        expect_identical(serialize(object, NULL), before)
+    })
+
+    test_that("pb_assay_lineage validates objects and assay identifiers", {
+        object <- lineage_object()
+        expect_error(pb_assay_lineage(list()), "ProBatchFeatures")
+        invalid <- list(
+            character(), "", NA_character_, 1L, TRUE, c("a", "b"),
+            factor("feature::raw"), list("feature::raw")
+        )
+        for (assay in invalid) {
+            expect_error(pb_assay_lineage(object, assay), "assay")
+        }
+        expect_error(pb_assay_lineage(object, "feature::unknown"), "not found")
+
+        empty <- methods::new(
+            "ProBatchFeatures", QFeatures::QFeatures(),
+            oplog = get_operation_log(object)
+        )
+        expect_error(pb_assay_lineage(empty), "no current stored assay")
+    })
+})
+
 test_that("internal add-assay-with-link links one-to-one when rows match", {
     data(example_proteome_matrix, package = "proBatch")
     data(example_sample_annotation, package = "proBatch")
