@@ -303,14 +303,20 @@ pb_register_step <- function(
     invisible(TRUE)
 }
 
-#' Unregister all transformation steps from one provider
+#' Unregister transformation steps from one provider
 #'
-#' Removes every canonical registration and alias owned by `package`. Calling
-#' the function when the provider owns no registrations is a no-op.
+#' Removes all or selected canonical registrations owned by `package`, together
+#' with their aliases. Canonical names that are not registered are ignored.
+#' Registered aliases and canonical names not owned by `package` cause an error
+#' without changing the registry. Use canonical names to select steps.
 #'
 #' @param package One non-missing, non-empty provider package name.
+#' @param steps Optional character vector of unique, non-missing, non-empty
+#'   canonical step names. `NULL` removes every registration owned by `package`;
+#'   `character()` removes nothing.
 #'
-#' @return The removed canonical names, invisibly.
+#' @return The removed canonical names in sorted order, invisibly. Returns
+#'   `character()` invisibly when no registrations are removed.
 #' @examples
 #' local({
 #'     provider <- "proBatchExampleProvider"
@@ -322,7 +328,10 @@ pb_register_step <- function(
 #'         aliases = "example_unregister_no_change"
 #'     )
 #'     alias_registered <- pb_has_step("example_unregister_no_change")
-#'     removed <- pb_unregister_steps(provider)
+#'     removed <- pb_unregister_steps(
+#'         provider,
+#'         steps = "example_unregister_identity"
+#'     )
 #'     c(
 #'         alias_registered = alias_registered,
 #'         alias_removed = !pb_has_step("example_unregister_no_change"),
@@ -334,10 +343,10 @@ pb_register_step <- function(
 #' })
 #' @export
 #' @md
-pb_unregister_steps <- function(package) {
+pb_unregister_steps <- function(package, steps = NULL) {
     package <- .pb_registry_character_scalar(package, "package")
     canonical_names <- ls(envir = .pb_step_records, all.names = TRUE)
-    remove_names <- canonical_names[vapply(
+    owned <- canonical_names[vapply(
         canonical_names,
         function(name) {
             record <- get(name, envir = .pb_step_records, inherits = FALSE)
@@ -345,6 +354,39 @@ pb_unregister_steps <- function(package) {
         },
         logical(1)
     )]
+
+    if (is.null(steps)) {
+        remove_names <- owned
+    } else {
+        steps <- .pb_registry_character_vector(steps, "steps")
+        alias_input <- steps[vapply(
+            steps,
+            function(step) {
+                exists(step, envir = .pb_step_aliases, inherits = FALSE)
+            },
+            logical(1)
+        )]
+        if (length(alias_input)) {
+            stop(
+                "`steps` must name canonical steps, not aliases: ",
+                paste0("'", sort(alias_input), "'", collapse = ", "),
+                ". Use the canonical name for each step.",
+                call. = FALSE
+            )
+        }
+        foreign <- setdiff(intersect(steps, canonical_names), owned)
+        if (length(foreign)) {
+            stop(
+                "Canonical step(s) ",
+                paste0("'", sort(foreign), "'", collapse = ", "),
+                " are not owned by provider '",
+                package,
+                "'.",
+                call. = FALSE
+            )
+        }
+        remove_names <- intersect(owned, steps)
+    }
     remove_names <- sort(remove_names)
 
     if (!length(remove_names)) {

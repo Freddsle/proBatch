@@ -300,30 +300,209 @@ test_that("availability inspection does not load requirement namespaces", {
 })
 
 test_that("provider unregister removes canonical names and aliases", {
-    provider <- "stats"
+    provider <- "proBatchExampleProvider"
     on.exit(pb_unregister_steps(provider), add = TRUE)
 
+    pb_register_step(
+        "registry_remove_two",
+        identity,
+        package = provider
+    )
     pb_register_step(
         "registry_remove_one",
         identity,
         package = provider,
         aliases = "registry_remove_alias"
     )
-    pb_register_step(
-        "registry_remove_two",
-        identity,
-        package = provider
-    )
 
-    removed <- pb_unregister_steps(provider)
+    removed <- withVisible(pb_unregister_steps(provider))
     expect_identical(
-        removed,
+        removed$value,
         c("registry_remove_one", "registry_remove_two")
     )
+    expect_false(removed$visible)
     expect_false(pb_has_step("registry_remove_one"))
     expect_false(pb_has_step("registry_remove_alias"))
     expect_false(pb_has_step("registry_remove_two"))
-    expect_identical(pb_unregister_steps(provider), character())
+    expect_identical(
+        withVisible(pb_unregister_steps(provider)),
+        list(value = character(), visible = FALSE)
+    )
+})
+
+test_that("selective unregister removes only selected steps and aliases", {
+    provider <- "proBatchExampleProvider"
+    on.exit(pb_unregister_steps(provider), add = TRUE)
+
+    for (name in c("registry_select_a", "registry_select_b", "registry_keep")) {
+        pb_register_step(
+            name,
+            identity,
+            package = provider,
+            aliases = paste0(name, "_alias")
+        )
+    }
+
+    removed <- withVisible(pb_unregister_steps(
+        provider,
+        steps = c("registry_select_b", "registry_select_a")
+    ))
+    expect_identical(removed$value, c("registry_select_a", "registry_select_b"))
+    expect_false(removed$visible)
+    expect_false(pb_has_step("registry_select_a"))
+    expect_false(pb_has_step("registry_select_a_alias"))
+    expect_false(pb_has_step("registry_select_b"))
+    expect_false(pb_has_step("registry_select_b_alias"))
+    expect_true(pb_has_step("registry_keep"))
+    expect_true(pb_has_step("registry_keep_alias"))
+})
+
+test_that("an empty unregister selection leaves the registry unchanged", {
+    provider <- "proBatchExampleProvider"
+    on.exit(pb_unregister_steps(provider), add = TRUE)
+    pb_register_step(
+        "registry_empty_selection",
+        identity,
+        package = provider,
+        aliases = "registry_empty_selection_alias"
+    )
+    before <- pb_list_steps(details = TRUE)
+
+    expect_identical(
+        withVisible(pb_unregister_steps(provider, steps = character())),
+        list(value = character(), visible = FALSE)
+    )
+    expect_identical(pb_list_steps(details = TRUE), before)
+})
+
+test_that("selective unregister ignores absent names and is idempotent", {
+    provider <- "proBatchExampleProvider"
+    on.exit(pb_unregister_steps(provider), add = TRUE)
+    pb_register_step("registry_retry", identity, package = provider)
+
+    expect_identical(
+        pb_unregister_steps(
+            provider,
+            steps = c("registry_absent", "registry_retry")
+        ),
+        "registry_retry"
+    )
+    expect_identical(
+        withVisible(pb_unregister_steps(provider, steps = "registry_retry")),
+        list(value = character(), visible = FALSE)
+    )
+    expect_identical(
+        withVisible(pb_unregister_steps(provider, steps = "registry_absent")),
+        list(value = character(), visible = FALSE)
+    )
+})
+
+test_that("selective unregister rejects foreign ownership before mutation", {
+    provider <- "proBatchExampleProvider"
+    other_provider <- "proBatchOtherExampleProvider"
+    on.exit(pb_unregister_steps(provider), add = TRUE)
+    on.exit(pb_unregister_steps(other_provider), add = TRUE)
+    pb_register_step(
+        "registry_owned",
+        identity,
+        package = provider,
+        aliases = "registry_owned_alias"
+    )
+    pb_register_step(
+        "registry_foreign",
+        identity,
+        package = other_provider,
+        aliases = "registry_foreign_alias"
+    )
+    before <- pb_list_steps(details = TRUE)
+
+    expect_error(
+        pb_unregister_steps(
+            provider,
+            steps = c("registry_owned", "registry_foreign")
+        ),
+        "not owned by provider"
+    )
+    expect_identical(pb_list_steps(details = TRUE), before)
+})
+
+test_that("selective unregister rejects aliases before mutation", {
+    provider <- "proBatchExampleProvider"
+    on.exit(pb_unregister_steps(provider), add = TRUE)
+    pb_register_step(
+        "registry_canonical_only",
+        identity,
+        package = provider,
+        aliases = "registry_not_canonical"
+    )
+    before <- pb_list_steps(details = TRUE)
+
+    expect_error(
+        pb_unregister_steps(
+            provider,
+            steps = c("registry_canonical_only", "registry_not_canonical")
+        ),
+        "canonical steps, not aliases"
+    )
+    expect_identical(pb_list_steps(details = TRUE), before)
+})
+
+test_that("selective unregister rejects malformed selections without mutation", {
+    provider <- "proBatchExampleProvider"
+    on.exit(pb_unregister_steps(provider), add = TRUE)
+    pb_register_step(
+        "registry_invalid_selection",
+        identity,
+        package = provider,
+        aliases = "registry_invalid_selection_alias"
+    )
+    before <- pb_list_steps(details = TRUE)
+    invalid_selections <- list(
+        c("registry_invalid_selection", "registry_invalid_selection"),
+        c("registry_invalid_selection", NA_character_),
+        1,
+        c("registry_invalid_selection", "")
+    )
+
+    for (steps in invalid_selections) {
+        expect_error(pb_unregister_steps(provider, steps = steps), "`steps`")
+        expect_identical(pb_list_steps(details = TRUE), before)
+    }
+})
+
+test_that("selective refresh preserves collisions for retained registrations", {
+    provider <- "proBatchExampleProvider"
+    on.exit(pb_unregister_steps(provider), add = TRUE)
+    for (name in c("registry_refresh", "registry_retained")) {
+        pb_register_step(
+            name,
+            identity,
+            package = provider,
+            label = "Original label"
+        )
+    }
+    pb_unregister_steps(provider, steps = "registry_refresh")
+
+    expect_true(isTRUE(pb_register_step(
+        "registry_refresh",
+        identity,
+        package = provider,
+        label = "Updated label"
+    )))
+    details <- pb_list_steps("^registry_refresh$", details = TRUE)
+    expect_identical(as.character(details$label), "Updated label")
+    before <- pb_list_steps(details = TRUE)
+
+    expect_error(
+        pb_register_step(
+            "registry_retained",
+            identity,
+            package = provider,
+            label = "Updated label"
+        ),
+        "already registered with different"
+    )
+    expect_identical(pb_list_steps(details = TRUE), before)
 })
 
 test_that("two-argument registration remains supported", {
